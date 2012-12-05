@@ -1,0 +1,10 @@
+C:\workspace\HybridDb\HybridDb\bin\Debug\HybridDb.dll
+C:\workspace\HybridDb\HybridDb\bin\Debug\HybridDb.pdb
+C:\workspace\HybridDb\HybridDb\bin\Debug\Dapper.dll
+C:\workspace\HybridDb\HybridDb\bin\Debug\Newtonsoft.Json.dll
+C:\workspace\HybridDb\HybridDb\bin\Debug\Dapper.pdb
+C:\workspace\HybridDb\HybridDb\bin\Debug\Dapper.xml
+C:\workspace\HybridDb\HybridDb\bin\Debug\Newtonsoft.Json.xml
+C:\workspace\HybridDb\HybridDb\obj\Debug\HybridDb.dll
+C:\workspace\HybridDb\HybridDb\obj\Debug\HybridDb.pdb
+C:\workspace\HybridDb\HybridDb\obj\Debug\HybridDb.csprojResolveAssemblyReference.cache

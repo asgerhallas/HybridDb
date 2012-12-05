@@ -1,0 +1,16 @@
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\HybridDb.Tests.dll
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\HybridDb.Tests.pdb
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Dapper.dll
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\HybridDb.dll
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Shouldly.dll
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\xunit.dll
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\HybridDb.pdb
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Dapper.pdb
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Dapper.xml
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Shouldly.pdb
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\xunit.xml
+C:\workspace\HybridDb\HybridDb.Tests\obj\Debug\HybridDb.Tests.csprojResolveAssemblyReference.cache
+C:\workspace\HybridDb\HybridDb.Tests\obj\Debug\HybridDb.Tests.dll
+C:\workspace\HybridDb\HybridDb.Tests\obj\Debug\HybridDb.Tests.pdb
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Newtonsoft.Json.dll
+C:\workspace\HybridDb\HybridDb.Tests\bin\Debug\Newtonsoft.Json.xml

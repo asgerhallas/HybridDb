@@ -1,0 +1,7 @@
+<Modules>
+  <Module PersistentId="97E49DA1-C846-4900-BA32-E17C0163A331" ModuleId="HybridDb" />
+  <Module PersistentId="B4D2D6CA-5E86-48D5-B12F-6CAAE847015C" ModuleId="HybridDb.Tests" />
+  <Module PersistentId="Dapper, Version=1.12.0.0, Culture=neutral, PublicKeyToken=null" ModuleId="Dapper" />
+  <Module PersistentId="System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" ModuleId="System.Data" />
+  <Module PersistentId="Dapper, Version=1.12.0.0, Culture=neutral, PublicKeyToken=null" ModuleId="Dapper_1" />
+</Modules>
