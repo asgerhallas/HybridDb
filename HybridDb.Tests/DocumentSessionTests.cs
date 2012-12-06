@@ -93,7 +93,17 @@ namespace HybridDb.Tests
         [Fact]
         public void CanLoadDocument()
         {
-            throw new NotImplementedException();
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id.ToString());
+            }
         }
 
         [Fact]

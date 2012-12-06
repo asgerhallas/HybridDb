@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Dynamic;
 using System.Linq;
 using Dapper;
 
@@ -59,19 +58,21 @@ namespace HybridDb
             return new DocumentSession(this, schema.Tables);
         }
 
-        public void Insert(ITableConfiguration table, Dictionary<IColumnConfiguration, object> values)
+        public void Insert(ITableConfiguration table, object values)
         {
+            var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
+
             using (var connection = Connect())
             {
                 var sql = string.Format("insert into {0} ({1}) values ({2})",
                                         FormatTableName(table.Name),
-                                        string.Join(", ", values.Keys.Select(x => x.Name)),
-                                        string.Join(", ", values.Keys.Select(x => "@" + x.Name)));
+                                        string.Join(", ", valuesAsDictionary.Keys),
+                                        string.Join(", ", valuesAsDictionary.Keys.Select(key => "@" + key)));
 
                 var parameters = new DynamicParameters();
-                foreach (var value in values)
+                foreach (var value in valuesAsDictionary)
                 {
-                    var columnConfiguration = value.Key;
+                    var columnConfiguration = table[value.Key];
                     parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
                 }
 
@@ -79,29 +80,31 @@ namespace HybridDb
             }
         }
 
-        public void Update(ITableConfiguration table, Dictionary<IColumnConfiguration, object> values)
+        public void Update(ITableConfiguration table, object values)
         {
+            var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
+
             using (var connection = Connect())
             {
                 var sql = string.Format("update {0} set {1},{2}=@NewEtag where {3}=@Id and {2}=@Etag",
                                         FormatTableName(table.Name),
-                                        string.Join(", ", values.Keys
-                                                                .Except(new IColumnConfiguration[] {table.IdColumn, table.EtagColumn})
-                                                                .Select(x => x.Name + "=@" + x.Name)),
+                                        string.Join(", ", valuesAsDictionary.Keys
+                                                                .Except(new[] {table.IdColumn.Name, table.EtagColumn.Name})
+                                                                .Select(key => key + "=@" + key)),
                                         table.EtagColumn.Name,
                                         table.IdColumn.Name);
 
                 var parameters = new DynamicParameters();
                 parameters.Add("@NewEtag", Guid.NewGuid(), table.EtagColumn.Column.DbType);
-                foreach (var value in values)
+                foreach (var value in valuesAsDictionary)
                 {
-                    var columnConfiguration = value.Key;
+                    var columnConfiguration = table[value.Key];
                     parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
                 }
 
                 var rowsUpdated = connection.Connection.Execute(sql, parameters);
-                if (rowsUpdated == null)
-
+                if (rowsUpdated == 0)
+                    throw new ConcurrencyException();
             }
         }
 
@@ -113,12 +116,11 @@ namespace HybridDb
                                         FormatTableName(table.Name),
                                         table.IdColumn.Name);
 
-                var row = (IDictionary<string, object>)connection.Connection.Query(sql, new {Id = id}).SingleOrDefault();
+                var row = (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = id}).SingleOrDefault();
                 if (row == null)
                     return null;
 
                 return row.ToDictionary(x => table[x.Key], x => x.Value);
-
             }
         }
 
@@ -141,7 +143,6 @@ namespace HybridDb
         {
             return (connectionForTesting != null) ? "#" + tableName : tableName;
         }
-
 
         public class ConnectionManager : IDisposable
         {

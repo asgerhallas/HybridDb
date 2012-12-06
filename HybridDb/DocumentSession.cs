@@ -38,7 +38,7 @@ namespace HybridDb
             foreach (var entity in entities)
             {
                 var configuration = entityConfigurations[entity.GetType()];
-                store.Insert(configuration, configuration.Columns.ToDictionary(x => x, x => x.GetValue(entity)));
+                store.Insert(configuration, configuration.Columns.ToDictionary(x => x.Name, x => x.GetValue(entity)));
             }
         }
 

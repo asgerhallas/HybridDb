@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Dynamic;
 using System.Linq;
 using System.Text;
 using Dapper;
@@ -114,12 +115,12 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new Dictionary<IColumnConfiguration, object>
+            store.Insert(table, new
             {
-                {table.IdColumn, id},
-                {table.EtagColumn, etag},
-                {table.DocumentColumn, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}},
-                {table["Field"], "Asger"}
+                Id = id,
+                Etag = etag,
+                Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'},
+                Field = "Asger"
             });
 
             var row = connection.Query("select * from #Entity").Single();
@@ -139,20 +140,20 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new Dictionary<IColumnConfiguration, object>
+            store.Insert(table, new
             {
-                {table.IdColumn, id},
-                {table.EtagColumn, etag},
-                {table.DocumentColumn, new byte[] {}},
-                {table["Field"], "Asger"}
+                Id = id,
+                Etag = etag,
+                Document = new byte[] { },
+                Field = "Asger"
             });
 
-            store.Update(table, new Dictionary<IColumnConfiguration, object>
+            store.Update(table, new
             {
-                {table.IdColumn, id},
-                {table.EtagColumn, etag},
-                {table.DocumentColumn, new byte[] {}},
-                {table["Field"], "Lars"}
+                Id = id,
+                Etag = etag,
+                Document = new byte[] { },
+                Field = "Lars"
             });
 
             var row = connection.Query("select * from #Entity").Single();
@@ -170,21 +171,49 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new Dictionary<IColumnConfiguration, object>
+            store.Insert(table, new
             {
-                {table.IdColumn, id},
-                {table.EtagColumn, etag},
-                {table.DocumentColumn, new byte[] {}},
-                {table["Field"], "Asger"}
+                Id = id,
+                Etag = etag,
+                Document = new byte[] { },
+                Field = "Asger"
             });
 
             Should.Throw<ConcurrencyException>(
-                () => store.Update(table, new Dictionary<IColumnConfiguration, object>
+                () => store.Update(table, new
                 {
-                    {table.IdColumn, id},
-                    {table.EtagColumn, Guid.NewGuid()},
-                    {table.DocumentColumn, new byte[] {}},
-                    {table["Field"], "Lars"}
+                    Id = Guid.NewGuid(),
+                    Etag = etag,
+                    Document = new byte[] { },
+                    Field = "Lars"
+                }));
+        }
+        
+        [Fact]
+        public void UpdateFailsWhenIdNotMatchAkaObjectDeleted()
+        {
+            var store = DocumentStore.ForTesting(connection);
+            store.ForDocument<Entity>().Store(x => x.Field);
+            store.Initialize();
+
+            var id = Guid.NewGuid();
+            var etag = Guid.NewGuid();
+            var table = store.Schema.GetTable<Entity>();
+            store.Insert(table, new 
+            {
+                Id = id,
+                Etag = etag,
+                Document = new byte[] {},
+                Field = "Asger"
+            });
+
+            Should.Throw<ConcurrencyException>(
+                () => store.Update(table, new 
+                {
+                    Id = Guid.NewGuid(),
+                    Etag = etag,
+                    Document = new byte[] {},
+                    Field = "Lars"
                 }));
         }
 
@@ -197,21 +226,15 @@ namespace HybridDb.Tests
 
             var id = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new Dictionary<IColumnConfiguration, object>
+            store.Insert(table, new
             {
-                {table.IdColumn, id},
-                {table["Field"], "Asger"}
+                Id = id,
+                Field = "Asger"
             });
 
             var entity = store.Get(table, id, null);
             entity[table.IdColumn].ShouldBe(id);
             entity[table["Field"]].ShouldBe("Asger");
-        }
-
-        [Fact]
-        public void EmploysOptimisticConcurrency()
-        {
-            throw new NotImplementedException();
         }
 
         bool TableExists(string name, bool temporary)

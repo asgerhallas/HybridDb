@@ -50,6 +50,7 @@
     <Compile Include="DocumentColumn.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
+    <Compile Include="ObjectToDictionaryRegistry.cs" />
     <Compile Include="TableConfiguration.cs" />
     <Compile Include="ExpressionExtensions.cs" />
     <Compile Include="IColumnConfiguration.cs" />

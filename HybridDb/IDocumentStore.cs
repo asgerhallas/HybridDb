@@ -9,8 +9,8 @@ namespace HybridDb
         IDocumentSession OpenSession();
         Schema Schema { get; }
         TableConfiguration<TEntity> ForDocument<TEntity>();
-        void Insert(ITableConfiguration table, Dictionary<IColumnConfiguration, object> values);
-        void Update(ITableConfiguration table, Dictionary<IColumnConfiguration, object> values);
+        void Insert(ITableConfiguration table, object values);
+        void Update(ITableConfiguration table, object values);
         Dictionary<IColumnConfiguration, object> Get(ITableConfiguration table, Guid id, Guid? etag);
     }
 
