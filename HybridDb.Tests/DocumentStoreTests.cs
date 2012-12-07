@@ -232,9 +232,9 @@ namespace HybridDb.Tests
                 Field = "Asger"
             });
 
-            var entity = store.Get(table, id, null);
-            entity[table.IdColumn].ShouldBe(id);
-            entity[table["Field"]].ShouldBe("Asger");
+            var entity = store.Get(table, id);
+            entity["Id"].ShouldBe(id);
+            entity["Field"].ShouldBe("Asger");
         }
 
         bool TableExists(string name, bool temporary)

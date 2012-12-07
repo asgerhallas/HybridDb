@@ -58,6 +58,28 @@ namespace HybridDb
             return new DocumentSession(this, schema.Tables);
         }
 
+        public void Insert<T>(Guid id, Guid etag, T values)
+        {
+            var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
+
+            using (var connection = Connect())
+            {
+                var sql = string.Format("insert into {0} ({1}) values ({2})",
+                                        FormatTableName(table.Name),
+                                        string.Join(", ", valuesAsDictionary.Keys),
+                                        string.Join(", ", valuesAsDictionary.Keys.Select(key => "@" + key)));
+
+                var parameters = new DynamicParameters();
+                foreach (var value in valuesAsDictionary)
+                {
+                    var columnConfiguration = table[value.Key];
+                    parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
+                }
+
+                connection.Connection.Execute(sql, parameters);
+            }
+        }
+
         public void Insert(ITableConfiguration table, object values)
         {
             var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
@@ -108,7 +130,7 @@ namespace HybridDb
             }
         }
 
-        public Dictionary<IColumnConfiguration, object> Get(ITableConfiguration table, Guid id, Guid? etag)
+        public IDictionary<string, object> Get(ITableConfiguration table, Guid id)
         {
             using (var connection = Connect())
             {
@@ -116,11 +138,7 @@ namespace HybridDb
                                         FormatTableName(table.Name),
                                         table.IdColumn.Name);
 
-                var row = (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = id}).SingleOrDefault();
-                if (row == null)
-                    return null;
-
-                return row.ToDictionary(x => table[x.Key], x => x.Value);
+                return (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = id}).SingleOrDefault();
             }
         }
 

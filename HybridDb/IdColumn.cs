@@ -18,5 +18,10 @@ namespace HybridDb
         {
             return ((dynamic) document).Id;
         }
+
+        public object SetValue(object value)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

@@ -9,12 +9,9 @@ namespace HybridDb
         IDocumentSession OpenSession();
         Schema Schema { get; }
         TableConfiguration<TEntity> ForDocument<TEntity>();
+        void Insert<T>(Guid id, Guid etag, T values);
         void Insert(ITableConfiguration table, object values);
         void Update(ITableConfiguration table, object values);
-        Dictionary<IColumnConfiguration, object> Get(ITableConfiguration table, Guid id, Guid? etag);
-    }
-
-    public class ConcurrencyException : Exception
-    {
+        IDictionary<string, object> Get(ITableConfiguration table, Guid id);
     }
 }

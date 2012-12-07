@@ -13,7 +13,7 @@ namespace HybridDb.Tests
         public void GetValueFromDocumentColumn()
         {
             var serializer = new JsonSerializer();
-            var column = new DocumentColumn(serializer);
+            var column = new DocumentColumn(typeof(object), serializer);
             var bytes = (byte[])column.GetValue(new {hat = "briller"});
             using(var inStream = new MemoryStream(bytes))
             using(var bsonReader = new BsonReader(inStream))
@@ -26,7 +26,7 @@ namespace HybridDb.Tests
         [Fact]
         public void GetValueFromDefaultColumn()
         {
-            var column = new ColumnConfiguration<Entity, string>(x => x.Bryststørrelse);
+            var column = new ProjectionColumn<Entity, string>(x => x.Bryststørrelse);
             var value = column.GetValue(new Entity {Bryststørrelse = "DD"});
             value.ShouldBe("DD");
         }

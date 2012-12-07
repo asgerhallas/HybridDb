@@ -22,7 +22,7 @@ namespace HybridDb
             EtagColumn = new EtagColumn();
             columns.Add(EtagColumn.Name, EtagColumn);
 
-            DocumentColumn = new DocumentColumn(serializer);
+            DocumentColumn = new DocumentColumn(typeof(TEntity), serializer);
             columns.Add(DocumentColumn.Name, DocumentColumn);
         }
 
@@ -44,7 +44,7 @@ namespace HybridDb
 
         public TableConfiguration<TEntity> Store<TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            var column = new ColumnConfiguration<TEntity, TMember>(member);
+            var column = new ProjectionColumn<TEntity, TMember>(member);
             columns.Add(column.Name, column);
             return this;
         }
@@ -57,6 +57,11 @@ namespace HybridDb
         public object GetValue(object document)
         {
             return Guid.NewGuid();
+        }
+
+        public object SetValue(object value)
+        {
+            throw new NotImplementedException();
         }
     }
 }

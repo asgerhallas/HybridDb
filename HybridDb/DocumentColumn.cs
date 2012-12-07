@@ -8,10 +8,12 @@ namespace HybridDb
 {
     public class DocumentColumn : IColumnConfiguration
     {
+        readonly Type documentType;
         readonly JsonSerializer serializer;
 
-        public DocumentColumn(JsonSerializer serializer)
+        public DocumentColumn(Type documentType, JsonSerializer serializer)
         {
+            this.documentType = documentType;
             this.serializer = serializer;
         }
 
@@ -32,6 +34,15 @@ namespace HybridDb
             {
                 serializer.Serialize(bsonWriter, document);
                 return outStream.ToArray();
+            }
+        }
+
+        public object SetValue(object value)
+        {
+            using (var inStream = new MemoryStream((byte[])value))
+            using (var bsonReader = new BsonReader(inStream))
+            {
+                return serializer.Deserialize(bsonReader, documentType);
             }
         }
     }

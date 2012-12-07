@@ -46,7 +46,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ColumnConfiguration.cs" />
+    <Compile Include="Column.cs" />
+    <Compile Include="ProjectionColumn.cs" />
+    <Compile Include="ConcurrencyException.cs" />
     <Compile Include="DocumentColumn.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />

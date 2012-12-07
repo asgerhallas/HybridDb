@@ -102,7 +102,26 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(id.ToString());
+                var document = session.Load<Entity>(id);
+                document.Property.ShouldBe("Asger");
+            }
+        }
+
+        [Fact]
+        public void LoadingSameDocumentTwiceInSameSessionReturnsSameInstance()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var document1 = session.Load<Entity>(id);
+                var document2 = session.Load<Entity>(id);
+                document1.ShouldBe(document2);
             }
         }
 
@@ -115,7 +134,48 @@ namespace HybridDb.Tests
         [Fact]
         public void SavesChangesWhenObjectHasChanged()
         {
-            throw new NotImplementedException();
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var document = session.Load<Entity>(id);
+                document.Property = "Lars";
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var document = session.Load<Entity>(id);
+                document.Property.ShouldBe("Lars");
+            }
+        }
+
+        [Fact]
+        public void DoesNotSaveChangesWhenObjectHasNotChanged()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var document = session.Load<Entity>(id);
+                document.Property.ShouldBe("Asger");
+            }
         }
 
         [Fact]

@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace HybridDb
 {
-    public class ColumnConfiguration<TEntity, TMember> : IColumnConfiguration
+    public class ProjectionColumn<TEntity, TMember> : IColumnConfiguration
     {
         static Dictionary<Type, Column> typeToColumn = new Dictionary<Type, Column>
         {
@@ -52,7 +52,7 @@ namespace HybridDb
         readonly Expression<Func<TEntity, TMember>> member;
         readonly Func<TEntity, TMember> getter;
 
-        public ColumnConfiguration(Expression<Func<TEntity, TMember>> member)
+        public ProjectionColumn(Expression<Func<TEntity, TMember>> member)
         {
             this.member = member;
             getter = member.Compile();
@@ -68,6 +68,11 @@ namespace HybridDb
         public object GetValue(object document)
         {
             return getter((TEntity) document);
+        }
+
+        public object SetValue(object value)
+        {
+            throw new NotImplementedException();
         }
 
         static Type GetMemberType(MemberInfo info)
