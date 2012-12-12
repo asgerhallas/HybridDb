@@ -2,13 +2,13 @@
 
 namespace HybridDb
 {
-    public interface ITableConfiguration
+    public interface ITable
     {
         string Name { get; }
-        IEnumerable<IColumnConfiguration> Columns { get; }
+        IEnumerable<IColumn> Columns { get; }
         IdColumn IdColumn { get; }
         EtagColumn EtagColumn { get; }
         DocumentColumn DocumentColumn { get; }
-        IColumnConfiguration this[string name] { get; }
+        IColumn this[string name] { get; }
     }
 }

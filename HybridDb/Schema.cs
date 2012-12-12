@@ -6,26 +6,26 @@ namespace HybridDb
 {
     public class Schema
     {
-        readonly Dictionary<Type, ITableConfiguration> tables;
+        readonly Dictionary<Type, ITable> tables;
 
         public Schema()
         {
-            tables = new Dictionary<Type, ITableConfiguration>();
+            tables = new Dictionary<Type, ITable>();
         }
 
-        public Dictionary<Type, ITableConfiguration> Tables
+        public Dictionary<Type, ITable> Tables
         {
             get { return tables; }
         }
 
-        public TableConfiguration<TEntity> Register<TEntity>()
+        public Table<TEntity> Register<TEntity>()
         {
-            var entity = new TableConfiguration<TEntity>(new JsonSerializer());
+            var entity = new Table<TEntity>(new JsonSerializer());
             tables.Add(typeof (TEntity), entity);
             return entity;
         }
 
-        public ITableConfiguration GetTable<T>()
+        public ITable GetTable<T>()
         {
             return tables[typeof (T)];
         }

@@ -8,10 +8,9 @@ namespace HybridDb
         void Initialize();
         IDocumentSession OpenSession();
         Schema Schema { get; }
-        TableConfiguration<TEntity> ForDocument<TEntity>();
-        void Insert<T>(Guid id, Guid etag, T values);
-        void Insert(ITableConfiguration table, object values);
-        void Update(ITableConfiguration table, object values);
-        IDictionary<string, object> Get(ITableConfiguration table, Guid id);
+        Table<TEntity> ForDocument<TEntity>();
+        void Insert(Guid key, object projections, byte[] document);
+        void Update(Guid key, Guid etag, object projections, byte[] document);
+        IDictionary<string, object> Get(ITable table, Guid key);
     }
 }

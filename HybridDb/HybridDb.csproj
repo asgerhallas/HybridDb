@@ -47,19 +47,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Column.cs" />
+    <Compile Include="EtagColumn.cs" />
+    <Compile Include="IColumn.cs" />
     <Compile Include="ProjectionColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
     <Compile Include="DocumentColumn.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
-    <Compile Include="TableConfiguration.cs" />
+    <Compile Include="Table.cs" />
     <Compile Include="ExpressionExtensions.cs" />
-    <Compile Include="IColumnConfiguration.cs" />
+    <Compile Include="IProjectionColumn.cs" />
     <Compile Include="IdColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
-    <Compile Include="ITableConfiguration.cs" />
+    <Compile Include="ITable.cs" />
     <Compile Include="Schema.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

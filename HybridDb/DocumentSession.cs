@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Newtonsoft.Json.Bson;
 
 namespace HybridDb
 {
     public class DocumentSession : IDocumentSession 
     {
         readonly IDocumentStore store;
-        readonly Dictionary<Type, ITableConfiguration> entityConfigurations;
+        readonly Dictionary<Type, ITable> entityConfigurations;
         readonly Dictionary<Guid, ManagedEntity> entities;
-        readonly List<object> transientEntities;
-        readonly List<object> deletedEntities;
 
         class ManagedEntity
         {
@@ -25,7 +25,7 @@ namespace HybridDb
             Deleted
         }
 
-        public DocumentSession(IDocumentStore store, Dictionary<Type, ITableConfiguration> entityConfigurations)
+        public DocumentSession(IDocumentStore store, Dictionary<Type, ITable> entityConfigurations)
         {
             entities = new Dictionary<Guid, ManagedEntity>();
 
@@ -76,14 +76,16 @@ namespace HybridDb
         {
             foreach (var entity in entities.Values)
             {
+                var id = ((dynamic) entity.Entity).Id;
                 var table = entityConfigurations[entity.Entity.GetType()];
+                var projections = table.Columns.OfType<IProjectionColumn>().ToDictionary(x => x.Name, x => x.GetValue(entity.Entity));
                 switch (entity.State)
                 {
                     case EntityState.Transient:
-                        store.Insert(table, table.Columns.ToDictionary(x => x.Name, x => x.GetValue(entity.Entity)));
+                        store.Insert(id, projections, GetValue(entity.Entity));
                         break;
                     case EntityState.Loaded:
-                        store.Update(table, table.Columns.ToDictionary(x => x.Name, x => x.GetValue(entity.Entity)));
+                        store.Update(id, null, projections, GetValue(entity.Entity));
                         break;
                     case EntityState.Deleted:
                         throw new NotImplementedException();
@@ -91,6 +93,26 @@ namespace HybridDb
                 }
             }
         }
+
+        public byte[] GetValue(object document)
+        {
+            using (var outStream = new MemoryStream())
+            using (var bsonWriter = new BsonWriter(outStream))
+            {
+                serializer.Serialize(bsonWriter, document);
+                return outStream.ToArray();
+            }
+        }
+
+        public object SetValue(object value)
+        {
+            using (var inStream = new MemoryStream((byte[])value))
+            using (var bsonReader = new BsonReader(inStream))
+            {
+                return serializer.Deserialize(bsonReader, documentType);
+            }
+        }
+
 
         public void Dispose()
         {

@@ -115,13 +115,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new
-            {
-                Id = id,
-                Etag = etag,
-                Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'},
-                Field = "Asger"
-            });
+            store.Insert(table);
 
             var row = connection.Query("select * from #Entity").Single();
             ((Guid) row.Id).ShouldBe(id);
@@ -140,13 +134,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new
-            {
-                Id = id,
-                Etag = etag,
-                Document = new byte[] { },
-                Field = "Asger"
-            });
+            store.Insert(table);
 
             store.Update(table, new
             {
@@ -171,13 +159,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new
-            {
-                Id = id,
-                Etag = etag,
-                Document = new byte[] { },
-                Field = "Asger"
-            });
+            store.Insert(table);
 
             Should.Throw<ConcurrencyException>(
                 () => store.Update(table, new
@@ -199,13 +181,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new 
-            {
-                Id = id,
-                Etag = etag,
-                Document = new byte[] {},
-                Field = "Asger"
-            });
+            store.Insert(table);
 
             Should.Throw<ConcurrencyException>(
                 () => store.Update(table, new 
@@ -226,11 +202,7 @@ namespace HybridDb.Tests
 
             var id = Guid.NewGuid();
             var table = store.Schema.GetTable<Entity>();
-            store.Insert(table, new
-            {
-                Id = id,
-                Field = "Asger"
-            });
+            store.Insert(table);
 
             var entity = store.Get(table, id);
             entity["Id"].ShouldBe(id);

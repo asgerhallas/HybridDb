@@ -32,7 +32,7 @@ namespace HybridDb
             get { return schema; }
         }
 
-        public TableConfiguration<TDocument> ForDocument<TDocument>()
+        public Table<TDocument> ForDocument<TDocument>()
         {
             return schema.Register<TDocument>();
         }
@@ -58,19 +58,20 @@ namespace HybridDb
             return new DocumentSession(this, schema.Tables);
         }
 
-        public void Insert<T>(Guid id, Guid etag, T values)
+        public void Insert(Guid key, object projections, byte[] document)
         {
-            var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
+            var table = Schema.Tables[document.GetType()];
+            var projectionsAsDictionary = projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections);
 
             using (var connection = Connect())
             {
                 var sql = string.Format("insert into {0} ({1}) values ({2})",
                                         FormatTableName(table.Name),
-                                        string.Join(", ", valuesAsDictionary.Keys),
-                                        string.Join(", ", valuesAsDictionary.Keys.Select(key => "@" + key)));
+                                        string.Join(", ", projectionsAsDictionary.Keys),
+                                        string.Join(", ", projectionsAsDictionary.Keys.Select(name => "@" + name)));
 
                 var parameters = new DynamicParameters();
-                foreach (var value in valuesAsDictionary)
+                foreach (var value in projectionsAsDictionary)
                 {
                     var columnConfiguration = table[value.Key];
                     parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
@@ -80,39 +81,17 @@ namespace HybridDb
             }
         }
 
-        public void Insert(ITableConfiguration table, object values)
+        public void Update(Guid key, Guid etag, object projections, byte[] document)
         {
-            var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
-
-            using (var connection = Connect())
-            {
-                var sql = string.Format("insert into {0} ({1}) values ({2})",
-                                        FormatTableName(table.Name),
-                                        string.Join(", ", valuesAsDictionary.Keys),
-                                        string.Join(", ", valuesAsDictionary.Keys.Select(key => "@" + key)));
-
-                var parameters = new DynamicParameters();
-                foreach (var value in valuesAsDictionary)
-                {
-                    var columnConfiguration = table[value.Key];
-                    parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
-                }
-
-                connection.Connection.Execute(sql, parameters);
-            }
-        }
-
-        public void Update(ITableConfiguration table, object values)
-        {
-            var valuesAsDictionary = values as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(values);
+            var table = Schema.Tables[document.GetType()];
+            var valuesAsDictionary = projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections);
 
             using (var connection = Connect())
             {
                 var sql = string.Format("update {0} set {1},{2}=@NewEtag where {3}=@Id and {2}=@Etag",
                                         FormatTableName(table.Name),
                                         string.Join(", ", valuesAsDictionary.Keys
-                                                                .Except(new[] {table.IdColumn.Name, table.EtagColumn.Name})
-                                                                .Select(key => key + "=@" + key)),
+                                                                .Select(name => name + "=@" + name)),
                                         table.EtagColumn.Name,
                                         table.IdColumn.Name);
 
@@ -130,7 +109,7 @@ namespace HybridDb
             }
         }
 
-        public IDictionary<string, object> Get(ITableConfiguration table, Guid id)
+        public IDictionary<string, object> Get(ITable table, Guid key)
         {
             using (var connection = Connect())
             {
@@ -138,7 +117,7 @@ namespace HybridDb
                                         FormatTableName(table.Name),
                                         table.IdColumn.Name);
 
-                return (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = id}).SingleOrDefault();
+                return (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault();
             }
         }
 

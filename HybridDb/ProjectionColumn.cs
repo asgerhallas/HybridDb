@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace HybridDb
 {
-    public class ProjectionColumn<TEntity, TMember> : IColumnConfiguration
+    public class ProjectionColumn<TEntity, TMember> : IProjectionColumn
     {
         static Dictionary<Type, Column> typeToColumn = new Dictionary<Type, Column>
         {

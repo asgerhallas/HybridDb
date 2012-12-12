@@ -2,7 +2,7 @@
 
 namespace HybridDb
 {
-    public class IdColumn : IColumnConfiguration
+    public class IdColumn : IColumn
     {
         public string Name
         {
@@ -12,16 +12,6 @@ namespace HybridDb
         public Column Column
         {
             get { return new Column(DbType.Guid); }
-        }
-
-        public object GetValue(object document)
-        {
-            return ((dynamic) document).Id;
-        }
-
-        public object SetValue(object value)
-        {
-            throw new System.NotImplementedException();
         }
     }
 }
