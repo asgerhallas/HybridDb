@@ -4,11 +4,11 @@ using Newtonsoft.Json;
 
 namespace HybridDb
 {
-    public class Schema
+    public class Configuration
     {
         readonly Dictionary<Type, ITable> tables;
 
-        public Schema()
+        public Configuration()
         {
             tables = new Dictionary<Type, ITable>();
         }
@@ -20,14 +20,24 @@ namespace HybridDb
 
         public Table<TEntity> Register<TEntity>()
         {
-            var entity = new Table<TEntity>(new JsonSerializer());
+            var entity = new Table<TEntity>();
             tables.Add(typeof (TEntity), entity);
             return entity;
         }
 
-        public ITable GetTable<T>()
+        public ITable GetTableFor<T>()
         {
             return tables[typeof (T)];
+        }
+
+        public ITable GetTableFor(Type type)
+        {
+            return tables[type];
+        }
+
+        public ISerializer CreateSerializer()
+        {
+            return new Serializer();
         }
     }
 }

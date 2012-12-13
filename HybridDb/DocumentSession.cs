@@ -1,20 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Newtonsoft.Json.Bson;
 
 namespace HybridDb
 {
-    public class DocumentSession : IDocumentSession 
+    public class DocumentSession : IDocumentSession
     {
         readonly IDocumentStore store;
-        readonly Dictionary<Type, ITable> entityConfigurations;
         readonly Dictionary<Guid, ManagedEntity> entities;
 
         class ManagedEntity
         {
             public object Entity { get; set; }
+            public Guid Etag { get; set; }
             public EntityState State { get; set; }
         }
 
@@ -25,12 +23,11 @@ namespace HybridDb
             Deleted
         }
 
-        public DocumentSession(IDocumentStore store, Dictionary<Type, ITable> entityConfigurations)
+        public DocumentSession(IDocumentStore store)
         {
             entities = new Dictionary<Guid, ManagedEntity>();
 
             this.store = store;
-            this.entityConfigurations = entityConfigurations;
         }
 
         public T Load<T>(Guid id) where T:class
@@ -39,9 +36,9 @@ namespace HybridDb
             if (entities.TryGetValue(id, out managedEntity))
                 return (T)managedEntity.Entity;
 
-            var table = entityConfigurations[typeof (T)];
-            var values = store.Get(table, id);
-            var entity = table.DocumentColumn.SetValue(values[table.DocumentColumn.Name]);
+            var table = store.Configuration.GetTableFor<T>();
+            var document = store.Get(table, id);
+            var entity = store.Configuration.CreateSerializer().Deserialize<T>(document.Data);
 
             managedEntity = new ManagedEntity
             {
@@ -50,12 +47,12 @@ namespace HybridDb
             };
             
             entities.Add(id, managedEntity);
-            return (T) entity;
+            return entity;
         }
 
         public void Store(object entity)
         {
-            var table = entityConfigurations[entity.GetType()];
+            var table = store.Configuration.GetTableFor(entity.GetType());
             var id = (Guid) table.IdColumn.GetValue(entity);
             if (entities.ContainsKey(id))
                 return;
@@ -69,23 +66,30 @@ namespace HybridDb
 
         public void Delete(object entity)
         {
-            deletedEntities.Add(entity);
+            var table = store.Configuration.GetTableFor(entity.GetType());
+            var id = (Guid)table.IdColumn.GetValue(entity);
+            if (!entities.ContainsKey(id))
+                return;
+
+            entities[id].State = EntityState.Deleted;
         }
 
         public void SaveChanges()
         {
+            var serializer = store.Configuration.CreateSerializer();
             foreach (var entity in entities.Values)
             {
                 var id = ((dynamic) entity.Entity).Id;
-                var table = entityConfigurations[entity.Entity.GetType()];
+                var table = store.Configuration.GetTableFor(entity.GetType());
                 var projections = table.Columns.OfType<IProjectionColumn>().ToDictionary(x => x.Name, x => x.GetValue(entity.Entity));
+                var document = serializer.Serialize(entity);
                 switch (entity.State)
                 {
                     case EntityState.Transient:
-                        store.Insert(id, projections, GetValue(entity.Entity));
+                        store.Insert(table, id, document, projections);
                         break;
                     case EntityState.Loaded:
-                        store.Update(id, null, projections, GetValue(entity.Entity));
+                        store.Update(table, id, entity.Etag, document, projections);
                         break;
                     case EntityState.Deleted:
                         throw new NotImplementedException();
@@ -93,26 +97,6 @@ namespace HybridDb
                 }
             }
         }
-
-        public byte[] GetValue(object document)
-        {
-            using (var outStream = new MemoryStream())
-            using (var bsonWriter = new BsonWriter(outStream))
-            {
-                serializer.Serialize(bsonWriter, document);
-                return outStream.ToArray();
-            }
-        }
-
-        public object SetValue(object value)
-        {
-            using (var inStream = new MemoryStream((byte[])value))
-            using (var bsonReader = new BsonReader(inStream))
-            {
-                return serializer.Deserialize(bsonReader, documentType);
-            }
-        }
-
 
         public void Dispose()
         {

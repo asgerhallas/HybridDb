@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Linq;
-using Newtonsoft.Json;
 
 namespace HybridDb
 {
@@ -10,7 +8,7 @@ namespace HybridDb
     {
         readonly Dictionary<string, IColumn> columns;
 
-        public Table(JsonSerializer serializer)
+        public Table()
         {
             columns = new Dictionary<string, IColumn>();
             Name = typeof (TEntity).Name;

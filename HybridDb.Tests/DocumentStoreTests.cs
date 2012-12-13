@@ -113,9 +113,8 @@ namespace HybridDb.Tests
             store.Initialize();
 
             var id = Guid.NewGuid();
-            var etag = Guid.NewGuid();
-            var table = store.Schema.GetTable<Entity>();
-            store.Insert(table);
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
 
             var row = connection.Query("select * from #Entity").Single();
             ((Guid) row.Id).ShouldBe(id);
@@ -132,17 +131,10 @@ namespace HybridDb.Tests
             store.Initialize();
 
             var id = Guid.NewGuid();
-            var etag = Guid.NewGuid();
-            var table = store.Schema.GetTable<Entity>();
-            store.Insert(table);
+            var table = store.Configuration.GetTableFor<Entity>();
+            var etag = store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
 
-            store.Update(table, new
-            {
-                Id = id,
-                Etag = etag,
-                Document = new byte[] { },
-                Field = "Lars"
-            });
+            store.Update(table, id, etag, new byte[] { }, new { Field = "Lars" });
 
             var row = connection.Query("select * from #Entity").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
@@ -158,17 +150,10 @@ namespace HybridDb.Tests
 
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
-            var table = store.Schema.GetTable<Entity>();
-            store.Insert(table);
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
 
-            Should.Throw<ConcurrencyException>(
-                () => store.Update(table, new
-                {
-                    Id = Guid.NewGuid(),
-                    Etag = etag,
-                    Document = new byte[] { },
-                    Field = "Lars"
-                }));
+            Should.Throw<ConcurrencyException>(() => store.Update(table, id, Guid.NewGuid(), new byte[] {}, new {Field = "Lars"}));
         }
         
         [Fact]
@@ -180,17 +165,10 @@ namespace HybridDb.Tests
 
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
-            var table = store.Schema.GetTable<Entity>();
-            store.Insert(table);
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
 
-            Should.Throw<ConcurrencyException>(
-                () => store.Update(table, new 
-                {
-                    Id = Guid.NewGuid(),
-                    Etag = etag,
-                    Document = new byte[] {},
-                    Field = "Lars"
-                }));
+            Should.Throw<ConcurrencyException>(() => store.Update(table, Guid.NewGuid(), etag, new byte[] {}, new { Field = "Lars" }));
         }
 
         [Fact]
@@ -201,12 +179,12 @@ namespace HybridDb.Tests
             store.Initialize();
 
             var id = Guid.NewGuid();
-            var table = store.Schema.GetTable<Entity>();
-            store.Insert(table);
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
 
             var entity = store.Get(table, id);
-            entity["Id"].ShouldBe(id);
-            entity["Field"].ShouldBe("Asger");
+            entity.Projections["Id"].ShouldBe(id);
+            entity.Projections["Field"].ShouldBe("Asger");
         }
 
         bool TableExists(string name, bool temporary)

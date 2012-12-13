@@ -49,6 +49,7 @@
     <Compile Include="Column.cs" />
     <Compile Include="EtagColumn.cs" />
     <Compile Include="IColumn.cs" />
+    <Compile Include="ISerializer.cs" />
     <Compile Include="ProjectionColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
     <Compile Include="DocumentColumn.cs" />
@@ -62,7 +63,7 @@
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="ITable.cs" />
-    <Compile Include="Schema.cs" />
+    <Compile Include="Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

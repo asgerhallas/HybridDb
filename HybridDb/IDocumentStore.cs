@@ -7,10 +7,17 @@ namespace HybridDb
     {
         void Initialize();
         IDocumentSession OpenSession();
-        Schema Schema { get; }
+        Configuration Configuration { get; }
         Table<TEntity> ForDocument<TEntity>();
-        void Insert(Guid key, object projections, byte[] document);
-        void Update(Guid key, Guid etag, object projections, byte[] document);
-        IDictionary<string, object> Get(ITable table, Guid key);
+        Guid Insert(ITable table, Guid key, byte[] document, object projections);
+        Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections);
+        Document Get(ITable table, Guid key);
+    }
+
+    public class Document
+    {
+        public Guid Etag { get; set; }
+        public IDictionary<string, object> Projections { get; set; }
+        public byte[] Data { get; set; }
     }
 }

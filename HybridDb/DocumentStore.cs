@@ -8,13 +8,13 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
+        readonly Configuration configuration;
         readonly SqlConnection connectionForTesting;
         readonly string connectionString;
-        readonly Schema schema;
 
         DocumentStore()
         {
-            schema = new Schema();
+            configuration = new Configuration();
         }
 
         DocumentStore(SqlConnection connectionForTesting) : this()
@@ -27,14 +27,14 @@ namespace HybridDb
             this.connectionString = connectionString;
         }
 
-        public Schema Schema
+        public Configuration Configuration
         {
-            get { return schema; }
+            get { return configuration; }
         }
 
         public Table<TDocument> ForDocument<TDocument>()
         {
-            return schema.Register<TDocument>();
+            return configuration.Register<TDocument>();
         }
 
         public void Initialize()
@@ -42,7 +42,7 @@ namespace HybridDb
             using (var manager = Connect())
             using (var tx = manager.Connection.BeginTransaction())
             {
-                foreach (var entity in schema.Tables.Values)
+                foreach (var entity in configuration.Tables.Values)
                 {
                     var sql = "create table ";
                     sql += FormatTableName(entity.Name);
@@ -55,61 +55,94 @@ namespace HybridDb
 
         public IDocumentSession OpenSession()
         {
-            return new DocumentSession(this, schema.Tables);
+            return new DocumentSession(this);
         }
 
-        public void Insert(Guid key, object projections, byte[] document)
+        public Guid Insert(ITable table, Guid key, byte[] document, object projections)
         {
-            var table = Schema.Tables[document.GetType()];
-            var projectionsAsDictionary = projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections);
+            var values = projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections);
+
+            var etag = Guid.NewGuid();
+            values.Add(table.EtagColumn.Name, etag);
+            values.Add(table.IdColumn.Name, key);
+            values.Add(table.DocumentColumn.Name, document);
 
             using (var connection = Connect())
             {
                 var sql = string.Format("insert into {0} ({1}) values ({2})",
                                         FormatTableName(table.Name),
-                                        string.Join(", ", projectionsAsDictionary.Keys),
-                                        string.Join(", ", projectionsAsDictionary.Keys.Select(name => "@" + name)));
+                                        string.Join(", ", values.Keys),
+                                        string.Join(", ", values.Keys.Select(name => "@" + name)));
 
                 var parameters = new DynamicParameters();
-                foreach (var value in projectionsAsDictionary)
+                foreach (var value in values)
                 {
                     var columnConfiguration = table[value.Key];
-                    parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
+                    parameters.Add("@" + columnConfiguration.Name,
+                                   value.Value,
+                                   columnConfiguration.Column.DbType,
+                                   size: columnConfiguration.Column.Length);
                 }
 
                 connection.Connection.Execute(sql, parameters);
             }
+
+            return etag;
         }
 
-        public void Update(Guid key, Guid etag, object projections, byte[] document)
+        public Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections)
         {
-            var table = Schema.Tables[document.GetType()];
-            var valuesAsDictionary = projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections);
+            var projectionsAsDictionary = (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
+                .ToDictionary(x => table[x.Key], x => x.Value);
+
+            var newEtag = Guid.NewGuid();
+            projectionsAsDictionary.Add(table.EtagColumn, newEtag);
+            projectionsAsDictionary.Add(table.DocumentColumn, document);
 
             using (var connection = Connect())
             {
-                var sql = string.Format("update {0} set {1},{2}=@NewEtag where {3}=@Id and {2}=@Etag",
+                var sql = string.Format("update {0} set {1} where {2}=@Id and {3}=@CurrentEtag",
                                         FormatTableName(table.Name),
-                                        string.Join(", ", valuesAsDictionary.Keys
-                                                                .Select(name => name + "=@" + name)),
-                                        table.EtagColumn.Name,
-                                        table.IdColumn.Name);
+                                        string.Join(", ", projectionsAsDictionary.Keys.Select(name => name + "=@" + name)),
+                                        table.IdColumn.Name,
+                                        table.EtagColumn.Name);
 
-                var parameters = new DynamicParameters();
-                parameters.Add("@NewEtag", Guid.NewGuid(), table.EtagColumn.Column.DbType);
-                foreach (var value in valuesAsDictionary)
-                {
-                    var columnConfiguration = table[value.Key];
-                    parameters.Add("@" + columnConfiguration.Name, value.Value, columnConfiguration.Column.DbType, size: columnConfiguration.Column.Length);
-                }
+                var parameters = MapProjectionsToParameters(projectionsAsDictionary);
 
                 var rowsUpdated = connection.Connection.Execute(sql, parameters);
                 if (rowsUpdated == 0)
                     throw new ConcurrencyException();
             }
+
+            return newEtag;
         }
 
-        public IDictionary<string, object> Get(ITable table, Guid key)
+        Dictionary<IColumn, object> ConvertAnonymousToProjections(ITable table, object projections)
+        {
+            projections as IDictionary<IColumn, object>
+
+            var projectionsAsDictionary = (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
+                .ToDictionary(x => table[x.Key], x => x.Value);
+        }
+
+        DynamicParameters MapProjectionsToParameters(Dictionary<IColumn, object> projections)
+        {
+            var parameters = new DynamicParameters();
+            //parameters.Add("@Id", key, table.IdColumn.Column.DbType);
+            //parameters.Add("@CurrentEtag", etag, table.EtagColumn.Column.DbType);
+            foreach (var projection in projections)
+            {
+                var column = projection.Key;
+                parameters.Add("@" + column.Name,
+                               projection.Value,
+                               column.Column.DbType,
+                               size: column.Column.Length);
+            }
+
+            return parameters;
+        }
+
+        public Document Get(ITable table, Guid key)
         {
             using (var connection = Connect())
             {
@@ -117,7 +150,14 @@ namespace HybridDb
                                         FormatTableName(table.Name),
                                         table.IdColumn.Name);
 
-                return (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault();
+                IDictionary<string, object> values = connection.Connection.Query(sql, new {Id = key}).SingleOrDefault();
+                return new Document
+                {
+                    Etag = (Guid) values[table.EtagColumn.Name],
+                    Data = (byte[]) values[table.DocumentColumn.Name],
+                    Projections =
+                        values.Where(x => !new[] {table.IdColumn.Name, table.EtagColumn.Name, table.DocumentColumn.Name}.Contains(x.Key)).ToDictionary(x => x.Key, x => x.Value)
+                };
             }
         }
 

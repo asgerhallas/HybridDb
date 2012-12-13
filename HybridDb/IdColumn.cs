@@ -2,7 +2,7 @@
 
 namespace HybridDb
 {
-    public class IdColumn : IColumn
+    public class IdColumn : IProjectionColumn
     {
         public string Name
         {
@@ -12,6 +12,11 @@ namespace HybridDb
         public Column Column
         {
             get { return new Column(DbType.Guid); }
+        }
+
+        public object GetValue(object document)
+        {
+            return ((dynamic) document).Id;
         }
     }
 }
