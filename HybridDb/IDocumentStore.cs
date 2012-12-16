@@ -9,15 +9,12 @@ namespace HybridDb
         IDocumentSession OpenSession();
         Configuration Configuration { get; }
         Table<TEntity> ForDocument<TEntity>();
+        Guid Execute(params DatabaseCommand[] commands);
         Guid Insert(ITable table, Guid key, byte[] document, object projections);
         Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections);
-        Document Get(ITable table, Guid key);
-    }
-
-    public class Document
-    {
-        public Guid Etag { get; set; }
-        public IDictionary<string, object> Projections { get; set; }
-        public byte[] Data { get; set; }
+        IDictionary<IColumn, object> Get(ITable table, Guid key);
+        void Delete(ITable table, Guid key, Guid etag);
+        long NumberOfRequests { get; }
+        Guid LastWrittenEtag { get; }
     }
 }

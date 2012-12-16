@@ -39,7 +39,7 @@ namespace HybridDb
             get { return columns.Values; }
         }
 
-        public Table<TEntity> Store<TMember>(Expression<Func<TEntity, TMember>> member)
+        public Table<TEntity> Projection<TMember>(Expression<Func<TEntity, TMember>> member)
         {
             var column = new ProjectionColumn<TEntity, TMember>(member);
             columns.Add(column.Name, column);

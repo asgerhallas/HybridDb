@@ -2,7 +2,7 @@
 
 namespace HybridDb
 {
-    public class IdColumn : IProjectionColumn
+    public class IdColumn : IColumn
     {
         public string Name
         {
