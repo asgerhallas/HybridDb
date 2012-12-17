@@ -17,7 +17,7 @@ namespace HybridDb.Tests
             connection = new SqlConnection("data source=.;Integrated Security=True");
             connection.Open();
             store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>();
+            store.ForDocument<Entity>().Projection(x => x.ProjectedProperty);
             store.Initialize();
         }
 
@@ -348,10 +348,129 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void CanQueryDocument()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).ToList();
+                
+                entities.Count.ShouldBe(1);
+                entities[0].Property.ShouldBe("Asger");
+                entities[0].ProjectedProperty.ShouldBe("Large");
+            }
+        }
+
+        [Fact]
+        public void CanSaveChangesOnAQueriedDocument()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).Single();
+
+                entity.Property = "Lars";
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                session.Load<Entity>(id).Property.ShouldBe("Lars");
+            }
+        }
+
+        [Fact]
+        public void QueryingALoadedDocumentReturnsSameInstance()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var instance1 = session.Load<Entity>(id);
+                var instance2 = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).Single();
+
+                instance1.ShouldBe(instance2);
+            }
+        }
+
+        [Fact]
+        public void QueryingALoadedDocumentMarkedForDeletionReturnsNothing()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Load<Entity>(id);
+                session.Delete(entity);
+
+                var entities = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).ToList();
+
+                entities.Count.ShouldBe(0);
+            }
+        }
+
+        [Fact]
+        public void CanQueryAndReturnProjection()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
+                session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = session.Query<Entity, EntityProjection>("ProjectedProperty = @Size", new { Size = "Large" }).ToList();
+
+                entities.Count.ShouldBe(1);
+                entities[0].ProjectedProperty.ShouldBe("Large");
+            }
+        }
+
+        [Fact]
+        public void WillNotSaveChangesToProjectedValues()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Query<Entity, EntityProjection>("ProjectedProperty = @Size", new { Size = "Large" }).Single();
+                entity.ProjectedProperty = "Small";
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                session.Load<Entity>(id).ProjectedProperty.ShouldBe("Large");
+
+            }
+        }
+
         public class Entity
         {
             public Guid Id { get; set; }
+            public string ProjectedProperty { get; set; }
             public string Property { get; set; }
+        }
+
+        public class EntityProjection
+        {
+            public string ProjectedProperty { get; set; }
         }
     }
 }

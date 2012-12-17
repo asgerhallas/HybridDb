@@ -16,5 +16,7 @@ namespace HybridDb
         void Delete(ITable table, Guid key, Guid etag);
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
+        IEnumerable<IDictionary<IColumn, object>> Query(ITable table, string columns = "*", string where = "", object parameters = null);
+        IEnumerable<TProjection> Query<TProjection>(ITable table, string columns = "*", string where = "", object parameters = null);
     }
 }

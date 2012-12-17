@@ -52,10 +52,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CreatesDefaultColumns()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>();
-            store.Initialize();
-
+            CreateStore();
+            
             var idColumn = GetColumn("Entity", "Id", temporary: true);
             idColumn.ShouldNotBe(null);
             GetType(idColumn.system_type_id).ShouldBe("uniqueidentifier");
@@ -69,10 +67,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanCreateColumnsFromProperties()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Property);
-            store.Initialize();
-
+            CreateStore();
+            
             var column = GetColumn("Entity", "Property", temporary: true);
             column.ShouldNotBe(null);
             GetType(column.system_type_id).ShouldBe("int");
@@ -81,9 +77,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanCreateColumnsFromFields()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            CreateStore();
 
             var column = GetColumn("Entity", "Field", temporary: true);
             column.ShouldNotBe(null);
@@ -94,13 +88,11 @@ namespace HybridDb.Tests
         [Fact]
         public void CanInsert()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
+            store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
 
             var row = connection.Query("select * from #Entity").Single();
             ((Guid) row.Id).ShouldBe(id);
@@ -112,15 +104,13 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUpdate()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var etag = store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
+            var etag = store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
 
-            store.Update(table, id, etag, new byte[] { }, new { Field = "Lars" });
+            store.Update(table, id, etag, new byte[] {}, new {Field = "Lars"});
 
             var row = connection.Query("select * from #Entity").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
@@ -130,43 +120,37 @@ namespace HybridDb.Tests
         [Fact]
         public void UpdateFailsWhenEtagNotMatch()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
+            store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
 
             Should.Throw<ConcurrencyException>(() => store.Update(table, id, Guid.NewGuid(), new byte[] {}, new {Field = "Lars"}));
         }
-        
+
         [Fact]
         public void UpdateFailsWhenIdNotMatchAkaObjectDeleted()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
+            store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table, Guid.NewGuid(), etag, new byte[] {}, new { Field = "Lars" }));
+            Should.Throw<ConcurrencyException>(() => store.Update(table, Guid.NewGuid(), etag, new byte[] {}, new {Field = "Lars"}));
         }
 
         [Fact]
         public void CanGet()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
             var document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
-            var etag = store.Insert(table, id, document, new { Field = "Asger" });
+            var etag = store.Insert(table, id, document, new {Field = "Asger"});
 
             var row = store.Get(table, id);
             row[table.IdColumn].ShouldBe(id);
@@ -176,15 +160,61 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanDelete()
+        public void CanQueryAndReturnFullDocuments()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>();
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var etag = store.Insert(table, id, new byte[0], new { });
+            var document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
+            var etag1 = store.Insert(table, id, document, new {Field = "Asger"});
+            var etag2 = store.Insert(table, id, document, new {Field = "Hans"});
+            store.Insert(table, id, document, new {Field = "Bjarne"});
+
+            var rows = store.Query(table, where:"Field != @name", parameters:new { name = "Bjarne" }).ToList();
+
+            rows.Count().ShouldBe(2);
+            rows[0][table.IdColumn].ShouldBe(id);
+            rows[0][table.EtagColumn].ShouldBe(etag1);
+            rows[0][table.DocumentColumn].ShouldBe(document);
+            rows[0][table["Field"]].ShouldBe("Asger");
+
+            rows[1][table.IdColumn].ShouldBe(id);
+            rows[1][table.EtagColumn].ShouldBe(etag2);
+            rows[1][table.DocumentColumn].ShouldBe(document);
+            rows[1][table["Field"]].ShouldBe("Hans");
+        }
+
+        [Fact]
+        public void CanQueryAndReturnProjections()
+        {
+            var store = CreateStore();
+
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            var document = new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
+            store.Insert(table, id, document, new { Field = "Asger" });
+
+            var rows = store.Query(table,
+                                   columns: "Field",
+                                   where: "Field = @name",
+                                   parameters: new {name = "Asger"}).ToList();
+
+            rows.Count().ShouldBe(1);
+            rows[0][table.IdColumn].ShouldBe(id);
+            rows[0].ShouldNotContainKey(table.EtagColumn);
+            rows[0].ShouldNotContainKey(table.DocumentColumn);
+            rows[0][table["Field"]].ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanDelete()
+        {
+            var store = CreateStore();
+
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            var etag = store.Insert(table, id, new byte[0], new {});
 
             store.Delete(table, id, etag);
 
@@ -194,13 +224,11 @@ namespace HybridDb.Tests
         [Fact]
         public void DeleteFailsWhenEtagNotMatch()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>();
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new byte[0], new { });
+            store.Insert(table, id, new byte[0], new {});
 
             Should.Throw<ConcurrencyException>(() => store.Delete(table, id, Guid.NewGuid()));
         }
@@ -208,13 +236,11 @@ namespace HybridDb.Tests
         [Fact]
         public void DeleteFailsWhenIdNotMatchAkaDocumentAlreadyDeleted()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>();
-            store.Initialize();
+            var store = CreateStore();
 
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var etag = store.Insert(table, id, new byte[0], new { });
+            var etag = store.Insert(table, id, new byte[0], new {});
 
             Should.Throw<ConcurrencyException>(() => store.Delete(table, Guid.NewGuid(), etag));
         }
@@ -222,15 +248,13 @@ namespace HybridDb.Tests
         [Fact]
         public void CanBatchCommandsAndGetEtag()
         {
-            var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field);
-            store.Initialize();
+            var store = CreateStore();
 
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var etag = store.Execute(new InsertCommand(table, id1, new byte[0], new { Field = "A" }),
-                                     new InsertCommand(table, id2, new byte[0], new { Field = "B" }));
+            var etag = store.Execute(new InsertCommand(table, id1, new byte[0], new {Field = "A"}),
+                                     new InsertCommand(table, id2, new byte[0], new {Field = "B"}));
 
             var rows = connection.Query<Guid>("select Etag from #Entity order by Field").ToList();
             rows.Count.ShouldBe(2);
@@ -239,9 +263,42 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void InitializeIsThreadSafe()
+        public void BatchesAreTransactional()
         {
-            throw new NotImplementedException();
+            var store = CreateStore();
+
+            var id1 = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            var etagThatMakesItFail = Guid.NewGuid();
+            try
+            {
+                store.Execute(new InsertCommand(table, id1, new byte[0], new { Field = "A" }),
+                              new UpdateCommand(table, id1, etagThatMakesItFail, new byte[0], new { Field = "B" }));
+            }
+            catch (ConcurrencyException)
+            {
+                // ignore the exception and ensure that nothing was inserted
+            }
+
+            connection.Query("select * from #Entity").Count().ShouldBe(0);
+        }
+
+        [Fact]
+        public void WillQuoteTableAndColumnNamesOnCreation()
+        {
+            var store = new DocumentStore(connectionString);
+            store.ForDocument<Case>();//.Projection(x => x.By);
+            store.Initialize();
+
+            connection.Execute("drop table Case");
+        }
+
+        IDocumentStore CreateStore()
+        {
+            var store = DocumentStore.ForTesting(connection);
+            store.ForDocument<Entity>().Projection(x => x.Field).Projection(x => x.Property);
+            store.Initialize();
+            return store;
         }
 
         bool TableExists(string name, bool temporary)
@@ -271,6 +328,12 @@ namespace HybridDb.Tests
             public string Name { get; set; }
             public int system_type_id { get; set; }
             public int max_length { get; set; }
+        }
+
+        public class Case
+        {
+            public Guid Id { get; private set; }
+            public string By { get; set; }
         }
 
         public class Entity

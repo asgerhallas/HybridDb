@@ -38,19 +38,27 @@ namespace HybridDb
             if (row == null)
                 return null;
 
-            var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.CreateSerializer().Deserialize<T>(document);
-
-            managedEntity = new ManagedEntity
-            {
-                Entity = entity,
-                Etag = (Guid) row[table.EtagColumn],
-                State = EntityState.Loaded,
-                Document = document
-            };
-
-            entities.Add(id, managedEntity);
+            var entity = ConvertToEntityAndPutUnderManagement<T>(table, row);
             return entity;
+        }
+
+        public IEnumerable<T> Query<T>(string where, object parameters) where T : class
+        {
+            var table = store.Configuration.GetTableFor<T>();
+            var columns = string.Join(",", new[] {table.IdColumn.Name, table.EtagColumn.Name, table.DocumentColumn.Name});
+            var rows = store.Query(table, columns, where, parameters);
+
+            return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table, row))
+                       .Where(entity => entity != null);
+        }
+
+        public IEnumerable<TProjection> Query<T, TProjection>(string where, object parameters) where T : class
+        {
+            var table = store.Configuration.GetTableFor<T>();
+            var properties = typeof (TProjection).GetProperties();
+            var columns = string.Join(",", properties.Select(x => x.Name));
+            var rows = store.Query<TProjection>(table, columns, where, parameters);
+            return rows;
         }
 
         public void Store(object entity)
@@ -62,6 +70,7 @@ namespace HybridDb
 
             entities.Add(id, new ManagedEntity
             {
+                Key = id,
                 Entity = entity,
                 State = EntityState.Transient
             });
@@ -90,25 +99,25 @@ namespace HybridDb
         {
             var serializer = store.Configuration.CreateSerializer();
 
-            var commands = new List<DatabaseCommand>();
+            var commands = new Dictionary<ManagedEntity, DatabaseCommand>();
             foreach (var managedEntity in entities.Values)
             {
-                var id = ((dynamic) managedEntity.Entity).Id;
+                var id = managedEntity.Key;
                 var table = store.Configuration.GetTableFor(managedEntity.Entity.GetType());
                 var projections = table.Columns.OfType<IProjectionColumn>().ToDictionary(x => x.Name, x => x.GetValue(managedEntity.Entity));
                 var document = serializer.Serialize(managedEntity.Entity);
-                
+
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(new InsertCommand(table, id, document, projections));
+                        commands.Add(managedEntity, new InsertCommand(table, id, document, projections));
                         break;
                     case EntityState.Loaded:
-                        if (!Enumerable.SequenceEqual(managedEntity.Document, document))
-                            commands.Add(new UpdateCommand(table, id, managedEntity.Etag, document, projections));
+                        if (!managedEntity.Document.SequenceEqual(document))
+                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections));
                         break;
                     case EntityState.Deleted:
-                        commands.Add(new DeleteCommand(table, id, managedEntity.Etag));
+                        commands.Add(managedEntity, new DeleteCommand(table, id, managedEntity.Etag));
                         break;
                 }
             }
@@ -116,28 +125,66 @@ namespace HybridDb
             if (commands.Count == 0)
                 return;
 
-            var etag = store.Execute(commands.ToArray());
+            var etag = store.Execute(commands.Values.ToArray());
 
-            foreach (var managedEntity in entities.ToList())
+            foreach (var change in commands)
             {
-                switch (managedEntity.Value.State)
+                var managedEntity = change.Key;
+                var command = change.Value;
+
+                var insertCommand = command as InsertCommand;
+                if (insertCommand != null)
                 {
-                    case EntityState.Transient:
-                        managedEntity.Value.State = EntityState.Loaded;
-                        managedEntity.Value.Document = doc
-                        managedEntity.Value.Etag = etag;
-                        break;
-                    case EntityState.Loaded:
-                        managedEntity.Value.Etag = etag;
-                        break;
-                    case EntityState.Deleted:
-                        entities.Remove(managedEntity.Key);
-                        break;
+                    managedEntity.State = EntityState.Loaded;
+                    managedEntity.Etag = etag;
+                    managedEntity.Document = insertCommand.Document;
+                    continue;
+                }
+
+                var updateCommand = command as UpdateCommand;
+                if (updateCommand != null)
+                {
+                    managedEntity.Etag = etag;
+                    managedEntity.Document = updateCommand.Document;
+                    continue;
+                }
+
+                if (command is DeleteCommand)
+                {
+                    entities.Remove(managedEntity.Key);
                 }
             }
         }
 
         public void Dispose() {}
+
+        T ConvertToEntityAndPutUnderManagement<T>(ITable table, IDictionary<IColumn, object> row) where T : class
+        {
+            var id = (Guid) row[table.IdColumn];
+
+            ManagedEntity managedEntity;
+            if (entities.TryGetValue(id, out managedEntity))
+            {
+                return managedEntity.State != EntityState.Deleted
+                           ? (T) managedEntity.Entity
+                           : null;
+            }
+
+            var document = (byte[]) row[table.DocumentColumn];
+            var entity = store.Configuration.CreateSerializer().Deserialize<T>(document);
+
+            managedEntity = new ManagedEntity
+            {
+                Key = id,
+                Entity = entity,
+                Etag = (Guid) row[table.EtagColumn],
+                State = EntityState.Loaded,
+                Document = document
+            };
+
+            entities.Add(id, managedEntity);
+            return entity;
+        }
 
         class AdvancedDocumentSessionCommands : IAdvancedDocumentSessionCommands
         {
@@ -169,6 +216,7 @@ namespace HybridDb
         class ManagedEntity
         {
             public object Entity { get; set; }
+            public Guid Key { get; set; }
             public Guid Etag { get; set; }
             public EntityState State { get; set; }
             public byte[] Document { get; set; }
