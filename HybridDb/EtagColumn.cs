@@ -6,5 +6,10 @@ namespace HybridDb
     {
         public string Name { get { return "Etag"; } }
         public Column Column { get { return new Column(DbType.Guid); } }
+        
+        public object Serialize(object value)
+        {
+            return value;
+        }
     }
 }

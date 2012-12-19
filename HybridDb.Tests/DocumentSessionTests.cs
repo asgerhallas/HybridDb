@@ -17,7 +17,10 @@ namespace HybridDb.Tests
             connection = new SqlConnection("data source=.;Integrated Security=True");
             connection.Open();
             store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.ProjectedProperty);
+            store.ForDocument<Entity>()
+                .Projection(x => x.ProjectedProperty)
+                .Projection(x => x.TheChild.NestedProperty);
+            store.Configuration.UseSerializer(new DefaultJsonSerializer());
             store.Initialize();
         }
 
@@ -50,7 +53,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = connection.Query("select * from #Entity").SingleOrDefault();
+            var entity = connection.Query("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);
@@ -429,8 +432,8 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
-                session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small" });
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
+                session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -438,6 +441,7 @@ namespace HybridDb.Tests
 
                 entities.Count.ShouldBe(1);
                 entities[0].ProjectedProperty.ShouldBe("Large");
+                entities[0].TheChildNestedProperty.ShouldBe("Hans");
             }
         }
 
@@ -447,7 +451,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -463,14 +467,26 @@ namespace HybridDb.Tests
 
         public class Entity
         {
+            public Entity()
+            {
+                TheChild = new Child();
+            }
+
             public Guid Id { get; set; }
             public string ProjectedProperty { get; set; }
             public string Property { get; set; }
+            public Child TheChild { get; set; }
+
+            public class Child
+            {
+                public string NestedProperty { get; set; }
+            }
         }
 
         public class EntityProjection
         {
             public string ProjectedProperty { get; set; }
+            public string TheChildNestedProperty { get; set; }
         }
     }
 }

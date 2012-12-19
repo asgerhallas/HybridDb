@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace HybridDb
 {
@@ -11,7 +10,10 @@ namespace HybridDb
         public Configuration()
         {
             tables = new Dictionary<Type, ITable>();
+            Serializer = new DefaultBsonSerializer();
         }
+
+        public ISerializer Serializer { get; private set; }
 
         public Dictionary<Type, ITable> Tables
         {
@@ -25,6 +27,11 @@ namespace HybridDb
             return entity;
         }
 
+        public void UseSerializer(ISerializer serializer)
+        {
+            Serializer = serializer;
+        }
+
         public ITable GetTableFor<T>()
         {
             return tables[typeof (T)];
@@ -33,11 +40,6 @@ namespace HybridDb
         public ITable GetTableFor(Type type)
         {
             return tables[type];
-        }
-
-        public ISerializer CreateSerializer()
-        {
-            return new Serializer();
         }
     }
 }

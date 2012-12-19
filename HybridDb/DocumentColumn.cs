@@ -15,5 +15,9 @@ namespace HybridDb
             get { return new Column(DbType.Binary, Int32.MaxValue); }
         }
 
+        public object Serialize(object value)
+        {
+            return value;
+        }
     }
 }

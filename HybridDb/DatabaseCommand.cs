@@ -11,9 +11,9 @@ namespace HybridDb
 
         protected static IDictionary<IColumn, object> ConvertAnonymousToProjections(ITable table, object projections)
         {
-            return projections as IDictionary<IColumn, object> ??
-                   (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
-                       .ToDictionary(x => table[x.Key], x => x.Value);
+            return (projections as IDictionary<IColumn, object> ??
+                    (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
+                        .ToDictionary(x => table[x.Key], x => x.Value));
         }
 
         protected static DynamicParameters MapProjectionsToParameters(IDictionary<IColumn, object> projections, int i)

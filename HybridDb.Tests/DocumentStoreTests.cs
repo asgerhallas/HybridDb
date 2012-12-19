@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -32,33 +33,33 @@ namespace HybridDb.Tests
             store.ForDocument<Entity>();
             store.Initialize();
 
-            TableExists("Entity", temporary: true).ShouldBe(true);
+            TableExists("Entities", temporary: true).ShouldBe(true);
         }
 
         [Fact]
         public void CanCreateRealTables()
         {
-            TableExists("Entity", temporary: false).ShouldBe(false);
+            TableExists("Entities", temporary: false).ShouldBe(false);
 
             var store = new DocumentStore(connectionString);
             store.ForDocument<Entity>();
             store.Initialize();
 
-            TableExists("Entity", temporary: false).ShouldBe(true);
+            TableExists("Entities", temporary: false).ShouldBe(true);
 
-            connection.Execute("drop table Entity");
+            connection.Execute("drop table Entities");
         }
 
         [Fact]
         public void CreatesDefaultColumns()
         {
             CreateStore();
-            
-            var idColumn = GetColumn("Entity", "Id", temporary: true);
+
+            var idColumn = GetColumn("Entities", "Id", temporary: true);
             idColumn.ShouldNotBe(null);
             GetType(idColumn.system_type_id).ShouldBe("uniqueidentifier");
 
-            var documentColumn = GetColumn("Entity", "Document", temporary: true);
+            var documentColumn = GetColumn("Entities", "Document", temporary: true);
             documentColumn.ShouldNotBe(null);
             GetType(documentColumn.system_type_id).ShouldBe("varbinary");
             documentColumn.max_length.ShouldBe(-1);
@@ -68,8 +69,22 @@ namespace HybridDb.Tests
         public void CanCreateColumnsFromProperties()
         {
             CreateStore();
-            
-            var column = GetColumn("Entity", "Property", temporary: true);
+
+            var column = GetColumn("Entities", "Property", temporary: true);
+            column.ShouldNotBe(null);
+            GetType(column.system_type_id).ShouldBe("int");
+
+            var nestedcolumn = GetColumn("Entities", "TheChildNestedProperty", temporary: true);
+            nestedcolumn.ShouldNotBe(null);
+            GetType(nestedcolumn.system_type_id).ShouldBe("float");
+        }
+
+        [Fact]
+        public void CanCreateNamedColumnsFromProperties()
+        {
+            CreateStore();
+
+            var column = GetColumn("Entities", "Property", temporary: true);
             column.ShouldNotBe(null);
             GetType(column.system_type_id).ShouldBe("int");
         }
@@ -79,7 +94,7 @@ namespace HybridDb.Tests
         {
             CreateStore();
 
-            var column = GetColumn("Entity", "Field", temporary: true);
+            var column = GetColumn("Entities", "Field", temporary: true);
             column.ShouldNotBe(null);
             GetType(column.system_type_id).ShouldBe("nvarchar");
             column.max_length.ShouldBe(-1); // -1 is MAX
@@ -94,7 +109,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetTableFor<Entity>();
             store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
 
-            var row = connection.Query("select * from #Entity").Single();
+            var row = connection.Query("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -112,7 +127,7 @@ namespace HybridDb.Tests
 
             store.Update(table, id, etag, new byte[] {}, new {Field = "Lars"});
 
-            var row = connection.Query("select * from #Entity").Single();
+            var row = connection.Query("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
         }
@@ -218,7 +233,7 @@ namespace HybridDb.Tests
 
             store.Delete(table, id, etag);
 
-            connection.Query("select * from #Entity").Count().ShouldBe(0);
+            connection.Query("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -256,7 +271,7 @@ namespace HybridDb.Tests
             var etag = store.Execute(new InsertCommand(table, id1, new byte[0], new {Field = "A"}),
                                      new InsertCommand(table, id2, new byte[0], new {Field = "B"}));
 
-            var rows = connection.Query<Guid>("select Etag from #Entity order by Field").ToList();
+            var rows = connection.Query<Guid>("select Etag from #Entities order by Field").ToList();
             rows.Count.ShouldBe(2);
             rows[0].ShouldBe(etag);
             rows[1].ShouldBe(etag);
@@ -280,23 +295,112 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            connection.Query("select * from #Entity").Count().ShouldBe(0);
+            connection.Query("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
         public void WillQuoteTableAndColumnNamesOnCreation()
         {
+            throw new NotImplementedException();
             var store = new DocumentStore(connectionString);
-            store.ForDocument<Case>();//.Projection(x => x.By);
+            store.ForDocument<Case>().Projection(x => x.By);
             store.Initialize();
 
-            connection.Execute("drop table Case");
+            connection.Execute("drop table \"Case\"");
+        }
+
+        [Fact]
+        public void WillNotCreateSchemaIfItAlreadyExists()
+        {
+            var store1 = DocumentStore.ForTesting(connection);
+            store1.ForDocument<Case>().Projection(x => x.By);
+            store1.Initialize();
+
+            var store2 = DocumentStore.ForTesting(connection);
+            store2.ForDocument<Case>().Projection(x => x.By);
+            
+            Should.NotThrow(store2.Initialize);
+        }
+
+        [Fact]
+        public void CanSplitLargeQueries()
+        {
+            var store = CreateStore();
+
+            var table = store.Configuration.GetTableFor<Entity>();
+
+            var commands = new List<DatabaseCommand>();
+            for (int i = 0; i < 2100/4+1; i++)
+            {
+                commands.Add(new InsertCommand(table, Guid.NewGuid(), new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "A"}));
+            }
+
+            store.Execute(commands.ToArray());
+            store.NumberOfRequests.ShouldBe(2);
+        }
+
+        [Fact]
+        public void CanStoreAndLoadEnumProjection()
+        {
+            var store = CreateStore();
+
+            var table = store.Configuration.GetTableFor<Entity>();
+            var id = Guid.NewGuid();
+            store.Insert(table, id, new byte[0], new {EnumProp = SomeFreakingEnum.Two});
+
+            var result = store.Get(table, id);
+            result[table["EnumProp"]].ShouldBe(SomeFreakingEnum.Two.ToString());
+        }
+
+        [Fact]
+        public void CanStoreAndLoadEnumProjectionToNetType()
+        {
+            var store = CreateStore();
+
+            var table = store.Configuration.GetTableFor<Entity>();
+            var id = Guid.NewGuid();
+            store.Insert(table, id, new byte[0], new {EnumProp = SomeFreakingEnum.Two});
+
+            var result = store.Query<ProjectionWithEnum>(table, "EnumProp", "1=1").Single();
+            result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
+        }
+
+        [Fact]
+        public void CanStoreAndLoadStringProjection()
+        {
+            var store = CreateStore();
+
+            var table = store.Configuration.GetTableFor<Entity>();
+            var id = Guid.NewGuid();
+            store.Insert(table, id, new byte[0], new {StringProp = "Hest"});
+
+            var result = store.Get(table, id);
+            result[table["StringProp"]].ShouldBe("Hest");
+        }
+
+        [Fact]
+        public void CanStoreAndLoadDateTimeProjection()
+        {
+            var store = CreateStore();
+
+            var table = store.Configuration.GetTableFor<Entity>();
+            var id = Guid.NewGuid();
+            store.Insert(table, id, new byte[0], new {DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1)});
+
+            var result = store.Get(table, id);
+            result[table["DateTimeProp"]].ShouldBe(new DateTime(2001, 12, 24, 1, 1, 1));
         }
 
         IDocumentStore CreateStore()
         {
             var store = DocumentStore.ForTesting(connection);
-            store.ForDocument<Entity>().Projection(x => x.Field).Projection(x => x.Property);
+            store.ForDocument<Entity>()
+                .Projection(x => x.Field)
+                .Projection(x => x.Property)
+                .Projection(x => x.TheChild.NestedProperty)
+                .Projection(x => x.StringProp)
+                .Projection(x => x.DateTimeProp)
+                .Projection(x => x.EnumProp);
             store.Initialize();
             return store;
         }
@@ -341,6 +445,26 @@ namespace HybridDb.Tests
             public string Field;
             public Guid Id { get; private set; }
             public int Property { get; set; }
+            public string StringProp { get; set; }
+            public SomeFreakingEnum EnumProp { get; set; }
+            public DateTime DateTimeProp { get; set; }
+            public Child TheChild { get; set; }
+
+            public class Child
+            {
+                public double NestedProperty { get; set; }
+            }
+        }
+
+        class ProjectionWithEnum
+        {
+            public SomeFreakingEnum EnumProp { get; set; }
+        }
+
+        public enum SomeFreakingEnum
+        {
+            One,
+            Two
         }
     }
 }

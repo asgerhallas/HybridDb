@@ -32,6 +32,11 @@ namespace HybridDb
             this.connectionString = connectionString;
         }
 
+        public bool IsInTestMode
+        {
+            get { return connectionForTesting != null; }
+        }
+
         public Configuration Configuration
         {
             get { return configuration; }
@@ -54,9 +59,21 @@ namespace HybridDb
                 {
                     foreach (var table in configuration.Tables.Values)
                     {
-                        var sql = "create table ";
-                        sql += "\"" + GetFormattedTableName(table) + "\"";
-                        sql += " (" + string.Join(", ", table.Columns.Select(x => x.Name + " " + x.Column.SqlType)) + ")";
+                        var tableExists =
+                            string.Format(IsInTestMode
+                                              ? "OBJECT_ID('tempdb..{0}') is not null"
+                                              : "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')",
+                                          GetFormattedTableName(table));
+
+                        var sql =
+                            string.Format(@"if not ({0})
+                                            begin
+                                                create table {1} ({2});
+                                            end",
+                                          tableExists,
+                                          Escape(GetFormattedTableName(table)),
+                                          string.Join(", ", table.Columns.Select(x => Escape(x.Name) + " " + x.Column.SqlType)));
+
                         connectionManager.Connection.Execute(sql, null, tx);
                     }
                     tx.Commit();
@@ -78,34 +95,51 @@ namespace HybridDb
             if (commands.Length == 0)
                 throw new ArgumentException("No commands were passed");
 
-            var i = 0;
-            var etag = Guid.NewGuid();
-            var sql = "";
-            var parameters = new DynamicParameters();
-            var expectedRowCount = 0;
-            foreach (var command in commands)
-            {
-                var preparedCommand = command.Prepare(this, etag, i++);
-                sql += string.Format("{0};", preparedCommand.Sql);
-                parameters.AddDynamicParams(preparedCommand.Parameters);
-                expectedRowCount += preparedCommand.ExpectedRowCount;
-            }
-
             using (var connectionManager = Connect())
             using (var tx = connectionManager.Connection.BeginTransaction())
             {
-                var rowcount = connectionManager.Connection.Execute(sql, parameters, tx);
+                var i = 0;
+                var etag = Guid.NewGuid();
+                var sql = "";
+                var parameters = new DynamicParameters();
+                var numberOfParameters = 0;
+                var expectedRowCount = 0;
+                foreach (var command in commands)
+                {
+                    var preparedCommand = command.Prepare(this, etag, i++);
+                    var numberOfNewParameters = preparedCommand.Parameters.ParameterNames.Count();
 
-                Interlocked.Increment(ref numberOfRequests);
-                lastWrittenEtag = etag;
+                    if (numberOfParameters + numberOfNewParameters >= 2100)
+                    {
+                        InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);
 
-                if (rowcount != expectedRowCount)
-                    throw new ConcurrencyException();
+                        sql = "";
+                        parameters = new DynamicParameters();
+                        expectedRowCount = 0;
+                        numberOfParameters = 0;
+                    }
+
+                    expectedRowCount += preparedCommand.ExpectedRowCount;
+                    numberOfParameters += numberOfNewParameters;
+
+                    sql += string.Format("{0};", preparedCommand.Sql);
+                    parameters.AddDynamicParams(preparedCommand.Parameters);
+                }
+
+                InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);
 
                 tx.Commit();
+                lastWrittenEtag = etag;
+                return etag;
             }
+        }
 
-            return etag;
+        void InternalExecute(ConnectionManager connectionManager, SqlTransaction tx, string sql, DynamicParameters parameters, int expectedRowCount)
+        {
+            var rowcount = connectionManager.Connection.Execute(sql, parameters, tx);
+            Interlocked.Increment(ref numberOfRequests);
+            if (rowcount != expectedRowCount)
+                throw new ConcurrencyException();
         }
 
         public Guid Insert(ITable table, Guid key, byte[] document, object projections)
@@ -142,7 +176,7 @@ namespace HybridDb
 
                 var sql = string.Format("select {0} from {1} where {2}",
                                         columns,
-                                        GetFormattedTableName(table),
+                                        Escape(GetFormattedTableName(table)),
                                         where);
 
                 if (typeof (IDictionary<IColumn, object>).IsAssignableFrom(typeof (TProjection)))
@@ -171,7 +205,7 @@ namespace HybridDb
             using (var connection = Connect())
             {
                 var sql = string.Format("select * from {0} where {1} = @Id",
-                                        GetFormattedTableName(table),
+                                        Escape(GetFormattedTableName(table)),
                                         table.IdColumn.Name);
 
                 var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
@@ -200,7 +234,13 @@ namespace HybridDb
 
         public string GetFormattedTableName(ITable table)
         {
-            return (connectionForTesting != null) ? "#" + table.Name : table.Name;
+            var tableName = Inflector.Inflector.Pluralize(table.Name);
+            return IsInTestMode ? "#" + tableName : tableName;
+        }
+
+        public string Escape(string identifier)
+        {
+            return string.Format("[{0}]", identifier);
         }
 
         void AssertInitialized()

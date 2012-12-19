@@ -33,7 +33,7 @@ namespace HybridDb
             values.Add(table.DocumentColumn, document);
 
             var sql = string.Format("update {0} set {1} where {2}=@Id{4} and {3}=@CurrentEtag{4}",
-                                    store.GetFormattedTableName(table),
+                                    store.Escape(store.GetFormattedTableName(table)),
                                     string.Join(", ", from column in values.Keys select column.Name + "=@" + column.Name + uniqueParameterIdentifier),
                                     table.IdColumn.Name,
                                     table.EtagColumn.Name,

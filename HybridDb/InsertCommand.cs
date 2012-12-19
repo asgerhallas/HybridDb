@@ -32,7 +32,7 @@ namespace HybridDb
             values.Add(table.DocumentColumn, document);
 
             var sql = string.Format("insert into {0} ({1}) values ({2})",
-                                    store.GetFormattedTableName(table),
+                                    store.Escape(store.GetFormattedTableName(table)),
                                     string.Join(", ", from column in values.Keys select column.Name),
                                     string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier));
 

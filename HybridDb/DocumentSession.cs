@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace HybridDb
 {
@@ -97,7 +98,7 @@ namespace HybridDb
 
         public void SaveChanges()
         {
-            var serializer = store.Configuration.CreateSerializer();
+            var serializer = store.Configuration.Serializer;
 
             var commands = new Dictionary<ManagedEntity, DatabaseCommand>();
             foreach (var managedEntity in entities.Values)
@@ -113,6 +114,8 @@ namespace HybridDb
                         commands.Add(managedEntity, new InsertCommand(table, id, document, projections));
                         break;
                     case EntityState.Loaded:
+                        var a = Encoding.UTF8.GetString(managedEntity.Document);
+                        var b = Encoding.UTF8.GetString(document);
                         if (!managedEntity.Document.SequenceEqual(document))
                             commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections));
                         break;
@@ -171,7 +174,7 @@ namespace HybridDb
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.CreateSerializer().Deserialize<T>(document);
+            var entity = store.Configuration.Serializer.Deserialize<T>(document);
 
             managedEntity = new ManagedEntity
             {

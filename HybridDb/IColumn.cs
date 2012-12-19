@@ -4,5 +4,6 @@
     {
         string Name { get; }
         Column Column { get; }
+        object Serialize(object value);
     }
 }

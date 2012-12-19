@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
+using Dapper;
+using System.Linq;
 
 namespace HybridDb
 {
     public class ProjectionColumn<TEntity, TMember> : IProjectionColumn
     {
-        static Dictionary<Type, Column> typeToColumn = new Dictionary<Type, Column>
+        static readonly Dictionary<Type, Column> typeToColumn = new Dictionary<Type, Column>
         {
             {typeof (byte), new Column(DbType.Byte)},
             {typeof (sbyte), new Column(DbType.SByte)},
@@ -28,6 +30,7 @@ namespace HybridDb
             {typeof (DateTime), new Column(DbType.DateTime)},
             {typeof (DateTimeOffset), new Column(DbType.DateTimeOffset)},
             {typeof (TimeSpan), new Column(DbType.Time)},
+            {typeof (Enum), new Column(DbType.String, Int32.MaxValue)},
             {typeof (byte[]), new Column(DbType.Binary, Int32.MaxValue)},
             {typeof (byte?), new Column(DbType.Byte)},
             {typeof (sbyte?), new Column(DbType.SByte)},
@@ -57,12 +60,16 @@ namespace HybridDb
             this.member = member;
             getter = member.Compile();
 
-            var expression = member.GetPropertyOrFieldExpression();
-            Name = expression.Member.Name;
-            Column = typeToColumn[GetMemberType(expression.Member)];
+            var expression = member.ToString();
+            Name = string.Join("", expression.Split('.').Skip(1));
+            Type = typeof(TMember);
+
+            var type = (Type.IsEnum) ? Type.BaseType : Type;
+            Column = typeToColumn[type];
         }
 
         public string Name { get; set; }
+        public Type Type { get; set; }
         public Column Column { get; private set; }
 
         public object GetValue(object document)
@@ -70,22 +77,17 @@ namespace HybridDb
             return getter((TEntity) document);
         }
 
+        public object Serialize(object value)
+        {
+            if (Type.IsEnum)
+                return value.ToString();
+
+            return value;
+        }
+
         public object SetValue(object value)
         {
             throw new NotImplementedException();
-        }
-
-        static Type GetMemberType(MemberInfo info)
-        {
-            var propertyInfo = info as PropertyInfo;
-            if (propertyInfo != null)
-                return propertyInfo.PropertyType;
-
-            var fieldInfo = info as FieldInfo;
-            if (fieldInfo != null)
-                return fieldInfo.FieldType;
-
-            throw new ArgumentException("Must be either property or field");
         }
     }
 }

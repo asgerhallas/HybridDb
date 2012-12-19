@@ -14,6 +14,11 @@ namespace HybridDb
             get { return new Column(DbType.Guid); }
         }
 
+        public object Serialize(object value)
+        {
+            return value;
+        }
+
         public object GetValue(object document)
         {
             return ((dynamic) document).Id;

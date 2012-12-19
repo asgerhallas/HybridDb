@@ -19,7 +19,7 @@ namespace HybridDb
         internal override PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier)
         {
             var sql = string.Format("delete from {0} where {1} = @Id{3} and {2} = @CurrentEtag{3}",
-                                    store.GetFormattedTableName(table),
+                                    store.Escape(store.GetFormattedTableName(table)),
                                     table.IdColumn.Name,
                                     table.EtagColumn.Name,
                                     uniqueParameterIdentifier);
