@@ -64,6 +64,7 @@
     <Compile Include="ColumnTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />
+    <Compile Include="DocumentStoreWithRealTablesTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

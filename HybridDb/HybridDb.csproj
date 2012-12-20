@@ -59,15 +59,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Logging\ColorSetting.cs" />
     <Compile Include="Column.cs" />
+    <Compile Include="Logging\ConsoleLogger.cs" />
     <Compile Include="DatabaseCommand.cs" />
     <Compile Include="DefaultBsonSerializer.cs" />
+    <Compile Include="DefaultJsonSerializer.cs" />
     <Compile Include="DeleteCommand.cs" />
     <Compile Include="EtagColumn.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
     <Compile Include="IColumn.cs" />
+    <Compile Include="Logging\ILogger.cs" />
     <Compile Include="InsertCommand.cs" />
     <Compile Include="ISerializer.cs" />
+    <Compile Include="Logging\LoggingColors.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="ProjectionColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
     <Compile Include="DocumentColumn.cs" />

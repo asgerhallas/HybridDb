@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 
 namespace HybridDb
 {
-    public interface IDocumentStore
+    public interface IDocumentStore : IDisposable
     {
         void Initialize();
         IDocumentSession OpenSession();
@@ -16,7 +17,7 @@ namespace HybridDb
         void Delete(ITable table, Guid key, Guid etag);
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
-        IEnumerable<IDictionary<IColumn, object>> Query(ITable table, string columns = "*", string where = "", object parameters = null);
-        IEnumerable<TProjection> Query<TProjection>(ITable table, string columns = "*", string where = "", object parameters = null);
+        IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out int totalRows, string columns = "*", string where = "", int skip = 0, int take = 0, object parameters = null);
+        IEnumerable<TProjection> Query<TProjection>(ITable table, out int totalRows, string columns = "*", string where = "", int skip = 0, int take = 0, object parameters = null);
     }
 }

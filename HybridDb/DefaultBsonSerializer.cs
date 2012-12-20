@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -142,28 +141,6 @@ namespace HybridDb
             public static string GetBackingFieldName(string propertyName)
             {
                 return "<" + propertyName + ">k__BackingField";
-            }
-        }
-    }
-
-    public class DefaultJsonSerializer : DefaultBsonSerializer
-    {
-        public override byte[] Serialize(object obj)
-        {
-            using (var textWriter = new StringWriter())
-            using (var jsonWriter = new JsonTextWriter(textWriter))
-            {
-                CreateSerializer().Serialize(jsonWriter, obj);
-                return Encoding.UTF8.GetBytes(textWriter.ToString());
-            }
-        }
-
-        public override T Deserialize<T>(byte[] data)
-        {
-            using (var textReader = new StringReader(Encoding.UTF8.GetString(data)))
-            using (var jsonReader = new JsonTextReader(textReader))
-            {
-                return CreateSerializer().Deserialize<T>(jsonReader);
             }
         }
     }

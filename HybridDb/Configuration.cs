@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using HybridDb.Logging;
 
 namespace HybridDb
 {
@@ -11,8 +12,10 @@ namespace HybridDb
         {
             tables = new Dictionary<Type, ITable>();
             Serializer = new DefaultBsonSerializer();
+            Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
         }
 
+        public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
         public Dictionary<Type, ITable> Tables
@@ -30,6 +33,11 @@ namespace HybridDb
         public void UseSerializer(ISerializer serializer)
         {
             Serializer = serializer;
+        }
+
+        public void UseSerializer(ILogger logger)
+        {
+            Logger = logger;
         }
 
         public ITable GetTableFor<T>()

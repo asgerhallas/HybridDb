@@ -9,14 +9,13 @@ namespace HybridDb.Tests
 {
     public class DocumentSessionTests : IDisposable
     {
-        readonly SqlConnection connection;
-        readonly IDocumentStore store;
+        readonly DocumentStore store;
+        readonly string connectionString;
 
         public DocumentSessionTests()
         {
-            connection = new SqlConnection("data source=.;Integrated Security=True");
-            connection.Open();
-            store = DocumentStore.ForTesting(connection);
+            connectionString = "data source=.;Integrated Security=True";
+            store = DocumentStore.ForTesting(connectionString);
             store.ForDocument<Entity>()
                 .Projection(x => x.ProjectedProperty)
                 .Projection(x => x.TheChild.NestedProperty);
@@ -26,7 +25,7 @@ namespace HybridDb.Tests
 
         public void Dispose()
         {
-            connection.Dispose();
+            store.Dispose();
         }
 
         [Fact]
@@ -38,7 +37,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CannotOpenSessionIfStoreIsNotInitilized()
         {
-            Should.Throw<DocumentStore.StoreNotInitializedException>(() => DocumentStore.ForTesting(connection).OpenSession());
+            Should.Throw<DocumentStore.StoreNotInitializedException>(() => DocumentStore.ForTesting(connectionString).OpenSession());
         }
 
         [Fact]
@@ -53,7 +52,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = connection.Query("select * from #Entities").SingleOrDefault();
+            var entity = store.Connection.Query("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);

@@ -47,7 +47,8 @@ namespace HybridDb
         {
             var table = store.Configuration.GetTableFor<T>();
             var columns = string.Join(",", new[] {table.IdColumn.Name, table.EtagColumn.Name, table.DocumentColumn.Name});
-            var rows = store.Query(table, columns, where, parameters);
+            int totalRows;
+            var rows = store.Query(table, out totalRows, columns, where, 0, 0, parameters);
 
             return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table, row))
                        .Where(entity => entity != null);
@@ -58,7 +59,8 @@ namespace HybridDb
             var table = store.Configuration.GetTableFor<T>();
             var properties = typeof (TProjection).GetProperties();
             var columns = string.Join(",", properties.Select(x => x.Name));
-            var rows = store.Query<TProjection>(table, columns, where, parameters);
+            int totalRows;
+            var rows = store.Query<TProjection>(table, out totalRows, columns, where, 0, 0, parameters);
             return rows;
         }
 

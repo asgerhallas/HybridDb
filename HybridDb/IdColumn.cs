@@ -11,7 +11,7 @@ namespace HybridDb
 
         public Column Column
         {
-            get { return new Column(DbType.Guid); }
+            get { return new Column(DbType.Guid, isPrimaryKey: true); }
         }
 
         public object Serialize(object value)
