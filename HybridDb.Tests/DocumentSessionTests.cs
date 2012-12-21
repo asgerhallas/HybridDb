@@ -7,6 +7,14 @@ using System.Linq;
 
 namespace HybridDb.Tests
 {
+    public static class StringEx
+    {
+        public static string Select(this string self, Func<string, string> selector)
+        {
+            return selector(self);
+        }
+    }
+
     public class DocumentSessionTests : IDisposable
     {
         readonly DocumentStore store;
@@ -27,6 +35,27 @@ namespace HybridDb.Tests
         {
             store.Dispose();
         }
+
+        public void Dyn(params dynamic[] objs)
+        {
+            
+        }
+
+        [Fact]
+        public void Hest()
+        {
+            
+
+            var lars = "hans";
+            var asger = "Asger #{lars}";
+
+            var t = "Asger".Select(formattedText =>
+            {
+                Console.WriteLine(lars);
+                return formattedText;
+            });
+        }
+
 
         [Fact]
         public void CanOpenSession()

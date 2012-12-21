@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using HybridDb.Schema;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Xunit;

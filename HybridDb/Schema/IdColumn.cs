@@ -1,6 +1,6 @@
 ﻿using System.Data;
 
-namespace HybridDb
+namespace HybridDb.Schema
 {
     public class IdColumn : IColumn
     {

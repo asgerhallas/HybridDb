@@ -2,7 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 
-namespace HybridDb
+namespace HybridDb.Schema
 {
     public class Column
     {

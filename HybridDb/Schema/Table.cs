@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace HybridDb
+namespace HybridDb.Schema
 {
     public class Table<TEntity> : ITable
     {
@@ -26,10 +26,19 @@ namespace HybridDb
         public EtagColumn EtagColumn { get; private set; }
         public IdColumn IdColumn { get; private set; }
         public DocumentColumn DocumentColumn { get; private set; }
+        public object SizeColumn { get; private set; }
+        public object CreatedAtColumn { get; private set; }
 
         public IColumn this[string name]
         {
-            get { return columns[name]; }
+            get
+            {
+                IColumn value;
+                if (columns.TryGetValue(name, out value))
+                    return value;
+
+                return null;
+            }
         }
 
         public string Name { get; private set; }

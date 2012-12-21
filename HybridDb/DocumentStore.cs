@@ -6,7 +6,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Dapper;
+using HybridDb.Commands;
 using HybridDb.Logging;
+using HybridDb.Schema;
 
 namespace HybridDb
 {
@@ -39,6 +41,17 @@ namespace HybridDb
         ILogger Logger
         {
             get { return Configuration.Logger; }
+        }
+
+        internal DbConnection Connection
+        {
+            get
+            {
+                if (!IsInTestMode)
+                    throw new InvalidOperationException("Only for testing purposes");
+
+                return Connect().Connection;
+            }
         }
 
         public void Dispose()
@@ -130,7 +143,7 @@ namespace HybridDb
 
                     if (command is DeleteCommand)
                         numberOfDeleteCommands++;
-                    
+
                     var preparedCommand = command.Prepare(this, etag, i++);
                     var numberOfNewParameters = preparedCommand.Parameters.ParameterNames.Count();
 
@@ -191,7 +204,8 @@ namespace HybridDb
             get { return lastWrittenEtag; }
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(ITable table, out int totalRows, string columns = "*", string where = "", int skip = 0, int take = 0, object parameters = null)
+        public IEnumerable<TProjection> Query<TProjection>(ITable table, out long totalRows, string columns = "*", string @where = "", int skip = 0, int take = 0,
+                                                           string orderby = "", object parameters = null)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
@@ -199,29 +213,40 @@ namespace HybridDb
                 if (!columns.Contains(table.IdColumn.Name) && columns != "*")
                     columns = string.Format("{0},{1}", table.IdColumn.Name, columns);
 
-                string sql;
-                if (skip > 0 || take > 0)
+                var isWindowed = skip > 0 || take > 0;
+
+                var reverseOrderBy = "";
+                if (!string.IsNullOrEmpty(orderby))
                 {
-                    sql = string.Format(@"with temp as
-                                        (select {0}, row_number() over(order by current_timestamp) as RowNumber from {1} where {2})
-                                        select *, (select count(*) from temp) as TotalRows from temp where RowNumber between {3} and {4}",
-                                        columns,
-                                        Escape(GetFormattedTableName(table)),
-                                        where,
-                                        skip,
-                                        take);
+                    reverseOrderBy = string.Join(", ", @orderby.Split(',').Select(x =>
+                    {
+                        if (x.IndexOf("asc", StringComparison.InvariantCultureIgnoreCase) >= 0)
+                            return x.Replace("asc", "desc", StringComparison.InvariantCultureIgnoreCase);
+                        
+                        if (x.IndexOf("desc", StringComparison.InvariantCultureIgnoreCase) >= 0)
+                            return x.Replace("desc", "asc", StringComparison.InvariantCultureIgnoreCase);
+
+                        return x + " desc";
+                    }));
                 }
-                else
-                {
-                    sql = string.Format("with temp as (select {0} from {1} where {2}) select *, (select count(*) from temp) as TotalRows from temp",
-                                            columns,
-                                            Escape(GetFormattedTableName(table)),
-                                            where);
-                }
+
+                var resultingOrderBy = string.IsNullOrEmpty(orderby) ? "" : orderby;
+
+                var sql = new SqlBuilder();
+                sql.Append(@"with temp as (select {0}", columns)
+                   .Append(isWindowed, ", row_number() over(order by {0}) as RowNumberAsc, row_number() over(order by {1}) as RowNumberDesc", orderby, reverseOrderBy)
+                   .Append("from {0}", Escape(GetFormattedTableName(table)))
+                   .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                   .Append(")")
+                   .Append(isWindowed, "select *, (RowNumberAsc + RowNumberDesc - 1) as TotalRows from temp where RowNumberAsc >= {0}", skip + 1)
+                   .Append(take > 0, "and RowNumberAsc <= {0}", skip + take)
+                   .Append(isWindowed, "order by RowNumberAsc")
+                   .Append(!isWindowed, "select *, (select count(*) from temp) as TotalRows from temp")
+                   .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
                 if (typeof (IDictionary<IColumn, object>).IsAssignableFrom(typeof (TProjection)))
                 {
-                    var rows = connection.Connection.Query(sql, parameters);
+                    var rows = connection.Connection.Query(sql.ToString(), parameters);
 
                     var firstRow = rows.FirstOrDefault();
                     totalRows = firstRow != null ? firstRow.TotalRows : 0;
@@ -231,12 +256,13 @@ namespace HybridDb
                     Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
 
                     return (IEnumerable<TProjection>) rows.Cast<IDictionary<string, object>>()
-                                                          .Select(row => row.Where(x => x.Key != "TotalRows")
-                                                                            .ToDictionary(x => table[x.Key], x => x.Value));
+                                                          .Select(row => row.Select(x => new {Key = table[x.Key], x.Value})
+                                                                            .Where(x => x.Key != null)
+                                                                            .ToDictionary(x => x.Key, x => x.Value));
                 }
                 else
                 {
-                    var rows = connection.Connection.Query<TProjection, Dims, Tuple<TProjection, Dims>>(sql, Tuple.Create, parameters, splitOn: "TotalRows");
+                    var rows = connection.Connection.Query<TProjection, Metadata, Tuple<TProjection, Metadata>>(sql.ToString(), Tuple.Create, parameters, splitOn: "TotalRows");
 
                     var firstRow = rows.FirstOrDefault();
                     totalRows = firstRow != null ? firstRow.Item2.TotalRows : 0;
@@ -250,14 +276,10 @@ namespace HybridDb
             }
         }
 
-        public class Dims
+        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out long totalRows, string columns = "*", string @where = "", int skip = 0, int take = 0, 
+                                                               string orderby = "", object parameters = null)
         {
-            public int TotalRows { get; set; }
-        }
-
-        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out int totalRows, string columns = "*", string where = "", int skip = 0, int take = 0, object parameters = null)
-        {
-            return Query<IDictionary<IColumn, object>>(table, out totalRows, columns, where, skip, take, parameters);
+            return Query<IDictionary<IColumn, object>>(table, out totalRows, columns, where, skip, take, orderby, parameters);
         }
 
         public IDictionary<IColumn, object> Get(ITable table, Guid key)
@@ -282,17 +304,6 @@ namespace HybridDb
         public static DocumentStore ForTesting(string connectionString)
         {
             return new DocumentStore(connectionString, true);
-        }
-
-        internal DbConnection Connection
-        {
-            get
-            {
-                if (!IsInTestMode)
-                    throw new InvalidOperationException("Only for testing purposes");
-
-                return Connect().Connection;
-            }
         }
 
         void InternalExecute(ManagedConnection managedConnection, DbTransaction tx, string sql, DynamicParameters parameters, int expectedRowCount)
@@ -358,6 +369,11 @@ namespace HybridDb
             {
                 dispose();
             }
+        }
+
+        public class Metadata
+        {
+            public int TotalRows { get; set; }
         }
 
         public class MissingProjectionValueException : Exception {}

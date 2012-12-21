@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HybridDb.Commands;
+using HybridDb.Schema;
 
 namespace HybridDb
 {
@@ -47,8 +49,8 @@ namespace HybridDb
         {
             var table = store.Configuration.GetTableFor<T>();
             var columns = string.Join(",", new[] {table.IdColumn.Name, table.EtagColumn.Name, table.DocumentColumn.Name});
-            int totalRows;
-            var rows = store.Query(table, out totalRows, columns, where, 0, 0, parameters);
+            long totalRows;
+            var rows = store.Query(table, out totalRows, columns, where, 0, 0, "", parameters);
 
             return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table, row))
                        .Where(entity => entity != null);
@@ -59,8 +61,8 @@ namespace HybridDb
             var table = store.Configuration.GetTableFor<T>();
             var properties = typeof (TProjection).GetProperties();
             var columns = string.Join(",", properties.Select(x => x.Name));
-            int totalRows;
-            var rows = store.Query<TProjection>(table, out totalRows, columns, where, 0, 0, parameters);
+            long totalRows;
+            var rows = store.Query<TProjection>(table, out totalRows, columns, where, 0, 0, "", parameters);
             return rows;
         }
 

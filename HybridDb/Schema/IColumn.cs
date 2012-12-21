@@ -1,4 +1,4 @@
-﻿namespace HybridDb
+﻿namespace HybridDb.Schema
 {
     public interface IColumn 
     {

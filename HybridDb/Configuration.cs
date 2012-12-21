@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HybridDb.Logging;
+using HybridDb.Schema;
 
 namespace HybridDb
 {

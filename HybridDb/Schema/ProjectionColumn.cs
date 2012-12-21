@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
-using Dapper;
 using System.Linq;
 
-namespace HybridDb
+namespace HybridDb.Schema
 {
     public class ProjectionColumn<TEntity, TMember> : IProjectionColumn
     {

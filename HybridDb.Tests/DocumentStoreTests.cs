@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Dapper;
+using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 
@@ -166,7 +167,7 @@ namespace HybridDb.Tests
             var etag2 = store.Insert(table, id2, document, new {Field = "Hans"});
             store.Insert(table, id3, document, new {Field = "Bjarne"});
 
-            int totalRows;
+            long totalRows;
             var rows = store.Query(table, out totalRows, where:"Field != @name", parameters:new { name = "Bjarne" }).ToList();
 
             rows.Count().ShouldBe(2);
@@ -190,7 +191,7 @@ namespace HybridDb.Tests
             var document = new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
             store.Insert(table, id, document, new { Field = "Asger" });
 
-            int totalRows;
+            long totalRows;
             var rows = store.Query(table,
                                    out totalRows,
                                    columns: "Field",
@@ -327,7 +328,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             store.Insert(table, id, new byte[0], new {EnumProp = SomeFreakingEnum.Two});
 
-            int totalRows;
+            long totalRows;
             var result = store.Query<ProjectionWithEnum>(table, out totalRows, "EnumProp", "1=1").Single();
             result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
@@ -359,12 +360,129 @@ namespace HybridDb.Tests
         {
             var table = store.Configuration.GetTableFor<Entity>();
             for (int i = 0; i < 10; i++)
-            {
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
-            }
 
-            int totalRows;
-            var result = store.Query(table, out totalRows, skip: 2, take: 5, where: "1=1");
+            long totalRows;
+            var result = store.Query(table, out totalRows, skip: 2, take: 5, where: "1=1").ToList();
+
+            result.Count.ShouldBe(5);
+            var props = result.Select(x => x[table["Property"]]).ToList();
+            props.ShouldContain(2);
+            props.ShouldContain(3);
+            props.ShouldContain(4);
+            props.ShouldContain(5);
+            props.ShouldContain(6);
+            totalRows.ShouldBe(10);
+        }
+
+        [Fact]
+        public void CanTake()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            for (int i = 0; i < 10; i++)
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
+
+            long totalRows;
+            var result = store.Query(table, out totalRows, take: 2, where: "1=1").ToList();
+
+            result.Count.ShouldBe(2);
+            var props = result.Select(x => x[table["Property"]]).ToList();
+            props.ShouldContain(0);
+            props.ShouldContain(1);
+            totalRows.ShouldBe(10);
+        }
+
+        [Fact]
+        public void CanSkip()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            for (int i = 0; i < 10; i++)
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
+
+            long totalRows;
+            var result = store.Query(table, out totalRows, skip: 7, where: "1=1").ToList();
+
+            result.Count.ShouldBe(3);
+            var props = result.Select(x => x[table["Property"]]).ToList();
+            props.ShouldContain(7);
+            props.ShouldContain(8);
+            props.ShouldContain(9);
+            totalRows.ShouldBe(10);
+        }
+
+        [Fact]
+        public void CanGetTotalRows()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            for (int i = 0; i < 10; i++)
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
+
+            long totalRows;
+            var result = store.Query(table, out totalRows, skip: 2, where: "Property >= 5").ToList();
+
+            result.Count.ShouldBe(3);
+            var props = result.Select(x => x[table["Property"]]).ToList();
+            props.ShouldContain(7);
+            props.ShouldContain(8);
+            props.ShouldContain(9);
+            totalRows.ShouldBe(5);
+        }
+
+        [Fact]
+        public void CanGetTotalRowsWithNoResults()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+
+            long totalRows;
+            var result = store.Query(table, out totalRows).ToList();
+
+            result.Count.ShouldBe(0);
+            totalRows.ShouldBe(0);
+        }
+
+        [Fact]
+        public void CanQueryWithoutWhere()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, Guid.NewGuid(), new byte[0], new {});
+
+            long totalRows;
+            var result = store.Query(table, out totalRows).ToList();
+
+            result.Count.ShouldBe(1);
+        }
+
+        [Fact]
+        public void CanOrderBy()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            for (int i = 5; i > 0; i--)
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { Field = i });
+
+            long totalRows;
+            var result = store.Query(table, out totalRows, orderby: "Field").ToList();
+
+            var props = result.Select(x => x[table["Field"]]).ToList();
+            props[0].ShouldBe("1");
+            props[1].ShouldBe("2");
+            props[2].ShouldBe("3");
+            props[3].ShouldBe("4");
+            props[4].ShouldBe("5");
+        }
+
+        [Fact]
+        public void CanOrderByDescWhileSkippingAndTaking()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            for (int i = 5; i > 0; i--)
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { Field = i });
+
+            long totalRows;
+            var result = store.Query(table, out totalRows, skip: 2, take: 2, orderby: "Field desc").ToList();
+
+            var props = result.Select(x => x[table["Field"]]).ToList();
+            props[0].ShouldBe("3");
+            props[1].ShouldBe("2");
         }
 
         bool TableExists(string name)

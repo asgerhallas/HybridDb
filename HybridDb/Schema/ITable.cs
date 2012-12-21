@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace HybridDb
+namespace HybridDb.Schema
 {
     public interface ITable
     {

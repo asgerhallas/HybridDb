@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
+using HybridDb.Schema;
 
-namespace HybridDb
+namespace HybridDb.Commands
 {
     public class InsertCommand : DatabaseCommand
     {

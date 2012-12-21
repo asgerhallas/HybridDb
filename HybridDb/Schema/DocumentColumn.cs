@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data;
 
-namespace HybridDb
+namespace HybridDb.Schema
 {
     public class DocumentColumn : IColumn
     {
