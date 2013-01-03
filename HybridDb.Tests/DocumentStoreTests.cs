@@ -167,8 +167,8 @@ namespace HybridDb.Tests
             var etag2 = store.Insert(table, id2, document, new {Field = "Hans"});
             store.Insert(table, id3, document, new {Field = "Bjarne"});
 
-            long totalRows;
-            var rows = store.Query(table, out totalRows, where:"Field != @name", parameters:new { name = "Bjarne" }).ToList();
+            QueryStats stats;
+            var rows = store.Query(table, out stats, where:"Field != @name", parameters:new { name = "Bjarne" }).ToList();
 
             rows.Count().ShouldBe(2);
             var first = rows.Single(x => (Guid) x[table.IdColumn] == id1);
@@ -191,9 +191,9 @@ namespace HybridDb.Tests
             var document = new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
             store.Insert(table, id, document, new { Field = "Asger" });
 
-            long totalRows;
+            QueryStats stats;
             var rows = store.Query(table,
-                                   out totalRows,
+                                   out stats,
                                    columns: "Field",
                                    where: "Field = @name",
                                    parameters: new {name = "Asger"}).ToList();
@@ -271,16 +271,6 @@ namespace HybridDb.Tests
             store.Connection.Query("select * from #Entities").Count().ShouldBe(0);
         }
 
-        [Fact]
-        public void WillQuoteTableAndColumnNamesOnCreation()
-        {
-            throw new NotImplementedException();
-            store = new DocumentStore("data source=.;Integrated Security=True");
-            store.ForDocument<Case>().Projection(x => x.By);
-            store.Initialize();
-
-            store.Connection.Execute("drop table \"Case\"");
-        }
 
         [Fact]
         public void WillNotCreateSchemaIfItAlreadyExists()
@@ -328,8 +318,8 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             store.Insert(table, id, new byte[0], new {EnumProp = SomeFreakingEnum.Two});
 
-            long totalRows;
-            var result = store.Query<ProjectionWithEnum>(table, out totalRows, "EnumProp", "1=1").Single();
+            QueryStats stats;
+            var result = store.Query<ProjectionWithEnum>(table, out stats, columns: "EnumProp", where: "1=1").Single();
             result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
 
@@ -362,8 +352,8 @@ namespace HybridDb.Tests
             for (int i = 0; i < 10; i++)
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
 
-            long totalRows;
-            var result = store.Query(table, out totalRows, skip: 2, take: 5, where: "1=1").ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats, skip: 2, take: 5, orderby: "Property").ToList();
 
             result.Count.ShouldBe(5);
             var props = result.Select(x => x[table["Property"]]).ToList();
@@ -372,7 +362,7 @@ namespace HybridDb.Tests
             props.ShouldContain(4);
             props.ShouldContain(5);
             props.ShouldContain(6);
-            totalRows.ShouldBe(10);
+            stats.TotalRows.ShouldBe(10);
         }
 
         [Fact]
@@ -382,14 +372,14 @@ namespace HybridDb.Tests
             for (int i = 0; i < 10; i++)
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
 
-            long totalRows;
-            var result = store.Query(table, out totalRows, take: 2, where: "1=1").ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats, take: 2, orderby: "Property").ToList();
 
             result.Count.ShouldBe(2);
             var props = result.Select(x => x[table["Property"]]).ToList();
             props.ShouldContain(0);
             props.ShouldContain(1);
-            totalRows.ShouldBe(10);
+            stats.TotalRows.ShouldBe(10);
         }
 
         [Fact]
@@ -399,15 +389,15 @@ namespace HybridDb.Tests
             for (int i = 0; i < 10; i++)
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
 
-            long totalRows;
-            var result = store.Query(table, out totalRows, skip: 7, where: "1=1").ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats, skip: 7, orderby: "Property").ToList();
 
             result.Count.ShouldBe(3);
             var props = result.Select(x => x[table["Property"]]).ToList();
             props.ShouldContain(7);
             props.ShouldContain(8);
             props.ShouldContain(9);
-            totalRows.ShouldBe(10);
+            stats.TotalRows.ShouldBe(10);
         }
 
         [Fact]
@@ -417,15 +407,11 @@ namespace HybridDb.Tests
             for (int i = 0; i < 10; i++)
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
 
-            long totalRows;
-            var result = store.Query(table, out totalRows, skip: 2, where: "Property >= 5").ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats, skip: 2, where: "Property >= 5").ToList();
 
             result.Count.ShouldBe(3);
-            var props = result.Select(x => x[table["Property"]]).ToList();
-            props.ShouldContain(7);
-            props.ShouldContain(8);
-            props.ShouldContain(9);
-            totalRows.ShouldBe(5);
+            stats.TotalRows.ShouldBe(5);
         }
 
         [Fact]
@@ -433,11 +419,11 @@ namespace HybridDb.Tests
         {
             var table = store.Configuration.GetTableFor<Entity>();
 
-            long totalRows;
-            var result = store.Query(table, out totalRows).ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats).ToList();
 
             result.Count.ShouldBe(0);
-            totalRows.ShouldBe(0);
+            stats.TotalRows.ShouldBe(0);
         }
 
         [Fact]
@@ -446,8 +432,8 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetTableFor<Entity>();
             store.Insert(table, Guid.NewGuid(), new byte[0], new {});
 
-            long totalRows;
-            var result = store.Query(table, out totalRows).ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats).ToList();
 
             result.Count.ShouldBe(1);
         }
@@ -459,8 +445,8 @@ namespace HybridDb.Tests
             for (int i = 5; i > 0; i--)
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Field = i });
 
-            long totalRows;
-            var result = store.Query(table, out totalRows, orderby: "Field").ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats, orderby: "Field").ToList();
 
             var props = result.Select(x => x[table["Field"]]).ToList();
             props[0].ShouldBe("1");
@@ -477,8 +463,8 @@ namespace HybridDb.Tests
             for (int i = 5; i > 0; i--)
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Field = i });
 
-            long totalRows;
-            var result = store.Query(table, out totalRows, skip: 2, take: 2, orderby: "Field desc").ToList();
+            QueryStats stats;
+            var result = store.Query(table, out stats, skip: 2, take: 2, orderby: "Field desc").ToList();
 
             var props = result.Select(x => x[table["Field"]]).ToList();
             props[0].ShouldBe("3");

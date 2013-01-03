@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Dapper;
 using HybridDb.Schema;
 
@@ -25,9 +26,11 @@ namespace HybridDb.Commands
                                     table.EtagColumn.Name,
                                     uniqueParameterIdentifier);
 
-            var parameters = new DynamicParameters();
-            parameters.Add("@Id" + uniqueParameterIdentifier, key, table.IdColumn.Column.DbType);
-            parameters.Add("@CurrentEtag" + uniqueParameterIdentifier, currentEtag, table.EtagColumn.Column.DbType);
+            var parameters = new List<Parameter>
+            {
+                new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.Column.DbType},
+                new Parameter {Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.Column.DbType}
+            };
 
             return new PreparedDatabaseCommand
             {

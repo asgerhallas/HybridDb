@@ -24,9 +24,9 @@ namespace HybridDb
             get { return tables; }
         }
 
-        public Table<TEntity> Register<TEntity>()
+        public Table<TEntity> Register<TEntity>(string name)
         {
-            var entity = new Table<TEntity>();
+            var entity = new Table<TEntity>(name);
             tables.Add(typeof (TEntity), entity);
             return entity;
         }

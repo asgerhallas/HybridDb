@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -67,7 +68,7 @@ namespace HybridDb
 
         public Table<TDocument> ForDocument<TDocument>()
         {
-            return configuration.Register<TDocument>();
+            return ForDocument<TDocument>(null);
         }
 
         public void Initialize()
@@ -127,7 +128,7 @@ namespace HybridDb
                 var i = 0;
                 var etag = Guid.NewGuid();
                 var sql = "";
-                var parameters = new DynamicParameters();
+                var parameters = new List<Parameter>();
                 var numberOfParameters = 0;
                 var expectedRowCount = 0;
                 var numberOfInsertCommands = 0;
@@ -145,14 +146,14 @@ namespace HybridDb
                         numberOfDeleteCommands++;
 
                     var preparedCommand = command.Prepare(this, etag, i++);
-                    var numberOfNewParameters = preparedCommand.Parameters.ParameterNames.Count();
+                    var numberOfNewParameters = preparedCommand.Parameters.Count;
 
                     if (numberOfParameters + numberOfNewParameters >= 2100)
                     {
                         InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);
 
                         sql = "";
-                        parameters = new DynamicParameters();
+                        parameters = new List<Parameter>();
                         expectedRowCount = 0;
                         numberOfParameters = 0;
                     }
@@ -161,7 +162,7 @@ namespace HybridDb
                     numberOfParameters += numberOfNewParameters;
 
                     sql += string.Format("{0};", preparedCommand.Sql);
-                    parameters.AddDynamicParams(preparedCommand.Parameters);
+                    parameters.AddRange(preparedCommand.Parameters);
                 }
 
                 InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);
@@ -204,8 +205,8 @@ namespace HybridDb
             get { return lastWrittenEtag; }
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(ITable table, out long totalRows, string columns = "*", string @where = "", int skip = 0, int take = 0,
-                                                           string orderby = "", object parameters = null)
+        public IEnumerable<TProjection> Query<TProjection>(ITable table, out QueryStats stats, string columns = "*", string @where = "", int skip = 0, int take = 0,
+                                                           string @orderby = "", object parameters = null)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
@@ -215,26 +216,24 @@ namespace HybridDb
 
                 var isWindowed = skip > 0 || take > 0;
 
-                var reverseOrderBy = "";
-                if (!string.IsNullOrEmpty(orderby))
-                {
-                    reverseOrderBy = string.Join(", ", @orderby.Split(',').Select(x =>
+                var rowNumberOrderBy = string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby;
+                var reverseRowNumberOrderBy =
+                    string.Join(", ", rowNumberOrderBy.Split(',').Select(x =>
                     {
                         if (x.IndexOf("asc", StringComparison.InvariantCultureIgnoreCase) >= 0)
                             return x.Replace("asc", "desc", StringComparison.InvariantCultureIgnoreCase);
-                        
+
                         if (x.IndexOf("desc", StringComparison.InvariantCultureIgnoreCase) >= 0)
                             return x.Replace("desc", "asc", StringComparison.InvariantCultureIgnoreCase);
 
                         return x + " desc";
                     }));
-                }
-
-                var resultingOrderBy = string.IsNullOrEmpty(orderby) ? "" : orderby;
 
                 var sql = new SqlBuilder();
                 sql.Append(@"with temp as (select {0}", columns)
-                   .Append(isWindowed, ", row_number() over(order by {0}) as RowNumberAsc, row_number() over(order by {1}) as RowNumberDesc", orderby, reverseOrderBy)
+                   .Append(isWindowed, ", row_number() over(order by {0}) as RowNumberAsc, row_number() over(order by {1}) as RowNumberDesc",
+                           rowNumberOrderBy,
+                           reverseRowNumberOrderBy)
                    .Append("from {0}", Escape(GetFormattedTableName(table)))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
@@ -244,42 +243,28 @@ namespace HybridDb
                    .Append(!isWindowed, "select *, (select count(*) from temp) as TotalRows from temp")
                    .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
-                if (typeof (IDictionary<IColumn, object>).IsAssignableFrom(typeof (TProjection)))
-                {
-                    var rows = connection.Connection.Query(sql.ToString(), parameters);
+                Console.WriteLine();
+                Console.WriteLine(sql.ToString());
 
-                    var firstRow = rows.FirstOrDefault();
-                    totalRows = firstRow != null ? firstRow.TotalRows : 0;
+                var result = typeof (IDictionary<IColumn, object>).IsAssignableFrom(typeof (TProjection))
+                                 ? (IEnumerable<TProjection>) (QueryInternal<object>(connection, sql, parameters, out stats)
+                                                                  .Cast<IDictionary<string, object>>()
+                                                                  .Select(row => row.Select(column => new {Key = table[column.Key], column.Value})
+                                                                                    .Where(column => column.Key != null)
+                                                                                    .ToDictionary(column => column.Key, column => column.Value)))
+                                 : QueryInternal<TProjection>(connection, sql, parameters, out stats);
 
-                    Interlocked.Increment(ref numberOfRequests);
+                Interlocked.Increment(ref numberOfRequests);
+                Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
 
-                    Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
-
-                    return (IEnumerable<TProjection>) rows.Cast<IDictionary<string, object>>()
-                                                          .Select(row => row.Select(x => new {Key = table[x.Key], x.Value})
-                                                                            .Where(x => x.Key != null)
-                                                                            .ToDictionary(x => x.Key, x => x.Value));
-                }
-                else
-                {
-                    var rows = connection.Connection.Query<TProjection, Metadata, Tuple<TProjection, Metadata>>(sql.ToString(), Tuple.Create, parameters, splitOn: "TotalRows");
-
-                    var firstRow = rows.FirstOrDefault();
-                    totalRows = firstRow != null ? firstRow.Item2.TotalRows : 0;
-
-                    Interlocked.Increment(ref numberOfRequests);
-
-                    Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
-
-                    return rows.Select(x => x.Item1);
-                }
+                return result;
             }
         }
 
-        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out long totalRows, string columns = "*", string @where = "", int skip = 0, int take = 0, 
+        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out QueryStats stats, string columns = "*", string @where = "", int skip = 0, int take = 0,
                                                                string orderby = "", object parameters = null)
         {
-            return Query<IDictionary<IColumn, object>>(table, out totalRows, columns, where, skip, take, orderby, parameters);
+            return Query<IDictionary<IColumn, object>>(table, out stats, columns: columns, where: @where, skip: skip, take: take, orderby: @orderby, parameters: parameters);
         }
 
         public IDictionary<IColumn, object> Get(ITable table, Guid key)
@@ -301,14 +286,33 @@ namespace HybridDb
             }
         }
 
+        IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)
+        {
+            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create, parameters, splitOn: "TotalRows");
+
+            var firstRow = rows.FirstOrDefault();
+            metadata = firstRow != null ? new QueryStats {TotalRows = firstRow.Item2.TotalRows} : new QueryStats();
+
+            Interlocked.Increment(ref numberOfRequests);
+
+            return rows.Select(x => x.Item1);
+        }
+
+        public Table<TDocument> ForDocument<TDocument>(string name)
+        {
+            return configuration.Register<TDocument>(name);
+        }
+
         public static DocumentStore ForTesting(string connectionString)
         {
             return new DocumentStore(connectionString, true);
         }
 
-        void InternalExecute(ManagedConnection managedConnection, DbTransaction tx, string sql, DynamicParameters parameters, int expectedRowCount)
+        void InternalExecute(ManagedConnection managedConnection, IDbTransaction tx, string sql, List<Parameter> parameters, int expectedRowCount)
         {
-            var rowcount = managedConnection.Connection.Execute(sql, parameters, tx);
+            Console.WriteLine("Internal execute");
+            var fastParameters = new FastDynamicParameters(parameters);
+            var rowcount = managedConnection.Connection.Execute(sql, fastParameters, tx);
             Interlocked.Increment(ref numberOfRequests);
             if (rowcount != expectedRowCount)
                 throw new ConcurrencyException();
@@ -334,8 +338,7 @@ namespace HybridDb
 
         public string GetFormattedTableName(ITable table)
         {
-            var tableName = Inflector.Inflector.Pluralize(table.Name);
-            return IsInTestMode ? "#" + tableName : tableName;
+            return IsInTestMode ? "#" + table.Name : table.Name;
         }
 
         public string Escape(string identifier)
@@ -369,11 +372,6 @@ namespace HybridDb
             {
                 dispose();
             }
-        }
-
-        public class Metadata
-        {
-            public int TotalRows { get; set; }
         }
 
         public class MissingProjectionValueException : Exception {}

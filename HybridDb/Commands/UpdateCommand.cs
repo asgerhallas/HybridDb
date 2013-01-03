@@ -41,8 +41,8 @@ namespace HybridDb.Commands
                                     uniqueParameterIdentifier);
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
-            parameters.Add("@Id" + uniqueParameterIdentifier, key, table.IdColumn.Column.DbType);
-            parameters.Add("@CurrentEtag" + uniqueParameterIdentifier, currentEtag, table.EtagColumn.Column.DbType);
+            parameters.Add(new Parameter { Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.Column.DbType});
+            parameters.Add(new Parameter { Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.Column.DbType});
 
             return new PreparedDatabaseCommand
             {

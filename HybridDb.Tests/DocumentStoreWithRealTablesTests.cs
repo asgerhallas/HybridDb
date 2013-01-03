@@ -22,15 +22,30 @@ namespace HybridDb.Tests
             using (var connection = new SqlConnection(connectionString))
             {
                 connection.Open();
-                TableExists(connection, "Entities").ShouldBe(false);
+                TableExists(connection, "Cases").ShouldBe(false);
 
                 var store = new DocumentStore(connectionString);
-                store.ForDocument<Entity>();
+                store.ForDocument<Case>();
                 store.Initialize();
 
-                TableExists(connection, "Entities").ShouldBe(true);
+                TableExists(connection, "Cases").ShouldBe(true);
 
-                connection.Execute("drop table Entities");
+                connection.Execute("drop table Cases");
+            }
+        }
+
+        [Fact]
+        public void WillQuoteTableAndColumnNamesOnCreation()
+        {
+            using (var connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+
+                var store = new DocumentStore(connectionString);
+                store.ForDocument<Case>("Case").Projection(x => x.By);
+                Should.NotThrow(store.Initialize);
+
+                connection.Execute("drop table [Case]");
             }
         }
 
@@ -39,9 +54,10 @@ namespace HybridDb.Tests
             return connection.Query(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
         }
 
-        public class Entity
+        public class Case
         {
             public Guid Id { get; private set; }
+            public string By { get; set; }
         }
     }
 }

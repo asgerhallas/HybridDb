@@ -59,6 +59,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="QueryStats.cs" />
+    <Compile Include="Parameter.cs" />
+    <Compile Include="FastDynamicParameters.cs" />
     <Compile Include="Logging\ColorSetting.cs" />
     <Compile Include="Schema\Column.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />

@@ -8,10 +8,10 @@ namespace HybridDb.Schema
     {
         readonly Dictionary<string, IColumn> columns;
 
-        public Table()
+        public Table(string name)
         {
             columns = new Dictionary<string, IColumn>();
-            Name = typeof (TEntity).Name;
+            Name = name ?? Inflector.Inflector.Pluralize(typeof(TEntity).Name);
 
             IdColumn = new IdColumn();
             columns.Add(IdColumn.Name, IdColumn);

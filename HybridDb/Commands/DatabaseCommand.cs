@@ -17,25 +17,23 @@ namespace HybridDb.Commands
                         .ToDictionary(x => table[x.Key], x => x.Value));
         }
 
-        protected static DynamicParameters MapProjectionsToParameters(IDictionary<IColumn, object> projections, int i)
+        protected static List<Parameter> MapProjectionsToParameters(IDictionary<IColumn, object> projections, int i)
         {
-            var parameters = new DynamicParameters();
-            foreach (var projection in projections)
-            {
-                var column = projection.Key;
-                parameters.Add("@" + column.Name + i,
-                               projection.Value,
-                               column.Column.DbType,
-                               size: column.Column.Length);
-            }
-
-            return parameters;
+            return (from projection in projections
+                    let column = projection.Key
+                    select new Parameter
+                    {
+                        Name = "@" + column.Name + i, 
+                        Value = projection.Value, 
+                        DbType = column.Column.DbType, 
+                        Size = column.Column.Length
+                    }).ToList();
         }
 
         public class PreparedDatabaseCommand
         {
             public string Sql { get; set; }
-            public DynamicParameters Parameters { get; set; }
+            public List<Parameter> Parameters { get; set; }
             public int ExpectedRowCount { get; set; }
         }
     }
