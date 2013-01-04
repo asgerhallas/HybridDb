@@ -1,8 +1,10 @@
-﻿namespace HybridDb
+﻿using System;
+
+namespace HybridDb
 {
     public interface ISerializer
     {
         byte[] Serialize(object obj);
-        T Deserialize<T>(byte[] data);
+        object Deserialize(byte[] data, Type type);
     }
 }

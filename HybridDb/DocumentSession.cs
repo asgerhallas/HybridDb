@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HybridDb.Commands;
+using HybridDb.Linq;
 using HybridDb.Schema;
 
 namespace HybridDb
 {
-    public class DocumentSession : IDocumentSession
+    public class DocumentSession : IDocumentSession, IAdvancedDocumentSessionCommands
     {
-        readonly AdvancedDocumentSessionCommands advanced;
         readonly Dictionary<Guid, ManagedEntity> entities;
         readonly IDocumentStore store;
 
@@ -17,13 +17,11 @@ namespace HybridDb
         {
             entities = new Dictionary<Guid, ManagedEntity>();
             this.store = store;
-
-            advanced = new AdvancedDocumentSessionCommands(this);
         }
 
         public IAdvancedDocumentSessionCommands Advanced
         {
-            get { return advanced; }
+            get { return this; }
         }
 
         public T Load<T>(Guid id) where T : class
@@ -41,8 +39,7 @@ namespace HybridDb
             if (row == null)
                 return null;
 
-            var entity = ConvertToEntityAndPutUnderManagement<T>(table, row);
-            return entity;
+            return (T)ConvertToEntityAndPutUnderManagement(table, row);
         }
 
         public IEnumerable<T> Query<T>(string where, object parameters) where T : class
@@ -52,7 +49,7 @@ namespace HybridDb
             QueryStats stats;
             var rows = store.Query(table, out stats, columns, where, 0, 0, "", parameters);
 
-            return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table, row))
+            return rows.Select(row => (T)ConvertToEntityAndPutUnderManagement(table, row))
                        .Where(entity => entity != null);
         }
 
@@ -64,6 +61,11 @@ namespace HybridDb
             QueryStats stats;
             var rows = store.Query<TProjection>(table, out stats, columns: columns, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
             return rows;
+        }
+
+        public IQueryable<T> Query<T>() where T : class
+        {
+            return new Query<T>(new QueryProvider(this));
         }
 
         public void Store(object entity)
@@ -165,7 +167,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        T ConvertToEntityAndPutUnderManagement<T>(ITable table, IDictionary<IColumn, object> row) where T : class
+        internal object ConvertToEntityAndPutUnderManagement(ITable table, IDictionary<IColumn, object> row)
         {
             var id = (Guid) row[table.IdColumn];
 
@@ -173,12 +175,12 @@ namespace HybridDb
             if (entities.TryGetValue(id, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? (T) managedEntity.Entity
+                           ? managedEntity.Entity
                            : null;
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize<T>(document);
+            var entity = store.Configuration.Serializer.Deserialize(document, table.EntityType);
 
             managedEntity = new ManagedEntity
             {
@@ -193,24 +195,20 @@ namespace HybridDb
             return entity;
         }
 
-        class AdvancedDocumentSessionCommands : IAdvancedDocumentSessionCommands
+
+        public void Clear()
         {
-            readonly DocumentSession session;
+            entities.Clear();
+        }
 
-            public AdvancedDocumentSessionCommands(DocumentSession session)
-            {
-                this.session = session;
-            }
+        public bool IsLoaded(Guid id)
+        {
+            return entities.ContainsKey(id);
+        }
 
-            public void Clear()
-            {
-                session.entities.Clear();
-            }
-
-            public bool IsLoaded(Guid id)
-            {
-                return session.entities.ContainsKey(id);
-            }
+        public IDocumentStore DocumentStore
+        {
+            get { return store; }
         }
 
         enum EntityState

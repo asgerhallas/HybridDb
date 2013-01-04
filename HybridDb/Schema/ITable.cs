@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace HybridDb.Schema
 {
@@ -9,6 +10,7 @@ namespace HybridDb.Schema
         IdColumn IdColumn { get; }
         EtagColumn EtagColumn { get; }
         DocumentColumn DocumentColumn { get; }
+        Type EntityType { get; }
         IColumn this[string name] { get; }
     }
 }

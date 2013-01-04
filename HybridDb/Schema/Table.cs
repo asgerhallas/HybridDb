@@ -23,6 +23,11 @@ namespace HybridDb.Schema
             columns.Add(DocumentColumn.Name, DocumentColumn);
         }
 
+        public Type EntityType
+        {
+            get { return typeof (TEntity); }
+        }
+
         public EtagColumn EtagColumn { get; private set; }
         public IdColumn IdColumn { get; private set; }
         public DocumentColumn DocumentColumn { get; private set; }

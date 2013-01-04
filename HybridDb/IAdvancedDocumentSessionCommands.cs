@@ -6,5 +6,6 @@ namespace HybridDb
     {
         void Clear();
         bool IsLoaded(Guid id);
+        IDocumentStore DocumentStore { get; }
     }
 }

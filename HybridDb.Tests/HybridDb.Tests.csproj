@@ -67,6 +67,7 @@
     <Compile Include="DocumentStoreTests.cs" />
     <Compile Include="DocumentStoreWithRealTablesTests.cs" />
     <Compile Include="InsertPerformanceTests.cs" />
+    <Compile Include="LinqTests.cs" />
     <Compile Include="QueryPerformanceFixture.cs" />
     <Compile Include="QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -34,6 +34,7 @@ namespace HybridDb
         {
             if (instance == null)
                 return false;
+
             return instance.GetType().IsA(typeToBe);
         }
 

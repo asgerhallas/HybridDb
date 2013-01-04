@@ -11,7 +11,7 @@ namespace HybridDb.Tests
 {
     public class DocumentStoreTests : IDisposable
     {
-        DocumentStore store;
+        readonly DocumentStore store;
 
         public DocumentStoreTests()
         {
@@ -286,7 +286,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanSplitLargeQueries()
+        public void CanSplitLargeCommandBatches()
         {
             var table = store.Configuration.GetTableFor<Entity>();
 

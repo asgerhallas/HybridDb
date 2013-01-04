@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using Newtonsoft.Json;
 
@@ -16,12 +17,12 @@ namespace HybridDb
             }
         }
 
-        public override T Deserialize<T>(byte[] data)
+        public override object Deserialize(byte[] data, Type type)
         {
             using (var textReader = new StringReader(Encoding.UTF8.GetString(data)))
             using (var jsonReader = new JsonTextReader(textReader))
             {
-                return CreateSerializer().Deserialize<T>(jsonReader);
+                return CreateSerializer().Deserialize(jsonReader, type);
             }
         }
     }

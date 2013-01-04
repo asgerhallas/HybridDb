@@ -40,12 +40,12 @@ namespace HybridDb
             }
         }
 
-        public virtual T Deserialize<T>(byte[] data)
+        public virtual object Deserialize(byte[] data, Type type)
         {
             using (var inStream = new MemoryStream(data))
             using (var bsonReader = new BsonReader(inStream))
             {
-                return CreateSerializer().Deserialize<T>(bsonReader);
+                return CreateSerializer().Deserialize(bsonReader, type);
             }
         }
 
