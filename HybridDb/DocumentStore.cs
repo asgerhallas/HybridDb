@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Dapper;
 using HybridDb.Commands;
@@ -205,35 +206,27 @@ namespace HybridDb
             get { return lastWrittenEtag; }
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(ITable table, out QueryStats stats, string columns = "*", string @where = "", int skip = 0, int take = 0,
-                                                           string @orderby = "", object parameters = null)
+        public IEnumerable<TProjection> Query<TProjection>(ITable table, out QueryStats stats, string select = null, string where = "",
+                                                           int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
+            if (select.IsNullOrEmpty() || select == "*")
+                select = "";
+
+            var isTypedProjection = !typeof (TProjection).IsA<IDictionary<IColumn, object>>();
+            if (isTypedProjection)
+                select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
+
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
             {
-                if (!columns.Contains(table.IdColumn.Name) && columns != "*")
-                    columns = string.Format("{0},{1}", table.IdColumn.Name, columns);
-
                 var isWindowed = skip > 0 || take > 0;
-
-                var rowNumberOrderBy = string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby;
-                var reverseRowNumberOrderBy =
-                    string.Join(", ", rowNumberOrderBy.Split(',').Select(x =>
-                    {
-                        if (x.IndexOf("asc", StringComparison.InvariantCultureIgnoreCase) >= 0)
-                            return x.Replace("asc", "desc", StringComparison.InvariantCultureIgnoreCase);
-
-                        if (x.IndexOf("desc", StringComparison.InvariantCultureIgnoreCase) >= 0)
-                            return x.Replace("desc", "asc", StringComparison.InvariantCultureIgnoreCase);
-
-                        return x + " desc";
-                    }));
+                var rowNumberOrderBy = CreateAscendingAndDescendingOrderByClauseForRowNumber(orderby);
 
                 var sql = new SqlBuilder();
-                sql.Append(@"with temp as (select {0}", columns)
+                sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
                    .Append(isWindowed, ", row_number() over(order by {0}) as RowNumberAsc, row_number() over(order by {1}) as RowNumberDesc",
-                           rowNumberOrderBy,
-                           reverseRowNumberOrderBy)
+                           rowNumberOrderBy.Item1,
+                           rowNumberOrderBy.Item2)
                    .Append("from {0}", Escape(GetFormattedTableName(table)))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
@@ -246,13 +239,13 @@ namespace HybridDb
                 Console.WriteLine();
                 Console.WriteLine(sql.ToString());
 
-                var result = typeof (IDictionary<IColumn, object>).IsAssignableFrom(typeof (TProjection))
-                                 ? (IEnumerable<TProjection>) (QueryInternal<object>(connection, sql, parameters, out stats)
+                var result = isTypedProjection
+                                 ? QueryInternal<TProjection>(connection, sql, parameters, out stats)
+                                 : (IEnumerable<TProjection>) (QueryInternal<object>(connection, sql, parameters, out stats)
                                                                   .Cast<IDictionary<string, object>>()
                                                                   .Select(row => row.Select(column => new {Key = table[column.Key], column.Value})
                                                                                     .Where(column => column.Key != null)
-                                                                                    .ToDictionary(column => column.Key, column => column.Value)))
-                                 : QueryInternal<TProjection>(connection, sql, parameters, out stats);
+                                                                                    .ToDictionary(column => column.Key, column => column.Value)));
 
                 Interlocked.Increment(ref numberOfRequests);
                 Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
@@ -261,10 +254,11 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out QueryStats stats, string columns = "*", string @where = "", int skip = 0, int take = 0,
-                                                               string orderby = "", object parameters = null)
+
+        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out QueryStats stats, string select = null, string where = "",
+                                                               int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
-            return Query<IDictionary<IColumn, object>>(table, out stats, columns: columns, where: @where, skip: skip, take: take, orderby: @orderby, parameters: parameters);
+            return Query<IDictionary<IColumn, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
         }
 
         public IDictionary<IColumn, object> Get(ITable table, Guid key)
@@ -284,6 +278,40 @@ namespace HybridDb
 
                 return row != null ? row.ToDictionary(x => table[x.Key], x => x.Value) : null;
             }
+        }
+
+        static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
+        {
+            var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
+            var selectedColumns = from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
+                                  let split = Regex.Split(clause, "AS|\\s", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
+                                  let column = split[0]
+                                  let alias = split.Length > 1 ? split[1] : null
+                                  where neededColumns.Contains(alias)
+                                  select new { column, alias = alias ?? column };
+
+            var missingColumns = from column in neededColumns
+                                 where !selectedColumns.Select(x => x.alias).Contains(column)
+                                 select new { column, alias = column };
+
+            select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
+            return select;
+        }
+
+        static Tuple<string, string> CreateAscendingAndDescendingOrderByClauseForRowNumber(string @orderby)
+        {
+            var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby;
+            var reverseRowNumberOrderBy = string.Join(", ", rowNumberOrderBy.Split(',').Select(x =>
+            {
+                if (x.IndexOf("asc", StringComparison.InvariantCultureIgnoreCase) >= 0)
+                    return x.Replace("asc", "desc", StringComparison.InvariantCultureIgnoreCase);
+
+                if (x.IndexOf("desc", StringComparison.InvariantCultureIgnoreCase) >= 0)
+                    return x.Replace("desc", "asc", StringComparison.InvariantCultureIgnoreCase);
+
+                return x + " desc";
+            }));
+            return Tuple.Create(rowNumberOrderBy, reverseRowNumberOrderBy);
         }
 
         IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)

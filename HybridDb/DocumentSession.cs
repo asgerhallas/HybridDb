@@ -47,7 +47,7 @@ namespace HybridDb
             var table = store.Configuration.GetTableFor<T>();
             var columns = string.Join(",", new[] {table.IdColumn.Name, table.EtagColumn.Name, table.DocumentColumn.Name});
             QueryStats stats;
-            var rows = store.Query(table, out stats, columns, where, 0, 0, "", parameters);
+            var rows = store.Query(table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
 
             return rows.Select(row => (T)ConvertToEntityAndPutUnderManagement(table, row))
                        .Where(entity => entity != null);
@@ -56,16 +56,14 @@ namespace HybridDb
         public IEnumerable<TProjection> Query<T, TProjection>(string where, object parameters) where T : class
         {
             var table = store.Configuration.GetTableFor<T>();
-            var properties = typeof (TProjection).GetProperties();
-            var columns = string.Join(",", properties.Select(x => x.Name));
             QueryStats stats;
-            var rows = store.Query<TProjection>(table, out stats, columns: columns, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
+            var rows = store.Query<TProjection>(table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
             return rows;
         }
 
         public IQueryable<T> Query<T>() where T : class
         {
-            return new Query<T>(new QueryProvider(this));
+            return new Query<T>(new QueryProvider<T>(this));
         }
 
         public void Store(object entity)

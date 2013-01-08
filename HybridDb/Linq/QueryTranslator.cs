@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -8,32 +9,84 @@ namespace HybridDb.Linq
     internal class QueryTranslator : ExpressionVisitor
     {
         StringBuilder sb;
+        readonly List<string> select = new List<string>();
 
-        internal string Translate(Expression expression)
+        internal Translation Translate(Expression expression)
         {
             sb = new StringBuilder();
             Visit(expression);
-            return sb.ToString();
+            
+            return new Translation
+            {
+                Select = string.Join(", ", select),
+                Where = sb.ToString()
+            };
         }
 
         static Expression StripQuotes(Expression e)
         {
             while (e.NodeType == ExpressionType.Quote)
-            {
                 e = ((UnaryExpression) e).Operand;
-            }
+
             return e;
         }
 
-        protected override Expression VisitMethodCall(MethodCallExpression m)
+        protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
-            if (m.Method.DeclaringType == typeof (Queryable) && m.Method.Name == "Where")
+            if (expression.Method.DeclaringType == typeof (Queryable))
             {
-                var lambda = (LambdaExpression) StripQuotes(m.Arguments[1]);
-                Visit(lambda.Body);
-                return m;
+                return VisitQueryableMethodCall(expression);
             }
-            throw new NotSupportedException(string.Format("The method '{0}' is not supported", m.Method.Name));
+
+            throw new NotSupportedException(string.Format("Translation of methods declared on '{0}' is not supported", expression.Method.DeclaringType));
+        }
+
+        protected Expression VisitQueryableMethodCall(MethodCallExpression expression)
+        {
+            switch (expression.Method.Name)
+            {
+                case "Select":
+                    Visit(expression.Arguments[0]);
+                    VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
+                    break;
+                case "Where":
+                    var lambda = (LambdaExpression) StripQuotes(expression.Arguments[1]);
+                    Visit(lambda.Body);
+                    break;
+                case "OfType":
+                    Visit(expression.Arguments[0]);
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format("The method '{0}' is not supported", expression.Method.Name));
+            }
+
+            return expression;
+        }
+
+        void VisitSelect(Expression expression)
+        {
+            var lambdaExpression = expression as LambdaExpression;
+            expression = lambdaExpression != null ? lambdaExpression.Body : expression;
+
+            switch (expression.NodeType)
+            {
+                case ExpressionType.New:
+                    var @new = (NewExpression) expression;
+                    for (int i = 0; i < @new.Arguments.Count; i++)
+                    {
+                        var property = @new.Arguments[i] as MemberExpression;
+                        if (property == null)
+                            continue;
+
+                        select.Add(property.Member.Name + " AS " + @new.Members[i].Name);
+                    }
+                    break;
+                case ExpressionType.MemberAccess:
+                    Visit(expression);
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format("Node {0} is not supported in a Select", expression.NodeType));
+            }
         }
 
         protected override Expression VisitUnary(UnaryExpression u)
@@ -52,40 +105,125 @@ namespace HybridDb.Linq
 
         protected override Expression VisitBinary(BinaryExpression b)
         {
+            var left = b.Left;
+            var right = b.Right;
+
             sb.Append("(");
-            Visit(b.Left);
             switch (b.NodeType)
             {
                 case ExpressionType.And:
-                    sb.Append(" AND ");
-                    break;
                 case ExpressionType.Or:
-                    sb.Append(" OR");
+                case ExpressionType.LessThan:
+                case ExpressionType.LessThanOrEqual:
+                case ExpressionType.GreaterThan:
+                case ExpressionType.GreaterThanOrEqual:
+                    Visit(left);
+                    sb.Append(GetOperator(b));
+                    Visit(right);
                     break;
                 case ExpressionType.Equal:
-                    sb.Append(" = ");
+                    if (right.NodeType == ExpressionType.Constant)
+                    {
+                        var ce = (ConstantExpression) right;
+                        if (ce.Value == null)
+                        {
+                            Visit(left);
+                            sb.Append(" IS NULL");
+                            break;
+                        }
+                    }
+                    else if (left.NodeType == ExpressionType.Constant)
+                    {
+                        var ce = (ConstantExpression) left;
+                        if (ce.Value == null)
+                        {
+                            Visit(right);
+                            sb.Append(" IS NULL");
+                            break;
+                        }
+                    }
+
+                    Visit(left);
+                    sb.Append(GetOperator(b));
+                    Visit(right);
                     break;
                 case ExpressionType.NotEqual:
-                    sb.Append(" <> ");
-                    break;
-                case ExpressionType.LessThan:
-                    sb.Append(" < ");
-                    break;
-                case ExpressionType.LessThanOrEqual:
-                    sb.Append(" <= ");
-                    break;
-                case ExpressionType.GreaterThan:
-                    sb.Append(" > ");
-                    break;
-                case ExpressionType.GreaterThanOrEqual:
-                    sb.Append(" >= ");
+                    if (right.NodeType == ExpressionType.Constant)
+                    {
+                        var ce = (ConstantExpression) right;
+                        if (ce.Value == null)
+                        {
+                            Visit(left);
+                            sb.Append(" IS NOT NULL");
+                            break;
+                        }
+                    }
+                    else if (left.NodeType == ExpressionType.Constant)
+                    {
+                        var ce = (ConstantExpression) left;
+                        if (ce.Value == null)
+                        {
+                            Visit(right);
+                            sb.Append(" IS NOT NULL");
+                            break;
+                        }
+                    }
+
+                    Visit(left);
+                    sb.Append(GetOperator(b));
+                    Visit(right);
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", b.NodeType));
             }
-            Visit(b.Right);
             sb.Append(")");
             return b;
+        }
+
+        protected virtual string GetOperator(BinaryExpression b)
+        {
+            switch (b.NodeType)
+            {
+                case ExpressionType.And:
+                case ExpressionType.AndAlso:
+                    return (IsBoolean(b.Left.Type)) ? "AND" : "&";
+                case ExpressionType.Or:
+                case ExpressionType.OrElse:
+                    return (IsBoolean(b.Left.Type) ? "OR" : "|");
+                case ExpressionType.Equal:
+                    return "=";
+                case ExpressionType.NotEqual:
+                    return "<>";
+                case ExpressionType.LessThan:
+                    return "<";
+                case ExpressionType.LessThanOrEqual:
+                    return "<=";
+                case ExpressionType.GreaterThan:
+                    return ">";
+                case ExpressionType.GreaterThanOrEqual:
+                    return ">=";
+                case ExpressionType.Add:
+                case ExpressionType.AddChecked:
+                    return "+";
+                case ExpressionType.Subtract:
+                case ExpressionType.SubtractChecked:
+                    return "-";
+                case ExpressionType.Multiply:
+                case ExpressionType.MultiplyChecked:
+                    return "*";
+                case ExpressionType.Divide:
+                    return "/";
+                case ExpressionType.Modulo:
+                    return "%";
+                case ExpressionType.ExclusiveOr:
+                    return "^";
+                case ExpressionType.LeftShift:
+                    return "<<";
+                case ExpressionType.RightShift:
+                    return ">>";
+                default:
+                    return "";
+            }
         }
 
         protected override Expression VisitConstant(ConstantExpression c)
@@ -103,7 +241,7 @@ namespace HybridDb.Linq
                 switch (Type.GetTypeCode(c.Value.GetType()))
                 {
                     case TypeCode.Boolean:
-                        sb.Append(((bool)c.Value) ? 1 : 0);
+                        sb.Append(((bool) c.Value) ? 1 : 0);
                         break;
                     case TypeCode.String:
                         sb.Append("'");
@@ -120,14 +258,27 @@ namespace HybridDb.Linq
             return c;
         }
 
-        protected override Expression VisitMember(MemberExpression node)
+        protected override Expression VisitMember(MemberExpression expression)
         {
-            if (node.Expression != null && node.Expression.NodeType == ExpressionType.Parameter)
+            if (expression.NodeType == ExpressionType.MemberAccess)
             {
-                sb.Append(node.Member.Name);
-                return node;
+                if (expression as ConstantExpression)
             }
-            throw new NotSupportedException(string.Format("The member '{0}' is not supported", node.Member.Name));
+
+            var parent = Visit(expression.Expression);
+            sb.Append(expression.Member.Name);
+            return parent;
+        }
+
+        protected virtual bool IsBoolean(Type type)
+        {
+            return type == typeof (bool) || type == typeof (bool?);
+        }
+
+        internal class Translation
+        {
+            public string Select { get; set; }
+            public string Where { get; set; }
         }
     }
 }

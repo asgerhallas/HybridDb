@@ -5,7 +5,13 @@ using System.Reflection;
 
 namespace HybridDb.Linq
 {
-    public class QueryProvider : IQueryProvider
+    public interface IHybridQueryProvider : IQueryProvider
+    {
+        object Execute<T>(IQueryable<T> query);
+        string GetQueryText(Expression expression);
+    }
+
+    public class QueryProvider<TSourceElement> : IHybridQueryProvider
     {
         readonly DocumentSession session;
 
@@ -26,37 +32,47 @@ namespace HybridDb.Linq
             {
                 return (IQueryable) Activator.CreateInstance(typeof (Query<>).MakeGenericType(elementType), new object[] {this, expression});
             }
-            catch (TargetInvocationException tie)
+            catch (TargetInvocationException e)
             {
-                throw tie.InnerException;
+                throw e.InnerException;
             }
         }
 
-        public T Execute<T>(Expression expression)
+        public object Execute<T>(IQueryable<T> query)
         {
-            return (T) Execute(expression);
-        }
-
-        public object Execute(Expression expression)
-        {
-            var text = Translate(expression);
-            var elementType = TypeSystem.GetElementType(expression.Type);
-            QueryStats stats;
+            var translation = Translate(query.Expression);
             var store = session.Advanced.DocumentStore;
-            var table = store.Configuration.GetTableFor(elementType);
-            
-            var results = store.Query(table, out stats, where: text);
-            return results.Select(result => session.ConvertToEntityAndPutUnderManagement(table, result));
+            var table = store.Configuration.GetTableFor(typeof (TSourceElement));
+
+            QueryStats stats;
+            if (typeof (TSourceElement) == typeof (T))
+            {
+                return store.Query(table, out stats, select: translation.Select, where: translation.Where)
+                            .Select(result => session.ConvertToEntityAndPutUnderManagement(table, result));
+            }
+
+            return store.Query<T>(table, out stats, select: translation.Select, where: translation.Where);
         }
 
         public string GetQueryText(Expression expression)
         {
-            return Translate(expression);
+            return Translate(expression).Where;
         }
 
-        string Translate(Expression expression)
+        QueryTranslator.Translation Translate(Expression expression)
         {
+            //var partiallyEvaluatedExpression = PartialEvaluator.Eval(expression);
             return new QueryTranslator().Translate(expression);
+        }
+
+        T IQueryProvider.Execute<T>(Expression expression)
+        {
+            throw new NotSupportedException();
+        }
+
+        object IQueryProvider.Execute(Expression expression)
+        {
+            throw new NotSupportedException();
         }
     }
 }

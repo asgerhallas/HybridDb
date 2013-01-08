@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -168,7 +169,7 @@ namespace HybridDb.Tests
             store.Insert(table, id3, document, new {Field = "Bjarne"});
 
             QueryStats stats;
-            var rows = store.Query(table, out stats, where:"Field != @name", parameters:new { name = "Bjarne" }).ToList();
+            var rows = store.Query(table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
 
             rows.Count().ShouldBe(2);
             var first = rows.Single(x => (Guid) x[table.IdColumn] == id1);
@@ -184,25 +185,25 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryAndReturnProjections()
+        public void CanQueryAndReturnAnonymousProjections()
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
             var document = new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
             store.Insert(table, id, document, new { Field = "Asger" });
 
-            QueryStats stats;
-            var rows = store.Query(table,
-                                   out stats,
-                                   columns: "Field",
-                                   where: "Field = @name",
-                                   parameters: new {name = "Asger"}).ToList();
+            var t = new {Field = ""};
+
+            QueryStats stats = null;
+            var methodInfo = (from method in store.GetType().GetMethods()
+                              where method.Name == "Query" && method.IsGenericMethod
+                              select method).Single().MakeGenericMethod(t.GetType());
+
+            var rows = (IEnumerable<dynamic>)methodInfo.Invoke(store,
+                new object[] {  table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"} });
 
             rows.Count().ShouldBe(1);
-            rows[0][table.IdColumn].ShouldBe(id);
-            rows[0].ShouldNotContainKey(table.EtagColumn);
-            rows[0].ShouldNotContainKey(table.DocumentColumn);
-            rows[0][table["Field"]].ShouldBe("Asger");
+            Assert.Equal("Asger", rows.Single().Field);
         }
 
         [Fact]
@@ -319,7 +320,7 @@ namespace HybridDb.Tests
             store.Insert(table, id, new byte[0], new {EnumProp = SomeFreakingEnum.Two});
 
             QueryStats stats;
-            var result = store.Query<ProjectionWithEnum>(table, out stats, columns: "EnumProp", where: "1=1").Single();
+            var result = store.Query<ProjectionWithEnum>(table, out stats, where: "1=1").Single();
             result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
 
@@ -408,7 +409,7 @@ namespace HybridDb.Tests
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
 
             QueryStats stats;
-            var result = store.Query(table, out stats, skip: 2, where: "Property >= 5").ToList();
+            var result = store.Query(table, out stats, where: "Property >= 5", skip: 2).ToList();
 
             result.Count.ShouldBe(3);
             stats.TotalRows.ShouldBe(5);
@@ -469,6 +470,18 @@ namespace HybridDb.Tests
             var props = result.Select(x => x[table["Field"]]).ToList();
             props[0].ShouldBe("3");
             props[1].ShouldBe("2");
+        }
+
+        [Fact]
+        public void FailsIfProjectionQueryOnNonProjectedFieldsOrProperties()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void FailsIfDatabaseSchemaExistsButDoesNotMatchCurrentConfiguration()
+        {
+            throw new NotImplementedException();
         }
 
         bool TableExists(string name)

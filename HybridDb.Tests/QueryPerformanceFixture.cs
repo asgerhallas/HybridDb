@@ -18,7 +18,9 @@ namespace HybridDb.Tests
         {
             const string connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTesting(connectionString);
-            store.ForDocument<Entity>().Projection(x => x.SomeNumber);
+            store.ForDocument<Entity>()
+                .Projection(x => x.SomeData)
+                .Projection(x => x.SomeNumber);
             store.Initialize();
 
             var commands = new List<DatabaseCommand>();

@@ -59,6 +59,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Linq\PartialEvaluator.cs" />
     <Compile Include="Linq\IHybridQueryable.cs" />
     <Compile Include="Linq\Query.cs" />
     <Compile Include="Linq\QueryProvider.cs" />
@@ -99,7 +100,7 @@
     <Compile Include="Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringEx.cs" />
-    <Compile Include="TypeExtensions.cs" />
+    <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>
   <ItemGroup>
