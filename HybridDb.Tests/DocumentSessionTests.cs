@@ -44,6 +44,23 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanGetEtagForEntity()
+        {
+            using (var session = store.OpenSession())
+            {
+                var entity1 = new Entity { Id = Guid.NewGuid(), Property = "Asger" };
+                session.Advanced.GetEtagFor(entity1).ShouldBe(null);
+
+                session.Store(entity1);
+                session.Advanced.GetEtagFor(entity1).ShouldBe(Guid.Empty);
+                
+                session.SaveChanges();
+                session.Advanced.GetEtagFor(entity1).ShouldNotBe(null);
+                session.Advanced.GetEtagFor(entity1).ShouldNotBe(Guid.Empty);
+            }
+        }
+
+        [Fact]
         public void CanDeferCommands()
         {
             var table = store.Configuration.GetTableFor<Entity>();

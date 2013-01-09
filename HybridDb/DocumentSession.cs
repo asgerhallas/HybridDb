@@ -80,6 +80,18 @@ namespace HybridDb
             entities.Remove(id);
         }
 
+        public Guid? GetEtagFor(object entity)
+        {
+            var table = store.Configuration.GetTableFor(entity.GetType());
+            var id = (Guid) table.IdColumn.GetValue(entity);
+
+            ManagedEntity managedEntity;
+            if (!entities.TryGetValue(id, out managedEntity))
+                return null;
+
+            return managedEntity.Etag;
+        }
+
         public void Store(object entity)
         {
             var table = store.Configuration.GetTableFor(entity.GetType());
