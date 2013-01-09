@@ -81,7 +81,7 @@ namespace HybridDb
 
                 var timer = Stopwatch.StartNew();
                 using (var connectionManager = Connect())
-                using (var tx = connectionManager.Connection.BeginTransaction())
+                using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.Serializable))
                 {
                     foreach (var table in configuration.Tables.Values)
                     {
@@ -124,7 +124,7 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
             using (var connectionManager = Connect())
-            using (var tx = connectionManager.Connection.BeginTransaction())
+            using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 var i = 0;
                 var etag = Guid.NewGuid();
@@ -218,6 +218,7 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
+            using (var tx = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 var isWindowed = skip > 0 || take > 0;
                 var rowNumberOrderBy = CreateAscendingAndDescendingOrderByClauseForRowNumber(orderby);
@@ -240,8 +241,8 @@ namespace HybridDb
                 Console.WriteLine(sql.ToString());
 
                 var result = isTypedProjection
-                                 ? QueryInternal<TProjection>(connection, sql, parameters, out stats)
-                                 : (IEnumerable<TProjection>) (QueryInternal<object>(connection, sql, parameters, out stats)
+                                 ? QueryInternal<TProjection>(connection, sql, parameters, tx, out stats)
+                                 : (IEnumerable<TProjection>) (QueryInternal<object>(connection, sql, parameters, tx, out stats)
                                                                   .Cast<IDictionary<string, object>>()
                                                                   .Select(row => row.Select(column => new {Key = table[column.Key], column.Value})
                                                                                     .Where(column => column.Key != null)
@@ -250,6 +251,7 @@ namespace HybridDb
                 Interlocked.Increment(ref numberOfRequests);
                 Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
 
+                tx.Commit();
                 return result;
             }
         }
@@ -265,17 +267,20 @@ namespace HybridDb
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
+            using (var tx = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
+                
                 var sql = string.Format("select * from {0} where {1} = @Id",
                                         Escape(GetFormattedTableName(table)),
                                         table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}, tx).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 
                 Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
+                tx.Commit();
                 return row != null ? row.ToDictionary(x => table[x.Key], x => x.Value) : null;
             }
         }
@@ -314,9 +319,9 @@ namespace HybridDb
             return Tuple.Create(rowNumberOrderBy, reverseRowNumberOrderBy);
         }
 
-        IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)
+        IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
         {
-            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create, parameters, splitOn: "TotalRows");
+            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create, parameters, tx, splitOn: "TotalRows");
 
             var firstRow = rows.FirstOrDefault();
             metadata = firstRow != null ? new QueryStats {TotalRows = firstRow.Item2.TotalRows} : new QueryStats();
