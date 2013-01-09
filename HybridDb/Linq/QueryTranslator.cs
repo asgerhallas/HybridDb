@@ -8,18 +8,25 @@ namespace HybridDb.Linq
 {
     internal class QueryTranslator : ExpressionVisitor
     {
-        StringBuilder sb;
         readonly List<string> select = new List<string>();
+        StringBuilder where;
+        StringBuilder orderby;
+        int take;
+        int skip;
 
         internal Translation Translate(Expression expression)
         {
-            sb = new StringBuilder();
+            where = new StringBuilder();
+            orderby = new StringBuilder();
             Visit(expression);
             
             return new Translation
             {
                 Select = string.Join(", ", select),
-                Where = sb.ToString()
+                Where = where.ToString(),
+                Take = take,
+                Skip = skip,
+                OrderBy = orderby.ToString()
             };
         }
 
@@ -43,18 +50,39 @@ namespace HybridDb.Linq
 
         protected Expression VisitQueryableMethodCall(MethodCallExpression expression)
         {
+            Visit(expression.Arguments[0]);
+
             switch (expression.Method.Name)
             {
                 case "Select":
-                    Visit(expression.Arguments[0]);
                     VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
                     break;
                 case "Where":
-                    var lambda = (LambdaExpression) StripQuotes(expression.Arguments[1]);
-                    Visit(lambda.Body);
+                    Visit(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body);
                     break;
                 case "OfType":
-                    Visit(expression.Arguments[0]);
+                    break;
+                case "Take":
+                    take = (int) ((ConstantExpression)expression.Arguments[1]).Value;
+                    break;
+                case "Skip":
+                    skip = (int)((ConstantExpression)expression.Arguments[1]).Value;
+                    break;
+                case "OrderBy":
+                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    break;
+                case "ThenBy":
+                    orderby.Append(", ");
+                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    break;
+                case "OrderByDescending":
+                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    orderby.Append(" DESC");
+                    break;
+                case "ThenByDescending":
+                    orderby.Append(", ");
+                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    orderby.Append(" DESC");
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The method '{0}' is not supported", expression.Method.Name));
@@ -77,7 +105,7 @@ namespace HybridDb.Linq
                         var property = @new.Arguments[i] as MemberExpression;
                         if (property == null)
                             continue;
-
+                        
                         select.Add(property.Member.Name + " AS " + @new.Members[i].Name);
                     }
                     break;
@@ -94,7 +122,7 @@ namespace HybridDb.Linq
             switch (u.NodeType)
             {
                 case ExpressionType.Not:
-                    sb.Append(" NOT ");
+                    @where.Append(" NOT ");
                     Visit(u.Operand);
                     break;
                 default:
@@ -108,7 +136,7 @@ namespace HybridDb.Linq
             var left = b.Left;
             var right = b.Right;
 
-            sb.Append("(");
+            @where.Append("(");
             switch (b.NodeType)
             {
                 case ExpressionType.And:
@@ -118,7 +146,7 @@ namespace HybridDb.Linq
                 case ExpressionType.GreaterThan:
                 case ExpressionType.GreaterThanOrEqual:
                     Visit(left);
-                    sb.Append(GetOperator(b));
+                    @where.Append(GetOperator(b));
                     Visit(right);
                     break;
                 case ExpressionType.Equal:
@@ -128,7 +156,7 @@ namespace HybridDb.Linq
                         if (ce.Value == null)
                         {
                             Visit(left);
-                            sb.Append(" IS NULL");
+                            @where.Append(" IS NULL");
                             break;
                         }
                     }
@@ -138,13 +166,13 @@ namespace HybridDb.Linq
                         if (ce.Value == null)
                         {
                             Visit(right);
-                            sb.Append(" IS NULL");
+                            @where.Append(" IS NULL");
                             break;
                         }
                     }
 
                     Visit(left);
-                    sb.Append(GetOperator(b));
+                    @where.Append(GetOperator(b));
                     Visit(right);
                     break;
                 case ExpressionType.NotEqual:
@@ -154,7 +182,7 @@ namespace HybridDb.Linq
                         if (ce.Value == null)
                         {
                             Visit(left);
-                            sb.Append(" IS NOT NULL");
+                            @where.Append(" IS NOT NULL");
                             break;
                         }
                     }
@@ -164,19 +192,19 @@ namespace HybridDb.Linq
                         if (ce.Value == null)
                         {
                             Visit(right);
-                            sb.Append(" IS NOT NULL");
+                            @where.Append(" IS NOT NULL");
                             break;
                         }
                     }
 
                     Visit(left);
-                    sb.Append(GetOperator(b));
+                    @where.Append(GetOperator(b));
                     Visit(right);
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", b.NodeType));
             }
-            sb.Append(")");
+            @where.Append(")");
             return b;
         }
 
@@ -191,36 +219,36 @@ namespace HybridDb.Linq
                 case ExpressionType.OrElse:
                     return (IsBoolean(b.Left.Type) ? "OR" : "|");
                 case ExpressionType.Equal:
-                    return "=";
+                    return " = ";
                 case ExpressionType.NotEqual:
-                    return "<>";
+                    return " <> ";
                 case ExpressionType.LessThan:
-                    return "<";
+                    return " < ";
                 case ExpressionType.LessThanOrEqual:
-                    return "<=";
+                    return " <= ";
                 case ExpressionType.GreaterThan:
-                    return ">";
+                    return " > ";
                 case ExpressionType.GreaterThanOrEqual:
-                    return ">=";
+                    return " >= ";
                 case ExpressionType.Add:
                 case ExpressionType.AddChecked:
-                    return "+";
+                    return " + ";
                 case ExpressionType.Subtract:
                 case ExpressionType.SubtractChecked:
-                    return "-";
+                    return " - ";
                 case ExpressionType.Multiply:
                 case ExpressionType.MultiplyChecked:
-                    return "*";
+                    return " * ";
                 case ExpressionType.Divide:
-                    return "/";
+                    return " / ";
                 case ExpressionType.Modulo:
-                    return "%";
+                    return " % ";
                 case ExpressionType.ExclusiveOr:
-                    return "^";
+                    return " ^ ";
                 case ExpressionType.LeftShift:
-                    return "<<";
+                    return " << ";
                 case ExpressionType.RightShift:
-                    return ">>";
+                    return " >> ";
                 default:
                     return "";
             }
@@ -234,24 +262,24 @@ namespace HybridDb.Linq
 
             if (c.Value == null)
             {
-                sb.Append("NULL");
+                @where.Append("NULL");
             }
             else
             {
                 switch (Type.GetTypeCode(c.Value.GetType()))
                 {
                     case TypeCode.Boolean:
-                        sb.Append(((bool) c.Value) ? 1 : 0);
+                        @where.Append(((bool) c.Value) ? 1 : 0);
                         break;
                     case TypeCode.String:
-                        sb.Append("'");
-                        sb.Append(c.Value);
-                        sb.Append("'");
+                        @where.Append("'");
+                        @where.Append(c.Value);
+                        @where.Append("'");
                         break;
                     case TypeCode.Object:
                         throw new NotSupportedException(string.Format("The constant for '{0}' is not supported", c.Value));
                     default:
-                        sb.Append(c.Value);
+                        @where.Append(c.Value);
                         break;
                 }
             }
@@ -263,12 +291,12 @@ namespace HybridDb.Linq
             var columnName = GetColumnNameFromMemberExpression(expression);
             if (columnName != null)
             {
-                sb.Append(columnName);
+                where.Append(columnName);
                 return expression;
             }
 
             var constantValue = GetConstantValueFromMemberExpression(expression);
-            sb.Append(constantValue);
+            where.Append(constantValue);
             return expression;
         }
 
@@ -315,12 +343,6 @@ namespace HybridDb.Linq
         protected virtual bool IsBoolean(Type type)
         {
             return type == typeof (bool) || type == typeof (bool?);
-        }
-
-        internal class Translation
-        {
-            public string Select { get; set; }
-            public string Where { get; set; }
         }
     }
 }

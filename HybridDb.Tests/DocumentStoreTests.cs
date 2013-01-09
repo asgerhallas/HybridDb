@@ -82,7 +82,7 @@ namespace HybridDb.Tests
             var isPrimaryKey = store.Connection.Query(sql).Any();
             isPrimaryKey.ShouldBe(true);
         }
-
+        
         [Fact]
         public void CanCreateColumnsFromFields()
         {
@@ -154,6 +154,19 @@ namespace HybridDb.Tests
             row[table.EtagColumn].ShouldBe(etag);
             row[table.DocumentColumn].ShouldBe(document);
             row[table["Field"]].ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanQueryWithProjectionToNestedProperty()
+        {
+            var id1 = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            var etag1 = store.Insert(table, id1, new byte[0], new { TheChildNestedProperty = 9.8d });
+
+            QueryStats stats;
+            var rows = store.Query<ProjectionWithNestedProperty>(table, out stats).ToList();
+
+            rows.Single().TheChildNestedProperty.ShouldBe(9.8d);
         }
 
         [Fact]
@@ -302,7 +315,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanStoreAndLoadEnumProjection()
+        public void CanStoreAndQueryEnumProjection()
         {
             var table = store.Configuration.GetTableFor<Entity>();
             var id = Guid.NewGuid();
@@ -313,19 +326,19 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanStoreAndLoadEnumProjectionToNetType()
+        public void CanStoreAndQueryEnumProjectionToNetType()
         {
             var table = store.Configuration.GetTableFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table, id, new byte[0], new {EnumProp = SomeFreakingEnum.Two});
 
             QueryStats stats;
-            var result = store.Query<ProjectionWithEnum>(table, out stats, where: "1=1").Single();
+            var result = store.Query<ProjectionWithEnum>(table, out stats).Single();
             result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
 
         [Fact]
-        public void CanStoreAndLoadStringProjection()
+        public void CanStoreAndQueryStringProjection()
         {
             var table = store.Configuration.GetTableFor<Entity>();
             var id = Guid.NewGuid();
@@ -336,7 +349,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanStoreAndLoadDateTimeProjection()
+        public void CanStoreAndQueryDateTimeProjection()
         {
             var table = store.Configuration.GetTableFor<Entity>();
             var id = Guid.NewGuid();
@@ -527,6 +540,11 @@ namespace HybridDb.Tests
             {
                 public double NestedProperty { get; set; }
             }
+        }
+
+        public class ProjectionWithNestedProperty
+        {
+            public double TheChildNestedProperty { get; set; }
         }
 
         public class ProjectionWithEnum

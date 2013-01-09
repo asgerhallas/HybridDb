@@ -8,7 +8,7 @@ namespace HybridDb.Linq
     public interface IHybridQueryProvider : IQueryProvider
     {
         object Execute<T>(IQueryable<T> query);
-        string GetQueryText(Expression expression);
+        string GetQueryText(IQueryable expression);
     }
 
     public class QueryProvider<TSourceElement> : IHybridQueryProvider
@@ -40,31 +40,25 @@ namespace HybridDb.Linq
 
         public object Execute<T>(IQueryable<T> query)
         {
-            var translation = Translate(query.Expression);
+            var translation = query.Translate();
             var store = session.Advanced.DocumentStore;
             var table = store.Configuration.GetTableFor(typeof (TSourceElement));
 
             QueryStats stats;
             if (typeof (TSourceElement) == typeof (T))
             {
-                return store.Query(table, out stats, select: translation.Select, where: translation.Where)
+                return store.Query(table, out stats, translation.Select, translation.Where, translation.Skip, translation.Take, translation.OrderBy)
                             .Select(result => session.ConvertToEntityAndPutUnderManagement(table, result));
             }
 
-            return store.Query<T>(table, out stats, select: translation.Select, where: translation.Where);
+            return store.Query<T>(table, out stats, translation.Select, translation.Where, translation.Skip, translation.Take, translation.OrderBy);
         }
 
-        public string GetQueryText(Expression expression)
+        public string GetQueryText(IQueryable query)
         {
-            return Translate(expression).Where;
+            return query.Translate().Where;
         }
-
-        QueryTranslator.Translation Translate(Expression expression)
-        {
-            //var partiallyEvaluatedExpression = PartialEvaluator.Eval(expression);
-            return new QueryTranslator().Translate(expression);
-        }
-
+        
         T IQueryProvider.Execute<T>(Expression expression)
         {
             throw new NotSupportedException();

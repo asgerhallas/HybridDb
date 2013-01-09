@@ -2,5 +2,7 @@
 
 namespace HybridDb.Linq
 {
-    public interface IHybridQueryable<out T> : IQueryable<T> {}
+    public interface IHybridQueryable<out T> : IQueryable<T>
+    {
+    }
 }

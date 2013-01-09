@@ -6,14 +6,6 @@ using System.Linq.Expressions;
 
 namespace HybridDb.Linq
 {
-    public static class QueryableEx
-    {
-        public static IQueryable<T> AsProjection<T>(this IQueryable query)
-        {
-            return query.Provider.CreateQuery<T>(query.OfType<T>().Expression);
-        }
-    }
-
     public class Query<T> : IQueryable<T>, IQueryable, IEnumerable<T>, IEnumerable, IOrderedQueryable<T>, IOrderedQueryable
     {
         readonly Expression expression;
@@ -70,7 +62,7 @@ namespace HybridDb.Linq
 
         public override string ToString()
         {
-            return provider.GetQueryText(expression);
+            return provider.GetQueryText(this);
         }
     }
 }

@@ -12,9 +12,11 @@ namespace HybridDb
     {
         readonly Dictionary<Guid, ManagedEntity> entities;
         readonly IDocumentStore store;
+        readonly List<DatabaseCommand> deferredCommands;
 
         public DocumentSession(IDocumentStore store)
         {
+            deferredCommands = new List<DatabaseCommand>();
             entities = new Dictionary<Guid, ManagedEntity>();
             this.store = store;
         }
@@ -64,6 +66,18 @@ namespace HybridDb
         public IQueryable<T> Query<T>() where T : class
         {
             return new Query<T>(new QueryProvider<T>(this));
+        }
+
+        public void Defer(DatabaseCommand command)
+        {
+            deferredCommands.Add(command);
+        }
+
+        public void Evict(object entity)
+        {
+            var table = store.Configuration.GetTableFor(entity.GetType());
+            var id = (Guid) table.IdColumn.GetValue(entity);
+            entities.Remove(id);
         }
 
         public void Store(object entity)
@@ -129,10 +143,10 @@ namespace HybridDb
                 }
             }
 
-            if (commands.Count == 0)
+            if (commands.Count + deferredCommands.Count == 0)
                 return;
 
-            var etag = store.Execute(commands.Values.ToArray());
+            var etag = store.Execute(commands.Values.Concat(deferredCommands).ToArray());
 
             foreach (var change in commands)
             {

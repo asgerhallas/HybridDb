@@ -1,4 +1,5 @@
 ﻿using System;
+using HybridDb.Commands;
 
 namespace HybridDb
 {
@@ -7,5 +8,7 @@ namespace HybridDb
         void Clear();
         bool IsLoaded(Guid id);
         IDocumentStore DocumentStore { get; }
+        void Defer(DatabaseCommand command);
+        void Evict(object entity);
     }
 }

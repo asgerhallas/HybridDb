@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.SqlClient;
 using Dapper;
+using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 using System.Linq;
@@ -26,6 +27,37 @@ namespace HybridDb.Tests
         public void Dispose()
         {
             store.Dispose();
+        }
+
+        [Fact]
+        public void CanEvictEntity()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                var entity1 = new Entity { Id = id, Property = "Asger" };
+                session.Store(entity1);
+                session.Advanced.IsLoaded(id).ShouldBe(true);
+                session.Advanced.Evict(entity1);
+                session.Advanced.IsLoaded(id).ShouldBe(false);
+            }
+        }
+
+        [Fact]
+        public void CanDeferCommands()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Defer(new InsertCommand(table, id, new byte[0], new{}));
+                store.NumberOfRequests.ShouldBe(0);
+                session.SaveChanges();
+                store.NumberOfRequests.ShouldBe(1);
+            }
+
+            var entity = store.Connection.Query(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
+            Assert.NotNull(entity);
         }
 
         [Fact]

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using HybridDb.Linq;
 using Xunit;
 using System.Linq;
@@ -9,254 +8,180 @@ namespace HybridDb.Tests
 {
     public class LinqTests
     {
-        readonly string connectionString;
-        readonly DocumentStore store;
+        readonly IDocumentSession session;
 
         public LinqTests()
         {
-            connectionString = "data source=.;Integrated Security=True";
-            store = DocumentStore.ForTesting(connectionString);
-            store.ForDocument<Entity>()
-                 .Projection(x => x.Property)
-                 .Projection(x => x.StringProp)
-                 .Projection(x => x.TheChild.NestedProperty);
-            store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            store.Initialize();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger"});
-                session.Store(new Entity { Id = Guid.NewGuid(), Property = 2, StringProp = "Lars", TheChild = new Entity.Child { NestedProperty = 3.1 }});
-                session.Store(new Entity { Id = Guid.NewGuid(), Property = 3, StringProp = null});
-                session.SaveChanges();
-            }
-        }
-
-        public void Dispose()
-        {
-            store.Dispose();
+            session = new DocumentSession(new DocumentStore(null));
         }
 
         [Fact]
         public void CanQueryUsingQueryComprehensionSyntax()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = (from a in session.Query<Entity>()
-                              where a.Property == 2
-                              select a).ToList();
+            var translation = (from a in session.Query<Entity>()
+                          where a.Property == 2
+                          select a).Translate();
 
-                result.Count().ShouldBe(1);
-            }
+            translation.Where.ShouldBe("(Property = 2)");
         }
 
         [Fact]
         public void CanQueryAll()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().ToList();
-                result.Count.ShouldBe(3);
-            }
+            var translation = session.Query<Entity>().Translate();
+            translation.Select.ShouldBe("");
+            translation.Where.ShouldBe("");
+            translation.Take.ShouldBe(0);
+            translation.Skip.ShouldBe(0);
         }
 
         [Fact]
         public void CanQueryWithWhereEquals()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property == 2).ToList();
-                result.Single().Property.ShouldBe(2);
-            }
+            var translation = session.Query<Entity>().Where(x => x.Property == 2).Translate();
+            translation.Where.ShouldBe("(Property = 2)");
         }
 
         [Fact]
         public void CanQueryWithWhereGreaterThan()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property > 1).ToList();
-                result.Count.ShouldBe(2);
-                result.ShouldContain(x => x.Property == 2);
-                result.ShouldContain(x => x.Property == 3);
-            }
+            var translation = session.Query<Entity>().Where(x => x.Property > 1).Translate();
+            translation.Where.ShouldBe("(Property > 1)");
         }
 
         [Fact]
         public void CanQueryWithWhereGreaterThanOrEqual()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property >= 2).ToList();
-                result.Count.ShouldBe(2);
-                result.ShouldContain(x => x.Property == 2);
-                result.ShouldContain(x => x.Property == 3);
-            }
+            var translation = session.Query<Entity>().Where(x => x.Property >= 2).Translate();
+            translation.Where.ShouldBe("(Property >= 2)");
         }
 
         [Fact]
         public void CanQueryWithWhereLessThanOrEqual()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property <= 2).ToList();
-                result.Count.ShouldBe(2);
-                result.ShouldContain(x => x.Property == 1);
-                result.ShouldContain(x => x.Property == 2);
-            }
+            var translation = session.Query<Entity>().Where(x => x.Property <= 2).Translate();
+            translation.Where.ShouldBe("(Property <= 2)");
         }
 
         [Fact]
         public void CanQueryWithWhereLessThan()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property < 2).ToList();
-                result.Count.ShouldBe(1);
-                result.ShouldContain(x => x.Property == 1);
-            }
+            var translation = session.Query<Entity>().Where(x => x.Property < 2).Translate();
+            translation.Where.ShouldBe("(Property < 2)");
         }
 
         [Fact]
         public void CanQueryWithWhereNotEquals()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property != 2).ToList();
-                result.Count.ShouldBe(2);
-                result.ShouldContain(x => x.Property == 1);
-                result.ShouldContain(x => x.Property == 3);
-            }
+            var translation = session.Query<Entity>().Where(x => x.Property != 2).Translate();
+            translation.Where.ShouldBe("(Property <> 2)");
         }
 
         [Fact]
         public void CanQueryWithWhereNull()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.StringProp == null).ToList();
-                result.Count.ShouldBe(1);
-                result.ShouldContain(x => x.Property == 3);
-            }
+            var translation = session.Query<Entity>().Where(x => x.StringProp == null).Translate();
+            translation.Where.ShouldBe("(StringProp IS NULL)");
         }
 
         [Fact]
         public void CanQueryWithWhereNotNull()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.StringProp != null).ToList();
-                result.Count.ShouldBe(2);
-                result.ShouldContain(x => x.Property == 1);
-                result.ShouldContain(x => x.Property == 2);
-            }
+            var translation = session.Query<Entity>().Where(x => x.StringProp != null).Translate();
+            translation.Where.ShouldBe("(StringProp IS NOT NULL)");
         }
 
         [Fact]
         public void CanQueryWithLocalVars()
         {
-            using (var session = store.OpenSession())
-            {
-                int prop = 2;
-                var result = session.Query<Entity>().Where(x => x.Property == prop).ToList();
-                result.Count.ShouldBe(1);
-                result.ShouldContain(x => x.Property == 2);
-            }
+            int prop = 2;
+            var translation = session.Query<Entity>().Where(x => x.Property == prop).Translate();
+            translation.Where.ShouldBe("(Property = 2)");
         }
 
         [Fact]
         public void CanQueryWithNestedLocalVars()
         {
-            using (var session = store.OpenSession())
-            {
-                var someObj = new
-                {
-                    prop = 2
-                };
-
-                var result = session.Query<Entity>().Where(x => x.Property == someObj.prop).ToList();
-                result.Count.ShouldBe(1);
-                result.ShouldContain(x => x.Property == 2);
-            }
+            var someObj = new { prop = 2 };
+            var translation = session.Query<Entity>().Where(x => x.Property == someObj.prop).Translate();
+            translation.Where.ShouldBe("(Property = 2)");
         }
 
         [Fact]
         public void CanQueryWithWhereAndNamedProjection()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property == 2).AsProjection<ProjectedEntity>().ToList();
-                var projection = result.Single();
-                projection.ShouldBeTypeOf<ProjectedEntity>();
-                projection.Property.ShouldBe(2);
-                projection.StringProp.ShouldBe("Lars");
-            }
+            var queryable = session.Query<Entity>().Where(x => x.Property == 2).AsProjection<ProjectedEntity>();
+            var translation = queryable.Translate();
+
+            queryable.ShouldBeTypeOf<IQueryable<ProjectedEntity>>();
+            queryable.Provider.ShouldBeTypeOf<QueryProvider<Entity>>();
+            translation.Select.ShouldBe("");
+            translation.Where.ShouldBe("(Property = 2)");
         }
 
         [Fact]
         public void CanQueryWithOnlyNamedProjection()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().AsProjection<ProjectedEntity>().ToList();
-                result.Count.ShouldBe(3);
-            }
+            var queryable = session.Query<Entity>().AsProjection<ProjectedEntity>();
+            queryable.ShouldBeTypeOf<IQueryable<ProjectedEntity>>();
+            queryable.Provider.ShouldBeTypeOf<QueryProvider<Entity>>();
         }
 
         [Fact]
         public void CanQueryOnNestedProperties()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.TheChild.NestedProperty > 2).ToList();
-                result.Count.ShouldBe(1);
-                result.ShouldContain(x => Math.Abs(x.TheChild.NestedProperty - 3.1) < 0.1);
-            }
-        }
-
-        [Fact]
-        public void CanProjectToNestedProperties()
-        {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Where(x => x.Property == 2).AsProjection<ProjectedEntity>().ToList();
-                result.Single().TheChildNestedProperty.ShouldBe(3.1);
-            }
+            var translation = session.Query<Entity>().Where(x => x.TheChild.NestedProperty > 2).Translate();
+            translation.Where.ShouldBe("(TheChildNestedProperty > 2)");
         }
 
         [Fact]
         public void CanQueryWithSelect()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Select(x => new { x.Property }).ToList();
-                result.Select(x => x.Property).ShouldContain(1);
-                result.Select(x => x.Property).ShouldContain(2);
-                result.Select(x => x.Property).ShouldContain(3);
-            }
+            var translation = session.Query<Entity>().Select(x => new { x.Property }).Translate();
+            translation.Select.ShouldBe("Property AS Property");
         }
 
         [Fact]
         public void CanQueryWithSelectToOtherName()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Select(x => new { HansOgGrethe = x.Property }).ToList();
-                result.Select(x => x.HansOgGrethe).ShouldContain(1);
-                result.Select(x => x.HansOgGrethe).ShouldContain(2);
-                result.Select(x => x.HansOgGrethe).ShouldContain(3);
-            }
+            var translation = session.Query<Entity>().Select(x => new { HansOgGrethe = x.Property }).Translate();
+            translation.Select.ShouldBe("Property AS HansOgGrethe");
         }
 
         [Fact]
         public void CanQueryWithSkipAndTake()
         {
-            using (var session = store.OpenSession())
-            {
-                var result = session.Query<Entity>().Skip(1).Take(1).ToList();
-                result.Count.ShouldBe(1);
-                result.Single().Property.ShouldBe(2);
-            }
+            var translation = session.Query<Entity>().Skip(1).Take(1).Translate();
+            translation.Skip.ShouldBe(1);
+            translation.Take.ShouldBe(1);
+        }
+
+        [Fact]
+        public void CanOrderBy()
+        {
+            var translation = session.Query<Entity>().OrderBy(x => x.Property).Translate();
+            translation.OrderBy.ShouldBe("Property");
+        }
+
+        [Fact]
+        public void CanOrderByAndThenBy()
+        {
+            var translation = session.Query<Entity>().OrderBy(x => x.Property).ThenBy(x => x.StringProp).Translate();
+            translation.OrderBy.ShouldBe("Property, StringProp");
+        }
+        
+        [Fact]
+        public void CanOrderByDescending()
+        {
+            var translation = session.Query<Entity>().OrderByDescending(x => x.Property).Translate();
+            translation.OrderBy.ShouldBe("Property DESC");
+        }
+        
+        [Fact]
+        public void CanOrderByAndThenByDescending()
+        {
+            var translation = session.Query<Entity>().OrderBy(x => x.Property).ThenByDescending(x => x.StringProp).Translate();
+            translation.OrderBy.ShouldBe("Property, StringProp DESC");
         }
 
         public class Entity
