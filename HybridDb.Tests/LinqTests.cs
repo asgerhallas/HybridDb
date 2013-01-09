@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using HybridDb.Linq;
 using Xunit;
 using System.Linq;
@@ -158,6 +159,22 @@ namespace HybridDb.Tests
             {
                 int prop = 2;
                 var result = session.Query<Entity>().Where(x => x.Property == prop).ToList();
+                result.Count.ShouldBe(1);
+                result.ShouldContain(x => x.Property == 2);
+            }
+        }
+
+        [Fact]
+        public void CanQueryWithNestedLocalVars()
+        {
+            using (var session = store.OpenSession())
+            {
+                var someObj = new
+                {
+                    prop = 2
+                };
+
+                var result = session.Query<Entity>().Where(x => x.Property == someObj.prop).ToList();
                 result.Count.ShouldBe(1);
                 result.ShouldContain(x => x.Property == 2);
             }

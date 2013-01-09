@@ -260,14 +260,56 @@ namespace HybridDb.Linq
 
         protected override Expression VisitMember(MemberExpression expression)
         {
-            if (expression.NodeType == ExpressionType.MemberAccess)
+            var columnName = GetColumnNameFromMemberExpression(expression);
+            if (columnName != null)
             {
-                if (expression as ConstantExpression)
+                sb.Append(columnName);
+                return expression;
             }
 
-            var parent = Visit(expression.Expression);
-            sb.Append(expression.Member.Name);
-            return parent;
+            var constantValue = GetConstantValueFromMemberExpression(expression);
+            sb.Append(constantValue);
+            return expression;
+        }
+
+        private string GetColumnNameFromMemberExpression(Expression expression)
+        {
+            if (expression.NodeType == ExpressionType.MemberAccess)
+            {
+                var memberExpression = ((MemberExpression)expression);
+                var name = GetColumnNameFromMemberExpression(memberExpression.Expression);
+                if (name == null)
+                    return null;
+
+                return name + memberExpression.Member.Name;
+            }
+
+            if (expression.NodeType == ExpressionType.Parameter)
+            {
+                return "";
+            }
+
+            return null;
+        }
+
+        private object GetConstantValueFromMemberExpression(Expression expression)
+        {
+            if (expression.NodeType == ExpressionType.MemberAccess)
+            {
+                var memberExpression = ((MemberExpression) expression);
+                var constant = GetConstantValueFromMemberExpression(memberExpression.Expression);
+                if (constant == null)
+                    return null;
+
+                return memberExpression.Member.GetValue(constant);
+            }
+
+            if (expression.NodeType == ExpressionType.Constant)
+            {
+                return ((ConstantExpression)expression).Value;
+            }
+
+            return null;
         }
 
         protected virtual bool IsBoolean(Type type)
