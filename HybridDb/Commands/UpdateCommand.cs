@@ -10,15 +10,17 @@ namespace HybridDb.Commands
         readonly byte[] document;
         readonly Guid key;
         readonly object projections;
+        readonly bool lastWriteWins;
         readonly ITable table;
 
-        public UpdateCommand(ITable table, Guid key, Guid etag, byte[] document, object projections)
+        public UpdateCommand(ITable table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;
             currentEtag = etag;
             this.document = document;
             this.projections = projections;
+            this.lastWriteWins = lastWriteWins;
         }
 
         public byte[] Document
@@ -33,16 +35,24 @@ namespace HybridDb.Commands
             values.Add(table.EtagColumn, etag);
             values.Add(table.DocumentColumn, document);
 
-            var sql = string.Format("update {0} set {1} where {2}=@Id{4} and {3}=@CurrentEtag{4}",
-                                    store.Escape(store.GetFormattedTableName(table)),
-                                    string.Join(", ", from column in values.Keys select column.Name + "=@" + column.Name + uniqueParameterIdentifier),
-                                    table.IdColumn.Name,
-                                    table.EtagColumn.Name,
-                                    uniqueParameterIdentifier);
+            var sql = new SqlBuilder()
+                .Append("update {0} set {1} where {2}=@Id{3}",
+                        store.Escape(store.GetFormattedTableName(table)),
+                        string.Join(", ", from column in values.Keys select column.Name + "=@" + column.Name + uniqueParameterIdentifier),
+                        table.IdColumn.Name,
+                        uniqueParameterIdentifier)
+                .Append(!lastWriteWins, "and {0}=@CurrentEtag{1}",
+                        table.EtagColumn.Name,
+                        uniqueParameterIdentifier)
+                .ToString();
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
-            parameters.Add(new Parameter { Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.Column.DbType});
-            parameters.Add(new Parameter { Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.Column.DbType});
+            parameters.Add(new Parameter { Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.Column.DbType });
+
+            if (!lastWriteWins)
+            {
+                parameters.Add(new Parameter { Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.Column.DbType });
+            }
 
             return new PreparedDatabaseCommand
             {

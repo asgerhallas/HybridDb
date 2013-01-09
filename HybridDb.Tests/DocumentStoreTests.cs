@@ -121,6 +121,16 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanUpdatePessimistically()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' }, new { Field = "Asger" });
+
+            Should.NotThrow(() => store.Update(table, id, Guid.NewGuid(), new byte[] { }, new { Field = "Lars" }, lastWriteWins: true));
+        }
+
+        [Fact]
         public void UpdateFailsWhenEtagNotMatch()
         {
             var id = Guid.NewGuid();
@@ -232,6 +242,16 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanDeletePessimistically()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, new byte[0], new { });
+
+            Should.NotThrow(() => store.Delete(table, id, Guid.NewGuid(), lastWriteWins: true));
+        }
+
+        [Fact]
         public void DeleteFailsWhenEtagNotMatch()
         {
             var id = Guid.NewGuid();
@@ -275,7 +295,7 @@ namespace HybridDb.Tests
             try
             {
                 store.Execute(new InsertCommand(table, id1, new byte[0], new { Field = "A" }),
-                              new UpdateCommand(table, id1, etagThatMakesItFail, new byte[0], new { Field = "B" }));
+                              new UpdateCommand(table, id1, etagThatMakesItFail, new byte[0], new { Field = "B" }, false));
             }
             catch (ConcurrencyException)
             {

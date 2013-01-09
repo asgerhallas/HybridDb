@@ -11,5 +11,6 @@ namespace HybridDb
         void Defer(DatabaseCommand command);
         void Evict(object entity);
         Guid? GetEtagFor(object entity);
+        void SaveChangesLastWriterWins();
     }
 }

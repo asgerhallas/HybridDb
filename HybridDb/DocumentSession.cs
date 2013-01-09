@@ -125,8 +125,18 @@ namespace HybridDb
                 entities[id].State = EntityState.Deleted;
             }
         }
-
+        
         public void SaveChanges()
+        {
+            SaveChangesInternal(false);
+        }
+
+        public void SaveChangesLastWriterWins()
+        {
+            SaveChangesInternal(true);
+        }
+
+        void SaveChangesInternal(bool lastWriteWins)
         {
             var serializer = store.Configuration.Serializer;
 
@@ -144,13 +154,11 @@ namespace HybridDb
                         commands.Add(managedEntity, new InsertCommand(table, id, document, projections));
                         break;
                     case EntityState.Loaded:
-                        var a = Encoding.UTF8.GetString(managedEntity.Document);
-                        var b = Encoding.UTF8.GetString(document);
                         if (!managedEntity.Document.SequenceEqual(document))
-                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections));
+                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections, lastWriteWins));
                         break;
                     case EntityState.Deleted:
-                        commands.Add(managedEntity, new DeleteCommand(table, id, managedEntity.Etag));
+                        commands.Add(managedEntity, new DeleteCommand(table, id, managedEntity.Etag, lastWriteWins));
                         break;
                 }
             }

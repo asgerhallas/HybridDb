@@ -186,14 +186,14 @@ namespace HybridDb
             return Execute(new InsertCommand(table, key, document, projections));
         }
 
-        public Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections)
+        public Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins = false)
         {
-            return Execute(new UpdateCommand(table, key, etag, document, projections));
+            return Execute(new UpdateCommand(table, key, etag, document, projections, lastWriteWins));
         }
 
-        public void Delete(ITable table, Guid key, Guid etag)
+        public void Delete(ITable table, Guid key, Guid etag, bool lastWriteWins = false)
         {
-            Execute(new DeleteCommand(table, key, etag));
+            Execute(new DeleteCommand(table, key, etag, lastWriteWins));
         }
 
         public long NumberOfRequests

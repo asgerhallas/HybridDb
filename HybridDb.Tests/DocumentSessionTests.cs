@@ -147,6 +147,29 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanSaveChangesWithPessimisticConcurrency()
+        {
+            var id = Guid.NewGuid();
+            using (var session1 = store.OpenSession())
+            using (var session2 = store.OpenSession())
+            {
+                var entityFromSession1 = new Entity { Id = id, Property = "Asger" };
+                session1.Store(entityFromSession1);
+                session1.SaveChanges();
+
+                var entityFromSession2 = session2.Load<Entity>(id);
+                entityFromSession2.Property = " er craazy";
+                session2.SaveChanges();
+
+                entityFromSession1.Property += " er 4 real";
+                session1.Advanced.SaveChangesLastWriterWins();
+
+                session1.Advanced.Clear();
+                session1.Load<Entity>(id).Property.ShouldBe("Asger er 4 real");
+            }
+        }
+
+        [Fact]
         public void CanDeleteDocument()
         {
             var id = Guid.NewGuid();
