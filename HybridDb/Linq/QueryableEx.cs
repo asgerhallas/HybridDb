@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace HybridDb.Linq
@@ -14,10 +16,15 @@ namespace HybridDb.Linq
             ((QueryProvider<T>)query.Provider).WriteStatisticsTo(out stats);
             return query;
         }
+
+        public static bool In<T>(this T property, params T[] list)
+        {
+            return list.Any(item => property.Equals(item));
+        }
         
         internal static Translation Translate(this IQueryable query)
         {
-            return new QueryTranslator().Translate(query.Expression);
+            return new QueryVisitor().Translate(query.Expression);
         }
     }
 }

@@ -59,11 +59,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Linq\ExpressionEx.cs" />
     <Compile Include="Linq\IHybridQueryable.cs" />
     <Compile Include="Linq\Query.cs" />
     <Compile Include="Linq\QueryableEx.cs" />
     <Compile Include="Linq\QueryProvider.cs" />
-    <Compile Include="Linq\QueryTranslator.cs" />
+    <Compile Include="Linq\QueryVisitor.cs" />
+    <Compile Include="Linq\UnaryBoolVisitor.cs" />
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="QueryStats.cs" />

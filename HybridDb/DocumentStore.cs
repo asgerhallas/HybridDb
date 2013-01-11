@@ -149,6 +149,9 @@ namespace HybridDb
                     var preparedCommand = command.Prepare(this, etag, i++);
                     var numberOfNewParameters = preparedCommand.Parameters.Count;
 
+                    if (numberOfNewParameters >= 2100)
+                        throw new InvalidOperationException("Cannot execute a query with more than 2100 parameters.");
+
                     if (numberOfParameters + numberOfNewParameters >= 2100)
                     {
                         InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);

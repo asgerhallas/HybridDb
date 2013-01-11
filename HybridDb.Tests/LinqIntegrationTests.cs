@@ -58,6 +58,16 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithSelectToNamedTypeWithNestedProperty()
+        {
+            var result = session.Query<Entity>().Select(x => new ProjectedEntity
+            {
+                TheChildNestedProperty = x.TheChild.NestedProperty
+            }).ToList();
+            result.Count.ShouldBe(3);
+        }
+
+        [Fact]
         public void CanQueryWithSelect()
         {
             var result = session.Query<Entity>().Select(x => new { x.Property }).ToList();

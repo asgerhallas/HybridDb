@@ -86,6 +86,19 @@ namespace HybridDb
 
     public static class MemberInfoEx
     {
+        public static Type GetMemberType(this MemberInfo member)
+        {
+            switch (member.MemberType)
+            {
+                case MemberTypes.Property:
+                    return ((PropertyInfo)member).PropertyType;
+                case MemberTypes.Field:
+                    return ((FieldInfo)member).FieldType;
+                default:
+                    throw new InvalidOperationException();
+            }
+        }
+
         public static object GetValue(this MemberInfo member, object instance)
         {
             switch (member.MemberType)

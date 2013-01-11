@@ -1,12 +1,14 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace HybridDb.Linq
 {
-    internal class QueryTranslator : ExpressionVisitor
+    internal class QueryVisitor : ExpressionVisitor
     {
         readonly List<string> select = new List<string>();
         StringBuilder where;
@@ -16,6 +18,8 @@ namespace HybridDb.Linq
 
         internal Translation Translate(Expression expression)
         {
+            expression = new UnaryBoolVisitor().Visit(expression);
+
             where = new StringBuilder();
             orderby = new StringBuilder();
             Visit(expression);
@@ -44,8 +48,39 @@ namespace HybridDb.Linq
             {
                 return VisitQueryableMethodCall(expression);
             }
+            
+            if (expression.Method.DeclaringType == typeof (QueryableEx))
+            {
+                return VisitQueryableExMethodCall(expression);
+            }
+            
+            if (expression.Method.DeclaringType == typeof (String))
+            {
+                return VisitStringMethodCall(expression);
+            }
 
             throw new NotSupportedException(string.Format("Translation of methods declared on '{0}' is not supported", expression.Method.DeclaringType));
+        }
+
+        Expression VisitStringMethodCall(MethodCallExpression expression)
+        {
+            @where.Append("(");
+
+            Visit(expression.Object);
+
+            switch (expression.Method.Name)
+            {
+                case "StartsWith":
+                    where.Append(" LIKE ");
+                    Visit(expression.Arguments[0]);
+                    where.Append(" + '%'");
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format("The method '{0}' is not supported", expression.Method.Name));
+            }
+            @where.Append(")");
+
+            return expression;
         }
 
         protected Expression VisitQueryableMethodCall(MethodCallExpression expression)
@@ -58,6 +93,9 @@ namespace HybridDb.Linq
                     VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
                     break;
                 case "Where":
+                    if (where.Length > 0)
+                        where.Append(" AND ");
+
                     Visit(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body);
                     break;
                 case "OfType":
@@ -69,20 +107,46 @@ namespace HybridDb.Linq
                     skip = (int)((ConstantExpression)expression.Arguments[1]).Value;
                     break;
                 case "OrderBy":
-                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    orderby.Append(GetMemberFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body).Item1);
                     break;
                 case "ThenBy":
                     orderby.Append(", ");
-                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    orderby.Append(GetMemberFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body).Item1);
                     break;
                 case "OrderByDescending":
-                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    orderby.Append(GetMemberFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body).Item1);
                     orderby.Append(" DESC");
                     break;
                 case "ThenByDescending":
                     orderby.Append(", ");
-                    orderby.Append(GetColumnNameFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body));
+                    orderby.Append(GetMemberFromMemberExpression(((LambdaExpression) StripQuotes(expression.Arguments[1])).Body).Item1);
                     orderby.Append(" DESC");
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format("The method '{0}' is not supported", expression.Method.Name));
+            }
+
+            return expression;
+        }
+
+        protected Expression VisitQueryableExMethodCall(MethodCallExpression expression)
+        {
+            Visit(expression.Arguments[0]);
+
+            switch (expression.Method.Name)
+            {
+                case "In":
+                    where.Append(" IN (");
+                    var values = (IEnumerable) GetConstantValueFromMemberExpression(expression.Arguments[1]);
+                    var first = true;
+                    foreach (var value in values)
+                    {
+                        if (!first)
+                            where.Append(", ");
+                        Visit(Expression.Constant(value));
+                        first = false;
+                    }
+                    where.Append(")");
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The method '{0}' is not supported", expression.Method.Name));
@@ -99,16 +163,30 @@ namespace HybridDb.Linq
             switch (expression.NodeType)
             {
                 case ExpressionType.New:
+                {
                     var @new = (NewExpression) expression;
                     for (int i = 0; i < @new.Arguments.Count; i++)
                     {
                         var property = @new.Arguments[i] as MemberExpression;
                         if (property == null)
                             continue;
-                        
-                        select.Add(property.Member.Name + " AS " + @new.Members[i].Name);
+
+                        select.Add(property.GetMemberExpressionInfo().FullName + " AS " + @new.Members[i].Name);
                     }
                     break;
+                }
+                case ExpressionType.MemberInit: {
+                    var memberInit = ((MemberInitExpression) expression);
+                    foreach (var memberBinding in memberInit.Bindings)
+                    {
+                        var property = memberBinding as MemberAssignment;
+                        if (property == null)
+                            continue;
+
+                        select.Add(property.Expression.GetMemberExpressionInfo().FullName + " AS " + property.Member.Name);
+                    }
+                    break;
+                }
                 case ExpressionType.MemberAccess:
                     Visit(expression);
                     break;
@@ -123,6 +201,10 @@ namespace HybridDb.Linq
             {
                 case ExpressionType.Not:
                     @where.Append(" NOT ");
+                    Visit(u.Operand);
+                    break;
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
                     Visit(u.Operand);
                     break;
                 default:
@@ -140,7 +222,9 @@ namespace HybridDb.Linq
             switch (b.NodeType)
             {
                 case ExpressionType.And:
+                case ExpressionType.AndAlso:
                 case ExpressionType.Or:
+                case ExpressionType.OrElse:
                 case ExpressionType.LessThan:
                 case ExpressionType.LessThanOrEqual:
                 case ExpressionType.GreaterThan:
@@ -152,7 +236,7 @@ namespace HybridDb.Linq
                 case ExpressionType.Equal:
                     if (right.NodeType == ExpressionType.Constant)
                     {
-                        var ce = (ConstantExpression) right;
+                        var ce = (ConstantExpression)right;
                         if (ce.Value == null)
                         {
                             Visit(left);
@@ -162,7 +246,7 @@ namespace HybridDb.Linq
                     }
                     else if (left.NodeType == ExpressionType.Constant)
                     {
-                        var ce = (ConstantExpression) left;
+                        var ce = (ConstantExpression)left;
                         if (ce.Value == null)
                         {
                             Visit(right);
@@ -213,11 +297,13 @@ namespace HybridDb.Linq
             switch (b.NodeType)
             {
                 case ExpressionType.And:
+                    return "&";
                 case ExpressionType.AndAlso:
-                    return (IsBoolean(b.Left.Type)) ? "AND" : "&";
+                    return " AND ";
                 case ExpressionType.Or:
+                    return "|";
                 case ExpressionType.OrElse:
-                    return (IsBoolean(b.Left.Type) ? "OR" : "|");
+                    return " OR ";
                 case ExpressionType.Equal:
                     return " = ";
                 case ExpressionType.NotEqual:
@@ -266,21 +352,23 @@ namespace HybridDb.Linq
             }
             else
             {
-                switch (Type.GetTypeCode(c.Value.GetType()))
+                if (c.Value is Boolean)
                 {
-                    case TypeCode.Boolean:
-                        @where.Append(((bool) c.Value) ? 1 : 0);
-                        break;
-                    case TypeCode.String:
-                        @where.Append("'");
-                        @where.Append(c.Value);
-                        @where.Append("'");
-                        break;
-                    case TypeCode.Object:
-                        throw new NotSupportedException(string.Format("The constant for '{0}' is not supported", c.Value));
-                    default:
-                        @where.Append(c.Value);
-                        break;
+                    @where.Append(((bool)c.Value) ? 1 : 0);
+                }
+                else if (c.Value is String || c.Value is Guid)
+                {
+                    @where.Append("'");
+                    @where.Append(c.Value);
+                    @where.Append("'");
+                }
+                else if (Type.GetTypeCode(c.Value.GetType()) == TypeCode.Object)
+                {
+                    throw new NotSupportedException(string.Format("The constant for '{0}' is not supported", c.Value));
+                }
+                else
+                {
+                    @where.Append(c.Value);
                 }
             }
             return c;
@@ -288,33 +376,36 @@ namespace HybridDb.Linq
 
         protected override Expression VisitMember(MemberExpression expression)
         {
-            var columnName = GetColumnNameFromMemberExpression(expression);
-            if (columnName != null)
+            var member = GetMemberFromMemberExpression(expression);
+            if (member != null)
             {
-                where.Append(columnName);
+                where.Append(member.Item1);
                 return expression;
             }
 
             var constantValue = GetConstantValueFromMemberExpression(expression);
-            where.Append(constantValue);
+            Visit(Expression.Constant(constantValue));
             return expression;
         }
 
-        private string GetColumnNameFromMemberExpression(Expression expression)
+        private Tuple<string, MemberInfo> GetMemberFromMemberExpression(Expression expression)
         {
+            if (expression == null)
+                return null;
+
             if (expression.NodeType == ExpressionType.MemberAccess)
             {
                 var memberExpression = ((MemberExpression)expression);
-                var name = GetColumnNameFromMemberExpression(memberExpression.Expression);
+                var name = GetMemberFromMemberExpression(memberExpression.Expression);
                 if (name == null)
                     return null;
 
-                return name + memberExpression.Member.Name;
+                return Tuple.Create(name.Item1 + memberExpression.Member.Name, memberExpression.Member);
             }
 
             if (expression.NodeType == ExpressionType.Parameter)
             {
-                return "";
+                return Tuple.Create("", (MemberInfo)null);
             }
 
             return null;
@@ -325,6 +416,10 @@ namespace HybridDb.Linq
             if (expression.NodeType == ExpressionType.MemberAccess)
             {
                 var memberExpression = ((MemberExpression) expression);
+                
+                if (memberExpression.Expression == null)
+                    return memberExpression.Member.GetValue(null);
+
                 var constant = GetConstantValueFromMemberExpression(memberExpression.Expression);
                 if (constant == null)
                     return null;
