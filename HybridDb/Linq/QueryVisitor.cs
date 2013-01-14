@@ -18,7 +18,8 @@ namespace HybridDb.Linq
 
         internal Translation Translate(Expression expression)
         {
-            expression = new UnaryBoolVisitor().Visit(expression);
+            expression = new ParameterMemberVisitor().Visit(expression);
+            expression = new UnaryBoolToBinaryEXpressionVisitor().Visit(expression);
 
             where = new StringBuilder();
             orderby = new StringBuilder();
