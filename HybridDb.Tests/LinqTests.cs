@@ -317,16 +317,6 @@ namespace HybridDb.Tests
             translation.Where.ShouldBe("Id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002')");
         }
 
-        [Fact]
-        public void CanQueryWhereWithInList()
-        {
-            var guid1 = new Guid("00000000-0000-0000-0000-000000000001");
-            var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
-            var translation = session.Query<Entity>().Where(x => x.Id.In(guid1, guid2)).Translate();
-            translation.Where.ShouldBe("Id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002')");
-        }
-
-
         public class Entity
         {
             public string Field;
