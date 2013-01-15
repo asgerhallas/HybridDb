@@ -59,13 +59,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Linq\Ast\ClauseExtractionVisitor.cs" />
+    <Compile Include="Linq\Ast\ParameterMemberVisitor.cs" />
+    <Compile Include="Linq\Ast\PredicateExpression.cs" />
+    <Compile Include="Linq\Ast\QueryTranslator.cs" />
+    <Compile Include="Linq\Ast\SqlBinaryExpression.cs" />
+    <Compile Include="Linq\Ast\SqlColumnExpression.cs" />
+    <Compile Include="Linq\Ast\SqlConstantExpression.cs" />
+    <Compile Include="Linq\Ast\SqlExpression.cs" />
+    <Compile Include="Linq\Ast\SqlExpressionVisitor.cs" />
+    <Compile Include="Linq\Ast\SqlNodeType.cs" />
+    <Compile Include="Linq\Ast\SqlQueryExpression.cs" />
+    <Compile Include="Linq\Ast\SqlWhereExpression.cs" />
+    <Compile Include="Linq\Ast\UnaryBoolToBinaryEXpressionVisitor.cs" />
     <Compile Include="Linq\ExpressionEx.cs" />
     <Compile Include="Linq\IHybridQueryable.cs" />
     <Compile Include="Linq\Query.cs" />
     <Compile Include="Linq\QueryableEx.cs" />
     <Compile Include="Linq\QueryProvider.cs" />
     <Compile Include="Linq\QueryVisitor.cs" />
-    <Compile Include="Linq\UnaryBoolToBinaryEXpressionVisitor.cs" />
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="QueryStats.cs" />
@@ -109,9 +121,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Linq\Ast\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <PropertyGroup>
