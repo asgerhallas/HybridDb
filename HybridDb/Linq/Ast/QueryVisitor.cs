@@ -35,7 +35,7 @@ namespace HybridDb.Linq.Ast
             switch (expression.Method.Name)
             {
                 case "Where":
-                    new WhereVisitor(whereOperations).Visit(expression.Arguments[1]);
+                    whereOperations = WhereVisitor.Translate(expression.Arguments[1]);
                     break;
                 case "Select":
                     select = new SelectVisitor().Translate(expression.Arguments[1]);

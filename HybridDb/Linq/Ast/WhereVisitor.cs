@@ -14,6 +14,13 @@ namespace HybridDb.Linq.Ast
             this.operations = operations;
         }
 
+        public static Stack<Operation> Translate(Expression expression)
+        {
+            var operations = new Stack<Operation>();
+            new WhereVisitor(operations).Visit(expression);
+            return operations;
+        }
+
         protected override Expression VisitBinary(BinaryExpression expression)
         {
             switch (expression.NodeType)
