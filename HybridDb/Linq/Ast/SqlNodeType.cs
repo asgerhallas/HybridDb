@@ -1,8 +1,7 @@
 ﻿namespace HybridDb.Linq.Ast
 {
-    internal enum SqlNodeType
+    public enum SqlNodeType
     {
-        BLAH,
         Query,
         Select,
         Where,
@@ -10,7 +9,6 @@
         Or,
         Equal,
         Constant,
-        Column,
-        Argument,
+        Column
     }
 }

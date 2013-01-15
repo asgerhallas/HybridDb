@@ -1,10 +1,10 @@
-﻿namespace HybridDb.Linq.Ast
+﻿using System.Diagnostics;
+
+namespace HybridDb.Linq.Ast
 {
-    internal class SqlExpression
+    [DebuggerDisplay("NodeType={NodeType}")]
+    public abstract class SqlExpression
     {
-        public virtual SqlNodeType NodeType
-        {
-            get { return SqlNodeType.BLAH; }
-        }
+        public abstract SqlNodeType NodeType { get; }
     }
 }

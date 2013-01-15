@@ -298,6 +298,18 @@ namespace HybridDb.Tests
             translation.Where.ShouldBe("(BoolProp = 1)");
         }
 
+        bool WackyCustomEqualityCheck(int x, int y)
+        {
+            return x == y;
+        }
+
+        [Fact]
+        public void CanQueryWhereWithConstantMethodCall()
+        {
+            var translation = session.Query<Entity>().Where(x => x.BoolProp == WackyCustomEqualityCheck(1, 1)).Translate();
+            translation.Where.ShouldBe("(BoolProp = 1)");
+        }
+
         [Fact]
         public void CanQueryWhereWithInArrayConstant()
         {

@@ -8,5 +8,10 @@
         {
             this.columnName = columnName;
         }
+
+        public override SqlNodeType NodeType
+        {
+            get { return SqlNodeType.Column; }
+        }
     }
 }

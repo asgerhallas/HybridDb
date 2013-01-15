@@ -1,6 +1,6 @@
 namespace HybridDb.Linq
 {
-    internal class Translation
+    public class Translation
     {
         public string Select { get; set; }
         public string Where { get; set; }

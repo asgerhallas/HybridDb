@@ -59,10 +59,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Linq\Ast\ClauseExtractionVisitor.cs" />
-    <Compile Include="Linq\Ast\ParameterMemberVisitor.cs" />
+    <Compile Include="Linq\Ast\OperationParser.cs" />
+    <Compile Include="Linq\Ast\QueryVisitor.cs" />
+    <Compile Include="Linq\Ast\Operation.cs" />
     <Compile Include="Linq\Ast\PredicateExpression.cs" />
-    <Compile Include="Linq\Ast\QueryTranslator.cs" />
     <Compile Include="Linq\Ast\SqlBinaryExpression.cs" />
     <Compile Include="Linq\Ast\SqlColumnExpression.cs" />
     <Compile Include="Linq\Ast\SqlConstantExpression.cs" />
@@ -71,7 +71,9 @@
     <Compile Include="Linq\Ast\SqlNodeType.cs" />
     <Compile Include="Linq\Ast\SqlQueryExpression.cs" />
     <Compile Include="Linq\Ast\SqlWhereExpression.cs" />
+    <Compile Include="Linq\Ast\StackEx.cs" />
     <Compile Include="Linq\Ast\UnaryBoolToBinaryEXpressionVisitor.cs" />
+    <Compile Include="Linq\Ast\WhereVisitor.cs" />
     <Compile Include="Linq\ExpressionEx.cs" />
     <Compile Include="Linq\IHybridQueryable.cs" />
     <Compile Include="Linq\Query.cs" />
