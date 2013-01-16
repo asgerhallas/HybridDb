@@ -2,7 +2,7 @@
 
 namespace HybridDb.Linq.Ast
 {
-    internal class UnaryBoolToBinaryEXpressionVisitor : ExpressionVisitor
+    public class UnaryBoolToBinaryExpressionVisitor : ExpressionVisitor
     {
         protected override Expression VisitBinary(BinaryExpression node)
         {

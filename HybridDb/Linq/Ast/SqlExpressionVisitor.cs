@@ -1,53 +1,50 @@
-﻿using System;
-using System.Linq.Expressions;
-
-namespace HybridDb.Linq.Ast
+﻿namespace HybridDb.Linq.Ast
 {
-    internal abstract class SqlExpressionVisitor : ExpressionVisitor
+    public abstract class SqlExpressionVisitor
     {
         public SqlExpression Visit(SqlExpression expression)
         {
-            switch (expression.NodeType)
-            {
-                case SqlNodeType.Query:
-                    return VisitQuery((SqlQueryExpression) expression);
-                case SqlNodeType.Select:
-                    return VisitSelect(expression);
-                case SqlNodeType.Where:
-                    return VisitWhere((SqlWhereExpression) expression);
-                case SqlNodeType.And:
-                case SqlNodeType.Or:
-                case SqlNodeType.Equal:
-                    return VisitBinary((SqlBinaryExpression) expression);
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            return Visit((dynamic) expression);
         }
 
-        protected virtual SqlExpression VisitQuery(SqlQueryExpression expression)
+        protected virtual SqlExpression Visit(SqlQueryExpression expression)
         {
             Visit(expression.Select);
-            Visit(expression.Where);
+            Visit((SqlExpression) expression.Where);
             Visit(expression.OrderBy);
             return expression;
         }
 
-        protected virtual SqlExpression VisitSelect(SqlExpression expression)
+        protected virtual SqlExpression Visit(SqlProjectionExpression expression)
         {
-            throw new NotImplementedException();
             return expression;
         }
 
-        protected virtual SqlExpression VisitWhere(SqlWhereExpression expression)
+        protected virtual SqlExpression Visit(SqlWhereExpression expression)
         {
-            Visit(expression.Predicate);
+            Visit((SqlExpression) expression.Predicate);
             return expression;
         }
 
-        protected virtual SqlExpression VisitBinary(SqlBinaryExpression expression)
+        protected virtual SqlExpression Visit(SqlBinaryExpression expression)
         {
             Visit(expression.Left);
             Visit(expression.Right);
+            return expression;
+        }
+
+        protected virtual SqlExpression Visit(SqlConstantExpression expression)
+        {
+            return expression;
+        }
+
+        protected virtual SqlExpression Visit(SqlColumnExpression expression)
+        {
+            return expression;
+        }
+
+        protected virtual SqlExpression Visit(SqlNotExpression expression)
+        {
             return expression;
         }
     }

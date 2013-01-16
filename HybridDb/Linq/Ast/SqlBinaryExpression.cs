@@ -1,6 +1,6 @@
 ﻿namespace HybridDb.Linq.Ast
 {
-    internal class SqlBinaryExpression : SqlExpression
+    public class SqlBinaryExpression : SqlExpression
     {
         readonly SqlNodeType nodeType;
         readonly SqlExpression left;

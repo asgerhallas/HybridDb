@@ -25,9 +25,7 @@ namespace HybridDb.Linq
         
         internal static Translation Translate(this IQueryable query)
         {
-            var test = new QueryTranslator().Translate(query.Expression);
-            return test;
-            return new QueryVisitor().Translate(query.Expression);
+            return new QueryTranslator().Translate(query.Expression);
         }
     }
 }

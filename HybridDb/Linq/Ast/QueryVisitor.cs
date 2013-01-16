@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace HybridDb.Linq.Ast
 {
@@ -9,36 +9,81 @@ namespace HybridDb.Linq.Ast
     {
         public Translation Translate(Expression expression)
         {
+            var selectOperations = new Stack<Operation>();
             var whereOperations = new Stack<Operation>();
-            new QueryVisitor(whereOperations).Visit(expression);
-            var where = whereOperations.ParseToSqlExpression();
-            return new Translation()
-            {};
+            var queryVisitor = new QueryVisitor(selectOperations, whereOperations);
+
+            queryVisitor.Visit(expression);
+
+            var selectSql = new StringBuilder();
+            if (selectOperations.Count > 0)
+            {
+                var select = selectOperations.ParseToSqlExpression();
+                new SqlExpressionTranslator(selectSql).Visit(select);
+            }
+
+            var whereSql = new StringBuilder();
+            if (whereOperations.Count > 0)
+            {
+                var where = whereOperations.ParseToSqlExpression();
+                new SqlExpressionTranslator(whereSql).Visit(@where);
+            }
+
+            return new Translation
+            {
+                Select = selectSql.ToString() ?? "",
+                Where = whereSql.ToString() ?? "",
+                Skip = queryVisitor.Skip,
+                Take = queryVisitor.Take
+            };
         }
     }
 
     internal class QueryVisitor : ExpressionVisitor
     {
+        readonly Stack<Operation> selectOperations;
         readonly Stack<Operation> whereOperations;
 
+        int skip;
+        int take;
         SqlExpression orderBy;
         SqlExpression select;
         SqlWhereExpression where;
 
-        public QueryVisitor(Stack<Operation> whereOperations)
+        public QueryVisitor(Stack<Operation> selectOperations, Stack<Operation> whereOperations)
         {
+            this.selectOperations = selectOperations;
             this.whereOperations = whereOperations;
+        }
+
+        public int Skip
+        {
+            get { return skip; }
+        }
+
+        public int Take
+        {
+            get { return take; }
         }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
             switch (expression.Method.Name)
             {
-                case "Where":
-                    whereOperations = WhereVisitor.Translate(expression.Arguments[1]);
-                    break;
                 case "Select":
-                    select = new SelectVisitor().Translate(expression.Arguments[1]);
+                    new SelectVisitor(selectOperations).Visit(expression.Arguments[1]);
+                    break;
+                case "Where":
+                    new WhereVisitor(whereOperations).Visit(expression.Arguments[1]);
+                    break;
+                case "Skip":
+                    skip = (int) ((ConstantExpression) expression.Arguments[1]).Value;
+                    break;
+                case "Take":
+                    take = (int) ((ConstantExpression) expression.Arguments[1]).Value;
+                    break;
+                case "OfType":
+                    // Change of type is done else where
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The method {0} is not supported", expression.Method.Name));
@@ -46,14 +91,6 @@ namespace HybridDb.Linq.Ast
 
             Visit(expression.Arguments[0]);
             return expression;
-        }
-    }
-
-    internal class SelectVisitor : ExpressionVisitor
-    {
-        public SqlWhereExpression Translate(Expression expression)
-        {
-            return null;
         }
     }
 }

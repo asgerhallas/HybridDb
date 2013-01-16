@@ -1,6 +1,6 @@
 ﻿namespace HybridDb.Linq.Ast
 {
-    internal class SqlQueryExpression : SqlExpression
+    public class SqlQueryExpression : SqlExpression
     {
         readonly SqlExpression orderBy;
         readonly SqlExpression select;

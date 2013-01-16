@@ -1,6 +1,6 @@
 ﻿namespace HybridDb.Linq.Ast
 {
-    internal class SqlConstantExpression : SqlExpression
+    public class SqlConstantExpression : SqlExpression
     {
         public object Value { get; private set; }
 

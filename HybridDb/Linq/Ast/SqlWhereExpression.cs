@@ -2,7 +2,7 @@
 
 namespace HybridDb.Linq.Ast
 {
-    internal class SqlWhereExpression : SqlExpression
+    public class SqlWhereExpression : SqlExpression
     {
         readonly SqlBinaryExpression predicate;
         bool top1 = false;
@@ -27,7 +27,7 @@ namespace HybridDb.Linq.Ast
     {
         readonly SqlExpression projection;
 
-        public SqlSelectExpression(SqlExpression projection)
+        public SqlSelectExpression(SqlProjectionExpression projection)
         {
             this.projection = projection;
         }
@@ -40,6 +40,34 @@ namespace HybridDb.Linq.Ast
         public override SqlNodeType NodeType
         {
             get { return SqlNodeType.Where; }
+        }
+    }
+
+    public class SqlProjectionExpression : SqlExpression
+    {
+        readonly string to;
+
+        public string To
+        {
+            get { return to; }
+        }
+
+        public string From
+        {
+            get { return @from; }
+        }
+
+        readonly string from;
+
+        public SqlProjectionExpression(string from, string to)
+        {
+            this.to = to;
+            this.from = from;
+        }
+
+        public override SqlNodeType NodeType
+        {
+            get { return SqlNodeType.Project; }
         }
     }
 }

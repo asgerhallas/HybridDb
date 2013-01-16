@@ -1,6 +1,6 @@
 ﻿namespace HybridDb.Linq.Ast
 {
-    internal class SqlColumnExpression : SqlExpression
+    public class SqlColumnExpression : SqlExpression
     {
         readonly string columnName;
 
@@ -12,6 +12,11 @@
         public override SqlNodeType NodeType
         {
             get { return SqlNodeType.Column; }
+        }
+
+        public string ColumnName
+        {
+            get { return columnName; }
         }
     }
 }

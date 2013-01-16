@@ -5,10 +5,21 @@
         Query,
         Select,
         Where,
+        Not,
         And,
         Or,
         Equal,
+        NotEqual,
+        Is,
+        IsNot,
         Constant,
-        Column
+        Column,
+        LessThan,
+        LessThanOrEqual,
+        GreaterThan,
+        GreaterThanOrEqual,
+        BitwiseAnd,
+        BitwiseOr,
+        Project
     }
 }

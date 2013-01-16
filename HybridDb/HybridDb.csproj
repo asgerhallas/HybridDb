@@ -60,19 +60,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Linq\Ast\OperationParser.cs" />
+    <Compile Include="Linq\Ast\OrderByVisitor.cs" />
     <Compile Include="Linq\Ast\QueryVisitor.cs" />
     <Compile Include="Linq\Ast\Operation.cs" />
     <Compile Include="Linq\Ast\PredicateExpression.cs" />
+    <Compile Include="Linq\Ast\SelectVisitor.cs" />
     <Compile Include="Linq\Ast\SqlBinaryExpression.cs" />
     <Compile Include="Linq\Ast\SqlColumnExpression.cs" />
     <Compile Include="Linq\Ast\SqlConstantExpression.cs" />
     <Compile Include="Linq\Ast\SqlExpression.cs" />
+    <Compile Include="Linq\Ast\SqlExpressionTranslator.cs" />
     <Compile Include="Linq\Ast\SqlExpressionVisitor.cs" />
     <Compile Include="Linq\Ast\SqlNodeType.cs" />
+    <Compile Include="Linq\Ast\SqlNotExpression.cs" />
     <Compile Include="Linq\Ast\SqlQueryExpression.cs" />
     <Compile Include="Linq\Ast\SqlWhereExpression.cs" />
     <Compile Include="Linq\Ast\StackEx.cs" />
-    <Compile Include="Linq\Ast\UnaryBoolToBinaryEXpressionVisitor.cs" />
+    <Compile Include="Linq\Ast\UnaryBoolToBinaryExpressionVisitor.cs" />
     <Compile Include="Linq\Ast\WhereVisitor.cs" />
     <Compile Include="Linq\ExpressionEx.cs" />
     <Compile Include="Linq\IHybridQueryable.cs" />

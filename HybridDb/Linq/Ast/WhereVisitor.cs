@@ -17,8 +17,15 @@ namespace HybridDb.Linq.Ast
         public static Stack<Operation> Translate(Expression expression)
         {
             var operations = new Stack<Operation>();
+            expression = new UnaryBoolToBinaryExpressionVisitor().Visit(expression);
             new WhereVisitor(operations).Visit(expression);
             return operations;
+        }
+
+        public override Expression Visit(Expression node)
+        {
+            
+            return base.Visit(node);
         }
 
         protected override Expression VisitBinary(BinaryExpression expression)
@@ -26,22 +33,34 @@ namespace HybridDb.Linq.Ast
             switch (expression.NodeType)
             {
                 case ExpressionType.And:
+                    operations.Push(new Operation(SqlNodeType.BitwiseAnd));
+                    break;
                 case ExpressionType.AndAlso:
                     operations.Push(new Operation(SqlNodeType.And));
                     break;
                 case ExpressionType.Or:
+                    operations.Push(new Operation(SqlNodeType.BitwiseOr));
+                    break;
                 case ExpressionType.OrElse:
                     operations.Push(new Operation(SqlNodeType.Or));
                     break;
                 case ExpressionType.LessThan:
-                case ExpressionType.LessThanOrEqual:
-                case ExpressionType.GreaterThan:
-                case ExpressionType.GreaterThanOrEqual:
+                    operations.Push(new Operation(SqlNodeType.LessThan));
                     break;
+                case ExpressionType.LessThanOrEqual:
+                    operations.Push(new Operation(SqlNodeType.LessThanOrEqual));
+                    break;
+                case ExpressionType.GreaterThan:
+                    operations.Push(new Operation(SqlNodeType.GreaterThan));
+                    break;
+                case ExpressionType.GreaterThanOrEqual:
+                    operations.Push(new Operation(SqlNodeType.GreaterThanOrEqual));
+                break;
                 case ExpressionType.Equal:
                     operations.Push(new Operation(SqlNodeType.Equal));
                     break;
                 case ExpressionType.NotEqual:
+                    operations.Push(new Operation(SqlNodeType.NotEqual));
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", expression.NodeType));
@@ -60,8 +79,20 @@ namespace HybridDb.Linq.Ast
 
         protected override Expression VisitUnary(UnaryExpression expression)
         {
-            if (expression.NodeType == ExpressionType.Quote)
-                Visit(expression.Operand);
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Not:
+                    operations.Push(new Operation(SqlNodeType.Not));
+                    Visit(expression.Operand);
+                    break;
+                case ExpressionType.Quote:
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                    Visit(expression.Operand);
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format("The unary operator '{0}' is not supported", expression.NodeType));
+            }
 
             return expression;
         }
@@ -104,6 +135,12 @@ namespace HybridDb.Linq.Ast
 
         protected override Expression VisitMember(MemberExpression expression)
         {
+            if (expression.Expression == null)
+            {
+                operations.Push(new Operation(SqlNodeType.Constant, expression.Member.GetValue(null)));
+                return expression;
+            }
+
             Visit(expression.Expression);
 
             switch (operations.Peek().NodeType)

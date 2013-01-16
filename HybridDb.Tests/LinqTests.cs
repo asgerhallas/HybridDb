@@ -164,6 +164,22 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithNestedLocalVarsWithNullValue()
+        {
+            var someObj = new {prop = (int?)null};
+            var translation = session.Query<Entity>().Where(x => x.Property == someObj.prop).Translate();
+            translation.Where.ShouldBe("(Property IS NULL)");
+        }
+
+        [Fact]
+        public void CanQueryWithNestedLocalVarsWithNullTarget()
+        {
+            ProjectedEntity someObj = null;
+            var translation = session.Query<Entity>().Where(x => x.Property == someObj.Property).Translate();
+            translation.Where.ShouldBe("(Property IS NULL)");
+        }
+
+        [Fact]
         public void CanQueryWithWhereAndNamedProjection()
         {
             var queryable = session.Query<Entity>().Where(x => x.Property == 2).AsProjection<ProjectedEntity>();
