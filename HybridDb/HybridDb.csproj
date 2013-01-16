@@ -78,6 +78,7 @@
     <Compile Include="Linq\Ast\StackEx.cs" />
     <Compile Include="Linq\Ast\UnaryBoolToBinaryExpressionVisitor.cs" />
     <Compile Include="Linq\Ast\WhereVisitor.cs" />
+    <Compile Include="Linq\Ast\WhereVisitor2.cs" />
     <Compile Include="Linq\ExpressionEx.cs" />
     <Compile Include="Linq\IHybridQueryable.cs" />
     <Compile Include="Linq\Query.cs" />

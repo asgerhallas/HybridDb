@@ -52,14 +52,14 @@ namespace HybridDb.Linq.Ast
             get { return to; }
         }
 
-        public string From
+        public SqlColumnExpression From
         {
-            get { return @from; }
+            get { return from; }
         }
 
-        readonly string from;
+        readonly SqlColumnExpression from;
 
-        public SqlProjectionExpression(string from, string to)
+        public SqlProjectionExpression(SqlColumnExpression from, string to)
         {
             this.to = to;
             this.from = from;

@@ -11,7 +11,7 @@ namespace HybridDb.Linq.Ast
         {
             var selectOperations = new Stack<Operation>();
             var whereOperations = new Stack<Operation>();
-            var queryVisitor = new QueryVisitor(selectOperations, whereOperations);
+            var queryVisitor = new QueryVisitor(selectOperations);
 
             queryVisitor.Visit(expression);
 
@@ -23,16 +23,17 @@ namespace HybridDb.Linq.Ast
             }
 
             var whereSql = new StringBuilder();
-            if (whereOperations.Count > 0)
-            {
-                var where = whereOperations.ParseToSqlExpression();
-                new SqlExpressionTranslator(whereSql).Visit(@where);
-            }
+            //if (whereOperations.Count > 0)
+            //{
+            //    var where = whereOperations.ParseToSqlExpression();
+            //    new SqlExpressionTranslator(whereSql).Visit(@where);
+            //}
+            new SqlExpressionTranslator(selectSql).Visit(queryVisitor.Where);
 
             return new Translation
             {
                 Select = selectSql.ToString() ?? "",
-                Where = whereSql.ToString() ?? "",
+                Where = selectSql.ToString() ?? "",
                 Skip = queryVisitor.Skip,
                 Take = queryVisitor.Take
             };
@@ -48,9 +49,14 @@ namespace HybridDb.Linq.Ast
         int take;
         SqlExpression orderBy;
         SqlExpression select;
-        SqlWhereExpression where;
+        SqlExpression where;
 
-        public QueryVisitor(Stack<Operation> selectOperations, Stack<Operation> whereOperations)
+        public SqlExpression Where
+        {
+            get { return @where; }
+        }
+
+        public QueryVisitor(Stack<Operation> selectOperations)
         {
             this.selectOperations = selectOperations;
             this.whereOperations = whereOperations;
@@ -74,7 +80,7 @@ namespace HybridDb.Linq.Ast
                     new SelectVisitor(selectOperations).Visit(expression.Arguments[1]);
                     break;
                 case "Where":
-                    new WhereVisitor(whereOperations).Visit(expression.Arguments[1]);
+                    where = WhereVisitor2.Translate(expression.Arguments[1]);
                     break;
                 case "Skip":
                     skip = (int) ((ConstantExpression) expression.Arguments[1]).Value;

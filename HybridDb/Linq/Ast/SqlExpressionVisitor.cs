@@ -10,19 +10,20 @@
         protected virtual SqlExpression Visit(SqlQueryExpression expression)
         {
             Visit(expression.Select);
-            Visit((SqlExpression) expression.Where);
+            Visit(expression.Where);
             Visit(expression.OrderBy);
             return expression;
         }
 
         protected virtual SqlExpression Visit(SqlProjectionExpression expression)
         {
+            Visit(expression.From);
             return expression;
         }
 
         protected virtual SqlExpression Visit(SqlWhereExpression expression)
         {
-            Visit((SqlExpression) expression.Predicate);
+            Visit(expression.Predicate);
             return expression;
         }
 
@@ -46,6 +47,23 @@
         protected virtual SqlExpression Visit(SqlNotExpression expression)
         {
             return expression;
+        }
+    }
+
+    public class NullCheckVisitor : SqlExpressionVisitor
+    {
+        protected override SqlExpression Visit(SqlBinaryExpression expression)
+        {
+            if (expression.Right.NodeType == SqlNodeType.Constant && ((SqlConstantExpression)expression.Right).Value == null)
+
+            switch (expression.NodeType)
+            {
+                    case SqlNodeType.Equal:
+                    case SqlNodeType.NotEqual:
+                        if (expression.Right.NodeType == SqlNodeType.Constant && ((SqlConstantExpression)expression.Right).Value == null)
+                            return new SqlBinaryExpression(expression.NodeType, expression.Left, e);
+                            
+            }
         }
     }
 }

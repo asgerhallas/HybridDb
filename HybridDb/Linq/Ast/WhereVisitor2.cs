@@ -5,65 +5,86 @@ using System.Linq.Expressions;
 
 namespace HybridDb.Linq.Ast
 {
-    internal class WhereVisitor : ExpressionVisitor
-    {
-        readonly Stack<Operation> operations;
+    /// <summary>
+    /// ConstantPropagation
+    /// UnaryBoolToBinary
+    /// Constant == Constant = remove eller not
+    /// Col == Constant(Null) = Col.IsNull() -> Visit omvendt, hvis de står omvendt
+    /// 
+    /// Nogle af disse (over) kan måske komme i AST i stedet?
+    /// 
+    /// Opløft til AST for hver clause type? Måske samme visitor dog? Eller nedarvning?
+    ///     Her udføres kolonner og metoder på kolonner
+    /// Reducer flere Where's flere selects, orderbys m.v.
+    /// Husk top1, som kommer fra Where men = take 1
+    /// 
+    /// Udskriv til streng eventuelt med visitors på AST elementerne
+    /// 
+    /// </summary>
 
-        public WhereVisitor(Stack<Operation> operations)
+    internal class WhereVisitor2 : ExpressionVisitor
+    {
+        readonly Stack<SqlExpression> operations;
+
+        public WhereVisitor2(Stack<SqlExpression> operations)
         {
             this.operations = operations;
         }
 
-        public static Stack<Operation> Translate(Expression expression)
+        public static SqlExpression Translate(Expression expression)
         {
-            var operations = new Stack<Operation>();
+            var operations = new Stack<SqlExpression>();
             expression = new UnaryBoolToBinaryExpressionVisitor().Visit(expression);
-            new WhereVisitor(operations).Visit(expression);
-            return operations;
+            new WhereVisitor2(operations).Visit(expression);
+            return operations.Pop();
         }
 
         protected override Expression VisitBinary(BinaryExpression expression)
         {
+            Visit(expression.Left);
+            var left = operations.Pop();
 
+            Visit(expression.Right);
+            var right = operations.Pop();
 
+            SqlNodeType nodeType;
             switch (expression.NodeType)
             {
                 case ExpressionType.And:
-                    operations.Push(new Operation(SqlNodeType.BitwiseAnd));
+                    nodeType = SqlNodeType.BitwiseAnd;
                     break;
                 case ExpressionType.AndAlso:
-                    operations.Push(new Operation(SqlNodeType.And));
+                    nodeType = SqlNodeType.And;
                     break;
                 case ExpressionType.Or:
-                    operations.Push(new Operation(SqlNodeType.BitwiseOr));
+                    nodeType = SqlNodeType.BitwiseOr;
                     break;
                 case ExpressionType.OrElse:
-                    operations.Push(new Operation(SqlNodeType.Or));
+                    nodeType = SqlNodeType.Or;
                     break;
                 case ExpressionType.LessThan:
-                    operations.Push(new Operation(SqlNodeType.LessThan));
+                    nodeType = SqlNodeType.LessThan;
                     break;
                 case ExpressionType.LessThanOrEqual:
-                    operations.Push(new Operation(SqlNodeType.LessThanOrEqual));
+                    nodeType = SqlNodeType.LessThanOrEqual;
                     break;
                 case ExpressionType.GreaterThan:
-                    operations.Push(new Operation(SqlNodeType.GreaterThan));
+                    nodeType = SqlNodeType.GreaterThan;
                     break;
                 case ExpressionType.GreaterThanOrEqual:
-                    operations.Push(new Operation(SqlNodeType.GreaterThanOrEqual));
-                break;
+                    nodeType = SqlNodeType.GreaterThanOrEqual;
+                    break;
                 case ExpressionType.Equal:
-                    operations.Push(new Operation(SqlNodeType.Equal));
+                    nodeType = SqlNodeType.Equal;
                     break;
                 case ExpressionType.NotEqual:
-                    operations.Push(new Operation(SqlNodeType.NotEqual));
+                    nodeType = SqlNodeType.NotEqual;
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", expression.NodeType));
             }
 
-            Visit(expression.Left);
-            Visit(expression.Right);
+            operations.Push(new SqlBinaryExpression(nodeType, left, right));
 
             return expression;
         }
@@ -78,8 +99,8 @@ namespace HybridDb.Linq.Ast
             switch (expression.NodeType)
             {
                 case ExpressionType.Not:
-                    operations.Push(new Operation(SqlNodeType.Not));
                     Visit(expression.Operand);
+                    operations.Push(new SqlNotExpression(operations.Pop()));
                     break;
                 case ExpressionType.Quote:
                 case ExpressionType.Convert:
@@ -95,13 +116,13 @@ namespace HybridDb.Linq.Ast
 
         protected override Expression VisitConstant(ConstantExpression expression)
         {
-            operations.Push(new Operation(SqlNodeType.Constant, expression.Value));
+            operations.Push(new SqlConstantExpression(expression.Value));
             return expression;
         }
 
         protected override Expression VisitParameter(ParameterExpression expression)
         {
-            operations.Push(new Operation(SqlNodeType.Column, ""));
+            operations.Push(new SqlColumnExpression(""));
             return expression;
         }
 
@@ -110,17 +131,15 @@ namespace HybridDb.Linq.Ast
             Visit(expression.Arguments);
             Visit(expression.Object);
 
-            var operation = operations.Pop();
-            switch (operation.NodeType)
+            switch (operations.Peek().NodeType)
             {
                 case SqlNodeType.Constant:
-                    var target = operation.Value;
+                    var target = (SqlConstantExpression)operations.Pop();
                     var arguments = operations.Pop(expression.Arguments.Count)
+                                              .Cast<SqlConstantExpression>()
                                               .Select(x => x.Value);
 
-                    operations.Push(new Operation(
-                                        SqlNodeType.Constant,
-                                        expression.Method.Invoke(target, arguments.ToArray())));
+                    operations.Push(new SqlConstantExpression(expression.Method.Invoke(target, arguments.ToArray())));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -133,7 +152,7 @@ namespace HybridDb.Linq.Ast
         {
             if (expression.Expression == null)
             {
-                operations.Push(new Operation(SqlNodeType.Constant, expression.Member.GetValue(null)));
+                operations.Push(new SqlConstantExpression(expression.Member.GetValue(null)));
                 return expression;
             }
 
@@ -142,14 +161,10 @@ namespace HybridDb.Linq.Ast
             switch (operations.Peek().NodeType)
             {
                 case SqlNodeType.Constant:
-                    operations.Push(new Operation(
-                                        SqlNodeType.Constant,
-                                        expression.Member.GetValue(operations.Pop().Value)));
+                    operations.Push(new SqlConstantExpression(expression.Member.GetValue(((SqlConstantExpression)operations.Pop()).Value)));
                     break;
                 case SqlNodeType.Column:
-                    operations.Push(new Operation(
-                                        SqlNodeType.Column,
-                                        operations.Pop().Value + expression.Member.Name));
+                    operations.Push(new SqlColumnExpression(((SqlColumnExpression)operations.Pop()).ColumnName + expression.Member.Name));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
