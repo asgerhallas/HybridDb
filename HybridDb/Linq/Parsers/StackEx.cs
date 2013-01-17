@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace HybridDb.Linq.Ast
+namespace HybridDb.Linq.Parsers
 {
     public static class StackEx
     {

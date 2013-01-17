@@ -10,6 +10,10 @@
         Or,
         Equal,
         NotEqual,
+        LikeStartsWith,
+        LikeEndsWith,
+        LikeContains,
+        In,
         Is,
         IsNot,
         Constant,
@@ -20,6 +24,8 @@
         GreaterThanOrEqual,
         BitwiseAnd,
         BitwiseOr,
-        Project
+        Project,
+        Ordering,
+        OrderBy
     }
 }

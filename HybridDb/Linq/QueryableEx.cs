@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Linq.Ast;
+using HybridDb.Linq.Parsers;
 
 namespace HybridDb.Linq
 {

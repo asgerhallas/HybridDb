@@ -123,7 +123,14 @@ namespace HybridDb.Tests
         public void CanQueryWithMultipleWhereClauses()
         {
             var translation = session.Query<Entity>().Where(x => x.Property == 0).Where(x => x.StringProp == "Lars").Translate();
-            translation.Where.ShouldBe("(Property = 0) AND (StringProp = 'Lars')");
+            translation.Where.ShouldBe("((Property = 0) AND (StringProp = 'Lars'))");
+        }
+
+        [Fact]
+        public void CanQueryWithMultipleSelectClauses()
+        {
+            var translation = session.Query<Entity>().Select(x => new { x.Id, x.StringProp }).Select(x => new { x.Id }).Translate();
+            translation.Select.ShouldBe("Id AS Id");
         }
 
         [Fact]
@@ -175,8 +182,7 @@ namespace HybridDb.Tests
         public void CanQueryWithNestedLocalVarsWithNullTarget()
         {
             ProjectedEntity someObj = null;
-            var translation = session.Query<Entity>().Where(x => x.Property == someObj.Property).Translate();
-            translation.Where.ShouldBe("(Property IS NULL)");
+            Should.Throw<NullReferenceException>(() => session.Query<Entity>().Where(x => x.Property == someObj.Property).Translate());
         }
 
         [Fact]
@@ -211,6 +217,13 @@ namespace HybridDb.Tests
         {
             var translation = session.Query<Entity>().Select(x => new {x.Property}).Translate();
             translation.Select.ShouldBe("Property AS Property");
+        }
+
+        [Fact]
+        public void CanQueryWithSelectToAnonymousWithMultipleProperties()
+        {
+            var translation = session.Query<Entity>().Select(x => new {x.Property, x.StringProp}).Translate();
+            translation.Select.ShouldBe("Property AS Property, StringProp AS StringProp");
         }
 
         [Fact]
@@ -333,7 +346,7 @@ namespace HybridDb.Tests
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var list = new[] {guid1, guid2};
             var translation = session.Query<Entity>().Where(x => x.Id.In(list)).Translate();
-            translation.Where.ShouldBe("Id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002')");
+            translation.Where.ShouldBe("(Id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002'))");
         }
 
         [Fact]
@@ -342,7 +355,7 @@ namespace HybridDb.Tests
             var guid1 = new Guid("00000000-0000-0000-0000-000000000001");
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var translation = session.Query<Entity>().Where(x => x.Id.In(new[] {guid1, guid2})).Translate();
-            translation.Where.ShouldBe("Id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002')");
+            translation.Where.ShouldBe("(Id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002'))");
         }
 
         public class Entity

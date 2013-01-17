@@ -4,9 +4,9 @@
     {
         readonly SqlExpression orderBy;
         readonly SqlExpression select;
-        readonly SqlWhereExpression where;
+        readonly SqlExpression where;
 
-        public SqlQueryExpression(SqlExpression select, SqlWhereExpression where, SqlExpression orderBy)
+        public SqlQueryExpression(SqlExpression select, SqlExpression where, SqlExpression orderBy)
         {
             this.where = where;
             this.select = select;
@@ -18,7 +18,7 @@
             get { return @select; }
         }
 
-        public SqlWhereExpression Where
+        public SqlExpression Where
         {
             get { return @where; }
         }

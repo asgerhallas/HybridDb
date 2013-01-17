@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using HybridDb.Linq.Ast;
+using HybridDb.Linq.Parsers;
 
 namespace HybridDb.Linq
 {
@@ -19,8 +20,6 @@ namespace HybridDb.Linq
 
         internal Translation Translate(Expression expression)
         {
-            expression = new UnaryBoolToBinaryExpressionVisitor().Visit(expression);
-
             where = new StringBuilder();
             orderby = new StringBuilder();
             Visit(expression);
