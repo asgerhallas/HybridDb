@@ -126,6 +126,7 @@
     <Compile Include="Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringEx.cs" />
+    <Compile Include="TableNotFoundException.cs" />
     <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>

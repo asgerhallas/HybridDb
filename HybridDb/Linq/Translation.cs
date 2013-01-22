@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace HybridDb.Linq
 {
     public class Translation
@@ -7,5 +9,6 @@ namespace HybridDb.Linq
         public int Take { get; set; }
         public int Skip { get; set; }
         public string OrderBy { get; set; }
+        public IDictionary<string, object> Parameters { get; set; }
     }
 }

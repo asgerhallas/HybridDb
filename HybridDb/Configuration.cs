@@ -43,12 +43,16 @@ namespace HybridDb
 
         public ITable GetTableFor<T>()
         {
-            return tables[typeof (T)];
+            return GetTableFor(typeof (T));
         }
 
         public ITable GetTableFor(Type type)
         {
-            return tables[type];
+            ITable value;
+            if (tables.TryGetValue(type, out value))
+                return value;
+
+            throw new TableNotFoundException(type);
         }
     }
 }

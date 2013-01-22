@@ -12,20 +12,21 @@ namespace HybridDb.Linq.Parsers
         public Translation Translate(Expression expression)
         {
             var queryVisitor = new QueryParser();
+            var parameters = new Dictionary<string, object>();
 
             queryVisitor.Visit(expression);
 
             var selectSql = new StringBuilder();
             if (queryVisitor.Select != null)
-                new SqlExpressionTranslator(selectSql).Visit(queryVisitor.Select);
+                new SqlExpressionTranslator(selectSql, parameters).Visit(queryVisitor.Select);
 
             var whereSql = new StringBuilder();
             if (queryVisitor.Where != null)
-                new SqlExpressionTranslator(whereSql).Visit(queryVisitor.Where);
+                new SqlExpressionTranslator(whereSql, parameters).Visit(queryVisitor.Where);
 
             var orderBySql = new StringBuilder();
             if (queryVisitor.OrderBy != null)
-                new SqlExpressionTranslator(orderBySql).Visit(queryVisitor.OrderBy);
+                new SqlExpressionTranslator(orderBySql, parameters).Visit(queryVisitor.OrderBy);
 
             return new Translation
             {
@@ -33,7 +34,8 @@ namespace HybridDb.Linq.Parsers
                 Where = whereSql.ToString(),
                 OrderBy = orderBySql.ToString(),
                 Skip = queryVisitor.Skip,
-                Take = queryVisitor.Take
+                Take = queryVisitor.Take,
+                Parameters = parameters
             };
         }
     }

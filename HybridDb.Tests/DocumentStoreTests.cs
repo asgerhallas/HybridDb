@@ -64,6 +64,15 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanCreateColumnsFromFields()
+        {
+            var column = GetColumn("Entities", "Field");
+            column.ShouldNotBe(null);
+            GetType(column.system_type_id).ShouldBe("nvarchar");
+            column.max_length.ShouldBe(-1); // -1 is MAX
+        }
+
+        [Fact]
         public void IdColumnsIsCreatedAsPrimaryKey()
         {
             const string sql = 
@@ -81,15 +90,6 @@ namespace HybridDb.Tests
 
             var isPrimaryKey = store.Connection.Query(sql).Any();
             isPrimaryKey.ShouldBe(true);
-        }
-        
-        [Fact]
-        public void CanCreateColumnsFromFields()
-        {
-            var column = GetColumn("Entities", "Field");
-            column.ShouldNotBe(null);
-            GetType(column.system_type_id).ShouldBe("nvarchar");
-            column.max_length.ShouldBe(-1); // -1 is MAX
         }
 
         [Fact]
@@ -369,14 +369,27 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanStoreAndQueryOnNull()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            var id = Guid.NewGuid();
+            store.Insert(table, id, new byte[0], new {StringProp = (string)null});
+
+            QueryStats stats;
+            var result = store.Query(table, out stats, where: "(@Value IS NULL AND StringProp IS NULL) OR StringProp = @Value", parameters: new { Value = (string)null });
+            result.Count().ShouldBe(1);
+        }
+
+        [Fact]
         public void CanStoreAndQueryDateTimeProjection()
         {
             var table = store.Configuration.GetTableFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table, id, new byte[0], new {DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1)});
 
-            var result = store.Get(table, id);
-            result[table["DateTimeProp"]].ShouldBe(new DateTime(2001, 12, 24, 1, 1, 1));
+            QueryStats stats;
+            var result = store.Query(table, out stats, where: "DateTimeProp = @dtp", parameters: new { dtp = new DateTime(2001, 12, 24, 1, 1, 1) });
+            result.First()[table["DateTimeProp"]].ShouldBe(new DateTime(2001, 12, 24, 1, 1, 1));
         }
 
         [Fact]
@@ -396,7 +409,7 @@ namespace HybridDb.Tests
             props.ShouldContain(4);
             props.ShouldContain(5);
             props.ShouldContain(6);
-            stats.TotalRows.ShouldBe(10);
+            stats.TotalResults.ShouldBe(10);
         }
 
         [Fact]
@@ -413,7 +426,7 @@ namespace HybridDb.Tests
             var props = result.Select(x => x[table["Property"]]).ToList();
             props.ShouldContain(0);
             props.ShouldContain(1);
-            stats.TotalRows.ShouldBe(10);
+            stats.TotalResults.ShouldBe(10);
         }
 
         [Fact]
@@ -431,7 +444,7 @@ namespace HybridDb.Tests
             props.ShouldContain(7);
             props.ShouldContain(8);
             props.ShouldContain(9);
-            stats.TotalRows.ShouldBe(10);
+            stats.TotalResults.ShouldBe(10);
         }
 
         [Fact]
@@ -445,7 +458,7 @@ namespace HybridDb.Tests
             var result = store.Query(table, out stats, where: "Property >= 5", skip: 2).ToList();
 
             result.Count.ShouldBe(3);
-            stats.TotalRows.ShouldBe(5);
+            stats.TotalResults.ShouldBe(5);
         }
 
         [Fact]
@@ -457,7 +470,7 @@ namespace HybridDb.Tests
             var result = store.Query(table, out stats).ToList();
 
             result.Count.ShouldBe(0);
-            stats.TotalRows.ShouldBe(0);
+            stats.TotalResults.ShouldBe(0);
         }
 
         [Fact]
@@ -515,6 +528,12 @@ namespace HybridDb.Tests
         public void FailsIfDatabaseSchemaExistsButDoesNotMatchCurrentConfiguration()
         {
             throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void FailsIfEntityTypeIsUnknown()
+        {
+            Should.Throw<TableNotFoundException>(() => store.Configuration.GetTableFor<int>());
         }
 
         bool TableExists(string name)

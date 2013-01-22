@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HybridDb.Linq.Ast;
@@ -9,10 +10,12 @@ namespace HybridDb.Linq.Parsers
     public class SqlExpressionTranslator : SqlExpressionVisitor
     {
         readonly StringBuilder sql;
+        readonly Dictionary<string, object> parameters;
 
-        public SqlExpressionTranslator(StringBuilder sql)
+        public SqlExpressionTranslator(StringBuilder sql, Dictionary<string, object> parameters)
         {
             this.sql = sql;
+            this.parameters = parameters;
         }
 
         protected override SqlExpression Visit(SqlBinaryExpression expression)
@@ -125,7 +128,10 @@ namespace HybridDb.Linq.Parsers
 
         protected override SqlExpression Visit(SqlConstantExpression expression)
         {
-            sql.Append(FormatConstant(expression.Value));
+            var key = "@Value" + parameters.Count;
+            sql.Append(key);
+            parameters.Add(key, expression.Value);
+            //sql.Append(FormatConstant(expression.Value));
             return expression;
         }
 

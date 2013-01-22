@@ -98,7 +98,7 @@ namespace HybridDb.Tests
         {
             QueryStats stats;
             session.Query<Entity>().Statistics(out stats).ToList();
-            stats.TotalRows.ShouldBe(3);
+            stats.TotalResults.ShouldBe(3);
         }
 
         [Fact]
@@ -106,7 +106,7 @@ namespace HybridDb.Tests
         {
             QueryStats stats;
             session.Query<Entity>().Statistics(out stats).Select(x => new { x.Property }).ToList();
-            stats.TotalRows.ShouldBe(3);
+            stats.TotalResults.ShouldBe(3);
         }
 
         public class Entity

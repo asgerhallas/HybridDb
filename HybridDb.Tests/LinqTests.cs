@@ -138,13 +138,17 @@ namespace HybridDb.Tests
         {
             var translation = session.Query<Entity>().Where(x => x.Property == 0 || (x.StringProp == null && x.Property == 1)).Translate();
             translation.Where.ShouldBe("((Property = 0) OR ((StringProp IS NULL) AND (Property = 1)))");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 0);
+            translation.Parameters.ShouldContainKeyAndValue("@Value1", DBNull.Value);
+            translation.Parameters.ShouldContainKeyAndValue("@Value2", 1);
         }
 
         [Fact]
         public void CanQueryWithStartsWith()
         {
             var translation = session.Query<Entity>().Where(x => x.StringProp.StartsWith("L")).Translate();
-            translation.Where.ShouldBe("(StringProp LIKE 'L' + '%')");
+            translation.Where.ShouldBe("(StringProp LIKE @Value0 + '%')");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "L");
         }
 
         [Fact]

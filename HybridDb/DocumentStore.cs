@@ -35,11 +35,6 @@ namespace HybridDb
 
         public DocumentStore(string connectionString) : this(connectionString, false) {}
 
-        public bool IsInTestMode
-        {
-            get { return forTesting; }
-        }
-
         ILogger Logger
         {
             get { return Configuration.Logger; }
@@ -56,6 +51,11 @@ namespace HybridDb
             }
         }
 
+        public bool IsInTestMode
+        {
+            get { return forTesting; }
+        }
+
         public void Dispose()
         {
             if (IsInTestMode && connectionForTesting != null)
@@ -70,6 +70,16 @@ namespace HybridDb
         public Table<TDocument> ForDocument<TDocument>()
         {
             return ForDocument<TDocument>(null);
+        }
+
+        public Table<TDocument> ForDocument<TDocument>(string name)
+        {
+            return configuration.Register<TDocument>(name);
+        }
+
+        public static DocumentStore ForTesting(string connectionString)
+        {
+            return new DocumentStore(connectionString, true);
         }
 
         public void Initialize()
@@ -234,10 +244,10 @@ namespace HybridDb
                    .Append("from {0}", Escape(GetFormattedTableName(table)))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
-                   .Append(isWindowed, "select *, (RowNumberAsc + RowNumberDesc - 1) as TotalRows from temp where RowNumberAsc >= {0}", skip + 1)
+                   .Append(isWindowed, "select *, (RowNumberAsc + RowNumberDesc - 1) as TotalResults from temp where RowNumberAsc >= {0}", skip + 1)
                    .Append(take > 0, "and RowNumberAsc <= {0}", skip + take)
                    .Append(isWindowed, "order by RowNumberAsc")
-                   .Append(!isWindowed, "select *, (select count(*) from temp) as TotalRows from temp")
+                   .Append(!isWindowed, "select *, (select count(*) from temp) as TotalResults from temp")
                    .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
                 Console.WriteLine();
@@ -324,24 +334,14 @@ namespace HybridDb
 
         IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
         {
-            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create, parameters, tx, splitOn: "TotalRows");
+            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create, parameters, tx, splitOn: "TotalResults");
 
             var firstRow = rows.FirstOrDefault();
-            metadata = firstRow != null ? new QueryStats {TotalRows = firstRow.Item2.TotalRows} : new QueryStats();
+            metadata = firstRow != null ? new QueryStats {TotalResults = firstRow.Item2.TotalResults} : new QueryStats();
 
             Interlocked.Increment(ref numberOfRequests);
 
             return rows.Select(x => x.Item1);
-        }
-
-        public Table<TDocument> ForDocument<TDocument>(string name)
-        {
-            return configuration.Register<TDocument>(name);
-        }
-
-        public static DocumentStore ForTesting(string connectionString)
-        {
-            return new DocumentStore(connectionString, true);
         }
 
         void InternalExecute(ManagedConnection managedConnection, IDbTransaction tx, string sql, List<Parameter> parameters, int expectedRowCount)

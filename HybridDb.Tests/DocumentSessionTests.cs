@@ -532,7 +532,6 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 session.Load<Entity>(id).ProjectedProperty.ShouldBe("Large");
-
             }
         }
 
