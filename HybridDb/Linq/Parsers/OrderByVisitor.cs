@@ -6,7 +6,7 @@ using HybridDb.Linq.Ast;
 
 namespace HybridDb.Linq.Parsers
 {
-    internal class OrderByVisitor : ConstantAndColumnParser
+    internal class OrderByVisitor : LambdaParser
     {
         public OrderByVisitor(Stack<SqlExpression> ast) : base(ast) {}
 

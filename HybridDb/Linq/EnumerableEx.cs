@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq
 {
     public static class EnumerableEx
     {

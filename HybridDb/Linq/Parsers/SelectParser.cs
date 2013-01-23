@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace HybridDb.Linq.Parsers
 {
-    internal class SelectParser : ConstantAndColumnParser
+    internal class SelectParser : LambdaParser
     {
         public SelectParser(Stack<SqlExpression> ast) : base(ast) { }
 

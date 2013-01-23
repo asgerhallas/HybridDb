@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -7,21 +6,15 @@ using System.Reflection;
 
 namespace HybridDb.Linq
 {
-    public interface IHybridQueryProvider : IQueryProvider
-    {
-        object Execute<T>(IQueryable<T> query);
-        string GetQueryText(IQueryable expression);
-    }
-
     public class QueryProvider<TSourceElement> : IHybridQueryProvider
     {
         readonly DocumentSession session;
-        QueryStats stats;
+        readonly QueryStats lastQueryStats;
 
         public QueryProvider(DocumentSession session)
         {
             this.session = session;
-            stats = new QueryStats();
+            lastQueryStats = new QueryStats();
         }
 
         public IQueryable<T> CreateQuery<T>(Expression expression)
@@ -31,7 +24,10 @@ namespace HybridDb.Linq
 
         public IQueryable CreateQuery(Expression expression)
         {
-            var elementType = TypeSystem.GetElementType(expression.Type);
+            var elementType = expression.Type.GetEnumerableType();
+            if (elementType == null)
+                throw new ArgumentException("Query is not based on IEnumerable");
+
             try
             {
                 return (IQueryable) Activator.CreateInstance(typeof (Query<>).MakeGenericType(elementType), new object[] {this, expression});
@@ -42,19 +38,32 @@ namespace HybridDb.Linq
             }
         }
 
-        public object Execute<T>(IQueryable<T> query)
+        public IEnumerable<T> ExecuteQuery<T>(Translation translation)
         {
-            var translation = query.Translate();
             var store = session.Advanced.DocumentStore;
             var table = store.Configuration.GetTableFor(typeof (TSourceElement));
 
             QueryStats storeStats;
-            var results = typeof(TSourceElement) == typeof(T)
-                          ? (IEnumerable) store.Query(table, out storeStats, translation.Select, translation.Where, translation.Skip, translation.Take, translation.OrderBy)
-                                              .Select(result => session.ConvertToEntityAndPutUnderManagement(table, result))
-                          : store.Query<T>(table, out storeStats, translation.Select, translation.Where, translation.Skip, translation.Take, translation.OrderBy);
+            var results = typeof (TSourceElement) == typeof (T)
+                              ? store.Query(table,
+                                            out storeStats,
+                                            translation.Select,
+                                            translation.Where,
+                                            translation.Skip,
+                                            translation.Take,
+                                            translation.OrderBy,
+                                            translation.Parameters)
+                                     .Select(result => session.ConvertToEntityAndPutUnderManagement(table, result))
+                                     .Cast<T>()
+                              : store.Query<T>(table,
+                                               out storeStats,
+                                               translation.Select,
+                                               translation.Where,
+                                               translation.Skip,
+                                               translation.Take,
+                                               translation.OrderBy);
 
-            storeStats.CopyTo(stats);
+            storeStats.CopyTo(lastQueryStats);
             return results;
         }
 
@@ -65,15 +74,49 @@ namespace HybridDb.Linq
 
         internal void WriteStatisticsTo(out QueryStats stats)
         {
-            stats = this.stats;
+            stats = lastQueryStats;
         }
 
         T IQueryProvider.Execute<T>(Expression expression)
         {
-            throw new NotSupportedException();
+            var translation = expression.Translate();
+
+            var result = ExecuteQuery<T>(translation);
+
+            switch (translation.ExecutionMethod)
+            {
+                case Translation.ExecutionSemantics.Single:
+                    if (lastQueryStats.TotalResults > 1)
+                        throw new InvalidOperationException("Query returned more than one element");
+
+                    if (lastQueryStats.TotalResults < 1)
+                        throw new InvalidOperationException("Query returned no elements");
+
+                    return result.Single();
+                case Translation.ExecutionSemantics.SingleOrDefault:
+                    if (lastQueryStats.TotalResults > 1)
+                        throw new InvalidOperationException("Query returned more than one element");
+
+                    if (lastQueryStats.TotalResults < 1)
+                        return default(T);
+
+                    return result.Single();
+                case Translation.ExecutionSemantics.First:
+                    if (lastQueryStats.TotalResults < 1)
+                        throw new InvalidOperationException("Query returned no elements");
+
+                    return result.First();
+                case Translation.ExecutionSemantics.FirstOrDefault:
+                    if (lastQueryStats.TotalResults < 1)
+                        return default(T);
+
+                    return result.First();
+                default:
+                    throw new ArgumentOutOfRangeException("Does not support execution method " + translation.ExecutionMethod);
+            }
         }
 
-        object IQueryProvider.Execute(Expression expression)
+        public object Execute(Expression expression)
         {
             throw new NotSupportedException();
         }

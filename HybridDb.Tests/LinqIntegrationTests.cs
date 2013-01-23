@@ -109,6 +109,130 @@ namespace HybridDb.Tests
             stats.TotalResults.ShouldBe(3);
         }
 
+        [Fact]
+        public void CanQueryWithWhereIn()
+        {
+            var result = session.Query<Entity>().Where(x => x.StringProp.In("Asger", "Lars")).ToList();
+            result.Count.ShouldBe(2);
+        }
+
+        [Fact]
+        public void CanQueryWithSingle()
+        {
+            var result = session.Query<Entity>().Where(x => x.StringProp == "Asger").Single();
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanQueryWithSingleWithPredicate()
+        {
+            var result = session.Query<Entity>().Single(x => x.StringProp == "Asger");
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void QueryWithSingleFailsWhenMoreThanOneResult()
+        {
+            Should.Throw<InvalidOperationException>(() => session.Query<Entity>().Single());
+        }
+
+        [Fact]
+        public void QueryWithSingleFailsWhenZeroResult()
+        {
+            Should.Throw<InvalidOperationException>(() => session.Query<Entity>().Single(x => x.StringProp == "WuggaWugga"));
+        }
+
+        [Fact]
+        public void CanQueryWithSingleOrDefault()
+        {
+            var result = session.Query<Entity>().Where(x => x.StringProp == "Asger").SingleOrDefault();
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanQueryWithSingleOrDefaultWithPredicate()
+        {
+            var result = session.Query<Entity>().SingleOrDefault(x => x.StringProp == "Asger");
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void QueryWithSingleOrDefaultFailsWhenMoreThanOneResult()
+        {
+            Should.Throw<InvalidOperationException>(() => session.Query<Entity>().SingleOrDefault());
+        }
+
+        [Fact]
+        public void QueryWithSingleOrDefaultReturnsNullZeroResult()
+        {
+            session.Query<Entity>().SingleOrDefault(x => x.StringProp == "WuggaWugga").ShouldBe(null);
+        }
+
+        [Fact]
+        public void CanQueryWithFirst()
+        {
+            var result = session.Query<Entity>().Where(x => x.StringProp == "Asger").First();
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanQueryWithFirstWithPredicate()
+        {
+            var result = session.Query<Entity>().First(x => x.StringProp == "Asger");
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void QueryWithFirstReturnsFirstWhenMoreThanOneResult()
+        {
+            var result = session.Query<Entity>().OrderBy(x => x.StringProp).Where(x => x.StringProp != null).First();
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void QueryWithFirstFailsWhenZeroResult()
+        {
+            Should.Throw<InvalidOperationException>(() => session.Query<Entity>().First(x => x.StringProp == "WuggaWugga"));
+        }
+
+        [Fact]
+        public void CanQueryWithFirstOrDefault()
+        {
+            var result = session.Query<Entity>().Where(x => x.StringProp == "Asger").FirstOrDefault();
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanQueryWithFirstOrDefaultWithPredicate()
+        {
+            var result = session.Query<Entity>().FirstOrDefault(x => x.StringProp == "Asger");
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void QueryWithFirstOrDefaultReturnsFirstWhenMoreThanOneResult()
+        {
+            var result = session.Query<Entity>().OrderBy(x => x.StringProp).Where(x => x.StringProp != null).FirstOrDefault();
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void QueryWithFirstOrDefaultReturnsNullWhenZeroResult()
+        {
+            session.Query<Entity>().FirstOrDefault(x => x.StringProp == "WuggaWugga").ShouldBe(null);
+        }
+
+
         public class Entity
         {
             public Entity()

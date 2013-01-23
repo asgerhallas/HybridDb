@@ -128,10 +128,7 @@ namespace HybridDb.Linq.Parsers
 
         protected override SqlExpression Visit(SqlConstantExpression expression)
         {
-            var key = "@Value" + parameters.Count;
-            sql.Append(key);
-            parameters.Add(key, expression.Value);
-            //sql.Append(FormatConstant(expression.Value));
+            sql.Append(FormatConstant(expression.Value));
             return expression;
         }
 
@@ -140,17 +137,13 @@ namespace HybridDb.Linq.Parsers
             if (value == null)
                 return "NULL";
 
-            if (value is Boolean)
-                return ((bool)value) ? "1" : "0";
-
-            if (value is string || value is Guid)
-                return string.Format("'{0}'", value);
-            
             var enumerable = value as IEnumerable;
-            if (enumerable != null)
+            if (enumerable != null && !(value is string))
                 return string.Format("({0})", string.Join(", ", enumerable.Cast<object>().Select(FormatConstant)));
 
-            return value.ToString();
+            var key = "@Value" + parameters.Count;
+            parameters.Add(key, value);
+            return key;
         }
     }
 }

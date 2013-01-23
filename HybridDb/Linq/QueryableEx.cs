@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 using HybridDb.Linq.Parsers;
 
@@ -26,7 +27,12 @@ namespace HybridDb.Linq
         
         internal static Translation Translate(this IQueryable query)
         {
-            return new QueryTranslator().Translate(query.Expression);
+            return Translate(query.Expression);
+        }
+
+        internal static Translation Translate(this Expression expression)
+        {
+            return new QueryTranslator().Translate(expression);
         }
     }
 }

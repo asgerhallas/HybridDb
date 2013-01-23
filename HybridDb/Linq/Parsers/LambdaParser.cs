@@ -1,36 +1,16 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 
 namespace HybridDb.Linq.Parsers
 {
-    /// <summary>
-    /// AST
-    /// ConstantPropagation
-    /// UnaryBoolToBinary
-    /// Constant == Constant = remove eller not
-    /// Col == Constant(Null) = Col.IsNull() -> Visit omvendt, hvis de står omvendt
-    /// 
-    /// Opløft til AST for hver clause type? Måske samme visitor dog? Eller nedarvning?
-    ///     Her udføres kolonner og metoder på kolonner
-    /// Reducer flere Where's flere selects, orderbys m.v.
-    /// Husk top1, som kommer fra Where men = take 1
-    /// 
-    /// Udskriv til streng eventuelt med visitors på AST elementerne
-    /// 
-    /// </summary>
-    /// 
-    /// 
-
-    public class ConstantAndColumnParser : ExpressionVisitor
+    public class LambdaParser : ExpressionVisitor
     {
         protected readonly Stack<SqlExpression> ast;
 
-        public ConstantAndColumnParser(Stack<SqlExpression> ast)
+        public LambdaParser(Stack<SqlExpression> ast)
         {
             this.ast = ast;
         }
@@ -72,7 +52,7 @@ namespace HybridDb.Linq.Parsers
                 Visit(expression.Arguments);
                 Visit(expression.Object);
             }
-            
+
             switch (ast.Peek().NodeType)
             {
                 case SqlNodeType.Constant:
@@ -90,7 +70,7 @@ namespace HybridDb.Linq.Parsers
 
         protected virtual void VisitConstantMethodCall(MethodCallExpression expression)
         {
-            var target = ((SqlConstantExpression)ast.Pop()).Value;
+            var target = ((SqlConstantExpression) ast.Pop()).Value;
             var arguments = ast.Pop(expression.Arguments.Count)
                                .Cast<SqlConstantExpression>()
                                .Select(x => x.Value);
@@ -106,10 +86,10 @@ namespace HybridDb.Linq.Parsers
         protected override Expression VisitNewArray(NewArrayExpression expression)
         {
             var items = new object[expression.Expressions.Count];
-            for (int i = 0; i < expression.Expressions.Count; i++)
+            for (var i = 0; i < expression.Expressions.Count; i++)
             {
                 Visit(expression.Expressions[i]);
-                items[i] = ((SqlConstantExpression)ast.Pop()).Value;
+                items[i] = ((SqlConstantExpression) ast.Pop()).Value;
             }
 
             ast.Push(new SqlConstantExpression(items));

@@ -318,7 +318,7 @@ namespace HybridDb
 
         static Tuple<string, string> CreateAscendingAndDescendingOrderByClauseForRowNumber(string @orderby)
         {
-            var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby;
+            var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "Id" : @orderby;
             var reverseRowNumberOrderBy = string.Join(", ", rowNumberOrderBy.Split(',').Select(x =>
             {
                 if (x.IndexOf("asc", StringComparison.InvariantCultureIgnoreCase) >= 0)
@@ -334,7 +334,15 @@ namespace HybridDb
 
         IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
         {
-            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create, parameters, tx, splitOn: "TotalResults");
+            var normalizedParameters = parameters as IEnumerable<Parameter> ??
+                                       (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
+                                        select new Parameter {Name = "@" + projection.Key, Value = projection.Value}).ToList();
+
+            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(),
+                                                                                        Tuple.Create,
+                                                                                        new FastDynamicParameters(normalizedParameters),
+                                                                                        tx,
+                                                                                        splitOn: "TotalResults");
 
             var firstRow = rows.FirstOrDefault();
             metadata = firstRow != null ? new QueryStats {TotalResults = firstRow.Item2.TotalResults} : new QueryStats();

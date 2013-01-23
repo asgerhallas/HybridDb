@@ -28,13 +28,11 @@ namespace HybridDb
         {
             if (dataObject == null)
             {
-                return null;
+                return new Dictionary<string, object>();
             }
-            if (dataObject is IDictionary<string, object>)
-            {
-                return (IDictionary<string, object>)dataObject;
-            }
-            return GetObjectToDictionaryConverter(dataObject)(dataObject);
+
+            return dataObject as IDictionary<string, object> ??
+                   GetObjectToDictionaryConverter(dataObject)(dataObject);
         }
 
         /// <summary>

@@ -6,7 +6,7 @@ using HybridDb.Linq.Ast;
 
 namespace HybridDb.Linq.Parsers
 {
-    internal class WhereParser : ConstantAndColumnParser
+    internal class WhereParser : LambdaParser
     {
         public WhereParser(Stack<SqlExpression> ast) : base(ast) { }
 

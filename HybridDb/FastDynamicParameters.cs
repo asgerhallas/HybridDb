@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Data;
 using Dapper;
+using System.Linq;
 
 namespace HybridDb
 {
     public class FastDynamicParameters : SqlMapper.IDynamicParameters
     {
-        readonly List<Parameter> parameters;
+        readonly IEnumerable<Parameter> parameters;
 
-        public FastDynamicParameters(List<Parameter> parameters)
+        public FastDynamicParameters(IEnumerable<Parameter> parameters)
         {
             this.parameters = parameters;
         }
@@ -22,7 +23,8 @@ namespace HybridDb
                 dbDataParameter.ParameterName = Clean(parameter.Name);
                 dbDataParameter.Value = parameter.Value ?? DBNull.Value;
                 dbDataParameter.Direction = ParameterDirection.Input;
-                dbDataParameter.DbType = parameter.DbType;
+                if (parameter.DbType.HasValue)
+                    dbDataParameter.DbType = parameter.DbType.Value;
                 dbDataParameter.Size = parameter.Size ?? 0;
                 command.Parameters.Add(dbDataParameter);
             }

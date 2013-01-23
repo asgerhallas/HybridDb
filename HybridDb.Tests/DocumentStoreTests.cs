@@ -455,9 +455,9 @@ namespace HybridDb.Tests
                 store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = i });
 
             QueryStats stats;
-            var result = store.Query(table, out stats, where: "Property >= 5", skip: 2).ToList();
+            var result = store.Query(table, out stats, where: "Property >= 5", skip: 1).ToList();
 
-            result.Count.ShouldBe(3);
+            result.Count.ShouldBe(4);
             stats.TotalResults.ShouldBe(5);
         }
 

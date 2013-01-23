@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 
 namespace HybridDb.Linq
 {
-    public class Query<T> : IQueryable<T>, IQueryable, IEnumerable<T>, IEnumerable, IOrderedQueryable<T>, IOrderedQueryable
+    public class Query<T> : IOrderedQueryable<T>
     {
         readonly Expression expression;
         readonly IHybridQueryProvider provider;
@@ -52,7 +52,7 @@ namespace HybridDb.Linq
 
         public IEnumerator<T> GetEnumerator()
         {
-            return ((IEnumerable) provider.Execute(this)).Cast<T>().GetEnumerator();
+            return provider.ExecuteQuery<T>(expression.Translate()).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

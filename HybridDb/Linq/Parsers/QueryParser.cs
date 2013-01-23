@@ -1,45 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Text;
 using HybridDb.Linq.Ast;
-using System.Linq;
 
 namespace HybridDb.Linq.Parsers
 {
-    public class QueryTranslator
-    {
-        public Translation Translate(Expression expression)
-        {
-            var queryVisitor = new QueryParser();
-            var parameters = new Dictionary<string, object>();
-
-            queryVisitor.Visit(expression);
-
-            var selectSql = new StringBuilder();
-            if (queryVisitor.Select != null)
-                new SqlExpressionTranslator(selectSql, parameters).Visit(queryVisitor.Select);
-
-            var whereSql = new StringBuilder();
-            if (queryVisitor.Where != null)
-                new SqlExpressionTranslator(whereSql, parameters).Visit(queryVisitor.Where);
-
-            var orderBySql = new StringBuilder();
-            if (queryVisitor.OrderBy != null)
-                new SqlExpressionTranslator(orderBySql, parameters).Visit(queryVisitor.OrderBy);
-
-            return new Translation
-            {
-                Select = selectSql.ToString(),
-                Where = whereSql.ToString(),
-                OrderBy = orderBySql.ToString(),
-                Skip = queryVisitor.Skip,
-                Take = queryVisitor.Take,
-                Parameters = parameters
-            };
-        }
-    }
-
     internal class QueryParser : ExpressionVisitor
     {
         public int Skip { get; private set; }
@@ -47,6 +11,7 @@ namespace HybridDb.Linq.Parsers
         public SqlExpression Select { get; private set; }
         public SqlExpression Where { get; private set; }
         public SqlOrderByExpression OrderBy { get; private set; }
+        public Translation.ExecutionSemantics Execution { get; set; }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
@@ -57,11 +22,29 @@ namespace HybridDb.Linq.Parsers
                 case "Select":
                     Select = SelectParser.Translate(expression.Arguments[1]);
                     break;
+                case "SingleOrDefault":
+                    Execution = Translation.ExecutionSemantics.SingleOrDefault;
+                    goto Take1;
+                case "Single":
+                    Execution = Translation.ExecutionSemantics.Single;
+                    goto Take1;
+                case "FirstOrDefault":
+                    Execution = Translation.ExecutionSemantics.FirstOrDefault;
+                    goto Take1;
+                case "First":
+                    Execution = Translation.ExecutionSemantics.First;
+                    goto Take1;
+                case "Take1":
+                    Take1:
+                    Take = 1;
+                    if (expression.Arguments.Count <= 1) break;
+                    goto Where;
                 case "Where":
+                    Where:
                     var whereExpression = WhereParser.Translate(expression.Arguments[1]);
                     Where = Where != null
-                        ? new SqlBinaryExpression(SqlNodeType.And, Where, whereExpression)
-                        : whereExpression;
+                                ? new SqlBinaryExpression(SqlNodeType.And, Where, whereExpression)
+                                : whereExpression;
                     break;
                 case "Skip":
                     Skip = (int) ((ConstantExpression) expression.Arguments[1]).Value;
@@ -76,10 +59,10 @@ namespace HybridDb.Linq.Parsers
                 case "ThenBy":
                 case "OrderByDescending":
                 case "ThenByDescending":
-                    var direction = expression.Method.Name.Contains("Descending") 
-                        ? SqlOrderingExpression.Directions.Descending 
-                        : SqlOrderingExpression.Directions.Ascending;
-                    
+                    var direction = expression.Method.Name.Contains("Descending")
+                                        ? SqlOrderingExpression.Directions.Descending
+                                        : SqlOrderingExpression.Directions.Ascending;
+
                     var orderByColumnExpression = OrderByVisitor.Translate(expression.Arguments[1]);
                     var orderingExpression = new SqlOrderingExpression(direction, orderByColumnExpression);
                     OrderBy = OrderBy != null

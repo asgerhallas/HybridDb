@@ -44,6 +44,15 @@ namespace HybridDb
             return IsA(instance, typeof (T));
         }
 
+        public static Type GetEnumerableType(this Type type)
+        {
+            return type
+                .GetInterfaces()
+                .Where(t => t.IsGenericType
+                            && t.GetGenericTypeDefinition() == typeof (IEnumerable<>))
+                .Select(t => t.GetGenericArguments()[0]).SingleOrDefault();
+        }
+
         public static bool IsNullable(this Type type)
         {
             return type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>);
