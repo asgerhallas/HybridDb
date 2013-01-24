@@ -44,7 +44,7 @@ namespace HybridDb
             return IsA(instance, typeof (T));
         }
 
-        public static Type GetEnumerableType(this Type type)
+        public static Type GetEnumeratedType(this Type type)
         {
             return type
                 .GetInterfaces()

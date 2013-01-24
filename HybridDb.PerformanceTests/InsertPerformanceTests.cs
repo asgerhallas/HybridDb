@@ -5,7 +5,7 @@ using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.Tests
+namespace HybridDb.PerformanceTests
 {
     public class InsertPerformanceTests
     {

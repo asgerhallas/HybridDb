@@ -447,6 +447,25 @@ namespace HybridDb.Tests
             stats.TotalResults.ShouldBe(10);
         }
 
+
+        [Fact]
+        public void CanGetTotalRowsWhenOrderingByPropertyWithSameValue()
+        {
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = 10 });
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = 10 });
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = 10 });
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = 10 });
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = 11 });
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { Property = 11 });
+
+            QueryStats stats;
+            var result = store.Query(table, out stats, @orderby: "Property", skip: 1).ToList();
+            result.Count.ShouldBe(5);
+            stats.TotalResults.ShouldBe(6);
+        }
+
+
         [Fact]
         public void CanGetTotalRows()
         {

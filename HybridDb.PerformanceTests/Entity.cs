@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HybridDb.Tests
+namespace HybridDb.PerformanceTests
 {
     public class Entity
     {

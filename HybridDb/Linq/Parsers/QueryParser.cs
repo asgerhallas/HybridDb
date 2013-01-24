@@ -42,6 +42,9 @@ namespace HybridDb.Linq.Parsers
                 case "Where":
                     Where:
                     var whereExpression = WhereParser.Translate(expression.Arguments[1]);
+                    if (whereExpression == null)
+                        break;
+
                     Where = Where != null
                                 ? new SqlBinaryExpression(SqlNodeType.And, Where, whereExpression)
                                 : whereExpression;

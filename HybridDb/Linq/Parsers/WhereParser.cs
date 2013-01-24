@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 
@@ -19,6 +20,9 @@ namespace HybridDb.Linq.Parsers
         {
             var ast = new Stack<SqlExpression>();
             new WhereParser(ast).Visit(expression);
+
+            if (ast.Count == 0)
+                return null;
 
             var sqlExpression = ast.Pop();
             sqlExpression = new ImplicitBooleanPredicatePropagator().Visit(sqlExpression);

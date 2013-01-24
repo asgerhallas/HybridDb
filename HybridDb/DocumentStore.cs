@@ -110,12 +110,13 @@ namespace HybridDb
                                           Escape(GetFormattedTableName(table)),
                                           string.Join(", ", table.Columns.Select(x => Escape(x.Name) + " " + x.Column.SqlType)));
 
+                        Console.WriteLine(sql);
                         connectionManager.Connection.Execute(sql, null, tx);
                     }
                     tx.Commit();
                 }
 
-                Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
+                //Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
                 initialized = true;
             }
         }
@@ -183,11 +184,11 @@ namespace HybridDb
 
                 tx.Commit();
 
-                Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
-                            numberOfInsertCommands,
-                            numberOfUpdateCommands,
-                            numberOfDeleteCommands,
-                            timer.ElapsedMilliseconds);
+                //Logger.Info("--Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
+                //            numberOfInsertCommands,
+                //            numberOfUpdateCommands,
+                //            numberOfDeleteCommands,
+                //            timer.ElapsedMilliseconds);
 
                 lastWrittenEtag = etag;
                 return etag;
@@ -234,20 +235,18 @@ namespace HybridDb
             using (var tx = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 var isWindowed = skip > 0 || take > 0;
-                var rowNumberOrderBy = CreateAscendingAndDescendingOrderByClauseForRowNumber(orderby);
+                var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby;
 
                 var sql = new SqlBuilder();
                 sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
-                   .Append(isWindowed, ", row_number() over(order by {0}) as RowNumberAsc, row_number() over(order by {1}) as RowNumberDesc",
-                           rowNumberOrderBy.Item1,
-                           rowNumberOrderBy.Item2)
+                   .Append(isWindowed, ", row_number() over(ORDER BY {0}) as RowNumber", rowNumberOrderBy)
                    .Append("from {0}", Escape(GetFormattedTableName(table)))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
-                   .Append(isWindowed, "select *, (RowNumberAsc + RowNumberDesc - 1) as TotalResults from temp where RowNumberAsc >= {0}", skip + 1)
-                   .Append(take > 0, "and RowNumberAsc <= {0}", skip + take)
-                   .Append(isWindowed, "order by RowNumberAsc")
-                   .Append(!isWindowed, "select *, (select count(*) from temp) as TotalResults from temp")
+                   .Append("select *, (select count(*) from temp) as TotalResults from temp")
+                   .Append(isWindowed, "where RowNumber >= {0}", skip + 1)
+                   .Append(isWindowed && take > 0, "and RowNumber <= {0}", skip + take)
+                   .Append(isWindowed, "order by RowNumber")
                    .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
                 Console.WriteLine();
@@ -262,7 +261,7 @@ namespace HybridDb
                                                                                     .ToDictionary(column => column.Key, column => column.Value)));
 
                 Interlocked.Increment(ref numberOfRequests);
-                Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
+                //Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
 
                 tx.Commit();
                 return result;
@@ -291,7 +290,7 @@ namespace HybridDb
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
+                Logger.Info("--Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 tx.Commit();
                 return row != null ? row.ToDictionary(x => table[x.Key], x => x.Value) : null;
@@ -302,7 +301,7 @@ namespace HybridDb
         {
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns = from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
-                                  let split = Regex.Split(clause, "AS|\\s", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
+                                  let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                                   let column = split[0]
                                   let alias = split.Length > 1 ? split[1] : null
                                   where neededColumns.Contains(alias)
@@ -314,22 +313,6 @@ namespace HybridDb
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
-        }
-
-        static Tuple<string, string> CreateAscendingAndDescendingOrderByClauseForRowNumber(string @orderby)
-        {
-            var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "Id" : @orderby;
-            var reverseRowNumberOrderBy = string.Join(", ", rowNumberOrderBy.Split(',').Select(x =>
-            {
-                if (x.IndexOf("asc", StringComparison.InvariantCultureIgnoreCase) >= 0)
-                    return x.Replace("asc", "desc", StringComparison.InvariantCultureIgnoreCase);
-
-                if (x.IndexOf("desc", StringComparison.InvariantCultureIgnoreCase) >= 0)
-                    return x.Replace("desc", "asc", StringComparison.InvariantCultureIgnoreCase);
-
-                return x + " desc";
-            }));
-            return Tuple.Create(rowNumberOrderBy, reverseRowNumberOrderBy);
         }
 
         IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
@@ -354,7 +337,9 @@ namespace HybridDb
 
         void InternalExecute(ManagedConnection managedConnection, IDbTransaction tx, string sql, List<Parameter> parameters, int expectedRowCount)
         {
-            Console.WriteLine("Internal execute");
+            Console.WriteLine(parameters.Aggregate(sql, (current, parameter) =>
+                                                   current.Replace(parameter.Name, parameter.ToSql())));
+
             var fastParameters = new FastDynamicParameters(parameters);
             var rowcount = managedConnection.Connection.Execute(sql, fastParameters, tx);
             Interlocked.Increment(ref numberOfRequests);

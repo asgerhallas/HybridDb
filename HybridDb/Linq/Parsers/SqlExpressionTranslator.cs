@@ -139,7 +139,10 @@ namespace HybridDb.Linq.Parsers
 
             var enumerable = value as IEnumerable;
             if (enumerable != null && !(value is string))
-                return string.Format("({0})", string.Join(", ", enumerable.Cast<object>().Select(FormatConstant)));
+            {
+                var listOfValues = enumerable.Cast<object>().ToList();
+                return string.Format("({0})", listOfValues.Count == 0 ? "NULL" : string.Join(", ", listOfValues.Select(FormatConstant)));
+            }
 
             var key = "@Value" + parameters.Count;
             parameters.Add(key, value);

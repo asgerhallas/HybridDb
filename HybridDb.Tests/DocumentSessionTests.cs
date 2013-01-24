@@ -108,6 +108,23 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanStoreDocumentWhenAccessToNestedPropertyIsNull()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity
+                {
+                    Property = "Asger",
+                    TheChild = null
+                });
+                session.SaveChanges();
+            }
+
+            var entity = store.Connection.Query("select * from #Entities").SingleOrDefault();
+            Assert.Null(entity.TheChildNestedProperty);
+        }
+
+        [Fact]
         public void StoresIdRetrievedFromObject()
         {
             using (var session = store.OpenSession())

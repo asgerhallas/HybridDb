@@ -29,5 +29,23 @@ namespace HybridDb
         {
             return string.IsNullOrEmpty(str);
         }
+
+        public static string ToSql(this Parameter parameter)
+        {
+            var value = parameter.Value;
+
+            if (value == null)
+                return "NULL";
+
+            if (value is Boolean)
+                return ((bool) value) ? "1" : "0";
+            
+            if (value is String || value is Guid)
+                return "'" + value + "'";
+            
+            return value.ToString();
+        }
+
+
     }
 }

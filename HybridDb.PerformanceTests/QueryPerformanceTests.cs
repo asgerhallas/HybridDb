@@ -1,9 +1,8 @@
-﻿using System;
-using System.Diagnostics;
-using Xunit;
+﻿using System.Diagnostics;
 using Shouldly;
+using Xunit;
 
-namespace HybridDb.Tests
+namespace HybridDb.PerformanceTests
 {
     public class QueryPerformanceTests : IUseFixture<QueryPerformanceFixture>
     {

@@ -72,7 +72,15 @@ namespace HybridDb.Schema
 
         public object GetValue(object document)
         {
-            return getter((TEntity) document);
+            //TODO: Maybe travser instead, as we are hiding potential important NRE exceptions
+            try
+            {
+                return getter((TEntity)document);
+            }
+            catch (NullReferenceException)
+            {
+                return null;
+            }
         }
 
         public object Serialize(object value)

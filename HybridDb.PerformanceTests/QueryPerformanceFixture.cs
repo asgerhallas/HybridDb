@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using HybridDb.Commands;
 
-namespace HybridDb.Tests
+namespace HybridDb.PerformanceTests
 {
     public class QueryPerformanceFixture : IDisposable
     {

@@ -51,12 +51,27 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithWhereAndProjection()
+        {
+            var result = session.Query<Entity>().Where(x => x.Property == 2).Select(x => new { x.StringProp }).ToList();
+            result.Single().StringProp.ShouldBe("Lars");
+        }
+
+        [Fact]
         public void CanQueryWithNamedProjection()
         {
             var result = session.Query<Entity>().AsProjection<ProjectedEntity>().ToList();
             result.Count.ShouldBe(3);
         }
 
+        [Fact]
+        public void CanQueryWithSelectToNamedTypeWithNestedProperty2()
+        {
+            Should.NotThrow(() => session.Query<Entity>().Select(x => new ProjectionWithPropertyContainingAs
+            {
+                CaseName = x.StringProp,
+            }).ToList());
+        }
         [Fact]
         public void CanQueryWithSelectToNamedTypeWithNestedProperty()
         {
@@ -232,7 +247,6 @@ namespace HybridDb.Tests
             session.Query<Entity>().FirstOrDefault(x => x.StringProp == "WuggaWugga").ShouldBe(null);
         }
 
-
         public class Entity
         {
             public Entity()
@@ -259,6 +273,10 @@ namespace HybridDb.Tests
             public string StringProp { get; set; }
             public double TheChildNestedProperty { get; set; }
         }
- 
+
+        public class ProjectionWithPropertyContainingAs
+        {
+            public string CaseName { get; set; }
+        }
     }
 }

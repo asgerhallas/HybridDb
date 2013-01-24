@@ -24,7 +24,7 @@ namespace HybridDb.Linq
 
         public IQueryable CreateQuery(Expression expression)
         {
-            var elementType = expression.Type.GetEnumerableType();
+            var elementType = expression.Type.GetEnumeratedType();
             if (elementType == null)
                 throw new ArgumentException("Query is not based on IEnumerable");
 
@@ -61,7 +61,8 @@ namespace HybridDb.Linq
                                                translation.Where,
                                                translation.Skip,
                                                translation.Take,
-                                               translation.OrderBy);
+                                               translation.OrderBy,
+                                               translation.Parameters);
 
             storeStats.CopyTo(lastQueryStats);
             return results;
