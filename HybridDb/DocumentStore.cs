@@ -17,11 +17,10 @@ namespace HybridDb
     public class DocumentStore : IDocumentStore
     {
         readonly Configuration configuration;
+        readonly Migration migration;
         readonly string connectionString;
         readonly bool forTesting;
-        readonly object locker = new object();
         SqlConnection connectionForTesting;
-        bool initialized;
         Guid lastWrittenEtag;
         long numberOfRequests;
 
@@ -31,25 +30,10 @@ namespace HybridDb
             this.connectionString = connectionString;
 
             configuration = new Configuration();
+            migration = new Migration(this);
         }
 
         public DocumentStore(string connectionString) : this(connectionString, false) {}
-
-        ILogger Logger
-        {
-            get { return Configuration.Logger; }
-        }
-
-        internal DbConnection Connection
-        {
-            get
-            {
-                if (!IsInTestMode)
-                    throw new InvalidOperationException("Only for testing purposes");
-
-                return Connect().Connection;
-            }
-        }
 
         public bool IsInTestMode
         {
@@ -67,6 +51,11 @@ namespace HybridDb
             get { return configuration; }
         }
 
+        public IMigration Migration
+        {
+            get { return migration; }
+        }
+
         public Table<TDocument> ForDocument<TDocument>()
         {
             return ForDocument<TDocument>(null);
@@ -82,49 +71,26 @@ namespace HybridDb
             return new DocumentStore(connectionString, true);
         }
 
-        public void Initialize()
+        public ManagedConnection Connect()
         {
-            if (initialized) return;
-            lock (locker)
+            if (IsInTestMode)
             {
-                if (initialized) return;
-
-                var timer = Stopwatch.StartNew();
-                using (var connectionManager = Connect())
-                using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.Serializable))
+                if (connectionForTesting == null)
                 {
-                    foreach (var table in configuration.Tables.Values)
-                    {
-                        var tableExists =
-                            string.Format(IsInTestMode
-                                              ? "OBJECT_ID('tempdb..{0}') is not null"
-                                              : "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')",
-                                          GetFormattedTableName(table));
-
-                        var sql =
-                            string.Format(@"if not ({0})
-                                            begin
-                                                create table {1} ({2});
-                                            end",
-                                          tableExists,
-                                          Escape(GetFormattedTableName(table)),
-                                          string.Join(", ", table.Columns.Select(x => Escape(x.Name) + " " + x.Column.SqlType)));
-
-                        Console.WriteLine(sql);
-                        connectionManager.Connection.Execute(sql, null, tx);
-                    }
-                    tx.Commit();
+                    connectionForTesting = new SqlConnection(connectionString);
+                    connectionForTesting.Open();
                 }
 
-                //Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
-                initialized = true;
+                return new ManagedConnection(connectionForTesting, () => { });
             }
+
+            var connection = new SqlConnection(connectionString);
+            connection.Open();
+            return new ManagedConnection(connection, connection.Dispose);
         }
 
         public IDocumentSession OpenSession()
         {
-            AssertInitialized();
-
             return new DocumentSession(this);
         }
 
@@ -184,11 +150,11 @@ namespace HybridDb
 
                 tx.Commit();
 
-                //Logger.Info("--Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
-                //            numberOfInsertCommands,
-                //            numberOfUpdateCommands,
-                //            numberOfDeleteCommands,
-                //            timer.ElapsedMilliseconds);
+                Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
+                            numberOfInsertCommands,
+                            numberOfUpdateCommands,
+                            numberOfDeleteCommands,
+                            timer.ElapsedMilliseconds);
 
                 lastWrittenEtag = etag;
                 return etag;
@@ -208,16 +174,6 @@ namespace HybridDb
         public void Delete(ITable table, Guid key, Guid etag, bool lastWriteWins = false)
         {
             Execute(new DeleteCommand(table, key, etag, lastWriteWins));
-        }
-
-        public long NumberOfRequests
-        {
-            get { return numberOfRequests; }
-        }
-
-        public Guid LastWrittenEtag
-        {
-            get { return lastWrittenEtag; }
         }
 
         public IEnumerable<TProjection> Query<TProjection>(ITable table, out QueryStats stats, string select = null, string where = "",
@@ -253,15 +209,15 @@ namespace HybridDb
                 Console.WriteLine(sql.ToString());
 
                 var result = isTypedProjection
-                                 ? QueryInternal<TProjection>(connection, sql, parameters, tx, out stats)
-                                 : (IEnumerable<TProjection>) (QueryInternal<object>(connection, sql, parameters, tx, out stats)
+                                 ? InternalQuery<TProjection>(connection, sql, parameters, tx, out stats)
+                                 : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, tx, out stats)
                                                                   .Cast<IDictionary<string, object>>()
                                                                   .Select(row => row.Select(column => new {Key = table[column.Key], column.Value})
                                                                                     .Where(column => column.Key != null)
                                                                                     .ToDictionary(column => column.Key, column => column.Value)));
 
                 Interlocked.Increment(ref numberOfRequests);
-                //Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
+                Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
 
                 tx.Commit();
                 return result;
@@ -290,10 +246,46 @@ namespace HybridDb
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Info("--Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
+                Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 tx.Commit();
                 return row != null ? row.ToDictionary(x => table[x.Key], x => x.Value) : null;
+            }
+        }
+
+        public long NumberOfRequests
+        {
+            get { return numberOfRequests; }
+        }
+
+        public Guid LastWrittenEtag
+        {
+            get { return lastWrittenEtag; }
+        }
+
+        public string GetFormattedTableName(ITable table)
+        {
+            return IsInTestMode ? "#" + table.Name : table.Name;
+        }
+
+        public string Escape(string identifier)
+        {
+            return string.Format("[{0}]", identifier);
+        }
+
+        ILogger Logger
+        {
+            get { return Configuration.Logger; }
+        }
+
+        internal DbConnection Connection
+        {
+            get
+            {
+                if (!IsInTestMode)
+                    throw new InvalidOperationException("Only for testing purposes");
+
+                return Connect().Connection;
             }
         }
 
@@ -315,7 +307,7 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<T> QueryInternal<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
+        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
         {
             var normalizedParameters = parameters as IEnumerable<Parameter> ??
                                        (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
@@ -347,64 +339,28 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        ManagedConnection Connect()
-        {
-            if (IsInTestMode)
-            {
-                if (connectionForTesting == null)
-                {
-                    connectionForTesting = new SqlConnection(connectionString);
-                    connectionForTesting.Open();
-                }
-
-                return new ManagedConnection(connectionForTesting, () => { });
-            }
-
-            var connection = new SqlConnection(connectionString);
-            connection.Open();
-            return new ManagedConnection(connection, connection.Dispose);
-        }
-
-        public string GetFormattedTableName(ITable table)
-        {
-            return IsInTestMode ? "#" + table.Name : table.Name;
-        }
-
-        public string Escape(string identifier)
-        {
-            return string.Format("[{0}]", identifier);
-        }
-
-        void AssertInitialized()
-        {
-            if (!initialized)
-                throw new StoreNotInitializedException();
-        }
-
-        public class ManagedConnection : IDisposable
-        {
-            readonly DbConnection connection;
-            readonly Action dispose;
-
-            public ManagedConnection(DbConnection connection, Action dispose)
-            {
-                this.connection = connection;
-                this.dispose = dispose;
-            }
-
-            public DbConnection Connection
-            {
-                get { return connection; }
-            }
-
-            public void Dispose()
-            {
-                dispose();
-            }
-        }
-
         public class MissingProjectionValueException : Exception {}
+    }
 
-        public class StoreNotInitializedException : Exception {}
+    public class ManagedConnection : IDisposable
+    {
+        readonly DbConnection connection;
+        readonly Action dispose;
+
+        public ManagedConnection(DbConnection connection, Action dispose)
+        {
+            this.connection = connection;
+            this.dispose = dispose;
+        }
+
+        public DbConnection Connection
+        {
+            get { return connection; }
+        }
+
+        public void Dispose()
+        {
+            dispose();
+        }
     }
 }

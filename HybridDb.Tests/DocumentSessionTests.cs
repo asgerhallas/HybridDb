@@ -21,7 +21,7 @@ namespace HybridDb.Tests
                 .Projection(x => x.ProjectedProperty)
                 .Projection(x => x.TheChild.NestedProperty);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            store.Initialize();
+            store.Migration.InitializeDatabase();
         }
 
         public void Dispose()
@@ -81,12 +81,6 @@ namespace HybridDb.Tests
         public void CanOpenSession()
         {
             store.OpenSession().ShouldNotBe(null);
-        }
-
-        [Fact]
-        public void CannotOpenSessionIfStoreIsNotInitilized()
-        {
-            Should.Throw<DocumentStore.StoreNotInitializedException>(() => DocumentStore.ForTesting(connectionString).OpenSession());
         }
 
         [Fact]

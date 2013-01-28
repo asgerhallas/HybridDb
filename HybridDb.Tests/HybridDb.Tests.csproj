@@ -64,9 +64,10 @@
     <Compile Include="ColumnTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />
-    <Compile Include="DocumentStoreWithRealTablesTests.cs" />
+    <Compile Include="MigrationWithRealTablesTests.cs" />
     <Compile Include="LinqIntegrationTests.cs" />
     <Compile Include="LinqTests.cs" />
+    <Compile Include="MigrationTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

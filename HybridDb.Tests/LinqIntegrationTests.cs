@@ -21,7 +21,7 @@ namespace HybridDb.Tests
                  .Projection(x => x.StringProp)
                  .Projection(x => x.TheChild.NestedProperty);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            store.Initialize();
+            store.Migration.InitializeDatabase();
 
             session = store.OpenSession();
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger" });

@@ -16,7 +16,7 @@ namespace HybridDb.PerformanceTests
             const string connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTesting(connectionString);
             store.ForDocument<Entity>().Projection(x => x.SomeNumber);
-            store.Initialize();
+            store.Migration.InitializeDatabase();
         }
 
         [Fact]
