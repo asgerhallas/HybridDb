@@ -27,6 +27,36 @@ END");
         }
 
         [Fact]
+        public void CanRenameProjection()
+        {
+            var store = new DocumentStore(connectionString);
+            store.Migration
+                .AddTable<MigrationTests.Entity>()
+                .AddProjection<MigrationTests.Entity, int>(x => x.Property)
+                .Commit();
+
+            store.Migration.RenameProjection<MigrationTests.Entity>("Property", "NewProperty").Commit();
+
+            GetColumn("Entities", "Property").ShouldBe(null);
+            GetColumn("Entities", "NewProperty").ShouldBe(null);
+            
+            connection.Execute("drop table Entities");
+        }
+
+        [Fact]
+        public void CanRenameTable()
+        {
+            var store = new DocumentStore(connectionString);
+            store.Migration.AddTable<MigrationTests.Entity>().Commit();
+
+            store.Migration.RenameTable("Entities", "NewEntities").Commit();
+            TableExists("Entities").ShouldBe(false);
+            TableExists("NewEntities").ShouldBe(true);
+
+            connection.Execute("drop table NewEntities");
+        }
+
+        [Fact]
         public void InitializeFailsIfDatabaseIsNotEmptyWhenNotForTesting()
         {
             TableExists("Cases").ShouldBe(false);
@@ -67,6 +97,12 @@ END");
         bool TableExists(string name)
         {
             return connection.Query(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
+        }
+
+        MigrationTests.Column GetColumn(string table, string column)
+        {
+            return connection.Query<MigrationTests.Column>(string.Format("select * from master.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column, table))
+                        .FirstOrDefault();
         }
 
         public class Case

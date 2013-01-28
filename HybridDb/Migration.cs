@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using Dapper;
 using HybridDb.Logging;
+using HybridDb.Schema;
 
 namespace HybridDb
 {
@@ -58,15 +60,65 @@ namespace HybridDb
             Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
         }
 
-        public void CreateTableFor<T>()
-        {
-
-
-        }
-
         public void AddIndexFor<T>(Expression<Func<T, object>> member)
         {
             throw new NotImplementedException();
+        }
+
+        public IMigrationContext AddTable<TEntity>()
+        {
+            var context = new MigrationContext(store);
+            context.AddTable<TEntity>();
+            return context;
+        }
+
+        public IMigrationContext RemoveTable(string tableName)
+        {
+            var context = new MigrationContext(store);
+            context.RemoveTable(tableName);
+            return context;
+        }
+
+        public IMigrationContext RenameTable(string oldTableName, string newTableName)
+        {
+            var context = new MigrationContext(store);
+            context.RenameTable(oldTableName, newTableName);
+            return context;
+        }
+
+        public IMigrationContext AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
+        {
+            var context = new MigrationContext(store);
+            context.AddProjection(member);
+            return context;
+        }
+
+        public IMigrationContext RemoveProjection<TEntity>(string columnName)
+        {
+            var context = new MigrationContext(store);
+            context.RemoveProjection<TEntity>(columnName);
+            return context;
+        }
+
+        public IMigrationContext UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
+        {
+            var context = new MigrationContext(store);
+            context.UpdateProjectionFor(member);
+            return context;
+        }
+
+        public IMigrationContext RenameProjection<TEntity>(string oldColumnName, string newColumnName)
+        {
+            var context = new MigrationContext(store);
+            context.RenameProjection<TEntity>(oldColumnName, newColumnName);
+            return context;
+        }
+
+        public IMigrationContext Do<TEntity>(string tableName, Action<IDictionary<string, object>> action)
+        {
+            var context = new MigrationContext(store);
+            context.Do<TEntity>(tableName, action);
+            return context;
         }
     }
 }

@@ -1,18 +1,24 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using HybridDb.Schema;
 
 namespace HybridDb
 {
     public interface IMigration
     {
-        void UpdateIndexesFor<T>();
-        void UpdateIndexesFor(params Type[] types);
+        void InitializeDatabase();
 
+        IMigrationContext AddTable<TEntity>();
+        IMigrationContext RemoveTable(string tableName);
+        IMigrationContext RenameTable(string oldTableName, string newTableName);
+
+        IMigrationContext UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
         
-        void UpdateSchema();
-        
-        
-        void Do<T>(Action<T> action);
-        void Do<T>(IQueryable<T> query, Action<T> action);
+        IMigrationContext AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
+        IMigrationContext RemoveProjection<TEntity>(string columnName);
+        IMigrationContext RenameProjection<TEntity>(string oldColumnName, string newColumnName);
+
+        IMigrationContext Do<T>(string tableName, Action<IDictionary<string, object>> action);
     }
 }

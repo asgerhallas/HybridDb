@@ -265,7 +265,12 @@ namespace HybridDb
 
         public string GetFormattedTableName(ITable table)
         {
-            return IsInTestMode ? "#" + table.Name : table.Name;
+            return GetFormattedTableName(table.Name);
+        }
+
+        public string GetFormattedTableName(string tableName)
+        {
+            return IsInTestMode ? "#" + tableName : tableName;
         }
 
         public string Escape(string identifier)

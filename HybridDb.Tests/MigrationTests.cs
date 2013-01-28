@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Dapper;
+using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -13,6 +15,115 @@ namespace HybridDb.Tests
         public MigrationTests()
         {
             store = DocumentStore.ForTesting("data source=.;Integrated Security=True");
+        }
+
+        [Fact]
+        public void CanModifyProjectionWhenDoing() // Note: not in your pants!
+        {
+            store.ForDocument<Entity>().Projection(x => x.Property);
+            store.Migration.InitializeDatabase();
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id1, Property = 1 });
+                session.Store(new Entity { Id = id2, Property = 2 });
+                session.Store(new Entity { Id = id3, Property = 3 });
+                session.SaveChanges();
+            }
+            
+            store.Migration.Do<Entity>("Entities", (projections) =>
+            {
+                var projectionValue = (int)projections["Property"];
+                projections["Property"] = ++projectionValue;
+            }).Commit();
+            
+            var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
+            result.ShouldContain(x => x.Id == id1 && x.Property == 2);
+            result.ShouldContain(x => x.Id == id2 && x.Property == 3);
+            result.ShouldContain(x => x.Id == id3 && x.Property == 4);
+            result.Count.ShouldBe(3);
+        }
+
+        [Fact]
+        public void CanUpdateIndexes()
+        {
+            store.ForDocument<Entity>();
+            store.Migration.InitializeDatabase();
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+
+            using(var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id1, Property = 1 });
+                session.Store(new Entity { Id = id2, Property = 2 });
+                session.Store(new Entity { Id = id3, Property = 3 });
+                session.SaveChanges();
+            }
+            store.Migration.AddProjection<Entity, int>(x => x.Property).Commit();
+            
+            store.Migration.UpdateProjectionFor<Entity, int>(x => x.Property).Commit();
+            var result = store.Connection.Query<Entity>("SELECT * FROM Entities").ToList();
+            
+            result.ShouldContain(x => x.Id == id1 && x.Property == 1);
+            result.ShouldContain(x => x.Id == id2 && x.Property == 2);
+            result.ShouldContain(x => x.Id == id3 && x.Property == 3);
+            result.Count.ShouldBe(3);
+        }
+
+        [Fact]
+        public void CanRemoveProjection()
+        {
+            store.Migration
+                .AddTable<Entity>()
+                .AddProjection<Entity, int>(x => x.Property)
+                .Commit();
+
+            store.Migration.RemoveProjection<Entity>("Property").Commit();
+
+            GetColumn("Entities", "Property").ShouldBe(null);
+        }
+
+        [Fact]
+        public void CanAddProjection()
+        {
+            store.Migration.AddTable<Entity>().Commit();
+
+            store.Migration.AddProjection<Entity, int>(x => x.Property).Commit();
+            var propertyColumn = GetColumn("Entities", "Property");
+            propertyColumn.ShouldNotBe(null);
+            GetType(propertyColumn.system_type_id).ShouldBe("int");
+        }
+
+        [Fact]
+        public void CanRemoveTable()
+        {
+            store.Migration.AddTable<Entity>().Commit();
+            
+            store.Migration.RemoveTable("Entities").Commit();
+            TableExists("Entities").ShouldBe(false);
+        }
+
+        [Fact]
+        public void CanCreateTable()
+        {
+            store.Migration.AddTable<Entity>().Commit();
+
+            var idColumn = GetColumn("Entities", "Id");
+            idColumn.ShouldNotBe(null);
+            GetType(idColumn.system_type_id).ShouldBe("uniqueidentifier");
+
+            var documentColumn = GetColumn("Entities", "Document");
+            documentColumn.ShouldNotBe(null);
+            GetType(documentColumn.system_type_id).ShouldBe("varbinary");
+            documentColumn.max_length.ShouldBe(-1);
+
+            var etagColumn = GetColumn("Entities", "Etag");
+            etagColumn.ShouldNotBe(null);
+            GetType(etagColumn.system_type_id).ShouldBe("uniqueidentifier");
         }
 
         [Fact]
@@ -137,7 +248,7 @@ namespace HybridDb.Tests
         public class Entity
         {
             public string Field;
-            public Guid Id { get; private set; }
+            public Guid Id { get; set; }
             public int Property { get; set; }
             public string StringProp { get; set; }
             public SomeFreakingEnum EnumProp { get; set; }
