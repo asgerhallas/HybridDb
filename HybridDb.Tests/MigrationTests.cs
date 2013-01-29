@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
-using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -15,6 +14,68 @@ namespace HybridDb.Tests
         public MigrationTests()
         {
             store = DocumentStore.ForTesting("data source=.;Integrated Security=True");
+        }
+
+        [Fact]
+        public void WillSupplyDeserializedEntityWhenDoing()
+        {
+            store.ForDocument<Entity>();
+            store.Migration.InitializeDatabase();
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id1, Property = 1 });
+                session.Store(new Entity { Id = id2, Property = 2 });
+                session.Store(new Entity { Id = id3, Property = 3 });
+                session.SaveChanges();
+            }
+
+            var processedEntities = new List<Entity>();
+            store.Migration
+                .Do<Entity>("Entities", (entity, projections) =>
+                {
+                    processedEntities.Add(entity);
+                })
+                .Commit();
+
+            processedEntities.Count.ShouldBe(3);
+            processedEntities.ShouldContain(x => x.Id == id1 && x.Property == 1);
+            processedEntities.ShouldContain(x => x.Id == id2 && x.Property == 2);
+            processedEntities.ShouldContain(x => x.Id == id3 && x.Property == 3);
+        }
+
+        [Fact]
+        public void CanAddProjectionWhenDoing() // giver da ik mening?
+        {
+            store.ForDocument<Entity>();
+            store.Migration.InitializeDatabase();
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id1, StringProp = "hello" });
+                session.Store(new Entity { Id = id2, StringProp = "world" });
+                session.Store(new Entity { Id = id3, StringProp = "!" });
+                session.SaveChanges();
+            }
+
+            store.Migration
+                .Do<Entity>("Entities", (entity, projections) =>
+                {
+                    projections.Add("StringProp", entity.StringProp);
+                })
+                .Commit();
+
+            var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
+            result.ShouldContain(x => x.Id == id1 && x.Property == 2);
+            result.ShouldContain(x => x.Id == id2 && x.Property == 3);
+            result.ShouldContain(x => x.Id == id3 && x.Property == 4);
+            result.Count.ShouldBe(3);
         }
 
         [Fact]
@@ -34,7 +95,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
             
-            store.Migration.Do<Entity>("Entities", (projections) =>
+            store.Migration.Do<Entity>("Entities", (entity, projections) =>
             {
                 var projectionValue = (int)projections["Property"];
                 projections["Property"] = ++projectionValue;
@@ -66,7 +127,7 @@ namespace HybridDb.Tests
             store.Migration.AddProjection<Entity, int>(x => x.Property).Commit();
             
             store.Migration.UpdateProjectionFor<Entity, int>(x => x.Property).Commit();
-            var result = store.Connection.Query<Entity>("SELECT * FROM Entities").ToList();
+            var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
             
             result.ShouldContain(x => x.Id == id1 && x.Property == 1);
             result.ShouldContain(x => x.Id == id2 && x.Property == 2);

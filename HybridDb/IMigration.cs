@@ -19,6 +19,6 @@ namespace HybridDb
         IMigrationContext RemoveProjection<TEntity>(string columnName);
         IMigrationContext RenameProjection<TEntity>(string oldColumnName, string newColumnName);
 
-        IMigrationContext Do<T>(string tableName, Action<IDictionary<string, object>> action);
+        IMigrationContext Do<T>(string tableName, Action<T, IDictionary<string, object>> action);
     }
 }

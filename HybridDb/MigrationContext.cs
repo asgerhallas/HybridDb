@@ -109,27 +109,38 @@ namespace HybridDb
             var table = new Table<TEntity>(null);
             var column = new ProjectionColumn<TEntity, TMember>(member);
 
-            Do<TEntity>(table.Name, ( projections) =>
+            Do<TEntity>(table.Name, (entity, projections) =>
             {
-                //projections.Add(column, column.GetValue(entity));
+                projections[column.Name] = column.GetValue(entity);
             });
 
             return this;
         }
 
-        public IMigrationContext Do<T>(string tableName, Action<IDictionary<string, object>> action)
+        public IMigrationContext Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
         {
             var table = new Table<T>(null);
             string selectSql = string.Format("SELECT * FROM {0}", store.GetFormattedTableName(table));
             foreach (var dictionary in connectionManager.Connection.Query(selectSql, transaction: tx).Cast<IDictionary<string, object>>())
             {
-                action(dictionary);
-                var etag = (Guid) dictionary[table.EtagColumn.Name];
-                var id = (Guid) dictionary[table.IdColumn.Name];
-                var document = (byte[]) dictionary[table.DocumentColumn.Name];
+                var document = (byte[])dictionary[new DocumentColumn().Name];
+                var entity = (T)store.Configuration.Serializer.Deserialize(document, table.EntityType);
 
-                DatabaseCommand.PreparedDatabaseCommand command = new UpdateCommand(table, id, etag, document, dictionary, true).Prepare(store, Guid.NewGuid(), 0);
-                connectionManager.Connection.Execute(command.Sql, command.Parameters, tx);
+                action(entity, dictionary);
+
+                var sql = new SqlBuilder()
+                    .Append("update {0} set {1} where {2}=@Id",
+                            store.Escape(store.GetFormattedTableName(table)),
+                            string.Join(", ", from column in dictionary.Keys select column + "=@" + column),
+                            table.IdColumn.Name)
+                    .ToString();
+
+                var parameters = dictionary.Select(x => new Parameter
+                {
+                    Name = x.Key,
+                    Value = x.Value
+                });
+                connectionManager.Connection.Execute(sql, new FastDynamicParameters(parameters), tx);
             }
 
             return this;

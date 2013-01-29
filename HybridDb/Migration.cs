@@ -114,10 +114,10 @@ namespace HybridDb
             return context;
         }
 
-        public IMigrationContext Do<TEntity>(string tableName, Action<IDictionary<string, object>> action)
+        public IMigrationContext Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
         {
             var context = new MigrationContext(store);
-            context.Do<TEntity>(tableName, action);
+            context.Do(tableName, action);
             return context;
         }
     }
