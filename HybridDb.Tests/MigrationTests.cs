@@ -32,13 +32,13 @@ namespace HybridDb.Tests
 
             try
             {
-                using (var tx = store.Migration.CreateTransaction())
+                using (var tx = store.Migration.CreateMigrator())
                 {
                     tx.Do<Entity>("Entities",
                                   (entity, projections) =>
                                   {
                                       entity.StringProp = "SomeString";
-                                      throw new InvalidOperationException("Error");
+                                      throw new Exception("Error");
                                   });
                     tx.Commit();
                 }
@@ -101,11 +101,7 @@ namespace HybridDb.Tests
             }
 
             var processedEntities = new List<Entity>();
-            store.Migration
-                .Do<Entity>("Entities", (entity, projections) =>
-                {
-                    processedEntities.Add(entity);
-                });
+            store.Migration.Do<Entity>("Entities", (entity, projections) => processedEntities.Add(entity));
 
             processedEntities.Count.ShouldBe(3);
             processedEntities.ShouldContain(x => x.Id == id1 && x.Property == 1);

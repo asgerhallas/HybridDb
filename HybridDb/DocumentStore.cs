@@ -237,7 +237,6 @@ namespace HybridDb
             using (var connection = Connect())
             using (var tx = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
-                
                 var sql = string.Format("select * from {0} where {1} = @Id",
                                         Escape(GetFormattedTableName(table)),
                                         table.IdColumn.Name);

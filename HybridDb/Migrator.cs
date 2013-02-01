@@ -9,13 +9,13 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
-    public class TransactionalMigration : ITransactionalMigration
+    public class Migrator : IMigrator
     {
         readonly DocumentStore store;
         readonly DbTransaction tx;
         readonly ManagedConnection connectionManager;
 
-        public TransactionalMigration(DocumentStore store)
+        public Migrator(DocumentStore store)
         {
             this.store = store;
             connectionManager = store.Connect();
@@ -27,7 +27,7 @@ namespace HybridDb
             throw new NotSupportedException("Use store.Migrations.InitializeDatabase()");
         }
 
-        public ITransactionalMigration AddTable<TEntity>()
+        public IMigrator AddTable<TEntity>()
         {
             var table = new Table<TEntity>(null);
             var tableName = store.GetFormattedTableName(table);
@@ -41,7 +41,7 @@ namespace HybridDb
             return this;
         }
 
-        public ITransactionalMigration RemoveTable(string tableName)
+        public IMigrator RemoveTable(string tableName)
         {
             var sql = string.Format("drop table {0};", store.GetFormattedTableName(tableName));
             connectionManager.Connection.Execute(sql, null, tx);
@@ -56,7 +56,7 @@ namespace HybridDb
                                  tableName);
         }
 
-        public ITransactionalMigration RenameTable(string oldTableName, string newTableName)
+        public IMigrator RenameTable(string oldTableName, string newTableName)
         {
             if (store.IsInTestMode)
                 throw new NotSupportedException("It is not possible to rename temp tables, therefore RenameTable is not supported when store is in test mode.");
@@ -68,7 +68,7 @@ namespace HybridDb
             return this;
         }
 
-        public ITransactionalMigration AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
+        public IMigrator AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
             var table = new Table<TEntity>(null);
             var projection = new ProjectionColumn<TEntity, TMember>(member);
@@ -80,7 +80,7 @@ namespace HybridDb
             return this;
         }
 
-        public ITransactionalMigration RemoveProjection<TEntity>(string columnName)
+        public IMigrator RemoveProjection<TEntity>(string columnName)
         {
             var table = new Table<TEntity>(null);
 
@@ -91,7 +91,7 @@ namespace HybridDb
             return this;
         }
 
-        public ITransactionalMigration RenameProjection<TEntity>(string oldColumnName, string newColumnName)
+        public IMigrator RenameProjection<TEntity>(string oldColumnName, string newColumnName)
         {
             if (store.IsInTestMode)
                 throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameProjection is not supported when store is in test mode.");
@@ -103,7 +103,7 @@ namespace HybridDb
             return this;
         }
 
-        public ITransactionalMigration UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
+        public IMigrator UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
             var table = new Table<TEntity>(null);
             var column = new ProjectionColumn<TEntity, TMember>(member);
@@ -116,7 +116,7 @@ namespace HybridDb
             return this;
         }
 
-        public ITransactionalMigration Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
+        public IMigrator Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
         {
             var table = new Table<T>(tableName);
             string selectSql = string.Format("SELECT * FROM {0}", store.GetFormattedTableName(table));
