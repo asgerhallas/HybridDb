@@ -60,65 +60,81 @@ namespace HybridDb
             Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
         }
 
-        public void AddIndexFor<T>(Expression<Func<T, object>> member)
+        public ITransactionalMigration CreateTransaction()
         {
-            throw new NotImplementedException();
+            return new TransactionalMigration(store);
         }
 
-        public IMigrationContext AddTable<TEntity>()
+        public void AddTable<TEntity>()
         {
-            var context = new MigrationContext(store);
-            context.AddTable<TEntity>();
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.AddTable<TEntity>();
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext RemoveTable(string tableName)
+        public void RemoveTable(string tableName)
         {
-            var context = new MigrationContext(store);
-            context.RemoveTable(tableName);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.RemoveTable(tableName);
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext RenameTable(string oldTableName, string newTableName)
+        public void RenameTable(string oldTableName, string newTableName)
         {
-            var context = new MigrationContext(store);
-            context.RenameTable(oldTableName, newTableName);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.RenameTable(oldTableName, newTableName);
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
+        public void AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            var context = new MigrationContext(store);
-            context.AddProjection(member);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.AddProjection(member);
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext RemoveProjection<TEntity>(string columnName)
+        public void RemoveProjection<TEntity>(string columnName)
         {
-            var context = new MigrationContext(store);
-            context.RemoveProjection<TEntity>(columnName);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.RemoveProjection<TEntity>(columnName);
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
+        public void UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            var context = new MigrationContext(store);
-            context.UpdateProjectionFor(member);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.UpdateProjectionFor(member);
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext RenameProjection<TEntity>(string oldColumnName, string newColumnName)
+        public void RenameProjection<TEntity>(string oldColumnName, string newColumnName)
         {
-            var context = new MigrationContext(store);
-            context.RenameProjection<TEntity>(oldColumnName, newColumnName);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.RenameProjection<TEntity>(oldColumnName, newColumnName);
+                tx.Commit();
+            }
         }
 
-        public IMigrationContext Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
+        public void Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
         {
-            var context = new MigrationContext(store);
-            context.Do(tableName, action);
-            return context;
+            using (var tx = new TransactionalMigration(store))
+            {
+                tx.Do(tableName, action);
+                tx.Commit();
+            }
         }
     }
 }

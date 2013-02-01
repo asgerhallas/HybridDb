@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
+using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
 
@@ -17,7 +18,73 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void WillSupplyDeserializedEntityWhenDoing()
+        public void ChangesArentPersistedIfExceptionOccours()
+        {
+            store.ForDocument<Entity>().Projection(x => x.StringProp);
+            store.Migration.InitializeDatabase();
+            var id1 = Guid.NewGuid();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id1, Property = 1 });
+                session.SaveChanges();
+            }
+
+            try
+            {
+                using (var tx = store.Migration.CreateTransaction())
+                {
+                    tx.Do<Entity>("Entities",
+                                  (entity, projections) =>
+                                  {
+                                      entity.StringProp = "SomeString";
+                                      throw new InvalidOperationException("Error");
+                                  });
+                    tx.Commit();
+                }
+            }
+            catch { }
+
+            var entity1 = store.Connection.Query<Entity>("SELECT * FROM #Entities").Single();
+            entity1.Id.ShouldBe(id1);
+            entity1.StringProp.ShouldBe(null);
+        }
+
+        [Fact]
+        public void CanDeserializeToAnyGivenTypeAndPersistChangesToDocumentWhenDoing()
+        {
+            store.ForDocument<Entity>();
+            store.Migration.InitializeDatabase();
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id1, Property = 1 });
+                session.Store(new Entity { Id = id2, Property = 2 });
+                session.Store(new Entity { Id = id3, Property = 3 });
+                session.SaveChanges();
+            }
+
+            store.Migration
+                .Do<JObject>("Entities", (entity, projections) =>
+                {
+                    entity["StringProp"] = "SomeString";
+                });
+
+            using(var session = store.OpenSession())
+            {
+                var entities = session.Query<Entity>().ToList();
+                entities.Count().ShouldBe(3);
+                entities.ShouldContain(x => x.Id == id1 && x.Property == 1 && x.StringProp == "SomeString");
+                entities.ShouldContain(x => x.Id == id2 && x.Property == 2 && x.StringProp == "SomeString");
+                entities.ShouldContain(x => x.Id == id3 && x.Property == 3 && x.StringProp == "SomeString");
+            }
+        }
+
+        [Fact]
+        public void CanDeserializeToEntityAndPersistChangesToDocumentWhenDoing()
         {
             store.ForDocument<Entity>();
             store.Migration.InitializeDatabase();
@@ -38,44 +105,12 @@ namespace HybridDb.Tests
                 .Do<Entity>("Entities", (entity, projections) =>
                 {
                     processedEntities.Add(entity);
-                })
-                .Commit();
+                });
 
             processedEntities.Count.ShouldBe(3);
             processedEntities.ShouldContain(x => x.Id == id1 && x.Property == 1);
             processedEntities.ShouldContain(x => x.Id == id2 && x.Property == 2);
             processedEntities.ShouldContain(x => x.Id == id3 && x.Property == 3);
-        }
-
-        [Fact]
-        public void CanAddProjectionWhenDoing() // giver da ik mening?
-        {
-            store.ForDocument<Entity>();
-            store.Migration.InitializeDatabase();
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Entity { Id = id1, StringProp = "hello" });
-                session.Store(new Entity { Id = id2, StringProp = "world" });
-                session.Store(new Entity { Id = id3, StringProp = "!" });
-                session.SaveChanges();
-            }
-
-            store.Migration
-                .Do<Entity>("Entities", (entity, projections) =>
-                {
-                    projections.Add("StringProp", entity.StringProp);
-                })
-                .Commit();
-
-            var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
-            result.ShouldContain(x => x.Id == id1 && x.Property == 2);
-            result.ShouldContain(x => x.Id == id2 && x.Property == 3);
-            result.ShouldContain(x => x.Id == id3 && x.Property == 4);
-            result.Count.ShouldBe(3);
         }
 
         [Fact]
@@ -99,7 +134,7 @@ namespace HybridDb.Tests
             {
                 var projectionValue = (int)projections["Property"];
                 projections["Property"] = ++projectionValue;
-            }).Commit();
+            });
             
             var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
             result.ShouldContain(x => x.Id == id1 && x.Property == 2);
@@ -109,7 +144,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanUpdateIndexes()
+        public void CanUpdateProjection()
         {
             store.ForDocument<Entity>();
             store.Migration.InitializeDatabase();
@@ -124,9 +159,9 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id3, Property = 3 });
                 session.SaveChanges();
             }
-            store.Migration.AddProjection<Entity, int>(x => x.Property).Commit();
+            store.Migration.AddProjection<Entity, int>(x => x.Property);
             
-            store.Migration.UpdateProjectionFor<Entity, int>(x => x.Property).Commit();
+            store.Migration.UpdateProjectionFor<Entity, int>(x => x.Property);
             var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
             
             result.ShouldContain(x => x.Id == id1 && x.Property == 1);
@@ -138,22 +173,20 @@ namespace HybridDb.Tests
         [Fact]
         public void CanRemoveProjection()
         {
-            store.Migration
-                .AddTable<Entity>()
-                .AddProjection<Entity, int>(x => x.Property)
-                .Commit();
-
-            store.Migration.RemoveProjection<Entity>("Property").Commit();
-
+            store.ForDocument<Entity>().Projection(x => x.Property);
+            store.Migration.InitializeDatabase();
+            
+            store.Migration.RemoveProjection<Entity>("Property");
             GetColumn("Entities", "Property").ShouldBe(null);
         }
 
         [Fact]
         public void CanAddProjection()
         {
-            store.Migration.AddTable<Entity>().Commit();
+            store.ForDocument<Entity>();
+            store.Migration.InitializeDatabase();
 
-            store.Migration.AddProjection<Entity, int>(x => x.Property).Commit();
+            store.Migration.AddProjection<Entity, int>(x => x.Property);
             var propertyColumn = GetColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
             GetType(propertyColumn.system_type_id).ShouldBe("int");
@@ -162,16 +195,17 @@ namespace HybridDb.Tests
         [Fact]
         public void CanRemoveTable()
         {
-            store.Migration.AddTable<Entity>().Commit();
+            store.ForDocument<Entity>();
+            store.Migration.InitializeDatabase();
             
-            store.Migration.RemoveTable("Entities").Commit();
+            store.Migration.RemoveTable("Entities");
             TableExists("Entities").ShouldBe(false);
         }
 
         [Fact]
         public void CanCreateTable()
         {
-            store.Migration.AddTable<Entity>().Commit();
+            store.Migration.AddTable<Entity>();
 
             var idColumn = GetColumn("Entities", "Id");
             idColumn.ShouldNotBe(null);

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using HybridDb.Schema;
 
 namespace HybridDb
 {
@@ -9,16 +8,18 @@ namespace HybridDb
     {
         void InitializeDatabase();
 
-        IMigrationContext AddTable<TEntity>();
-        IMigrationContext RemoveTable(string tableName);
-        IMigrationContext RenameTable(string oldTableName, string newTableName);
+        ITransactionalMigration CreateTransaction();
 
-        IMigrationContext UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
+        void AddTable<TEntity>();
+        void RemoveTable(string tableName);
+        void RenameTable(string oldTableName, string newTableName);
         
-        IMigrationContext AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
-        IMigrationContext RemoveProjection<TEntity>(string columnName);
-        IMigrationContext RenameProjection<TEntity>(string oldColumnName, string newColumnName);
-
-        IMigrationContext Do<T>(string tableName, Action<T, IDictionary<string, object>> action);
+        void UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
+        
+        void AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
+        void RemoveProjection<TEntity>(string columnName);
+        void RenameProjection<TEntity>(string oldColumnName, string newColumnName);
+        
+        void Do<T>(string tableName, Action<T, IDictionary<string, object>> action);
     }
 }
