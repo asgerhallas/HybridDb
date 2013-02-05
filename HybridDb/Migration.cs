@@ -50,7 +50,7 @@ namespace HybridDb
                     sql.Append("if not ({0}) begin create table {1} ({2}); end",
                                tableExists,
                                store.Escape(store.GetFormattedTableName(table)),
-                               string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.Column.SqlType)));
+                               string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.SqlColumn.SqlType)));
 
                 }
                 connectionManager.Connection.Execute(sql.ToString(), null, tx);

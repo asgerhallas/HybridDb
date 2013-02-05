@@ -2,14 +2,12 @@
 
 namespace HybridDb.Schema
 {
-    public class EtagColumn : IColumn
+    public class EtagColumn : Column
     {
-        public string Name { get { return "Etag"; } }
-        public Column Column { get { return new Column(DbType.Guid); } }
-        
-        public object Serialize(object value)
+        public EtagColumn()
         {
-            return value;
+            Name = "Etag";
+            SqlColumn = new SqlColumn(DbType.Guid);
         }
     }
 }

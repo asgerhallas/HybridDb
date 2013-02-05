@@ -56,14 +56,14 @@ namespace HybridDb
             get { return migration; }
         }
 
-        public Table<TDocument> ForDocument<TDocument>()
+        public TableBuilder<TEntity> ForDocument<TEntity>()
         {
-            return ForDocument<TDocument>(null);
+            return ForDocument<TEntity>(null);
         }
 
-        public Table<TDocument> ForDocument<TDocument>(string name)
+        public TableBuilder<TEntity> ForDocument<TEntity>(string name)
         {
-            return configuration.Register<TDocument>(name);
+            return configuration.Register<TEntity>(name);
         }
 
         public static DocumentStore ForTesting(string connectionString)
@@ -212,9 +212,8 @@ namespace HybridDb
                                  ? InternalQuery<TProjection>(connection, sql, parameters, tx, out stats)
                                  : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, tx, out stats)
                                                                   .Cast<IDictionary<string, object>>()
-                                                                  .Select(row => row.Select(column => new {Key = table[column.Key], column.Value})
-                                                                                    .Where(column => column.Key != null)
-                                                                                    .ToDictionary(column => column.Key, column => column.Value)));
+                                                                  .Select(row => row.ToDictionary(column => table.GetNamedOrDynamicColumn(column.Key, column.Value),
+                                                                                                  column => column.Value)));
 
                 Interlocked.Increment(ref numberOfRequests);
                 Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
@@ -223,7 +222,6 @@ namespace HybridDb
                 return result;
             }
         }
-
 
         public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out QueryStats stats, string select = null, string where = "",
                                                                int skip = 0, int take = 0, string orderby = "", object parameters = null)
@@ -248,7 +246,7 @@ namespace HybridDb
                 Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 tx.Commit();
-                return row != null ? row.ToDictionary(x => table[x.Key], x => x.Value) : null;
+                return row != null ? row.ToDictionary(x => table.GetNamedOrDynamicColumn(x.Key, x.Value), x => x.Value) : null;
             }
         }
 
@@ -295,17 +293,17 @@ namespace HybridDb
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
-            var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
+            var neededColumns = typeof (TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns = from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
                                   let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                                   let column = split[0]
                                   let alias = split.Length > 1 ? split[1] : null
                                   where neededColumns.Contains(alias)
-                                  select new { column, alias = alias ?? column };
+                                  select new {column, alias = alias ?? column};
 
             var missingColumns = from column in neededColumns
                                  where !selectedColumns.Select(x => x.alias).Contains(column)
-                                 select new { column, alias = column };
+                                 select new {column, alias = column};
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
@@ -334,7 +332,7 @@ namespace HybridDb
         void InternalExecute(ManagedConnection managedConnection, IDbTransaction tx, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             Console.WriteLine(parameters.Aggregate(sql, (current, parameter) =>
-                                                   current.Replace(parameter.Name, parameter.ToSql())));
+                                                        current.Replace(parameter.Name, parameter.ToSql())));
 
             var fastParameters = new FastDynamicParameters(parameters);
             var rowcount = managedConnection.Connection.Execute(sql, fastParameters, tx);

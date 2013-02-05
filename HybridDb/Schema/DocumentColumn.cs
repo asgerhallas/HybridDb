@@ -3,21 +3,12 @@ using System.Data;
 
 namespace HybridDb.Schema
 {
-    public class DocumentColumn : IColumn
+    public class DocumentColumn : Column
     {
-        public string Name
+        public DocumentColumn()
         {
-            get { return "Document"; }
-        }
-
-        public Column Column
-        {
-            get { return new Column(DbType.Binary, Int32.MaxValue); }
-        }
-
-        public object Serialize(object value)
-        {
-            return value;
+            Name = "Document";
+            SqlColumn = new SqlColumn(DbType.Binary, Int32.MaxValue);
         }
     }
 }

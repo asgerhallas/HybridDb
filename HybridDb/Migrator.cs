@@ -29,13 +29,13 @@ namespace HybridDb
 
         public IMigrator AddTable<TEntity>()
         {
-            var table = new Table<TEntity>(null);
+            var table = new Table(store.Configuration.GetTableNameByConventionFor<TEntity>());
             var tableName = store.GetFormattedTableName(table);
             
             var sql = string.Format("if not ({0}) begin create table {1} ({2}); end",
                         GetTableExistsSql(tableName),
                         store.Escape(tableName),
-                        string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.Column.SqlType)));
+                        string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.SqlColumn.SqlType)));
 
             connectionManager.Connection.Execute(sql, null, tx);
             return this;
@@ -70,19 +70,19 @@ namespace HybridDb
 
         public IMigrator AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            var table = new Table<TEntity>(null);
+            var table = new Table(store.Configuration.GetTableNameByConventionFor<TEntity>());
             var projection = new ProjectionColumn<TEntity, TMember>(member);
 
             var sql = string.Format("ALTER TABLE {0} ADD {1};",
                                     store.GetFormattedTableName(table),
-                                    store.Escape(projection.Name) + " " + projection.Column.SqlType);
+                                    store.Escape(projection.Name) + " " + projection.SqlColumn.SqlType);
             connectionManager.Connection.Execute(sql, null, tx);
             return this;
         }
 
         public IMigrator RemoveProjection<TEntity>(string columnName)
         {
-            var table = new Table<TEntity>(null);
+            var table = new Table(store.Configuration.GetTableNameByConventionFor<TEntity>());
 
             var sql = string.Format("ALTER TABLE {0} DROP COLUMN {1};",
                                     store.GetFormattedTableName(table),
@@ -96,7 +96,7 @@ namespace HybridDb
             if (store.IsInTestMode)
                 throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameProjection is not supported when store is in test mode.");
 
-            var table = new Table<TEntity>(null);
+            var table = new Table(store.Configuration.GetTableNameByConventionFor<TEntity>());
 
             var sql = string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.GetFormattedTableName(table), oldColumnName, newColumnName);
             connectionManager.Connection.Execute(sql, null, tx);
@@ -105,7 +105,7 @@ namespace HybridDb
 
         public IMigrator UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            var table = new Table<TEntity>(null);
+            var table = new Table(store.Configuration.GetTableNameByConventionFor<TEntity>());
             var column = new ProjectionColumn<TEntity, TMember>(member);
 
             Do<TEntity>(table.Name, (entity, projections) =>
@@ -118,14 +118,14 @@ namespace HybridDb
 
         public IMigrator Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
         {
-            var table = new Table<T>(tableName);
+            var table = new Table(tableName);
             string selectSql = string.Format("SELECT * FROM {0}", store.GetFormattedTableName(table));
             foreach (var dictionary in connectionManager.Connection.Query(selectSql, transaction: tx).Cast<IDictionary<string, object>>())
             {
                 var documentColumn = new DocumentColumn();
                 var document = (byte[])dictionary[documentColumn.Name];
                 
-                var entity = (T)store.Configuration.Serializer.Deserialize(document, table.EntityType);
+                var entity = (T)store.Configuration.Serializer.Deserialize(document, typeof(T));
                 action(entity, dictionary);
                 dictionary[documentColumn.Name] = store.Configuration.Serializer.Serialize(entity);
 

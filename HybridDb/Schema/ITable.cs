@@ -6,11 +6,12 @@ namespace HybridDb.Schema
     public interface ITable
     {
         string Name { get; }
-        IEnumerable<IColumn> Columns { get; }
+        IEnumerable<Column> Columns { get; }
         IdColumn IdColumn { get; }
         EtagColumn EtagColumn { get; }
         DocumentColumn DocumentColumn { get; }
-        Type EntityType { get; }
-        IColumn this[string name] { get; }
+        Column this[string name] { get; }
+        Column GetNamedOrDynamicColumn(string name, object value);
+        void AddProjection(IProjectionColumn column);
     }
 }

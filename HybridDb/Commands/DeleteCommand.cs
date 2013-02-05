@@ -34,10 +34,10 @@ namespace HybridDb.Commands
                 .ToString();
 
             var parameters = new List<Parameter>();
-            parameters.Add(new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.Column.DbType});
+            parameters.Add(new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.SqlColumn.Type});
             if (!lastWriteWins)
             {
-                parameters.Add(new Parameter {Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.Column.DbType});
+                parameters.Add(new Parameter {Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.SqlColumn.Type});
             }
 
             return new PreparedDatabaseCommand
