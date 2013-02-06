@@ -553,23 +553,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void FailsIfProjectionQueryOnNonProjectedFieldsOrProperties()
-        {
-            var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, Guid.NewGuid(), new byte[0], new { StringProp = "Hest" });
-
-            QueryStats stats;
-            Should.Throw<MissingProjectedColumnException>(() => 
-                store.Query<ProjectionWithNonProjectedField>(store.Configuration.GetTableFor<Entity>(), out stats).ToList());
-        }
-
-        [Fact]
-        public void FailsIfDatabaseSchemaExistsButDoesNotMatchCurrentConfiguration()
-        {
-            throw new NotImplementedException();
-        }
-
-        [Fact]
         public void FailsIfEntityTypeIsUnknown()
         {
             Should.Throw<TableNotFoundException>(() => store.Configuration.GetTableFor<int>());
