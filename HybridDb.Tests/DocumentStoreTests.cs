@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Schema;
@@ -556,6 +557,21 @@ namespace HybridDb.Tests
         public void FailsIfEntityTypeIsUnknown()
         {
             Should.Throw<TableNotFoundException>(() => store.Configuration.GetTableFor<int>());
+        }
+
+        [Fact]
+        public void WillEnlistCommandsInAmbientTransactions()
+        {
+            using (new TransactionScope())
+            {
+                var table = store.Configuration.GetTableFor<Entity>();
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { });
+                store.Insert(table, Guid.NewGuid(), new byte[0], new { });
+
+                // No tx complete here
+            }
+
+            store.Connection.Query("select * from #Entities").Count().ShouldBe(0);
         }
 
         public class Case

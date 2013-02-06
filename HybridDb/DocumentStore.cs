@@ -7,10 +7,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Logging;
 using HybridDb.Schema;
+using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
@@ -81,6 +83,11 @@ namespace HybridDb
                     connectionForTesting.Open();
                 }
 
+                // already opened connection will not automatically enlist in later
+                // transactions, so we fix that if there is a tx going around
+                if (Transaction.Current != null)
+                    connectionForTesting.EnlistTransaction(Transaction.Current);
+
                 return new ManagedConnection(connectionForTesting, () => { });
             }
 
@@ -101,7 +108,7 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
             using (var connectionManager = Connect())
-            using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
+            //using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 var i = 0;
                 var etag = Guid.NewGuid();
@@ -131,7 +138,7 @@ namespace HybridDb
 
                     if (numberOfParameters + numberOfNewParameters >= 2100)
                     {
-                        InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);
+                        InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
                         sql = "";
                         parameters = new List<Parameter>();
@@ -146,9 +153,7 @@ namespace HybridDb
                     parameters.AddRange(preparedCommand.Parameters);
                 }
 
-                InternalExecute(connectionManager, tx, sql, parameters, expectedRowCount);
-
-                tx.Commit();
+                InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
                 Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                             numberOfInsertCommands,
@@ -324,13 +329,10 @@ namespace HybridDb
             return rows.Select(x => x.Item1);
         }
 
-        void InternalExecute(ManagedConnection managedConnection, IDbTransaction tx, string sql, List<Parameter> parameters, int expectedRowCount)
+        void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
-            Console.WriteLine(parameters.Aggregate(sql, (current, parameter) =>
-                                                        current.Replace(parameter.Name, parameter.ToSql())));
-
             var fastParameters = new FastDynamicParameters(parameters);
-            var rowcount = managedConnection.Connection.Execute(sql, fastParameters, tx);
+            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
             Interlocked.Increment(ref numberOfRequests);
             if (rowcount != expectedRowCount)
                 throw new ConcurrencyException();
