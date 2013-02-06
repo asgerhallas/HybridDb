@@ -555,7 +555,12 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsIfProjectionQueryOnNonProjectedFieldsOrProperties()
         {
-            throw new NotImplementedException();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { StringProp = "Hest" });
+
+            QueryStats stats;
+            Should.Throw<MissingProjectedColumnException>(() => 
+                store.Query<ProjectionWithNonProjectedField>(store.Configuration.GetTableFor<Entity>(), out stats).ToList());
         }
 
         [Fact]
@@ -582,6 +587,7 @@ namespace HybridDb.Tests
             public Guid Id { get; private set; }
             public int Property { get; set; }
             public string StringProp { get; set; }
+            public string NonProjectedField { get; set; }
             public SomeFreakingEnum EnumProp { get; set; }
             public DateTime DateTimeProp { get; set; }
             public Child TheChild { get; set; }
@@ -600,6 +606,11 @@ namespace HybridDb.Tests
         public class ProjectionWithEnum
         {
             public SomeFreakingEnum EnumProp { get; set; }
+        }
+
+        public class ProjectionWithNonProjectedField
+        {
+            public string NonProjectedField { get; set; }
         }
 
         public enum SomeFreakingEnum

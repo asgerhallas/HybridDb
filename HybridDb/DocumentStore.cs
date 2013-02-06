@@ -205,9 +205,6 @@ namespace HybridDb
                    .Append(isWindowed, "order by RowNumber")
                    .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
-                Console.WriteLine();
-                Console.WriteLine(sql.ToString());
-
                 var result = isTypedProjection
                                  ? InternalQuery<TProjection>(connection, sql, parameters, tx, out stats)
                                  : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, tx, out stats)
@@ -311,22 +308,31 @@ namespace HybridDb
 
         IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
         {
-            var normalizedParameters = parameters as IEnumerable<Parameter> ??
-                                       (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
-                                        select new Parameter {Name = "@" + projection.Key, Value = projection.Value}).ToList();
+            try
+            {
+                var normalizedParameters = parameters as IEnumerable<Parameter> ??
+                                           (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
+                                            select new Parameter { Name = "@" + projection.Key, Value = projection.Value }).ToList();
 
-            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(),
-                                                                                        Tuple.Create,
-                                                                                        new FastDynamicParameters(normalizedParameters),
-                                                                                        tx,
-                                                                                        splitOn: "TotalResults");
+                var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create,
+                                                                                            new FastDynamicParameters(normalizedParameters),
+                                                                                            tx, splitOn: "TotalResults");
 
-            var firstRow = rows.FirstOrDefault();
-            metadata = firstRow != null ? new QueryStats {TotalResults = firstRow.Item2.TotalResults} : new QueryStats();
+                var firstRow = rows.FirstOrDefault();
+                metadata = firstRow != null ? new QueryStats { TotalResults = firstRow.Item2.TotalResults } : new QueryStats();
 
-            Interlocked.Increment(ref numberOfRequests);
+                Interlocked.Increment(ref numberOfRequests);
 
-            return rows.Select(x => x.Item1);
+                return rows.Select(x => x.Item1);
+            }
+            catch (SqlException exception)
+            {
+                var match = new Regex("Invalid column name '(.*?)'").Match(exception.Message);
+                if (match.Success)
+                    throw new MissingProjectedColumnException(match.Groups[1].Value, exception);
+                
+                throw;
+            }
         }
 
         void InternalExecute(ManagedConnection managedConnection, IDbTransaction tx, string sql, List<Parameter> parameters, int expectedRowCount)
