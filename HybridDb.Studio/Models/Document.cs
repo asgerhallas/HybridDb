@@ -8,9 +8,9 @@ namespace HybridDb.Studio.Models
     public class Document
     {
         readonly IEnumerable<Projection> projections;
-        readonly KeyValuePair<IColumn, object> idColumn;
-        readonly KeyValuePair<IColumn, object> documentColumn;
-        readonly KeyValuePair<IColumn, object> etagColumn;
+        readonly KeyValuePair<Column, object> idColumn;
+        readonly KeyValuePair<Column, object> documentColumn;
+        readonly KeyValuePair<Column, object> etagColumn;
 
         public ITable Table { get; private set; }
         public string DocumentAsString { get; set; }
@@ -25,12 +25,17 @@ namespace HybridDb.Studio.Models
             get { return (Guid) idColumn.Value; }
         }
 
+        public string Name
+        {
+            get { return Table.Name + "/" + Id.ToString().Substring(0, 8); }
+        }
+
         public Guid? Etag
         {
             get { return (Guid?)etagColumn.Value; }
         }
 
-        public Document(ITable table, string document, IDictionary<IColumn, object> projections)
+        public Document(ITable table, string document, IDictionary<Column, object> projections)
         {
             Table = table;
             DocumentAsString = document;
@@ -40,7 +45,7 @@ namespace HybridDb.Studio.Models
             this.projections = projections.Where(x => !IsMetadataColumn(x.Key)).Select(x => new Projection(x.Key, x.Value)).ToList();
         }
 
-        bool IsMetadataColumn(IColumn column)
+        bool IsMetadataColumn(Column column)
         {
             return column == idColumn.Key
                    || column == documentColumn.Key
