@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using Shouldly;
@@ -27,6 +28,35 @@ namespace HybridDb.Tests
         public void Dispose()
         {
             store.Dispose();
+        }
+
+        [Fact]
+        public void FactMethodName()
+        {
+            var newGuid = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = newGuid, Property = "HAnd" });
+                session.SaveChanges() ;
+            }
+
+            using (var tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<Entity>(newGuid);
+                    user.Property = "Ayende"; // old name is "Oren"
+                    session.SaveChanges();
+                }
+
+                tx.Complete();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var user = session.Load<Entity>(newGuid);
+                Console.WriteLine(user.Property);
+            }            
         }
 
         [Fact]

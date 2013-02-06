@@ -53,8 +53,7 @@ namespace HybridDb.Linq
                                             translation.Take,
                                             translation.OrderBy,
                                             translation.Parameters)
-                                     .Select(result => session.ConvertToEntityAndPutUnderManagement(table, result))
-                                     .Cast<T>()
+                                     .Select(result => session.ConvertToEntityAndPutUnderManagement<T>(table, result))
                               : store.Query<T>(table,
                                                out storeStats,
                                                translation.Select,

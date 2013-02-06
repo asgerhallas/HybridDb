@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Dapper;
 using HybridDb.Commands;
+using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -12,6 +13,7 @@ namespace HybridDb.Tests
     public class DocumentStoreTests : IDisposable
     {
         readonly DocumentStore store;
+        readonly byte[] documentAsByteArray;
 
         public DocumentStoreTests()
         {
@@ -24,6 +26,8 @@ namespace HybridDb.Tests
                 .Projection(x => x.DateTimeProp)
                 .Projection(x => x.EnumProp);
             store.Migration.InitializeDatabase();
+
+            documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
         }
 
         public void Dispose()
@@ -36,7 +40,7 @@ namespace HybridDb.Tests
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
+            store.Insert(table, id, documentAsByteArray, new { Field = "Asger" });
 
             var row = store.Connection.Query("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
@@ -46,17 +50,59 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanInsertDynamically()
+        {
+            var id = Guid.NewGuid();
+            store.Insert(new Table("Entities"), id,
+                         documentAsByteArray,
+                         new {Field = "Asger"});
+
+            var row = store.Connection.Query("select * from #Entities").Single();
+            ((Guid)row.Id).ShouldBe(id);
+            ((Guid)row.Etag).ShouldNotBe(Guid.Empty);
+            Encoding.ASCII.GetString((byte[])row.Document).ShouldBe("asger");
+            ((string)row.Field).ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanInsertNullsDynamically()
+        {
+            store.Insert(new Table("Entities"),
+                         Guid.NewGuid(),
+                         documentAsByteArray,
+                         new Dictionary<string, object> {{"Field", null}});
+
+            var row = store.Connection.Query("select * from #Entities").Single();
+            ((string) row.Field).ShouldBe(null);
+        }
+
+        [Fact]
         public void CanUpdate()
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var etag = store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
+            var etag = store.Insert(table, id, documentAsByteArray, new {Field = "Asger"});
 
             store.Update(table, id, etag, new byte[] {}, new {Field = "Lars"});
 
             var row = store.Connection.Query("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
+        }
+
+        [Fact]
+        public void CanUpdateDynamically()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            var etag = store.Insert(table, id, documentAsByteArray, new {Field = "Asger"});
+
+            store.Update(new Table("Entities"), id, etag, new byte[] { }, new Dictionary<string, object> { { "Field", null }, { "StringProp", "Lars" } });
+
+            var row = store.Connection.Query("select * from #Entities").Single();
+            ((Guid) row.Etag).ShouldNotBe(etag);
+            ((string) row.Field).ShouldBe(null);
+            ((string) row.StringProp).ShouldBe("Lars");
         }
 
         [Fact]
@@ -74,7 +120,7 @@ namespace HybridDb.Tests
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
+            store.Insert(table, id, documentAsByteArray, new {Field = "Asger"});
 
             Should.Throw<ConcurrencyException>(() => store.Update(table, id, Guid.NewGuid(), new byte[] {}, new {Field = "Lars"}));
         }
@@ -85,7 +131,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
+            store.Insert(table, id, documentAsByteArray, new {Field = "Asger"});
 
             Should.Throw<ConcurrencyException>(() => store.Update(table, Guid.NewGuid(), etag, new byte[] {}, new {Field = "Lars"}));
         }
@@ -95,13 +141,26 @@ namespace HybridDb.Tests
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
-            var etag = store.Insert(table, id, document, new {Field = "Asger"});
+            var etag = store.Insert(table, id, documentAsByteArray, new {Field = "Asger"});
 
             var row = store.Get(table, id);
             row[table.IdColumn].ShouldBe(id);
             row[table.EtagColumn].ShouldBe(etag);
-            row[table.DocumentColumn].ShouldBe(document);
+            row[table.DocumentColumn].ShouldBe(documentAsByteArray);
+            row[table["Field"]].ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanGetDynamically()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            var etag = store.Insert(table, id, documentAsByteArray, new { Field = "Asger" });
+
+            var row = store.Get(new Table("Entities"), id);
+            row[table.IdColumn].ShouldBe(id);
+            row[table.EtagColumn].ShouldBe(etag);
+            row[table.DocumentColumn].ShouldBe(documentAsByteArray);
             row[table["Field"]].ShouldBe("Asger");
         }
 
@@ -110,7 +169,7 @@ namespace HybridDb.Tests
         {
             var id1 = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var etag1 = store.Insert(table, id1, new byte[0], new { TheChildNestedProperty = 9.8d });
+            store.Insert(table, id1, new byte[0], new { TheChildNestedProperty = 9.8d });
 
             QueryStats stats;
             var rows = store.Query<ProjectionWithNestedProperty>(table, out stats).ToList();
@@ -125,10 +184,9 @@ namespace HybridDb.Tests
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
-            var etag1 = store.Insert(table, id1, document, new {Field = "Asger"});
-            var etag2 = store.Insert(table, id2, document, new {Field = "Hans"});
-            store.Insert(table, id3, document, new {Field = "Bjarne"});
+            var etag1 = store.Insert(table, id1, documentAsByteArray, new {Field = "Asger"});
+            var etag2 = store.Insert(table, id2, documentAsByteArray, new {Field = "Hans"});
+            store.Insert(table, id3, documentAsByteArray, new {Field = "Bjarne"});
 
             QueryStats stats;
             var rows = store.Query(table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
@@ -136,13 +194,13 @@ namespace HybridDb.Tests
             rows.Count().ShouldBe(2);
             var first = rows.Single(x => (Guid) x[table.IdColumn] == id1);
             first[table.EtagColumn].ShouldBe(etag1);
-            first[table.DocumentColumn].ShouldBe(document);
+            first[table.DocumentColumn].ShouldBe(documentAsByteArray);
             first[table["Field"]].ShouldBe("Asger");
 
             var second = rows.Single(x => (Guid)x[table.IdColumn] == id2);
             second[table.IdColumn].ShouldBe(id2);
             second[table.EtagColumn].ShouldBe(etag2);
-            second[table.DocumentColumn].ShouldBe(document);
+            second[table.DocumentColumn].ShouldBe(documentAsByteArray);
             second[table["Field"]].ShouldBe("Hans");
         }
 
@@ -151,8 +209,8 @@ namespace HybridDb.Tests
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetTableFor<Entity>();
-            var document = new[] { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
-            store.Insert(table, id, document, new { Field = "Asger" });
+
+            store.Insert(table, id, documentAsByteArray, new { Field = "Asger" });
 
             var t = new {Field = ""};
 
@@ -266,7 +324,7 @@ namespace HybridDb.Tests
             var commands = new List<DatabaseCommand>();
             for (int i = 0; i < 2100/4+1; i++)
             {
-                commands.Add(new InsertCommand(table, Guid.NewGuid(), new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "A"}));
+                commands.Add(new InsertCommand(table, Guid.NewGuid(), documentAsByteArray, new {Field = "A"}));
             }
 
             store.Execute(commands.ToArray());

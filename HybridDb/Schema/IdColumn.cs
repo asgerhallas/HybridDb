@@ -2,21 +2,35 @@
 
 namespace HybridDb.Schema
 {
-    public class IdColumn : IColumn
+    public abstract class Column
     {
-        public string Name
+        public string Name { get; protected set; }
+        public SqlColumn SqlColumn { get; protected set; }
+
+        protected bool Equals(Column other)
         {
-            get { return "Id"; }
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Name, other.Name);
         }
 
-        public Column Column
+        public override bool Equals(object obj)
         {
-            get { return new Column(DbType.Guid, isPrimaryKey: true); }
+            return Equals(obj as Column);
         }
 
-        public object Serialize(object value)
+        public override int GetHashCode()
         {
-            return value;
+            return Name.GetHashCode();
+        }
+    }
+
+    public class IdColumn : Column
+    {
+        public IdColumn()
+        {
+            Name = "Id";
+            SqlColumn = new SqlColumn(DbType.Guid, isPrimaryKey: true);
         }
 
         public object GetValue(object document)

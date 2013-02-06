@@ -50,7 +50,7 @@ namespace HybridDb
                     sql.Append("if not ({0}) begin create table {1} ({2}); end",
                                tableExists,
                                store.Escape(store.GetFormattedTableName(table)),
-                               string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.Column.SqlType)));
+                               string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.SqlColumn.SqlType)));
 
                 }
                 connectionManager.Connection.Execute(sql.ToString(), null, tx);
@@ -60,14 +60,14 @@ namespace HybridDb
             Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
         }
 
-        public ITransactionalMigration CreateTransaction()
+        public IMigrator CreateMigrator()
         {
-            return new TransactionalMigration(store);
+            return new Migrator(store);
         }
 
         public void AddTable<TEntity>()
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.AddTable<TEntity>();
                 tx.Commit();
@@ -76,7 +76,7 @@ namespace HybridDb
 
         public void RemoveTable(string tableName)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.RemoveTable(tableName);
                 tx.Commit();
@@ -85,7 +85,7 @@ namespace HybridDb
 
         public void RenameTable(string oldTableName, string newTableName)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.RenameTable(oldTableName, newTableName);
                 tx.Commit();
@@ -94,7 +94,7 @@ namespace HybridDb
 
         public void AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.AddProjection(member);
                 tx.Commit();
@@ -103,7 +103,7 @@ namespace HybridDb
 
         public void RemoveProjection<TEntity>(string columnName)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.RemoveProjection<TEntity>(columnName);
                 tx.Commit();
@@ -112,7 +112,7 @@ namespace HybridDb
 
         public void UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.UpdateProjectionFor(member);
                 tx.Commit();
@@ -121,7 +121,7 @@ namespace HybridDb
 
         public void RenameProjection<TEntity>(string oldColumnName, string newColumnName)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.RenameProjection<TEntity>(oldColumnName, newColumnName);
                 tx.Commit();
@@ -130,7 +130,7 @@ namespace HybridDb
 
         public void Do<T>(string tableName, Action<T, IDictionary<string, object>> action)
         {
-            using (var tx = new TransactionalMigration(store))
+            using (var tx = new Migrator(store))
             {
                 tx.Do(tableName, action);
                 tx.Commit();

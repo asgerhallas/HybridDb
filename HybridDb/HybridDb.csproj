@@ -52,6 +52,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -60,7 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IMigration.cs" />
-    <Compile Include="ITransactionalMigration.cs" />
+    <Compile Include="IMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />
     <Compile Include="Linq\Ast\SqlProjectionExpression.cs" />
@@ -94,20 +95,20 @@
     <Compile Include="Linq\QueryProvider.cs" />
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="Migration.cs" />
-    <Compile Include="TransactionalMigration.cs" />
+    <Compile Include="Migrator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />
     <Compile Include="Logging\ColorSetting.cs" />
-    <Compile Include="Schema\Column.cs" />
+    <Compile Include="Schema\SqlColumn.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
     <Compile Include="DefaultBsonSerializer.cs" />
     <Compile Include="DefaultJsonSerializer.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
+    <Compile Include="Schema\DynamicColumn.cs" />
     <Compile Include="Schema\EtagColumn.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
-    <Compile Include="Schema\IColumn.cs" />
     <Compile Include="Logging\ILogger.cs" />
     <Compile Include="Commands\InsertCommand.cs" />
     <Compile Include="ISerializer.cs" />

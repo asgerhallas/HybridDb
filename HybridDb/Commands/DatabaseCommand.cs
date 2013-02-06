@@ -10,14 +10,14 @@ namespace HybridDb.Commands
     {
         internal abstract PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier);
 
-        protected static IDictionary<IColumn, object> ConvertAnonymousToProjections(ITable table, object projections)
+        protected static IDictionary<Column, object> ConvertAnonymousToProjections(ITable table, object projections)
         {
-            return (projections as IDictionary<IColumn, object> ??
+            return (projections as IDictionary<Column, object> ??
                     (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
-                        .ToDictionary(x => table[x.Key], x => x.Value));
+                        .ToDictionary(x => table.GetNamedOrDynamicColumn(x.Key, x.Value), x => x.Value));
         }
 
-        protected static List<Parameter> MapProjectionsToParameters(IDictionary<IColumn, object> projections, int i)
+        protected static List<Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)
         {
             return (from projection in projections
                     let column = projection.Key
@@ -25,8 +25,8 @@ namespace HybridDb.Commands
                     {
                         Name = "@" + column.Name + i, 
                         Value = projection.Value, 
-                        DbType = column.Column.DbType, 
-                        Size = column.Column.Length
+                        DbType = column.SqlColumn.Type,
+                        Size = column.SqlColumn.Length
                     }).ToList();
         }
 

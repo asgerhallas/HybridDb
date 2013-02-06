@@ -41,17 +41,16 @@ namespace HybridDb
             if (row == null)
                 return null;
 
-            return (T)ConvertToEntityAndPutUnderManagement(table, row);
+            return ConvertToEntityAndPutUnderManagement<T>(table, row);
         }
 
         public IEnumerable<T> Query<T>(string where, object parameters) where T : class
         {
             var table = store.Configuration.GetTableFor<T>();
-            var columns = string.Join(",", new[] {table.IdColumn.Name, table.EtagColumn.Name, table.DocumentColumn.Name});
             QueryStats stats;
             var rows = store.Query(table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
 
-            return rows.Select(row => (T)ConvertToEntityAndPutUnderManagement(table, row))
+            return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table, row))
                        .Where(entity => entity != null);
         }
 
@@ -199,7 +198,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal object ConvertToEntityAndPutUnderManagement(ITable table, IDictionary<IColumn, object> row)
+        internal T ConvertToEntityAndPutUnderManagement<T>(ITable table, IDictionary<Column, object> row)
         {
             var id = (Guid) row[table.IdColumn];
 
@@ -207,12 +206,12 @@ namespace HybridDb
             if (entities.TryGetValue(id, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? managedEntity.Entity
-                           : null;
+                           ? (T)managedEntity.Entity
+                           : default(T);
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize(document, table.EntityType);
+            var entity = store.Configuration.Serializer.Deserialize(document, typeof(T));
 
             managedEntity = new ManagedEntity
             {
@@ -224,7 +223,7 @@ namespace HybridDb
             };
 
             entities.Add(id, managedEntity);
-            return entity;
+            return (T)entity;
         }
 
 

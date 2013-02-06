@@ -30,12 +30,12 @@ END");
         public void CanRenameProjection()
         {
             var store = new DocumentStore(connectionString);
-            store.Migration.CreateTransaction()
+            store.Migration.CreateMigrator()
                 .AddTable<MigrationTests.Entity>()
                 .AddProjection<MigrationTests.Entity, int>(x => x.Property)
                 .Commit();
 
-            store.Migration.CreateTransaction().RenameProjection<MigrationTests.Entity>("Property", "NewProperty").Commit();
+            store.Migration.CreateMigrator().RenameProjection<MigrationTests.Entity>("Property", "NewProperty").Commit();
 
             GetColumn("Entities", "Property").ShouldBe(null);
             GetColumn("Entities", "NewProperty").ShouldBe(null);
@@ -47,9 +47,9 @@ END");
         public void CanRenameTable()
         {
             var store = new DocumentStore(connectionString);
-            store.Migration.CreateTransaction().AddTable<MigrationTests.Entity>().Commit();
+            store.Migration.CreateMigrator().AddTable<MigrationTests.Entity>().Commit();
 
-            store.Migration.CreateTransaction().RenameTable("Entities", "NewEntities").Commit();
+            store.Migration.CreateMigrator().RenameTable("Entities", "NewEntities").Commit();
             TableExists("Entities").ShouldBe(false);
             TableExists("NewEntities").ShouldBe(true);
 
