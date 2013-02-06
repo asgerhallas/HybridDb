@@ -144,7 +144,7 @@ namespace HybridDb
             {
                 var id = managedEntity.Key;
                 var table = store.Configuration.GetTableFor(managedEntity.Entity.GetType());
-                var projections = table.Columns.OfType<IProjectionColumn>().ToDictionary(x => x.Name, x => x.GetValue(managedEntity.Entity));
+                var projections = table.Columns.OfType<ProjectionColumn>().ToDictionary(x => x.Name, x => x.GetValue(managedEntity.Entity));
                 var document = serializer.Serialize(managedEntity.Entity);
 
                 switch (managedEntity.State)

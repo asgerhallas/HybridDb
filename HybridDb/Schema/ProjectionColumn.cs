@@ -4,7 +4,12 @@ using System.Linq;
 
 namespace HybridDb.Schema
 {
-    public class ProjectionColumn<TEntity, TMember> : Column, IProjectionColumn
+    public abstract class ProjectionColumn : Column
+    {
+        public abstract object GetValue(object document);
+    }
+
+    public class ProjectionColumn<TEntity, TMember> : ProjectionColumn
     {
         readonly Func<TEntity, TMember> getter;
 
@@ -18,7 +23,7 @@ namespace HybridDb.Schema
             SqlColumn = new SqlColumn(typeof(TMember));
         }
 
-        public object GetValue(object document)
+        public override object GetValue(object document)
         {
             //TODO: Maybe travser instead, as we are hiding potential important NRE exceptions
             try

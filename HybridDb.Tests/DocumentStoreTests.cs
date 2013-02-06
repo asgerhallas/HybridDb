@@ -227,6 +227,24 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryDynamicTable()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id1, documentAsByteArray, new { Field = "Asger", StringProp = "A" });
+            store.Insert(table, id2, documentAsByteArray, new { Field = "Hans", StringProp = "B" });
+
+            QueryStats stats;
+            var rows = store.Query(new Table("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
+
+            rows.Count().ShouldBe(1);
+            var row = rows.Single();
+            row[table["Field"]].ShouldBe("Asger");
+            row[table["StringProp"]].ShouldBe("A");
+        }
+
+        [Fact]
         public void CanDelete()
         {
             var id = Guid.NewGuid();

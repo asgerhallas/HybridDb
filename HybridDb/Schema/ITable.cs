@@ -11,6 +11,6 @@ namespace HybridDb.Schema
         DocumentColumn DocumentColumn { get; }
         Column this[string name] { get; }
         Column GetNamedOrDynamicColumn(string name, object value);
-        void AddProjection(Column column);
+        void AddProjection(ProjectionColumn column);
     }
 }
