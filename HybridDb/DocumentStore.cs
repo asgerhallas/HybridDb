@@ -182,7 +182,7 @@ namespace HybridDb
             if (select.IsNullOrEmpty() || select == "*")
                 select = "";
 
-            var isTypedProjection = !typeof (TProjection).IsA<IDictionary<IColumn, object>>();
+            var isTypedProjection = !typeof (TProjection).IsA<IDictionary<Column, object>>();
             if (isTypedProjection)
                 select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
 
@@ -223,13 +223,13 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<IDictionary<IColumn, object>> Query(ITable table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<IDictionary<Column, object>> Query(ITable table, out QueryStats stats, string select = null, string where = "",
                                                                int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
-            return Query<IDictionary<IColumn, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
+            return Query<IDictionary<Column, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
         }
 
-        public IDictionary<IColumn, object> Get(ITable table, Guid key)
+        public IDictionary<Column, object> Get(ITable table, Guid key)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())

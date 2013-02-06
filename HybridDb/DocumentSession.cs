@@ -198,7 +198,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal T ConvertToEntityAndPutUnderManagement<T>(ITable table, IDictionary<IColumn, object> row)
+        internal T ConvertToEntityAndPutUnderManagement<T>(ITable table, IDictionary<Column, object> row)
         {
             var id = (Guid) row[table.IdColumn];
 

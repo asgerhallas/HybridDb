@@ -4,26 +4,19 @@ using System.Linq;
 
 namespace HybridDb.Schema
 {
-    public class ProjectionColumn<TEntity, TMember> : IProjectionColumn
+    public class ProjectionColumn<TEntity, TMember> : Column, IProjectionColumn
     {
-        readonly Expression<Func<TEntity, TMember>> member;
         readonly Func<TEntity, TMember> getter;
 
         public ProjectionColumn(Expression<Func<TEntity, TMember>> member)
         {
-            this.member = member;
             getter = member.Compile();
 
             var expression = member.ToString();
             Name = string.Join("", expression.Split('.').Skip(1));
-            Type = typeof(TMember);
 
-            SqlColumn = new SqlColumn(Type);
+            SqlColumn = new SqlColumn(typeof(TMember));
         }
-
-        public string Name { get; set; }
-        public Type Type { get; set; }
-        public SqlColumn SqlColumn { get; private set; }
 
         public object GetValue(object document)
         {

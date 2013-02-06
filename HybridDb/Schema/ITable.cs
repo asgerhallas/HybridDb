@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace HybridDb.Schema
 {
@@ -12,6 +11,6 @@ namespace HybridDb.Schema
         DocumentColumn DocumentColumn { get; }
         Column this[string name] { get; }
         Column GetNamedOrDynamicColumn(string name, object value);
-        void AddProjection(IProjectionColumn column);
+        void AddProjection(Column column);
     }
 }
