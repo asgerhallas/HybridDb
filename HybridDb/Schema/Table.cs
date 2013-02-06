@@ -57,7 +57,7 @@ namespace HybridDb.Schema
             get { return columns.Values; }
         }
 
-        public void AddProjection(Column column)
+        public void AddProjection(ProjectionColumn column)
         {
             columns.Add(column.Name, column);
         }

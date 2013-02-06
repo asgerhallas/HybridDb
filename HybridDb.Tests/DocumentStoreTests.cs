@@ -227,6 +227,24 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryDynamicTable()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id1, documentAsByteArray, new { Field = "Asger", StringProp = "A" });
+            store.Insert(table, id2, documentAsByteArray, new { Field = "Hans", StringProp = "B" });
+
+            QueryStats stats;
+            var rows = store.Query(new Table("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
+
+            rows.Count().ShouldBe(1);
+            var row = rows.Single();
+            row[table["Field"]].ShouldBe("Asger");
+            row[table["StringProp"]].ShouldBe("A");
+        }
+
+        [Fact]
         public void CanDelete()
         {
             var id = Guid.NewGuid();
@@ -537,7 +555,12 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsIfProjectionQueryOnNonProjectedFieldsOrProperties()
         {
-            throw new NotImplementedException();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, Guid.NewGuid(), new byte[0], new { StringProp = "Hest" });
+
+            QueryStats stats;
+            Should.Throw<MissingProjectedColumnException>(() => 
+                store.Query<ProjectionWithNonProjectedField>(store.Configuration.GetTableFor<Entity>(), out stats).ToList());
         }
 
         [Fact]
@@ -564,6 +587,7 @@ namespace HybridDb.Tests
             public Guid Id { get; private set; }
             public int Property { get; set; }
             public string StringProp { get; set; }
+            public string NonProjectedField { get; set; }
             public SomeFreakingEnum EnumProp { get; set; }
             public DateTime DateTimeProp { get; set; }
             public Child TheChild { get; set; }
@@ -582,6 +606,11 @@ namespace HybridDb.Tests
         public class ProjectionWithEnum
         {
             public SomeFreakingEnum EnumProp { get; set; }
+        }
+
+        public class ProjectionWithNonProjectedField
+        {
+            public string NonProjectedField { get; set; }
         }
 
         public enum SomeFreakingEnum

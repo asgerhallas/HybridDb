@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using HybridDb.Logging;
 using HybridDb.Schema;
 
@@ -63,23 +62,6 @@ namespace HybridDb
                 return value;
 
             throw new TableNotFoundException(type);
-        }
-    }
-
-    public class TableBuilder<TEntity>
-    {
-        readonly ITable table;
-
-        public TableBuilder(ITable table)
-        {
-            this.table = table;
-        }
-
-        public TableBuilder<TEntity> Projection<TMember>(Expression<Func<TEntity, TMember>> member)
-        {
-            var column = new ProjectionColumn<TEntity, TMember>(member);
-            table.AddProjection(column);
-            return this;
         }
     }
 }
