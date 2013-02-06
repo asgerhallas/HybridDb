@@ -73,7 +73,7 @@ namespace HybridDb
             return new DocumentStore(connectionString, true);
         }
 
-        public ManagedConnection Connect()
+        public ManagedConnection Connect(Transaction tx = null)
         {
             if (IsInTestMode)
             {
@@ -85,10 +85,17 @@ namespace HybridDb
 
                 // already opened connection will not automatically enlist in later
                 // transactions, so we fix that if there is a tx going around
-                if (Transaction.Current != null)
+                if (tx != null)
+                {
                     connectionForTesting.EnlistTransaction(Transaction.Current);
+                }
+                else
+                {
+                    var managedTx = new TransactionScope();
+                    return new ManagedConnection(connectionForTesting, managedTx.Complete, managedTx.Dispose);
+                }
 
-                return new ManagedConnection(connectionForTesting, () => { });
+                return new ManagedConnection(connectionForTesting, () => { }, () => { });
             }
 
             var connection = new SqlConnection(connectionString);
@@ -108,7 +115,7 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
             using (var connectionManager = Connect())
-            //using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
+            using (var tx = connectionManager.EnsureTransaction())
             {
                 var i = 0;
                 var etag = Guid.NewGuid();
@@ -344,17 +351,24 @@ namespace HybridDb
     public class ManagedConnection : IDisposable
     {
         readonly DbConnection connection;
+        readonly Action complete;
         readonly Action dispose;
 
-        public ManagedConnection(DbConnection connection, Action dispose)
+        public ManagedConnection(DbConnection connection, Action complete, Action dispose)
         {
             this.connection = connection;
+            this.complete = complete;
             this.dispose = dispose;
         }
 
         public DbConnection Connection
         {
             get { return connection; }
+        }
+
+        public void Complete()
+        {
+            complete();
         }
 
         public void Dispose()
