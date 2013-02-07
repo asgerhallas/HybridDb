@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Configuration;
 using System.Data.SqlClient;
 using System.Windows;
 using Caliburn.Micro;
@@ -7,24 +6,11 @@ using HybridDb.Studio.Properties;
 
 namespace HybridDb.Studio.ViewModels
 {
-    public interface ISettings
-    {
-        bool ConnectionIsValid();
-        string ConnectionString { get; set; }
-    }
-
     public class SettingsViewModel : Screen, ISettings
     {
-        public SettingsViewModel()
-        {
-        }
-
         public string ConnectionString
         {
-            get
-            {
-                return (string)Settings.Default["ConnectionString"];
-            }
+            get { return (string) Settings.Default["ConnectionString"]; }
             set
             {
                 Settings.Default["ConnectionString"] = value;
@@ -37,7 +23,12 @@ namespace HybridDb.Studio.ViewModels
             if (ConnectionString == null)
                 return false;
 
-            try { new DocumentStore(ConnectionString).Connect().Dispose(); }
+            try
+            {
+                using (var store = new DocumentStore(ConnectionString))
+                using (store.Connect())
+                {}
+            }
             catch (ArgumentException)
             {
                 return false;
@@ -59,7 +50,12 @@ namespace HybridDb.Studio.ViewModels
             bool connectionIsValid = ConnectionIsValid();
             if (!connectionIsValid)
             {
-                MessageBox.Show("Could not establish connection with connectionstring.", "Error", MessageBoxButton.OK);
+                MessageBoxResult result = MessageBox.Show("Could not establish connection with connectionstring.", "Error", MessageBoxButton.OKCancel);
+                if (result != MessageBoxResult.OK)
+                {
+                    App.Current.Shutdown();
+                    return;
+                }
             }
             
             callback(connectionIsValid);
