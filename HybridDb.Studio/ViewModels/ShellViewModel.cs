@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Studio.ViewModels
 {
-    public class ShellViewModel : Conductor<Screen>.Collection.OneActive
+    public class ShellViewModel : Conductor<DocumentViewModel>.Collection.OneActive
     {
         private readonly DocumentStore store;
         private readonly Func<Document, DocumentViewModel> documentViewModelFactory;
@@ -87,8 +87,7 @@ namespace HybridDb.Studio.ViewModels
 
         public void OpenDocument(Document document)
         {
-            var documents = Items.OfType<DocumentViewModel>();
-            var documentViewModel = documents.SingleOrDefault(x => x.Document.Id == document.Id && x.Document.Table.Name == document.Table.Name);
+            var documentViewModel = Items.SingleOrDefault(x => x.Document.Id == document.Id && x.Document.Table.Name == document.Table.Name);
             if (documentViewModel == null)
             {
                 documentViewModel = documentViewModelFactory(document);
@@ -102,12 +101,12 @@ namespace HybridDb.Studio.ViewModels
             NotifyOfPropertyChange(() => CanSaveDocument);
         }
 
-        public void SaveDocument()
+        public void SaveDocument(DocumentViewModel documentViewModel)
         {
             if (ActiveItem == null)
                 return;
 
-            var document = ((DocumentViewModel)ActiveItem).Document;
+            var document = documentViewModel.Document;
 
             Loading = true;
             StatusMessage = string.Format("Saving document {0}", documentId);
@@ -119,6 +118,19 @@ namespace HybridDb.Studio.ViewModels
 
             FindDocument(document.Table, document.Id);
             Loading = false;
+        }
+        
+        public void DeleteDocument(DocumentViewModel documentViewModel)
+        {
+            var document = documentViewModel.Document;
+
+            var result = MessageBox.Show("Are you sure?", "Delete " + document.Name, MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            CloseDocument(documentViewModel);
+            store.Delete(document.Table, document.Id, document.Etag ?? new Guid());
+            StatusMessage = "Deleted document " + document.Name;
         }
 
         public void FindDocument()

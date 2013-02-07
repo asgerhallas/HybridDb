@@ -15,10 +15,11 @@
         </Grid.RowDefinitions>
         <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" FlowDirection="LeftToRight" HorizontalAlignment="Left"
                     VerticalAlignment="Center" Margin="10,6,0,7">
+            <TextBlock Text="Tablename: " VerticalAlignment="Center" />
             <TextBox x:Name="TableName" Width="100" Margin="5,0" />
+            <TextBlock Text="Document Id: " VerticalAlignment="Center" />
             <TextBox x:Name="DocumentId" Width="300" IsEnabled="{Binding CanFindDocument}" />
             <Button x:Name="Find" Content="Find" Width="75" Margin="5,0" cal:Message.Attach="FindDocument" />
-            <Button x:Name="Save" Content="Save" Width="75" Margin="5,0" cal:Message.Attach="SaveDocument" />
             <TextBlock Text="Working..." VerticalAlignment="Center" Visibility="{Binding Loading, Converter={StaticResource BoolToVisibility}}" />
         </StackPanel>
 
