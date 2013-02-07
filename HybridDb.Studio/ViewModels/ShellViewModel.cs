@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -12,21 +13,29 @@ namespace HybridDb.Studio.ViewModels
 {
     public class ShellViewModel : Conductor<DocumentViewModel>.Collection.OneActive
     {
-        private readonly DocumentStore store;
+        private DocumentStore store;
         private readonly Func<Document, DocumentViewModel> documentViewModelFactory;
+        readonly ISettings settings;
+        readonly IWindowManager windowManager;
 
         private string documentId;
         private string tableName;
         private string statusMessage;
         private bool loading;
 
-        public ShellViewModel(Func<Document, DocumentViewModel> documentViewModelFactory)
+        public ShellViewModel(Func<Document, DocumentViewModel> documentViewModelFactory, ISettings settings, IWindowManager windowManager)
         {
             this.documentViewModelFactory = documentViewModelFactory;
-            store = new DocumentStore("data source=.;Initial Catalog=Energy10;Integrated Security=True");
-            
-            DocumentId = "3423A819-BCBB-464C-9DB1-0006367895E3";
-            TableName = "Cases";
+            this.settings = settings;
+            this.windowManager = windowManager;
+            store = new DocumentStore(settings.ConnectionString);
+        }
+
+        public void OpenSettings()
+        {
+            windowManager.ShowDialog(settings);
+            store.Dispose();
+            store = new DocumentStore(settings.ConnectionString);
         }
 
         public string DocumentId
@@ -158,7 +167,17 @@ namespace HybridDb.Studio.ViewModels
         void FindDocument(ITable table, Guid documentId)
         {
             QueryStats stats;
-            IDictionary<Column, object> projections = store.Get(table, documentId);
+            IDictionary<Column, object> projections;
+            try
+            {
+                projections = store.Get(table, documentId);
+            }
+            catch (SqlException e)
+            {
+                MessageBox.Show(e.Message, "Exception", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             if (projections == null)
             {
                 MessageBox.Show(string.Format("Could not find document {0} in {1}", documentId, table.Name),

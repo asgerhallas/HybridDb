@@ -1,7 +1,7 @@
 ﻿<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:HybridDb.Studio" xmlns:Converters="clr-namespace:HybridDb.Studio.Converters"
-             x:Class="HybridDb.Studio.App">
+             xmlns:Properties="clr-namespace:HybridDb.Studio.Properties" x:Class="HybridDb.Studio.App">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -9,6 +9,7 @@
                     <local:AppBootstrapper x:Key="bootstrapper" />
                     
                     <Converters:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+                    <Properties:Settings x:Key="ConnectionString" />
                 
                 </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
