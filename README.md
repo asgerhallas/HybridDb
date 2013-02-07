@@ -20,7 +20,7 @@ So if all you need is to put some JSON to rest - on a single server, in simple m
 Why?
 ====
 
-We have been happy users of the awesome RavenDB for a quite a while, 
+We have been happy users of the [awesome RavenDB](http://ravendb.net/) for a quite a while, 
 but we ran into some performance issues that we were not able to dodge ([read more here](https://groups.google.com/d/topic/ravendb/6NjiJpzYxyI/discussion)).
 
 With no solution to the problem in sight - and in the lucky situation that we did not rely on any of RavenDB's more advanced features - we decided to write a drop-in replacement to run on top of SQL Server.
