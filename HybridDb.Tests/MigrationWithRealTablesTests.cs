@@ -31,19 +31,19 @@ END");
         {
             var store = new DocumentStore(connectionString);
             store.Migration.CreateMigrator()
-                .AddTable<MigrationTests.Entity>()
-                .AddProjection<MigrationTests.Entity, int>(x => x.Property)
-                .Commit()
-                .Dispose();
+                 .AddTable<MigrationTests.Entity>()
+                 .AddProjection<MigrationTests.Entity, int>(x => x.Property)
+                 .Commit()
+                 .Dispose();
 
             store.Migration.CreateMigrator()
-                .RenameProjection<MigrationTests.Entity>("Property", "NewProperty")
-                .Commit()
-                .Dispose();
+                 .RenameProjection<MigrationTests.Entity>("Property", "NewProperty")
+                 .Commit()
+                 .Dispose();
 
             GetColumn("Entities", "Property").ShouldBe(null);
             GetColumn("Entities", "NewProperty").ShouldBe(null);
-            
+
             connection.Execute("drop table Entities");
         }
 
@@ -106,7 +106,7 @@ END");
         MigrationTests.Column GetColumn(string table, string column)
         {
             return connection.Query<MigrationTests.Column>(string.Format("select * from master.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column, table))
-                        .FirstOrDefault();
+                             .FirstOrDefault();
         }
 
         public class Case

@@ -21,6 +21,12 @@ namespace HybridDb
             get { return connection; }
         }
 
+        public ManagedConnection Somehit
+        {
+            get { throw new NotImplementedException(); }
+            set { throw new NotImplementedException(); }
+        }
+
         public void Complete()
         {
             complete();

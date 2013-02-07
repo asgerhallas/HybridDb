@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SqlClient;
@@ -20,9 +21,10 @@ namespace HybridDb
         readonly Migration migration;
         readonly string connectionString;
         readonly bool forTesting;
-        DbConnection ambientConnection;
+        DbConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
         long numberOfRequests;
+        int numberOfManagedConnections;
 
         DocumentStore(string connectionString, bool forTesting)
         {
@@ -42,8 +44,11 @@ namespace HybridDb
 
         public void Dispose()
         {
-            if (ambientConnection != null)
-                ambientConnection.Dispose();
+            if (numberOfManagedConnections > 0)
+                Logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+
+            if (ambientConnectionForTesting != null)
+                ambientConnectionForTesting.Dispose();
         }
 
         public Configuration Configuration
@@ -69,46 +74,6 @@ namespace HybridDb
         public static DocumentStore ForTesting(string connectionString)
         {
             return new DocumentStore(connectionString, true);
-        }
-
-        public ManagedConnection Connect()
-        {
-            Action complete = () => { };
-            Action dispose = () => { };
-
-            if (Transaction.Current == null)
-            {
-                var tx = new TransactionScope();
-                complete = tx.Complete;
-                dispose = tx.Dispose;
-            }
-
-            DbConnection connection;
-            if (IsInTestMode)
-            {
-                if (ambientConnection == null)
-                {
-                    ambientConnection = new SqlConnection(connectionString);
-                    ambientConnection.Open();
-                }
-
-                connection = ambientConnection;
-            }
-            else
-            {
-                connection = new SqlConnection(connectionString);
-                connection.Open();
-
-                complete = connection.Dispose + complete;
-                dispose = connection.Dispose + dispose;
-            }
-
-            // Connections that are kept open during multiple operations (for testing mostly)
-            // will not automatically be enlisted in transactions started later, we fix that here.
-            // Calling EnlistTransaction on a connection that is already enlisted is a noop
-            connection.EnlistTransaction(Transaction.Current);
-
-            return new ManagedConnection(connection, complete, dispose);
         }
 
         public IDocumentSession OpenSession()
@@ -296,11 +261,59 @@ namespace HybridDb
             get { return Configuration.Logger; }
         }
 
+        internal ManagedConnection Connect()
+        {
+            Action complete = () => { };
+            Action dispose = () => { numberOfManagedConnections--; };
+
+            try
+            {
+                if (Transaction.Current == null)
+                {
+                    var tx = new TransactionScope();
+                    complete += tx.Complete;
+                    dispose += tx.Dispose;
+                }
+
+                DbConnection connection;
+                if (IsInTestMode)
+                {
+                    // We don't care about thread safety in test mode
+                    if (ambientConnectionForTesting == null)
+                    {
+                        ambientConnectionForTesting = new SqlConnection(connectionString);
+                        ambientConnectionForTesting.Open();
+                    }
+
+                    connection = ambientConnectionForTesting;
+                }
+                else
+                {
+                    connection = new SqlConnection(connectionString);
+                    connection.Open();
+
+                    complete = connection.Dispose + complete;
+                    dispose = connection.Dispose + dispose;
+                }
+
+                // Connections that are kept open during multiple operations (for testing mostly)
+                // will not automatically be enlisted in transactions started later, we fix that here.
+                // Calling EnlistTransaction on a connection that is already enlisted is a no-op.
+                connection.EnlistTransaction(Transaction.Current);
+
+                numberOfManagedConnections++;
+
+                return new ManagedConnection(connection, complete, dispose);
+            }
+            catch (Exception)
+            {
+                dispose();
+                throw;
+            }
+        }
+
         internal IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
         {
-            if (!IsInTestMode)
-                throw new InvalidOperationException("Only for testing purposes");
-
             using (var connection = Connect())
             {
                 return connection.Connection.Query<T>(sql, parameters);
@@ -309,9 +322,6 @@ namespace HybridDb
 
         internal IEnumerable<dynamic> RawQuery(string sql, object parameters = null)
         {
-            if (!IsInTestMode)
-                throw new InvalidOperationException("Only for testing purposes");
-
             using (var connection = Connect())
             {
                 return connection.Connection.Query(sql, parameters);
