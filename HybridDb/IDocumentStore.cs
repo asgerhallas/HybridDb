@@ -12,7 +12,7 @@ namespace HybridDb
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         IDocumentSession OpenSession();
-        TableBuilder<TEntity> ForDocument<TEntity>();
+        TableBuilder<TEntity> DocumentsFor<TEntity>();
         Guid Execute(params DatabaseCommand[] commands);
         Guid Insert(ITable table, Guid key, byte[] document, object projections);
         Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins = false);

@@ -17,16 +17,14 @@ namespace HybridDb.Tests
 
         public DocumentStoreTests()
         {
-            Transaction.Current.ShouldBe(null);
-
             store = DocumentStore.ForTesting("data source=.;Integrated Security=True");
-            store.ForDocument<Entity>()
-                 .Projection(x => x.Field)
-                 .Projection(x => x.Property)
-                 .Projection(x => x.TheChild.NestedProperty)
-                 .Projection(x => x.StringProp)
-                 .Projection(x => x.DateTimeProp)
-                 .Projection(x => x.EnumProp);
+            store.DocumentsFor<Entity>()
+                 .WithProjection(x => x.Field)
+                 .WithProjection(x => x.Property)
+                 .WithProjection(x => x.TheChild.NestedProperty)
+                 .WithProjection(x => x.StringProp)
+                 .WithProjection(x => x.DateTimeProp)
+                 .WithProjection(x => x.EnumProp);
             store.Migration.InitializeDatabase();
 
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
@@ -327,11 +325,11 @@ namespace HybridDb.Tests
         public void WillNotCreateSchemaIfItAlreadyExists()
         {
             var store1 = DocumentStore.ForTesting("data source=.;Integrated Security=True");
-            store1.ForDocument<Case>().Projection(x => x.By);
+            store1.DocumentsFor<Case>().WithProjection(x => x.By);
             store1.Migration.InitializeDatabase();
 
             var store2 = DocumentStore.ForTesting("data source=.;Integrated Security=True");
-            store2.ForDocument<Case>().Projection(x => x.By);
+            store2.DocumentsFor<Case>().WithProjection(x => x.By);
 
             Should.NotThrow(store2.Migration.InitializeDatabase);
         }

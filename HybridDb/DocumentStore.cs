@@ -61,12 +61,12 @@ namespace HybridDb
             get { return migration; }
         }
 
-        public TableBuilder<TEntity> ForDocument<TEntity>()
+        public TableBuilder<TEntity> DocumentsFor<TEntity>()
         {
-            return ForDocument<TEntity>(null);
+            return DocumentsFor<TEntity>(null);
         }
 
-        public TableBuilder<TEntity> ForDocument<TEntity>(string name)
+        public TableBuilder<TEntity> DocumentsFor<TEntity>(string name)
         {
             return configuration.Register<TEntity>(name);
         }

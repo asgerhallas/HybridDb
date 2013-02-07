@@ -66,7 +66,7 @@ END");
             TableExists("Cases").ShouldBe(false);
 
             var store = new DocumentStore(connectionString);
-            store.ForDocument<Case>();
+            store.DocumentsFor<Case>();
             store.Migration.InitializeDatabase();
 
             Should.Throw<InvalidOperationException>(() => store.Migration.InitializeDatabase());
@@ -80,7 +80,7 @@ END");
             TableExists("Cases").ShouldBe(false);
 
             var store = new DocumentStore(connectionString);
-            store.ForDocument<Case>();
+            store.DocumentsFor<Case>();
             store.Migration.InitializeDatabase();
 
             TableExists("Cases").ShouldBe(true);
@@ -92,7 +92,7 @@ END");
         public void WillQuoteTableAndColumnNamesOnCreation()
         {
             var store = new DocumentStore(connectionString);
-            store.ForDocument<Case>("Case").Projection(x => x.By);
+            store.DocumentsFor<Case>("Case").WithProjection(x => x.By);
             Should.NotThrow(store.Migration.InitializeDatabase);
 
             connection.Execute("drop table [Case]");

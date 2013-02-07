@@ -13,7 +13,7 @@ namespace HybridDb
             this.table = table;
         }
 
-        public TableBuilder<TEntity> Projection<TMember>(Expression<Func<TEntity, TMember>> member)
+        public TableBuilder<TEntity> WithProjection<TMember>(Expression<Func<TEntity, TMember>> member)
         {
             var column = new ProjectionColumn<TEntity, TMember>(member);
             table.AddProjection(column);

@@ -17,9 +17,9 @@ namespace HybridDb.Tests
         {
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTesting(connectionString);
-            store.ForDocument<Entity>()
-                .Projection(x => x.ProjectedProperty)
-                .Projection(x => x.TheChild.NestedProperty);
+            store.DocumentsFor<Entity>()
+                .WithProjection(x => x.ProjectedProperty)
+                .WithProjection(x => x.TheChild.NestedProperty);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
             store.Migration.InitializeDatabase();
         }
