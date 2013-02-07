@@ -63,11 +63,18 @@ namespace HybridDb.Studio.ViewModels
 
         public void Save()
         {
-            if (ConnectionIsValid())
+            if (!ConnectionIsValid())
             {
-                Settings.Default.Save();
-                TryClose(true);
+                MessageBoxResult result = MessageBox.Show("Could not establish connection with connectionstring.", "Error", MessageBoxButton.OKCancel);
+                if (result != MessageBoxResult.OK)
+                {
+                    App.Current.Shutdown();
+                }
+                return;
             }
+
+            Settings.Default.Save();
+            TryClose(true);
         }
     }
 }
