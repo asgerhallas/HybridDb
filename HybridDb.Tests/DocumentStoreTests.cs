@@ -18,6 +18,8 @@ namespace HybridDb.Tests
 
         public DocumentStoreTests()
         {
+            Transaction.Current.ShouldBe(null);
+
             store = DocumentStore.ForTesting("data source=.;Integrated Security=True");
             store.ForDocument<Entity>()
                 .Projection(x => x.Field)
@@ -34,6 +36,15 @@ namespace HybridDb.Tests
         public void Dispose()
         {
             store.Dispose();
+            Transaction.Current.ShouldBe(null);
+        }
+
+        [Fact]
+        public void Simple()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, documentAsByteArray, new { Field = "Asger" });
         }
 
         [Fact]
@@ -43,7 +54,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetTableFor<Entity>();
             store.Insert(table, id, documentAsByteArray, new { Field = "Asger" });
 
-            var row = store.Connection.Query("select * from #Entities").Single();
+            var row = store.RawQuery("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -58,7 +69,7 @@ namespace HybridDb.Tests
                          documentAsByteArray,
                          new {Field = "Asger"});
 
-            var row = store.Connection.Query("select * from #Entities").Single();
+            var row = store.RawQuery("select * from #Entities").Single();
             ((Guid)row.Id).ShouldBe(id);
             ((Guid)row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[])row.Document).ShouldBe("asger");
@@ -73,7 +84,7 @@ namespace HybridDb.Tests
                          documentAsByteArray,
                          new Dictionary<string, object> {{"Field", null}});
 
-            var row = store.Connection.Query("select * from #Entities").Single();
+            var row = store.RawQuery("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
         }
 
@@ -86,7 +97,7 @@ namespace HybridDb.Tests
 
             store.Update(table, id, etag, new byte[] {}, new {Field = "Lars"});
 
-            var row = store.Connection.Query("select * from #Entities").Single();
+            var row = store.RawQuery("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
         }
@@ -100,7 +111,7 @@ namespace HybridDb.Tests
 
             store.Update(new Table("Entities"), id, etag, new byte[] { }, new Dictionary<string, object> { { "Field", null }, { "StringProp", "Lars" } });
 
-            var row = store.Connection.Query("select * from #Entities").Single();
+            var row = store.RawQuery("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe(null);
             ((string) row.StringProp).ShouldBe("Lars");
@@ -254,7 +265,7 @@ namespace HybridDb.Tests
 
             store.Delete(table, id, etag);
 
-            store.Connection.Query("select * from #Entities").Count().ShouldBe(0);
+            store.RawQuery("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -296,7 +307,7 @@ namespace HybridDb.Tests
             var etag = store.Execute(new InsertCommand(table, id1, new byte[0], new {Field = "A"}),
                                      new InsertCommand(table, id2, new byte[0], new {Field = "B"}));
 
-            var rows = store.Connection.Query<Guid>("select Etag from #Entities order by Field").ToList();
+            var rows = store.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
             rows.Count.ShouldBe(2);
             rows[0].ShouldBe(etag);
             rows[1].ShouldBe(etag);
@@ -318,7 +329,7 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            store.Connection.Query("select * from #Entities").Count().ShouldBe(0);
+            store.RawQuery("select * from #Entities").Count().ShouldBe(0);
         }
 
 
@@ -571,7 +582,26 @@ namespace HybridDb.Tests
                 // No tx complete here
             }
 
-            store.Connection.Query("select * from #Entities").Count().ShouldBe(0);
+            store.RawQuery("select * from #Entities").Count().ShouldBe(0);
+        }
+
+        [Fact]
+        public void Transaction1()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, documentAsByteArray, new { Field = "Asger" });
+
+            try
+            {
+                store.Update(table, id, Guid.NewGuid(), new byte[] {}, new {Field = "Lars"});
+            }
+            catch
+            {
+                // ignore
+            }
+
+            Transaction.Current.ShouldBe(null);
         }
 
         public class Case

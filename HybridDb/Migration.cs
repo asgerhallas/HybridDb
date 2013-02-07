@@ -28,11 +28,11 @@ namespace HybridDb
         {
             var timer = Stopwatch.StartNew();
             using (var connectionManager = store.Connect())
-            using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.Serializable))
+            //using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.Serializable))
             {
                 if (!store.IsInTestMode)
                 {
-                    var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null, tx);
+                    var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null);
                     if (existingTables.Any())
                         throw new InvalidOperationException("You cannot initialize a database that is not empty.");
                 }
@@ -53,8 +53,8 @@ namespace HybridDb
                                string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.SqlColumn.SqlType)));
 
                 }
-                connectionManager.Connection.Execute(sql.ToString(), null, tx);
-                tx.Commit();
+                connectionManager.Connection.Execute(sql.ToString(), null);
+                connectionManager.Complete();
             }
 
             Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);

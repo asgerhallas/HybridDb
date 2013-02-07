@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -12,7 +11,6 @@ using Dapper;
 using HybridDb.Commands;
 using HybridDb.Logging;
 using HybridDb.Schema;
-using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
@@ -22,7 +20,7 @@ namespace HybridDb
         readonly Migration migration;
         readonly string connectionString;
         readonly bool forTesting;
-        SqlConnection connectionForTesting;
+        DbConnection ambientConnection;
         Guid lastWrittenEtag;
         long numberOfRequests;
 
@@ -44,8 +42,8 @@ namespace HybridDb
 
         public void Dispose()
         {
-            if (IsInTestMode && connectionForTesting != null)
-                connectionForTesting.Dispose();
+            if (ambientConnection != null)
+                ambientConnection.Dispose();
         }
 
         public Configuration Configuration
@@ -73,34 +71,44 @@ namespace HybridDb
             return new DocumentStore(connectionString, true);
         }
 
-        public ManagedConnection Connect(Transaction tx = null)
+        public ManagedConnection Connect()
         {
-            if (IsInTestMode)
+            Action complete = () => { };
+            Action dispose = () => { };
+
+            if (Transaction.Current == null)
             {
-                if (connectionForTesting == null)
-                {
-                    connectionForTesting = new SqlConnection(connectionString);
-                    connectionForTesting.Open();
-                }
-
-                // already opened connection will not automatically enlist in later
-                // transactions, so we fix that if there is a tx going around
-                if (tx != null)
-                {
-                    connectionForTesting.EnlistTransaction(Transaction.Current);
-                }
-                else
-                {
-                    var managedTx = new TransactionScope();
-                    return new ManagedConnection(connectionForTesting, managedTx.Complete, managedTx.Dispose);
-                }
-
-                return new ManagedConnection(connectionForTesting, () => { }, () => { });
+                var tx = new TransactionScope();
+                complete = tx.Complete;
+                dispose = tx.Dispose;
             }
 
-            var connection = new SqlConnection(connectionString);
-            connection.Open();
-            return new ManagedConnection(connection, connection.Dispose);
+            DbConnection connection;
+            if (IsInTestMode)
+            {
+                if (ambientConnection == null)
+                {
+                    ambientConnection = new SqlConnection(connectionString);
+                    ambientConnection.Open();
+                }
+
+                connection = ambientConnection;
+            }
+            else
+            {
+                connection = new SqlConnection(connectionString);
+                connection.Open();
+
+                complete = connection.Dispose + complete;
+                dispose = connection.Dispose + dispose;
+            }
+
+            // Connections that are kept open during multiple operations (for testing mostly)
+            // will not automatically be enlisted in transactions started later, we fix that here.
+            // Calling EnlistTransaction on a connection that is already enlisted is a noop
+            connection.EnlistTransaction(Transaction.Current);
+
+            return new ManagedConnection(connection, complete, dispose);
         }
 
         public IDocumentSession OpenSession()
@@ -115,7 +123,6 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
             using (var connectionManager = Connect())
-            using (var tx = connectionManager.EnsureTransaction())
             {
                 var i = 0;
                 var etag = Guid.NewGuid();
@@ -162,6 +169,8 @@ namespace HybridDb
 
                 InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
+                connectionManager.Complete();
+
                 Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                             numberOfInsertCommands,
                             numberOfUpdateCommands,
@@ -200,7 +209,6 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
-            using (var tx = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 var isWindowed = skip > 0 || take > 0;
                 var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby;
@@ -218,8 +226,8 @@ namespace HybridDb
                    .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
                 var result = isTypedProjection
-                                 ? InternalQuery<TProjection>(connection, sql, parameters, tx, out stats)
-                                 : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, tx, out stats)
+                                 ? InternalQuery<TProjection>(connection, sql, parameters, out stats)
+                                 : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, out stats)
                                                                   .Cast<IDictionary<string, object>>()
                                                                   .Select(row => row.ToDictionary(column => table.GetNamedOrDynamicColumn(column.Key, column.Value),
                                                                                                   column => column.Value)));
@@ -227,7 +235,7 @@ namespace HybridDb
                 Interlocked.Increment(ref numberOfRequests);
                 Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
 
-                tx.Commit();
+                connection.Complete();
                 return result;
             }
         }
@@ -242,19 +250,18 @@ namespace HybridDb
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
-            using (var tx = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 var sql = string.Format("select * from {0} where {1} = @Id",
                                         Escape(GetFormattedTableName(table)),
                                         table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}, tx).SingleOrDefault());
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 
                 Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
-                tx.Commit();
+                connection.Complete();
                 return row != null ? row.ToDictionary(x => table.GetNamedOrDynamicColumn(x.Key, x.Value), x => x.Value) : null;
             }
         }
@@ -289,14 +296,25 @@ namespace HybridDb
             get { return Configuration.Logger; }
         }
 
-        internal DbConnection Connection
+        internal IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
         {
-            get
-            {
-                if (!IsInTestMode)
-                    throw new InvalidOperationException("Only for testing purposes");
+            if (!IsInTestMode)
+                throw new InvalidOperationException("Only for testing purposes");
 
-                return Connect().Connection;
+            using (var connection = Connect())
+            {
+                return connection.Connection.Query<T>(sql, parameters);
+            }
+        }
+
+        internal IEnumerable<dynamic> RawQuery(string sql, object parameters = null)
+        {
+            if (!IsInTestMode)
+                throw new InvalidOperationException("Only for testing purposes");
+
+            using (var connection = Connect())
+            {
+                return connection.Connection.Query(sql, parameters);
             }
         }
 
@@ -318,7 +336,7 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, DbTransaction tx, out QueryStats metadata)
+        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)
         {
             var normalizedParameters = parameters as IEnumerable<Parameter> ??
                                        (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
@@ -326,7 +344,7 @@ namespace HybridDb
 
             var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create,
                                                                                         new FastDynamicParameters(normalizedParameters),
-                                                                                        tx, splitOn: "TotalResults");
+                                                                                        splitOn: "TotalResults");
 
             var firstRow = rows.FirstOrDefault();
             metadata = firstRow != null ? new QueryStats { TotalResults = firstRow.Item2.TotalResults } : new QueryStats();
@@ -346,34 +364,5 @@ namespace HybridDb
         }
 
         public class MissingProjectionValueException : Exception {}
-    }
-
-    public class ManagedConnection : IDisposable
-    {
-        readonly DbConnection connection;
-        readonly Action complete;
-        readonly Action dispose;
-
-        public ManagedConnection(DbConnection connection, Action complete, Action dispose)
-        {
-            this.connection = connection;
-            this.complete = complete;
-            this.dispose = dispose;
-        }
-
-        public DbConnection Connection
-        {
-            get { return connection; }
-        }
-
-        public void Complete()
-        {
-            complete();
-        }
-
-        public void Dispose()
-        {
-            dispose();
-        }
     }
 }

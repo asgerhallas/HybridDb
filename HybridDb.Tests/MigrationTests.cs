@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Transactions;
 using Dapper;
 using Newtonsoft.Json.Linq;
 using Shouldly;
@@ -45,7 +46,7 @@ namespace HybridDb.Tests
             }
             catch { }
 
-            var entity1 = store.Connection.Query<Entity>("SELECT * FROM #Entities").Single();
+            var entity1 = store.RawQuery<Entity>("SELECT * FROM #Entities").Single();
             entity1.Id.ShouldBe(id1);
             entity1.StringProp.ShouldBe(null);
         }
@@ -132,7 +133,7 @@ namespace HybridDb.Tests
                 projections["Property"] = ++projectionValue;
             });
             
-            var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
+            var result = store.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
             result.ShouldContain(x => x.Id == id1 && x.Property == 2);
             result.ShouldContain(x => x.Id == id2 && x.Property == 3);
             result.ShouldContain(x => x.Id == id3 && x.Property == 4);
@@ -158,7 +159,7 @@ namespace HybridDb.Tests
             store.Migration.AddProjection<Entity, int>(x => x.Property);
             
             store.Migration.UpdateProjectionFor<Entity, int>(x => x.Property);
-            var result = store.Connection.Query<Entity>("SELECT * FROM #Entities").ToList();
+            var result = store.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
             
             result.ShouldContain(x => x.Id == id1 && x.Property == 1);
             result.ShouldContain(x => x.Id == id2 && x.Property == 2);
@@ -288,7 +289,7 @@ namespace HybridDb.Tests
                   WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
                   AND K.COLUMN_NAME = 'Id'";
 
-            var isPrimaryKey = store.Connection.Query(sql).Any();
+            var isPrimaryKey = store.RawQuery(sql).Any();
             isPrimaryKey.ShouldBe(true);
         }
 
@@ -315,18 +316,18 @@ namespace HybridDb.Tests
 
         bool TableExists(string name)
         {
-            return store.Connection.Query(string.Format("select OBJECT_ID('tempdb..#{0}') as Result", name)).First().Result != null;
+            return store.RawQuery(string.Format("select OBJECT_ID('tempdb..#{0}') as Result", name)).First().Result != null;
         }
 
         Column GetColumn(string table, string column)
         {
-            return store.Connection.Query<Column>(string.Format("select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..#{1}')", column, table))
+            return store.RawQuery<Column>(string.Format("select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..#{1}')", column, table))
                         .FirstOrDefault();
         }
 
         string GetType(int id)
         {
-            return store.Connection.Query<string>("select name from sys.types where system_type_id = @id", new { id }).FirstOrDefault();
+            return store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { id }).FirstOrDefault();
         }
 
         public class Column
@@ -367,6 +368,7 @@ namespace HybridDb.Tests
         public void Dispose()
         {
             store.Dispose();
+            Transaction.Current.ShouldBe(null);
         }
     }
 }

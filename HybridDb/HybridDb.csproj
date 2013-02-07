@@ -94,6 +94,7 @@
     <Compile Include="Linq\QueryableEx.cs" />
     <Compile Include="Linq\QueryProvider.cs" />
     <Compile Include="Linq\Translation.cs" />
+    <Compile Include="ManagedConnection.cs" />
     <Compile Include="Migration.cs" />
     <Compile Include="Migrator.cs" />
     <Compile Include="QueryStats.cs" />

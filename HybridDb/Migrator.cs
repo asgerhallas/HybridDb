@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using Dapper;
@@ -12,14 +10,12 @@ namespace HybridDb
     public class Migrator : IMigrator
     {
         readonly DocumentStore store;
-        readonly DbTransaction tx;
         readonly ManagedConnection connectionManager;
 
         public Migrator(DocumentStore store)
         {
             this.store = store;
             connectionManager = store.Connect();
-            tx = connectionManager.Connection.BeginTransaction(IsolationLevel.Serializable);
         }
 
         public void InitializeDatabase()
@@ -37,14 +33,14 @@ namespace HybridDb
                         store.Escape(tableName),
                         string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.SqlColumn.SqlType)));
 
-            connectionManager.Connection.Execute(sql, null, tx);
+            connectionManager.Connection.Execute(sql, null);
             return this;
         }
 
         public IMigrator RemoveTable(string tableName)
         {
             var sql = string.Format("drop table {0};", store.GetFormattedTableName(tableName));
-            connectionManager.Connection.Execute(sql, null, tx);
+            connectionManager.Connection.Execute(sql, null);
             return this;
         }
 
@@ -64,7 +60,7 @@ namespace HybridDb
             var sql = string.Format("sp_rename {0}, {1};",
                                     store.GetFormattedTableName(oldTableName),
                                     store.GetFormattedTableName(newTableName));
-            connectionManager.Connection.Execute(sql, null, tx);
+            connectionManager.Connection.Execute(sql, null);
             return this;
         }
 
@@ -76,7 +72,7 @@ namespace HybridDb
             var sql = string.Format("ALTER TABLE {0} ADD {1};",
                                     store.GetFormattedTableName(table),
                                     store.Escape(projection.Name) + " " + projection.SqlColumn.SqlType);
-            connectionManager.Connection.Execute(sql, null, tx);
+            connectionManager.Connection.Execute(sql, null);
             return this;
         }
 
@@ -87,7 +83,7 @@ namespace HybridDb
             var sql = string.Format("ALTER TABLE {0} DROP COLUMN {1};",
                                     store.GetFormattedTableName(table),
                                     columnName);
-            connectionManager.Connection.Execute(sql, null, tx);
+            connectionManager.Connection.Execute(sql, null);
             return this;
         }
 
@@ -99,7 +95,7 @@ namespace HybridDb
             var table = new Table(store.Configuration.GetTableNameByConventionFor<TEntity>());
 
             var sql = string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.GetFormattedTableName(table), oldColumnName, newColumnName);
-            connectionManager.Connection.Execute(sql, null, tx);
+            connectionManager.Connection.Execute(sql, null);
             return this;
         }
 
@@ -120,7 +116,7 @@ namespace HybridDb
         {
             var table = new Table(tableName);
             string selectSql = string.Format("SELECT * FROM {0}", store.GetFormattedTableName(table));
-            foreach (var dictionary in connectionManager.Connection.Query(selectSql, transaction: tx).Cast<IDictionary<string, object>>())
+            foreach (var dictionary in connectionManager.Connection.Query(selectSql).Cast<IDictionary<string, object>>())
             {
                 var documentColumn = new DocumentColumn();
                 var document = (byte[])dictionary[documentColumn.Name];
@@ -141,20 +137,20 @@ namespace HybridDb
                     Name = x.Key,
                     Value = x.Value
                 });
-                connectionManager.Connection.Execute(sql, new FastDynamicParameters(parameters), tx);
+                connectionManager.Connection.Execute(sql, new FastDynamicParameters(parameters));
             }
 
             return this;
         }
 
-        public void Commit()
+        public IMigrator Commit()
         {
-            tx.Commit();
+            connectionManager.Complete();
+            return this;
         }
 
         public void Dispose()
         {
-            tx.Dispose();
             connectionManager.Dispose();
         }
     }

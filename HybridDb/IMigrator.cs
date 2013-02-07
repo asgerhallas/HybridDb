@@ -6,7 +6,7 @@ namespace HybridDb
 {
     public interface IMigrator : IDisposable
     {
-        void Commit();
+        IMigrator Commit();
 
         IMigrator AddTable<TEntity>();
         IMigrator RemoveTable(string tableName);
