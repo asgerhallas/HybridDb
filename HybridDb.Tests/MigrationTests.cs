@@ -15,7 +15,7 @@ namespace HybridDb.Tests
 
         public MigrationTests()
         {
-            store = DocumentStore.ForTesting("data source=.;Integrated Security=True");
+            store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
         }
 
         [Fact]

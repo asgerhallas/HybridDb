@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SqlClient;
@@ -20,26 +19,26 @@ namespace HybridDb
         readonly Configuration configuration;
         readonly Migration migration;
         readonly string connectionString;
-        readonly bool forTesting;
+        readonly TableMode tableMode;
         DbConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
         long numberOfRequests;
         int numberOfManagedConnections;
 
-        DocumentStore(string connectionString, bool forTesting)
+        DocumentStore(string connectionString, TableMode tableMode)
         {
-            this.forTesting = forTesting;
+            this.tableMode = tableMode;
             this.connectionString = connectionString;
 
             configuration = new Configuration();
             migration = new Migration(this);
         }
 
-        public DocumentStore(string connectionString) : this(connectionString, false) {}
+        public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
 
         public bool IsInTestMode
         {
-            get { return forTesting; }
+            get { return tableMode != TableMode.UseRealTables; }
         }
 
         public void Dispose()
@@ -71,9 +70,14 @@ namespace HybridDb
             return configuration.Register<TEntity>(name);
         }
 
-        public static DocumentStore ForTesting(string connectionString)
+        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
         {
-            return new DocumentStore(connectionString, true);
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", TableMode.UseGlobalTempTables);
+        }
+
+        public static DocumentStore ForTestingWithTempTables(string connectionString = null)
+        {
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", TableMode.UseTempTables);
         }
 
         public IDocumentSession OpenSession()
@@ -206,7 +210,7 @@ namespace HybridDb
         }
 
         public IEnumerable<IDictionary<Column, object>> Query(ITable table, out QueryStats stats, string select = null, string where = "",
-                                                               int skip = 0, int take = 0, string orderby = "", object parameters = null)
+                                                              int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             return Query<IDictionary<Column, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
         }
@@ -248,7 +252,17 @@ namespace HybridDb
 
         public string GetFormattedTableName(string tableName)
         {
-            return IsInTestMode ? "#" + tableName : tableName;
+            switch (tableMode)
+            {
+                case TableMode.UseRealTables:
+                    return tableName;
+                case TableMode.UseTempTables:
+                    return "#" + tableName;
+                case TableMode.UseGlobalTempTables:
+                    return "##" + tableName;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         public string Escape(string identifier)
@@ -350,14 +364,14 @@ namespace HybridDb
         {
             var normalizedParameters = parameters as IEnumerable<Parameter> ??
                                        (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
-                                        select new Parameter { Name = "@" + projection.Key, Value = projection.Value }).ToList();
+                                        select new Parameter {Name = "@" + projection.Key, Value = projection.Value}).ToList();
 
             var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create,
                                                                                         new FastDynamicParameters(normalizedParameters),
                                                                                         splitOn: "TotalResults");
 
             var firstRow = rows.FirstOrDefault();
-            metadata = firstRow != null ? new QueryStats { TotalResults = firstRow.Item2.TotalResults } : new QueryStats();
+            metadata = firstRow != null ? new QueryStats {TotalResults = firstRow.Item2.TotalResults} : new QueryStats();
 
             Interlocked.Increment(ref numberOfRequests);
 
@@ -371,6 +385,13 @@ namespace HybridDb
             Interlocked.Increment(ref numberOfRequests);
             if (rowcount != expectedRowCount)
                 throw new ConcurrencyException();
+        }
+
+        enum TableMode
+        {
+            UseRealTables,
+            UseTempTables,
+            UseGlobalTempTables
         }
 
         public class MissingProjectionValueException : Exception {}

@@ -15,7 +15,7 @@ namespace HybridDb.Tests
         public LinqIntegrationTests()
         {
             connectionString = "data source=.;Integrated Security=True";
-            store = DocumentStore.ForTesting(connectionString);
+            store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.DocumentsFor<Entity>()
                  .WithProjection(x => x.Property)
                  .WithProjection(x => x.StringProp)

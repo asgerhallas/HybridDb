@@ -17,7 +17,7 @@ namespace HybridDb.Tests
 
         public DocumentStoreTests()
         {
-            store = DocumentStore.ForTesting("data source=.;Integrated Security=True");
+            store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
             store.DocumentsFor<Entity>()
                  .WithProjection(x => x.Field)
                  .WithProjection(x => x.Property)
@@ -324,11 +324,11 @@ namespace HybridDb.Tests
         [Fact]
         public void WillNotCreateSchemaIfItAlreadyExists()
         {
-            var store1 = DocumentStore.ForTesting("data source=.;Integrated Security=True");
+            var store1 = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
             store1.DocumentsFor<Case>().WithProjection(x => x.By);
             store1.Migration.InitializeDatabase();
 
-            var store2 = DocumentStore.ForTesting("data source=.;Integrated Security=True");
+            var store2 = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
             store2.DocumentsFor<Case>().WithProjection(x => x.By);
 
             Should.NotThrow(store2.Migration.InitializeDatabase);
@@ -571,6 +571,30 @@ namespace HybridDb.Tests
             }
 
             store.RawQuery("select * from #Entities").Count().ShouldBe(0);
+        }
+
+        [Fact]
+        public void CanUseGlobalTempTables()
+        {
+            using (var globalStore1 = DocumentStore.ForTestingWithGlobalTempTables())
+            {
+                globalStore1.DocumentsFor<Case>();
+                globalStore1.Migration.InitializeDatabase();
+
+                var id = Guid.NewGuid();
+                globalStore1.Insert(globalStore1.Configuration.GetTableFor<Case>(), id, new byte[0], new { });
+
+                using (var globalStore2 = DocumentStore.ForTestingWithGlobalTempTables())
+                {
+                    globalStore2.DocumentsFor<Case>();
+                    var result = globalStore2.Get(globalStore2.Configuration.GetTableFor<Case>(), id);
+
+                    result.ShouldNotBe(null);
+                }
+            }
+
+            var tables = store.RawQuery<string>(string.Format("select OBJECT_ID('##Cases') as Result"));
+            tables.First().ShouldBe(null);
         }
 
         public class Case

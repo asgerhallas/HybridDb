@@ -28,7 +28,6 @@ namespace HybridDb
         {
             var timer = Stopwatch.StartNew();
             using (var connectionManager = store.Connect())
-            //using (var tx = connectionManager.Connection.BeginTransaction(IsolationLevel.Serializable))
             {
                 if (!store.IsInTestMode)
                 {
