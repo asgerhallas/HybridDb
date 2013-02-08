@@ -20,29 +20,13 @@ namespace HybridDb.Studio.ViewModels
 
         public bool ConnectionIsValid()
         {
-            if (ConnectionString == null)
+            if (string.IsNullOrWhiteSpace(ConnectionString))
                 return false;
 
-            try
+            using (var store = new DocumentStore(ConnectionString))
             {
-                using (var store = new DocumentStore(ConnectionString))
-                using (store.Connect())
-                {}
+                return store.CanConnect();
             }
-            catch (ArgumentException)
-            {
-                return false;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-            catch (SqlException)
-            {
-                return false;
-            }
-
-            return true;
         }
 
         public override void CanClose(Action<bool> callback)
