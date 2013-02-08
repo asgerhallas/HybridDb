@@ -395,5 +395,21 @@ namespace HybridDb
         }
 
         public class MissingProjectionValueException : Exception {}
+
+        public bool CanConnect()
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
     }
 }
