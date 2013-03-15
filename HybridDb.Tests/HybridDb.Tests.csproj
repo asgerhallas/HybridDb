@@ -63,6 +63,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ColumnTests.cs" />
+    <Compile Include="Diffing\CompatibilityExtensions.cs" />
+    <Compile Include="Diffing\Diff.cs" />
+    <Compile Include="Diffing\Differ.cs" />
+    <Compile Include="Diffing\DiffTests.cs" />
+    <Compile Include="Diffing\diff_match_patch.cs" />
+    <Compile Include="Diffing\Operation.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />
     <Compile Include="MigrationWithRealTablesTests.cs" />
