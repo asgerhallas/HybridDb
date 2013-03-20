@@ -60,6 +60,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Diffing\CompatibilityExtensions.cs" />
+    <Compile Include="Diffing\Diff.cs" />
+    <Compile Include="Diffing\Differ.cs" />
+    <Compile Include="Diffing\diff_match_patch.cs" />
+    <Compile Include="Diffing\Operation.cs" />
     <Compile Include="IMigration.cs" />
     <Compile Include="IMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />

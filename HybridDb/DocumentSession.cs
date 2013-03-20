@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using HybridDb.Commands;
+using HybridDb.Diffing;
 using HybridDb.Linq;
 using HybridDb.Schema;
 
@@ -124,7 +124,7 @@ namespace HybridDb
                 entities[id].State = EntityState.Deleted;
             }
         }
-        
+
         public void SaveChanges()
         {
             SaveChangesInternal(false);
@@ -153,8 +153,16 @@ namespace HybridDb
                         commands.Add(managedEntity, new InsertCommand(table, id, document, projections));
                         break;
                     case EntityState.Loaded:
-                        if (!managedEntity.Document.SequenceEqual(document))
-                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections, lastWriteWins));
+                        if (managedEntity.Document.SequenceEqual(document))
+                            break;
+
+                        if (lastWriteWins)
+                        {
+                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections, true));
+                        } else
+                        {
+                            commands.Add(managedEntity, new PatchUpdateCommand(table, id, managedEntity.Etag, managedEntity.Document, document, projections, false));
+                        }
                         break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(table, id, managedEntity.Etag, lastWriteWins));
@@ -206,12 +214,12 @@ namespace HybridDb
             if (entities.TryGetValue(id, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? (T)managedEntity.Entity
+                           ? (T) managedEntity.Entity
                            : default(T);
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize(document, typeof(T));
+            var entity = store.Configuration.Serializer.Deserialize(document, typeof (T));
 
             managedEntity = new ManagedEntity
             {
@@ -223,7 +231,7 @@ namespace HybridDb
             };
 
             entities.Add(id, managedEntity);
-            return (T)entity;
+            return (T) entity;
         }
 
 
