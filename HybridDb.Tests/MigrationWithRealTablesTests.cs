@@ -2,6 +2,7 @@
 using System.Data.SqlClient;
 using System.Linq;
 using Dapper;
+using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -30,14 +31,18 @@ END");
         public void CanRenameProjection()
         {
             var store = new DocumentStore(connectionString);
-            store.Migration.CreateMigrator()
-                 .AddTable<MigrationTests.Entity>()
-                 .AddProjection<MigrationTests.Entity, int>(x => x.Property)
+            var table = new Table(store.Configuration.GetTableNameByConventionFor<MigrationWithTempTablesTests.Entity>());
+            store.CreateMigrator()
+                 .AddTable(table)
+                 .AddColumn(table, new ProjectionColumn2("Property", typeof(int)))
+                 .UpdateProjectionColumnsFromDocument()
                  .Commit()
                  .Dispose();
 
+            store.CreateMigrator().Do()
+
             store.Migration.CreateMigrator()
-                 .RenameProjection<MigrationTests.Entity>("Property", "NewProperty")
+                 .RenameProjection<MigrationWithTempTablesTests.Entity>("Property", "NewProperty")
                  .Commit()
                  .Dispose();
 
@@ -51,7 +56,7 @@ END");
         public void CanRenameTable()
         {
             var store = new DocumentStore(connectionString);
-            store.Migration.CreateMigrator().AddTable<MigrationTests.Entity>().Commit().Dispose();
+            store.Migration.CreateMigrator().AddTable<MigrationWithTempTablesTests.Entity>().Commit().Dispose();
 
             store.Migration.CreateMigrator().RenameTable("Entities", "NewEntities").Commit().Dispose();
             TableExists("Entities").ShouldBe(false);
@@ -103,9 +108,9 @@ END");
             return connection.Query(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
         }
 
-        MigrationTests.Column GetColumn(string table, string column)
+        MigrationWithTempTablesTests.Column GetColumn(string table, string column)
         {
-            return connection.Query<MigrationTests.Column>(string.Format("select * from master.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column, table))
+            return connection.Query<MigrationWithTempTablesTests.Column>(string.Format("select * from master.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column, table))
                              .FirstOrDefault();
         }
 

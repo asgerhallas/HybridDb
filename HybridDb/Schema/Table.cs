@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace HybridDb.Schema
 {
-    public class Table : ITable
+    public class Table
     {
         readonly Dictionary<string, Column> columns;
 
@@ -39,15 +40,15 @@ namespace HybridDb.Schema
             }
         }
 
-        public Column GetNamedOrDynamicColumn(string name, object value)
+        public Column GetColumnOrDefaultDynamicColumn(string name, Type type)
         {
             Column column;
             if (columns.TryGetValue(name, out column))
                 return column;
 
-            return value == null 
+            return type == null 
                 ? new DynamicColumn(name)
-                : new DynamicColumn(name, value.GetType());
+                : new DynamicColumn(name, type);
         }
 
         public string Name { get; private set; }
@@ -60,6 +61,21 @@ namespace HybridDb.Schema
         public void AddProjection(ProjectionColumn column)
         {
             columns.Add(column.Name, column);
+        }
+
+        public string GetFormattedName(TableMode tableMode)
+        {
+            switch (tableMode)
+            {
+                case TableMode.UseRealTables:
+                    return Name;
+                case TableMode.UseTempTables:
+                    return "#" + Name;
+                case TableMode.UseGlobalTempTables:
+                    return "##" + Name;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
     }
 }

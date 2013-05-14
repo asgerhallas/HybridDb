@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Commands;
-using HybridDb.Diffing;
 using HybridDb.Linq;
 using HybridDb.Schema;
 
@@ -153,16 +152,8 @@ namespace HybridDb
                         commands.Add(managedEntity, new InsertCommand(table, id, document, projections));
                         break;
                     case EntityState.Loaded:
-                        if (managedEntity.Document.SequenceEqual(document))
-                            break;
-
-                        if (lastWriteWins)
-                        {
-                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections, true));
-                        } else
-                        {
-                            commands.Add(managedEntity, new PatchUpdateCommand(table, id, managedEntity.Etag, managedEntity.Document, document, projections, false));
-                        }
+                        if (!managedEntity.Document.SequenceEqual(document))
+                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections, lastWriteWins));
                         break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(table, id, managedEntity.Etag, lastWriteWins));
@@ -206,7 +197,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal T ConvertToEntityAndPutUnderManagement<T>(ITable table, IDictionary<Column, object> row)
+        internal T ConvertToEntityAndPutUnderManagement<T>(Table table, IDictionary<Column, object> row)
         {
             var id = (Guid) row[table.IdColumn];
 

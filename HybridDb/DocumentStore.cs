@@ -20,9 +20,13 @@ namespace HybridDb
         readonly Migration migration;
         readonly string connectionString;
         readonly TableMode tableMode;
+
         DbConnection ambientConnectionForTesting;
+
         Guid lastWrittenEtag;
+
         long numberOfRequests;
+
         int numberOfManagedConnections;
 
         DocumentStore(string connectionString, TableMode tableMode)
@@ -35,6 +39,11 @@ namespace HybridDb
         }
 
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
+
+        public TableMode TableMode
+        {
+            get { return tableMode; }
+        }
 
         public bool IsInTestMode
         {
@@ -50,16 +59,28 @@ namespace HybridDb
                 ambientConnectionForTesting.Dispose();
         }
 
+        /// <summary>
+        /// Configuration for tables and projections used in sessions.
+        /// The store does not use the configuration in itself.
+        /// </summary>
         public Configuration Configuration
         {
             get { return configuration; }
         }
 
-        public IMigration Migration
+        public IMigrator CreateMigrator()
         {
-            get { return migration; }
+            return new Migrator(this);
         }
 
+        public void InitializeDatabase(bool safe = true)
+        {
+            foreach (var table in Configuration.Tables.Values)
+            {
+                CreateMigrator().MigrateTo(table, safe).Commit();
+            }
+        }
+        
         public TableBuilder<TEntity> DocumentsFor<TEntity>()
         {
             return DocumentsFor<TEntity>(null);
@@ -151,22 +172,22 @@ namespace HybridDb
             }
         }
 
-        public Guid Insert(ITable table, Guid key, byte[] document, object projections)
+        public Guid Insert(Table table, Guid key, byte[] document, object projections)
         {
             return Execute(new InsertCommand(table, key, document, projections));
         }
 
-        public Guid Update(ITable table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins = false)
+        public Guid Update(Table table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins = false)
         {
             return Execute(new UpdateCommand(table, key, etag, document, projections, lastWriteWins));
         }
 
-        public void Delete(ITable table, Guid key, Guid etag, bool lastWriteWins = false)
+        public void Delete(Table table, Guid key, Guid etag, bool lastWriteWins = false)
         {
             Execute(new DeleteCommand(table, key, etag, lastWriteWins));
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(ITable table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<TProjection> Query<TProjection>(Table table, out QueryStats stats, string select = null, string where = "",
                                                            int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
@@ -198,8 +219,9 @@ namespace HybridDb
                                  ? InternalQuery<TProjection>(connection, sql, parameters, out stats)
                                  : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, out stats)
                                                                   .Cast<IDictionary<string, object>>()
-                                                                  .Select(row => row.ToDictionary(column => table.GetNamedOrDynamicColumn(column.Key, column.Value),
-                                                                                                  column => column.Value)));
+                                                                  .Select(row => row.ToDictionary(
+                                                                      column => table.GetColumnOrDefaultDynamicColumn(column.Key, column.Value.GetTypeOrDefault()),
+                                                                      column => column.Value)));
 
                 Interlocked.Increment(ref numberOfRequests);
                 Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
@@ -209,19 +231,19 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<IDictionary<Column, object>> Query(ITable table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<IDictionary<Column, object>> Query(Table table, out QueryStats stats, string select = null, string where = "",
                                                               int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             return Query<IDictionary<Column, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
         }
 
-        public IDictionary<Column, object> Get(ITable table, Guid key)
+        public IDictionary<Column, object> Get(Table table, Guid key)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
             {
                 var sql = string.Format("select * from {0} where {1} = @Id",
-                                        Escape(GetFormattedTableName(table)),
+                                        Escape(table.GetFormattedName(TableMode)),
                                         table.IdColumn.Name);
 
                 var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
@@ -231,7 +253,7 @@ namespace HybridDb
                 Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 connection.Complete();
-                return row != null ? row.ToDictionary(x => table.GetNamedOrDynamicColumn(x.Key, x.Value), x => x.Value) : null;
+                return row != null ? row.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value) : null;
             }
         }
 
@@ -243,26 +265,6 @@ namespace HybridDb
         public Guid LastWrittenEtag
         {
             get { return lastWrittenEtag; }
-        }
-
-        public string GetFormattedTableName(ITable table)
-        {
-            return GetFormattedTableName(table.Name);
-        }
-
-        public string GetFormattedTableName(string tableName)
-        {
-            switch (tableMode)
-            {
-                case TableMode.UseRealTables:
-                    return tableName;
-                case TableMode.UseTempTables:
-                    return "#" + tableName;
-                case TableMode.UseGlobalTempTables:
-                    return "##" + tableName;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
         }
 
         public string Escape(string identifier)
@@ -387,13 +389,6 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        enum TableMode
-        {
-            UseRealTables,
-            UseTempTables,
-            UseGlobalTempTables
-        }
-
         public class MissingProjectionValueException : Exception {}
 
         public bool CanConnect()
@@ -411,5 +406,12 @@ namespace HybridDb
                 return false;
             }
         }
+    }
+
+    public enum TableMode
+    {
+        UseRealTables,
+        UseTempTables,
+        UseGlobalTempTables
     }
 }

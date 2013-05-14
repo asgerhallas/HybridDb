@@ -9,11 +9,11 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class MigrationTests : IDisposable
+    public class MigrationWithTempTablesTests : IDisposable
     {
         readonly DocumentStore store;
 
-        public MigrationTests()
+        public MigrationWithTempTablesTests()
         {
             store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
         }

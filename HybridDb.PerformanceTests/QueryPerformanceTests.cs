@@ -9,7 +9,7 @@ namespace HybridDb.PerformanceTests
         DocumentStore store;
 
         [Fact]
-        public void QueryPerformance()
+        public void SimpleQuery()
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
@@ -18,7 +18,7 @@ namespace HybridDb.PerformanceTests
         }
 
         [Fact]
-        public void QueryWithWindowPerformance()
+        public void QueryWithWindow()
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
@@ -27,7 +27,7 @@ namespace HybridDb.PerformanceTests
         }
 
         [Fact]
-        public void QueryWithLateWindowPerformance()
+        public void QueryWithLateWindow()
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
@@ -36,7 +36,7 @@ namespace HybridDb.PerformanceTests
         }
 
         [Fact]
-        public void QueryWithWindowAndProjectionPerformance()
+        public void QueryWithWindowAndProjection()
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;

@@ -12,7 +12,7 @@ namespace HybridDb.Studio.Models
         readonly KeyValuePair<Column, object> documentColumn;
         readonly KeyValuePair<Column, object> etagColumn;
 
-        public ITable Table { get; private set; }
+        public Table Table { get; private set; }
         public string DocumentAsString { get; set; }
         
         public IEnumerable<Projection> Projections
@@ -35,7 +35,7 @@ namespace HybridDb.Studio.Models
             get { return (Guid?)etagColumn.Value; }
         }
 
-        public Document(ITable table, string document, IDictionary<Column, object> projections)
+        public Document(Table table, string document, IDictionary<Column, object> projections)
         {
             Table = table;
             DocumentAsString = document;

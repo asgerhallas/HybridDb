@@ -10,11 +10,11 @@ namespace HybridDb.Commands
     {
         internal abstract PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier);
 
-        protected static IDictionary<Column, object> ConvertAnonymousToProjections(ITable table, object projections)
+        protected static IDictionary<Column, object> ConvertAnonymousToProjections(Table table, object projections)
         {
             return (projections as IDictionary<Column, object> ??
                     (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
-                        .ToDictionary(x => table.GetNamedOrDynamicColumn(x.Key, x.Value), x => x.Value));
+                        .ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value));
         }
 
         protected static List<Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)

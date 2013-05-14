@@ -10,9 +10,9 @@ namespace HybridDb.Commands
         readonly Guid currentEtag;
         readonly bool lastWriteWins;
         readonly Guid key;
-        readonly ITable table;
+        readonly Table table;
 
-        public DeleteCommand(ITable table, Guid key, Guid etag, bool lastWriteWins)
+        public DeleteCommand(Table table, Guid key, Guid etag, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;
@@ -24,7 +24,7 @@ namespace HybridDb.Commands
         {
             var sql = new SqlBuilder()
                 .Append("delete from {0} where {1} = @Id{2}",
-                        store.Escape(store.GetFormattedTableName(table)),
+                        store.Escape(table.GetFormattedName(store.TableMode)),
                         table.IdColumn.Name,
                         uniqueParameterIdentifier)
                 .Append(!lastWriteWins,
@@ -33,11 +33,19 @@ namespace HybridDb.Commands
                         uniqueParameterIdentifier)
                 .ToString();
 
-            var parameters = new List<Parameter>();
-            parameters.Add(new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.SqlColumn.Type});
+            var parameters = new List<Parameter>
+            {
+                new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.SqlColumn.Type}
+            };
+
             if (!lastWriteWins)
             {
-                parameters.Add(new Parameter {Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.SqlColumn.Type});
+                parameters.Add(new Parameter
+                {
+                    Name = "@CurrentEtag" + uniqueParameterIdentifier, 
+                    Value = currentEtag, 
+                    DbType = table.EtagColumn.SqlColumn.Type
+                });
             }
 
             return new PreparedDatabaseCommand

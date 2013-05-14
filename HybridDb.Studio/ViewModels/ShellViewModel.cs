@@ -164,7 +164,7 @@ namespace HybridDb.Studio.ViewModels
             StatusMessage = string.Format("Fetched document {0} in {1}ms", documentId, sw.ElapsedMilliseconds);
         }
 
-        void FindDocument(ITable table, Guid documentId)
+        void FindDocument(Table table, Guid documentId)
         {
             QueryStats stats;
             IDictionary<Column, object> projections;

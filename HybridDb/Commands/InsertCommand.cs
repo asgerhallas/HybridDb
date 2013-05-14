@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Schema;
 
@@ -9,9 +11,9 @@ namespace HybridDb.Commands
         readonly byte[] document;
         readonly Guid key;
         readonly object projections;
-        readonly ITable table;
+        readonly Table table;
 
-        public InsertCommand(ITable table, Guid key, byte[] document, object projections)
+        public InsertCommand(Table table, Guid key, byte[] document, object projections)
         {
             this.table = table;
             this.key = key;
@@ -28,16 +30,36 @@ namespace HybridDb.Commands
         {
             var values = ConvertAnonymousToProjections(table, projections);
 
-            values.Add(table.EtagColumn, etag);
-            values.Add(table.IdColumn, key);
-            values.Add(table.DocumentColumn, document);
+            var simpleProjections = (from value in values where value.Key is ProjectionColumn select value).ToDictionary();
+            simpleProjections.Add(table.EtagColumn, etag);
+            simpleProjections.Add(table.IdColumn, key);
+            simpleProjections.Add(table.DocumentColumn, document);
 
-            var sql = string.Format("insert into {0} ({1}) values ({2})",
-                                    store.Escape(store.GetFormattedTableName(table)),
-                                    string.Join(", ", from column in values.Keys select column.Name),
-                                    string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier));
+            var sql = string.Format("insert into {0} ({1}) values ({2});",
+                                    store.Escape(table.GetFormattedName(store.TableMode)),
+                                    string.Join(", ", from column in simpleProjections.Keys select column.Name),
+                                    string.Join(", ", from column in simpleProjections.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
-            var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
+
+            var collectionProjections = values.Where(x => x.Key is CollectionProjectionColumn)
+                                              .ToDictionary(x => (CollectionProjectionColumn) x.Key, x => x.Value);
+
+            foreach (var collectionProjection in collectionProjections)
+            {
+                var projectionTable = collectionProjection.Key.Table;
+
+                var blahs = new Dictionary<Column, object> {{collectionProjection.Key, collectionProjection.Value}};
+
+                blahs.Add(projectionTable.DocumentIdColumn, key);
+                //blahs.Add(projectionTable.DocumentColumn, document);
+
+                //sql += string.Format("insert into {0} ({1}) values ({2});",
+                //                     store.Escape(store.GetFormattedTableName(projectionTable)),
+                //                     string.Join(", ", from column in blahs.Keys select column.Name),
+                //                     string.Join(", ", from column in blahs.Keys select "@" + column.Name + uniqueParameterIdentifier));
+            }
+
+            var parameters = MapProjectionsToParameters(simpleProjections, uniqueParameterIdentifier);
 
             return new PreparedDatabaseCommand
             {

@@ -24,7 +24,8 @@ namespace HybridDb.Tests
                  .WithProjection(x => x.TheChild.NestedProperty)
                  .WithProjection(x => x.StringProp)
                  .WithProjection(x => x.DateTimeProp)
-                 .WithProjection(x => x.EnumProp);
+                 .WithProjection(x => x.EnumProp)
+                 .WithProjection("Children", x => x.Children.Select(y => y.NestedString));
             store.Migration.InitializeDatabase();
 
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
@@ -74,6 +75,32 @@ namespace HybridDb.Tests
 
             var row = store.RawQuery("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
+        }
+
+        [Fact]
+        public void CanInsertCollectionProjections()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetTableFor<Entity>();
+            store.Insert(table, id, documentAsByteArray,
+                         new
+                         {
+                             Children = new[]
+                             {
+                                 new {NestedString = "A"},
+                                 new {NestedString = "B"}
+                             }
+                         });
+
+            var mainrow = store.RawQuery("select * from #Entities").Single();
+            ((Guid)mainrow.Id).ShouldBe(id);
+
+            var utilrows = store.RawQuery("select * from #Entities_Children").ToList();
+            utilrows.Count.ShouldBe(2);
+            
+            var utilrow = utilrows.First();
+            ((Guid)utilrow.DocumentId).ShouldBe(id);
+            ((string)utilrow.NestedString).ShouldBe("A");
         }
 
         [Fact]
@@ -605,6 +632,11 @@ namespace HybridDb.Tests
 
         public class Entity
         {
+            public Entity()
+            {
+                Children = new List<Child>();
+            }
+
             public string Field;
             public Guid Id { get; private set; }
             public int Property { get; set; }
@@ -613,9 +645,11 @@ namespace HybridDb.Tests
             public SomeFreakingEnum EnumProp { get; set; }
             public DateTime DateTimeProp { get; set; }
             public Child TheChild { get; set; }
+            public List<Child> Children { get; set; }
 
             public class Child
             {
+                public string NestedString { get; set; }
                 public double NestedProperty { get; set; }
             }
         }

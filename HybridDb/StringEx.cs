@@ -45,7 +45,5 @@ namespace HybridDb
             
             return value.ToString();
         }
-
-
     }
 }

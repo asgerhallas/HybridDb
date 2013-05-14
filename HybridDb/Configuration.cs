@@ -11,11 +11,11 @@ namespace HybridDb
 
     public class Configuration
     {
-        readonly Dictionary<Type, ITable> tables;
+        readonly Dictionary<Type, Table> tables;
 
         public Configuration()
         {
-            tables = new Dictionary<Type, ITable>();
+            tables = new Dictionary<Type, Table>();
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
         }
@@ -23,7 +23,7 @@ namespace HybridDb
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
-        public Dictionary<Type, ITable> Tables
+        public Dictionary<Type, Table> Tables
         {
             get { return tables; }
         }
@@ -50,14 +50,14 @@ namespace HybridDb
             Logger = logger;
         }
 
-        public ITable GetTableFor<T>()
+        public Table GetTableFor<T>()
         {
             return GetTableFor(typeof (T));
         }
 
-        public ITable GetTableFor(Type type)
+        public Table GetTableFor(Type type)
         {
-            ITable value;
+            Table value;
             if (tables.TryGetValue(type, out value))
                 return value;
 

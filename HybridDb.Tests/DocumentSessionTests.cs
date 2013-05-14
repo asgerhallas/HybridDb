@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
+using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 using System.Linq;
@@ -19,8 +21,9 @@ namespace HybridDb.Tests
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.DocumentsFor<Entity>()
                 .WithProjection(x => x.ProjectedProperty)
-                .WithProjection(x => x.TheChild.NestedProperty);
-            store.Configuration.UseSerializer(new DefaultJsonSerializer());
+                .WithProjection(x => x.TheChild.NestedProperty)
+                .WithProjection("Children", x => x.Children.SelectMany(y => y.NestedProperty));
+            store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
             store.Migration.InitializeDatabase();
         }
 
@@ -29,34 +32,25 @@ namespace HybridDb.Tests
             store.Dispose();
         }
 
-        //[Fact]
-        //public void FactMethodName()
-        //{
-        //    var newGuid = Guid.NewGuid();
-        //    using (var session = store.OpenSession())
-        //    {
-        //        session.Store(new Entity { Id = newGuid, Property = "HAnd" });
-        //        session.SaveChanges() ;
-        //    }
+        [Fact]
+        public void CanProjectCollection()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                var entity1 = new Entity
+                {
+                    Id = id,
+                    Children =
+                    {
+                        new Entity.Child {NestedProperty = "A"},
+                        new Entity.Child {NestedProperty = "B"}
+                    }
+                };
 
-        //    using (var tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
-        //    {
-        //        using (var session = store.OpenSession())
-        //        {
-        //            var user = session.Load<Entity>(newGuid);
-        //            user.Property = "Ayende"; // old name is "Oren"
-        //            session.SaveChanges();
-        //        }
-
-        //        tx.Complete();
-        //    }
-
-        //    using (var session = store.OpenSession())
-        //    {
-        //        var user = session.Load<Entity>(newGuid);
-        //        Console.WriteLine(user.Property);
-        //    }            
-        //}
+                session.Store(entity1);
+            }
+        }
 
         [Fact]
         public void CanEvictEntity()
@@ -580,10 +574,12 @@ namespace HybridDb.Tests
             public Entity()
             {
                 TheChild = new Child();
+                Children = new List<Child>();
             }
 
             public Guid Id { get; set; }
             public string ProjectedProperty { get; set; }
+            public List<Child> Children { get; set; }
             public string Property { get; set; }
             public Child TheChild { get; set; }
 

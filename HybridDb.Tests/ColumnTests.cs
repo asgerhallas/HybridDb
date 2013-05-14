@@ -1,8 +1,5 @@
 ﻿using System;
-using System.IO;
 using HybridDb.Schema;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
 using Xunit;
 using Shouldly;
 
@@ -10,24 +7,10 @@ namespace HybridDb.Tests
 {
     public class ColumnTests
     {
-        //[Fact]
-        //public void GetValueFromDocumentColumn()
-        //{
-        //    var serializer = new JsonSerializer();
-        //    var column = new DocumentColumn();
-        //    var bytes = (byte[])column.GetValue(new {hat = "briller"});
-        //    using(var inStream = new MemoryStream(bytes))
-        //    using(var bsonReader = new BsonReader(inStream))
-        //    {
-        //        var document = (dynamic) serializer.Deserialize(bsonReader);
-        //        Assert.Equal("briller", (string)document.hat);
-        //    }
-        //}
-
         [Fact]
         public void GetValueFromDefaultColumn()
         {
-            var column = new ProjectionColumn<Entity, string>(x => x.Bryststørrelse);
+            var column = new ProjectionColumn<Entity, string>("Bryststørrelse", x => x.Bryststørrelse);
             var value = column.GetValue(new Entity {Bryststørrelse = "DD"});
             value.ShouldBe("DD");
         }

@@ -60,11 +60,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Diffing\CompatibilityExtensions.cs" />
-    <Compile Include="Diffing\Diff.cs" />
-    <Compile Include="Diffing\Differ.cs" />
-    <Compile Include="Diffing\diff_match_patch.cs" />
-    <Compile Include="Diffing\Operation.cs" />
     <Compile Include="IMigration.cs" />
     <Compile Include="IMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
@@ -100,7 +95,7 @@
     <Compile Include="Linq\QueryProvider.cs" />
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="ManagedConnection.cs" />
-    <Compile Include="Migration.cs" />
+    <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migrator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
@@ -129,7 +124,6 @@
     <Compile Include="ObjectToDictionaryRegistry.cs" />
     <Compile Include="SqlBuilder.cs" />
     <Compile Include="Schema\Table.cs" />
-    <Compile Include="ExpressionExtensions.cs" />
     <Compile Include="Schema\IdColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
