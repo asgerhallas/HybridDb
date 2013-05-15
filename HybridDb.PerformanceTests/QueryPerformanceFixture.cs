@@ -19,14 +19,14 @@ namespace HybridDb.PerformanceTests
             const string connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.DocumentsFor<Entity>()
-                .WithProjection(x => x.SomeData)
-                .WithProjection(x => x.SomeNumber);
-            store.Migration.InitializeDatabase();
+                .Project(x => x.SomeData)
+                .Project(x => x.SomeNumber);
+            store.InitializeDatabase();
 
             var commands = new List<DatabaseCommand>();
             for (int i = 0; i < 10000; i++)
             {
-                commands.Add(new InsertCommand(store.Configuration.GetTableFor<Entity>(), Guid.NewGuid(), new byte[0], new { SomeNumber = i }));
+                commands.Add(new InsertCommand(store.Configuration.GetTableFor<Entity>().Table, Guid.NewGuid(), new byte[0], new { SomeNumber = i }));
             }
 
             store.Execute(commands.ToArray());
@@ -35,7 +35,7 @@ namespace HybridDb.PerformanceTests
             var watch = Stopwatch.StartNew();
 
             QueryStats rows;
-            store.Query(store.Configuration.GetTableFor<Entity>(), out rows);
+            store.Query(store.Configuration.GetTableFor<Entity>().Table, out rows);
 
             if (watch.ElapsedMilliseconds > 200)
                 Console.WriteLine("Warm up takes longer than expected");

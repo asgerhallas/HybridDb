@@ -31,18 +31,16 @@ END");
         public void CanRenameProjection()
         {
             var store = new DocumentStore(connectionString);
-            var table = new Table(store.Configuration.GetTableNameByConventionFor<MigrationWithTempTablesTests.Entity>());
+            var table = new Table("Entities");
+            var oldColumn = new UserColumn("Property", new SqlColumn(typeof (int)));
             store.CreateMigrator()
                  .AddTable(table)
-                 .AddColumn(table, new ProjectionColumn2("Property", typeof(int)))
-                 .UpdateProjectionColumnsFromDocument()
+                 .AddColumn(table, oldColumn)
                  .Commit()
                  .Dispose();
 
-            store.CreateMigrator().Do()
-
-            store.Migration.CreateMigrator()
-                 .RenameProjection<MigrationWithTempTablesTests.Entity>("Property", "NewProperty")
+            store.CreateMigrator()
+                 .RenameColumn(table, oldColumn, new UserColumn("Property", new SqlColumn(typeof(int))))
                  .Commit()
                  .Dispose();
 
@@ -56,9 +54,10 @@ END");
         public void CanRenameTable()
         {
             var store = new DocumentStore(connectionString);
-            store.Migration.CreateMigrator().AddTable<MigrationWithTempTablesTests.Entity>().Commit().Dispose();
+            var table = new Table("Entities");
+            store.CreateMigrator().AddTable(table).Commit().Dispose();
 
-            store.Migration.CreateMigrator().RenameTable("Entities", "NewEntities").Commit().Dispose();
+            store.CreateMigrator().RenameTable(table, new Table("NewEntities")).Commit().Dispose();
             TableExists("Entities").ShouldBe(false);
             TableExists("NewEntities").ShouldBe(true);
 
@@ -72,9 +71,9 @@ END");
 
             var store = new DocumentStore(connectionString);
             store.DocumentsFor<Case>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
-            Should.Throw<InvalidOperationException>(() => store.Migration.InitializeDatabase());
+            Should.Throw<InvalidOperationException>(() => store.InitializeDatabase());
 
             connection.Execute("drop table Cases");
         }
@@ -86,7 +85,7 @@ END");
 
             var store = new DocumentStore(connectionString);
             store.DocumentsFor<Case>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             TableExists("Cases").ShouldBe(true);
 
@@ -97,8 +96,8 @@ END");
         public void WillQuoteTableAndColumnNamesOnCreation()
         {
             var store = new DocumentStore(connectionString);
-            store.DocumentsFor<Case>("Case").WithProjection(x => x.By);
-            Should.NotThrow(store.Migration.InitializeDatabase);
+            store.DocumentsFor<Case>("Case").Project(x => x.By);
+            Should.NotThrow(() => store.InitializeDatabase());
 
             connection.Execute("drop table [Case]");
         }

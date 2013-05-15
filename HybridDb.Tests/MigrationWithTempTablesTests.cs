@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
 using Dapper;
+using HybridDb.Schema;
 using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
@@ -19,10 +20,10 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void ChangesArentPersistedIfExceptionOccours()
+        public void ChangesAreNotPersistedOnExceptions()
         {
-            store.DocumentsFor<Entity>().WithProjection(x => x.StringProp);
-            store.Migration.InitializeDatabase();
+            store.DocumentsFor<Entity>().Project(x => x.StringProp);
+            store.InitializeDatabase();
             var id1 = Guid.NewGuid();
 
             using (var session = store.OpenSession())
@@ -33,9 +34,10 @@ namespace HybridDb.Tests
 
             try
             {
-                using (var tx = store.Migration.CreateMigrator())
+                using (var tx = store.CreateMigrator())
                 {
-                    tx.Do<Entity>("Entities",
+                    tx.Do<Entity>(new Table("Entities"),
+                                  store.Configuration.Serializer,
                                   (entity, projections) =>
                                   {
                                       entity.StringProp = "SomeString";
@@ -52,10 +54,10 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanDeserializeToAnyGivenTypeAndPersistChangesToDocumentWhenDoing()
+        public void CanDeserializeToAnyGivenTypeAndPersistChangesToDocument()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
@@ -68,11 +70,12 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            store.Migration
-                .Do<JObject>("Entities", (entity, projections) =>
-                {
-                    entity["StringProp"] = "SomeString";
-                });
+            store.CreateMigrator()
+                 .Do<JObject>(new Table("Entities"),
+                              store.Configuration.Serializer,
+                              (entity, projections) => { entity["StringProp"] = "SomeString"; })
+                 .Commit()
+                 .Dispose();
 
             using(var session = store.OpenSession())
             {
@@ -85,24 +88,29 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanDeserializeToEntityAndPersistChangesToDocumentWhenDoing()
+        public void CanDeserializeToEntityAndPersistChangesToDocument()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
 
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id1, Property = 1 });
-                session.Store(new Entity { Id = id2, Property = 2 });
-                session.Store(new Entity { Id = id3, Property = 3 });
+                session.Store(new Entity {Id = id1, Property = 1});
+                session.Store(new Entity {Id = id2, Property = 2});
+                session.Store(new Entity {Id = id3, Property = 3});
                 session.SaveChanges();
             }
 
             var processedEntities = new List<Entity>();
-            store.Migration.Do<Entity>("Entities", (entity, projections) => processedEntities.Add(entity));
+            store.CreateMigrator()
+                 .Do<Entity>(new Table("Entities"),
+                             store.Configuration.Serializer,
+                             (entity, projections) => processedEntities.Add(entity))
+                 .Commit()
+                 .Dispose();
 
             processedEntities.Count.ShouldBe(3);
             processedEntities.ShouldContain(x => x.Id == id1 && x.Property == 1);
@@ -111,10 +119,10 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanModifyProjectionWhenDoing() // Note: not in your pants!
+        public void CanModifyProjection()
         {
-            store.DocumentsFor<Entity>().WithProjection(x => x.Property);
-            store.Migration.InitializeDatabase();
+            store.DocumentsFor<Entity>().Project(x => x.Property);
+            store.InitializeDatabase();
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
@@ -126,12 +134,15 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id3, Property = 3 });
                 session.SaveChanges();
             }
-            
-            store.Migration.Do<Entity>("Entities", (entity, projections) =>
-            {
-                var projectionValue = (int)projections["Property"];
-                projections["Property"] = ++projectionValue;
-            });
+
+            store.CreateMigrator()
+                 .Do<Entity>(new Table("Entities"),
+                             store.Configuration.Serializer,
+                             (entity, projections) =>
+                             {
+                                 var projectionValue = (int) projections["Property"];
+                                 projections["Property"] = ++projectionValue;
+                             });
             
             var result = store.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
             result.ShouldContain(x => x.Id == id1 && x.Property == 2);
@@ -144,7 +155,7 @@ namespace HybridDb.Tests
         public void CanUpdateProjection()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
@@ -156,9 +167,17 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id3, Property = 3 });
                 session.SaveChanges();
             }
-            store.Migration.AddProjection<Entity, int>(x => x.Property);
-            
-            store.Migration.UpdateProjectionFor<Entity, int>(x => x.Property);
+
+            using (var migrator = store.CreateMigrator())
+            {
+                var tableToTypeRelation = store.Configuration.GetTableFor<Entity>();
+                tableToTypeRelation.Project(x => x.Property);
+
+                migrator.AddColumn(tableToTypeRelation.Table, new UserColumn("Property", new SqlColumn(typeof (int))));
+                migrator.UpdateProjectionColumnsFromDocument(tableToTypeRelation, store.Configuration.Serializer);
+                migrator.Commit();
+            }
+
             var result = store.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
             
             result.ShouldContain(x => x.Id == id1 && x.Property == 1);
@@ -168,22 +187,32 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanRemoveProjection()
+        public void CanRemoveColumn()
         {
-            store.DocumentsFor<Entity>().WithProjection(x => x.Property);
-            store.Migration.InitializeDatabase();
-            
-            store.Migration.RemoveProjection<Entity>("Property");
+            store.DocumentsFor<Entity>().Project(x => x.Property);
+            store.InitializeDatabase();
+
+            store.CreateMigrator()
+                 .RemoveColumn(new Table("Entities"),
+                               new UserColumn("Property", new SqlColumn()))
+                 .Commit()
+                 .Dispose();
+
             GetColumn("Entities", "Property").ShouldBe(null);
         }
 
         [Fact]
-        public void CanAddProjection()
+        public void CanAddColumn()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
-            store.Migration.AddProjection<Entity, int>(x => x.Property);
+            store.CreateMigrator()
+                 .AddColumn(new Table("Entities"),
+                            new UserColumn("Property", new SqlColumn(typeof (int))))
+                 .Commit()
+                 .Dispose();
+            
             var propertyColumn = GetColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
             GetType(propertyColumn.system_type_id).ShouldBe("int");
@@ -193,16 +222,16 @@ namespace HybridDb.Tests
         public void CanRemoveTable()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
-            
-            store.Migration.RemoveTable("Entities");
+            store.InitializeDatabase();
+
+            store.CreateMigrator().RemoveTable(new Table("Entities"));
             TableExists("Entities").ShouldBe(false);
         }
 
         [Fact]
         public void CanCreateTable()
         {
-            store.Migration.AddTable<Entity>();
+            store.CreateMigrator().AddTable(new Table("Entities")).Commit().Dispose();
 
             var idColumn = GetColumn("Entities", "Id");
             idColumn.ShouldNotBe(null);
@@ -222,7 +251,7 @@ namespace HybridDb.Tests
         public void InitializeCreatesTables()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             TableExists("Entities").ShouldBe(true);
         }
@@ -231,7 +260,7 @@ namespace HybridDb.Tests
         public void InitializeCreatesDefaultColumns()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             var idColumn = GetColumn("Entities", "Id");
             idColumn.ShouldNotBe(null);
@@ -246,8 +275,8 @@ namespace HybridDb.Tests
         [Fact]
         public void InitializeCreatesColumnsFromProperties()
         {
-            store.DocumentsFor<Entity>().WithProjection(x => x.Property).WithProjection(x => x.TheChild.NestedProperty);
-            store.Migration.InitializeDatabase();
+            store.DocumentsFor<Entity>().Project(x => x.Property).Project(x => x.TheChild.NestedProperty);
+            store.InitializeDatabase();
 
             var column = GetColumn("Entities", "Property");
             column.ShouldNotBe(null);
@@ -261,8 +290,8 @@ namespace HybridDb.Tests
         [Fact]
         public void InitializeCreatesColumnsFromFields()
         {
-            store.DocumentsFor<Entity>().WithProjection(x => x.Field);
-            store.Migration.InitializeDatabase();
+            store.DocumentsFor<Entity>().Project(x => x.Field);
+            store.InitializeDatabase();
 
             var column = GetColumn("Entities", "Field");
             column.ShouldNotBe(null);
@@ -274,7 +303,7 @@ namespace HybridDb.Tests
         public void InitializeCreatesIdColumnAsPrimaryKey()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             const string sql =
                 @"SELECT K.TABLE_NAME,
@@ -297,19 +326,19 @@ namespace HybridDb.Tests
         public void InitializeDoesNotFailIfDatabaseIsNotEmptyWhenForTesting()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
-            Should.NotThrow(() => store.Migration.InitializeDatabase());
+            Should.NotThrow(() => store.InitializeDatabase());
         }
 
         [Fact]
         public void CanCreateMissingTables()
         {
             store.DocumentsFor<Entity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             store.DocumentsFor<AnotherEntity>();
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             TableExists("AnotherEntities").ShouldBe(true);
         }

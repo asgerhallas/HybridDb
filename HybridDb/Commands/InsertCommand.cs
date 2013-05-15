@@ -30,7 +30,7 @@ namespace HybridDb.Commands
         {
             var values = ConvertAnonymousToProjections(table, projections);
 
-            var simpleProjections = (from value in values where value.Key is ProjectionColumn select value).ToDictionary();
+            var simpleProjections = (from value in values where value.Key is UserColumn select value).ToDictionary();
             simpleProjections.Add(table.EtagColumn, etag);
             simpleProjections.Add(table.IdColumn, key);
             simpleProjections.Add(table.DocumentColumn, document);
@@ -41,23 +41,23 @@ namespace HybridDb.Commands
                                     string.Join(", ", from column in simpleProjections.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
 
-            var collectionProjections = values.Where(x => x.Key is CollectionProjectionColumn)
-                                              .ToDictionary(x => (CollectionProjectionColumn) x.Key, x => x.Value);
+            //var collectionProjections = values.Where(x => x.Key is CollectionProjectionColumn)
+            //                                  .ToDictionary(x => (CollectionProjectionColumn) x.Key, x => x.Value);
 
-            foreach (var collectionProjection in collectionProjections)
-            {
-                var projectionTable = collectionProjection.Key.Table;
+            //foreach (var collectionProjection in collectionProjections)
+            //{
+            //    var projectionTable = collectionProjection.Key.Table;
 
-                var blahs = new Dictionary<Column, object> {{collectionProjection.Key, collectionProjection.Value}};
+            //    var blahs = new Dictionary<Column, object> {{collectionProjection.Key, collectionProjection.Value}};
 
-                blahs.Add(projectionTable.DocumentIdColumn, key);
-                //blahs.Add(projectionTable.DocumentColumn, document);
+            //    blahs.Add(projectionTable.DocumentIdColumn, key);
+            //    //blahs.Add(projectionTable.DocumentColumn, document);
 
-                //sql += string.Format("insert into {0} ({1}) values ({2});",
-                //                     store.Escape(store.GetFormattedTableName(projectionTable)),
-                //                     string.Join(", ", from column in blahs.Keys select column.Name),
-                //                     string.Join(", ", from column in blahs.Keys select "@" + column.Name + uniqueParameterIdentifier));
-            }
+            //    //sql += string.Format("insert into {0} ({1}) values ({2});",
+            //    //                     store.Escape(store.GetFormattedTableName(projectionTable)),
+            //    //                     string.Join(", ", from column in blahs.Keys select column.Name),
+            //    //                     string.Join(", ", from column in blahs.Keys select "@" + column.Name + uniqueParameterIdentifier));
+            //}
 
             var parameters = MapProjectionsToParameters(simpleProjections, uniqueParameterIdentifier);
 

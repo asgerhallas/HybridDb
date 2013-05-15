@@ -20,11 +20,11 @@ namespace HybridDb.Tests
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.DocumentsFor<Entity>()
-                .WithProjection(x => x.ProjectedProperty)
-                .WithProjection(x => x.TheChild.NestedProperty)
-                .WithProjection("Children", x => x.Children.SelectMany(y => y.NestedProperty));
+                .Project(x => x.ProjectedProperty)
+                .Project(x => x.TheChild.NestedProperty)
+                .Project("Children", x => x.Children.SelectMany(y => y.NestedProperty));
             store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
         }
 
         public void Dispose()
@@ -90,7 +90,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(new InsertCommand(table, id, new byte[0], new{}));
+                session.Advanced.Defer(new InsertCommand(table.Table, id, new byte[0], new{}));
                 store.NumberOfRequests.ShouldBe(0);
                 session.SaveChanges();
                 store.NumberOfRequests.ShouldBe(1);

@@ -116,7 +116,7 @@
     <Compile Include="ISerializer.cs" />
     <Compile Include="Logging\LoggingColors.cs" />
     <Compile Include="Logging\LogLevel.cs" />
-    <Compile Include="Schema\ProjectionColumn.cs" />
+    <Compile Include="Schema\UserColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
     <Compile Include="Schema\DocumentColumn.cs" />
     <Compile Include="DocumentSession.cs" />

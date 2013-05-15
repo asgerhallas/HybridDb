@@ -27,39 +27,21 @@ namespace HybridDb
             connectionManager = store.Connect();
         }
 
-        public IMigrator MigrateTo(Table table, bool safe = true)
+        public IMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
         {
             var timer = Stopwatch.StartNew();
-            using (var connectionManager = store.Connect())
+
+            if (!store.IsInTestMode)
             {
-                if (!store.IsInTestMode)
-                {
-                    var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null);
-                    if (existingTables.Any())
-                        throw new InvalidOperationException("You cannot initialize a database that is not empty.");
-                }
-
-                var sql = new SqlBuilder();
-                foreach (var table in store.Configuration.Tables.Values)
-                {
-                    // for extra security (and to mitigate a very theoretical race condition) recheck existance of tables before creation
-                    var tableExists =
-                        string.Format(store.IsInTestMode
-                                          ? "OBJECT_ID('tempdb..{0}') is not null"
-                                          : "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')",
-                                      table.GetFormattedName(store.TableMode));
-
-                    sql.Append("if not ({0}) begin create table {1} ({2}); end",
-                               tableExists,
-                               store.Escape(table.GetFormattedName(store.TableMode)),
-                               string.Join(", ", table.Columns.Select(x => store.Escape(x.Name) + " " + x.SqlColumn.SqlType)));
-
-                }
-                connectionManager.Connection.Execute(sql.ToString(), null);
-                connectionManager.Complete();
+                var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null);
+                if (existingTables.Any())
+                    throw new InvalidOperationException("You cannot initialize a database that is not empty.");
             }
 
-            Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
+            AddTable(documentConfiguration.Table);
+
+            store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
+            return this;
         }
 
         public IMigrator AddTable(Table table)
@@ -114,10 +96,10 @@ namespace HybridDb
             return this;
         }
 
-        public IMigrator RenameProjection(Table table, Column oldColumn, Column newColumn)
+        public IMigrator RenameColumn(Table table, Column oldColumn, Column newColumn)
         {
             if (store.IsInTestMode)
-                throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameProjection is not supported when store is in test mode.");
+                throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameColumn is not supported when store is in test mode.");
 
             var tableName = table.GetFormattedName(store.TableMode);
             var sql = string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", tableName, oldColumn.Name, newColumn.Name);
@@ -126,24 +108,29 @@ namespace HybridDb
             return this;
         }
 
-        public IMigrator UpdateProjectionColumnsFromDocument(Table table, ISerializer serializer, Type deserializeToType)
+        public IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer)
         {
-            Do<object>(table,
-                       store.Configuration.Serializer,
-                       (entity, projections) =>
-                       {
-                           foreach (var column in table.Columns.OfType<ProjectionColumn>())
-                           {
-                               projections[column.Name] = column.GetValue(entity);
-                           }
-                       });
+            Do(documentConfiguration,
+               store.Configuration.Serializer,
+               (entity, projections) =>
+               {
+                   foreach (var column in documentConfiguration.Projections.Where(x => x.Key is UserColumn))
+                   {
+                       projections[column.Key.Name] = column.Value(entity);
+                   }
+               });
 
             return this;
         }
 
-        public IMigrator Do(Table table, ISerializer serializer, Type deserializeToType, Action<object, IDictionary<string, object>> action)
+        public IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action) 
         {
-            var tableName = table.GetFormattedName(store.TableMode);
+            return Do(new DocumentConfiguration(table, typeof(T)), serializer, (entity, projections) => action((T) entity, projections));
+        }
+
+        public IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action)
+        {
+            var tableName = relation.Table.GetFormattedName(store.TableMode);
 
             string selectSql = string.Format("SELECT * FROM {0}", tableName);
             foreach (var dictionary in connectionManager.Connection.Query(selectSql).Cast<IDictionary<string, object>>())
@@ -151,17 +138,15 @@ namespace HybridDb
                 var documentColumn = new DocumentColumn();
                 var document = (byte[])dictionary[documentColumn.Name];
 
-                var entity = serializer.Deserialize(document, deserializeToType);
+                var entity = serializer.Deserialize(document, relation.Type);
                 action(entity, dictionary);
                 dictionary[documentColumn.Name] = serializer.Serialize(entity);
-
-                store.Update()
 
                 var sql = new SqlBuilder()
                     .Append("update {0} set {1} where {2}=@Id",
                             store.Escape(tableName),
                             string.Join(", ", from column in dictionary.Keys select column + "=@" + column),
-                            table.IdColumn.Name)
+                            relation.Table.IdColumn.Name)
                     .ToString();
 
                 var parameters = dictionary.Select(x => new Parameter
@@ -174,11 +159,6 @@ namespace HybridDb
             }
 
             return this;
-        }
-
-        public IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action) 
-        {
-            return Do(table, serializer, typeof (T), (entity, projections) => action((T) entity, projections));
         }
 
         public IMigrator Commit()

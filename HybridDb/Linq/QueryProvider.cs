@@ -45,7 +45,7 @@ namespace HybridDb.Linq
 
             QueryStats storeStats;
             var results = typeof (TSourceElement) == typeof (T)
-                              ? store.Query(table,
+                              ? store.Query(table.Table,
                                             out storeStats,
                                             translation.Select,
                                             translation.Where,
@@ -53,8 +53,8 @@ namespace HybridDb.Linq
                                             translation.Take,
                                             translation.OrderBy,
                                             translation.Parameters)
-                                     .Select(result => session.ConvertToEntityAndPutUnderManagement<T>(table, result))
-                              : store.Query<T>(table,
+                                     .Select(result => session.ConvertToEntityAndPutUnderManagement<T>(table.Table, result))
+                              : store.Query<T>(table.Table,
                                                out storeStats,
                                                translation.Select,
                                                translation.Where,

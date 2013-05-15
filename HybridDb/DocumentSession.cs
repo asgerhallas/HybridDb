@@ -36,20 +36,20 @@ namespace HybridDb
             }
 
             var table = store.Configuration.GetTableFor<T>();
-            var row = store.Get(table, id);
+            var row = store.Get(table.Table, id);
             if (row == null)
                 return null;
 
-            return ConvertToEntityAndPutUnderManagement<T>(table, row);
+            return ConvertToEntityAndPutUnderManagement<T>(table.Table, row);
         }
 
         public IEnumerable<T> Query<T>(string where, object parameters) where T : class
         {
             var table = store.Configuration.GetTableFor<T>();
             QueryStats stats;
-            var rows = store.Query(table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
+            var rows = store.Query(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
 
-            return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table, row))
+            return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table.Table, row))
                        .Where(entity => entity != null);
         }
 
@@ -57,7 +57,7 @@ namespace HybridDb
         {
             var table = store.Configuration.GetTableFor<T>();
             QueryStats stats;
-            var rows = store.Query<TProjection>(table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
+            var rows = store.Query<TProjection>(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
             return rows;
         }
 
@@ -74,14 +74,14 @@ namespace HybridDb
         public void Evict(object entity)
         {
             var table = store.Configuration.GetTableFor(entity.GetType());
-            var id = (Guid) table.IdColumn.GetValue(entity);
+            var id = (Guid) table.Projections[table.Table.IdColumn](entity);
             entities.Remove(id);
         }
 
         public Guid? GetEtagFor(object entity)
         {
             var table = store.Configuration.GetTableFor(entity.GetType());
-            var id = (Guid) table.IdColumn.GetValue(entity);
+            var id = (Guid)table.Projections[table.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -93,7 +93,7 @@ namespace HybridDb
         public void Store(object entity)
         {
             var table = store.Configuration.GetTableFor(entity.GetType());
-            var id = (Guid) table.IdColumn.GetValue(entity);
+            var id = (Guid)table.Projections[table.Table.IdColumn](entity);
             if (entities.ContainsKey(id))
                 return;
 
@@ -108,7 +108,7 @@ namespace HybridDb
         public void Delete(object entity)
         {
             var table = store.Configuration.GetTableFor(entity.GetType());
-            var id = (Guid) table.IdColumn.GetValue(entity);
+            var id = (Guid)table.Projections[table.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -143,20 +143,20 @@ namespace HybridDb
             {
                 var id = managedEntity.Key;
                 var table = store.Configuration.GetTableFor(managedEntity.Entity.GetType());
-                var projections = table.Columns.OfType<ProjectionColumn>().ToDictionary(x => x.Name, x => x.GetValue(managedEntity.Entity));
+                var projections = table.Table.Columns.OfType<UserColumn>().ToDictionary(x => x.Name, x => table.Projections[x](managedEntity.Entity));
                 var document = serializer.Serialize(managedEntity.Entity);
 
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(managedEntity, new InsertCommand(table, id, document, projections));
+                        commands.Add(managedEntity, new InsertCommand(table.Table, id, document, projections));
                         break;
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))
-                            commands.Add(managedEntity, new UpdateCommand(table, id, managedEntity.Etag, document, projections, lastWriteWins));
+                            commands.Add(managedEntity, new UpdateCommand(table.Table, id, managedEntity.Etag, document, projections, lastWriteWins));
                         break;
                     case EntityState.Deleted:
-                        commands.Add(managedEntity, new DeleteCommand(table, id, managedEntity.Etag, lastWriteWins));
+                        commands.Add(managedEntity, new DeleteCommand(table.Table, id, managedEntity.Etag, lastWriteWins));
                         break;
                 }
             }

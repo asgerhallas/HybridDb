@@ -17,11 +17,11 @@ namespace HybridDb.Tests
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.DocumentsFor<Entity>()
-                 .WithProjection(x => x.Property)
-                 .WithProjection(x => x.StringProp)
-                 .WithProjection(x => x.TheChild.NestedProperty);
+                 .Project(x => x.Property)
+                 .Project(x => x.StringProp)
+                 .Project(x => x.TheChild.NestedProperty);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            store.Migration.InitializeDatabase();
+            store.InitializeDatabase();
 
             session = store.OpenSession();
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger" });

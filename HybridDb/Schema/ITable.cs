@@ -10,7 +10,7 @@ namespace HybridDb.Schema
         IdColumn DocumentIdColumn { get; }
         Column this[string name] { get; }
         Column GetColumnOrDefaultDynamicColumn(string name, Type type);
-        void AddProjection(ProjectionColumn column);
+        void AddProjection(UserColumn column);
     }
     
     //public interface ITable
@@ -22,6 +22,6 @@ namespace HybridDb.Schema
     //    DocumentColumn DocumentColumn { get; }
     //    Column this[string name] { get; }
     //    Column GetColumnOrDefaultDynamicColumn(string name, Type type);
-    //    void AddProjection(ProjectionColumn column);
+    //    void AddProjection(UserColumn column);
     //}
 }

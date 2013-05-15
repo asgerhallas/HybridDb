@@ -6,7 +6,7 @@ namespace HybridDb
 {
     public interface IMigrator : IDisposable
     {
-        IMigrator MigrateTo(Table table, bool safe = true);
+        IMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true);
 
         IMigrator AddTable(Table table);
         IMigrator RemoveTable(Table table);
@@ -14,11 +14,11 @@ namespace HybridDb
 
         IMigrator AddColumn(Table table, Column column);
         IMigrator RemoveColumn(Table table, Column column);
-        IMigrator RenameProjection(Table table, Column oldColumn, Column newColumn);
+        IMigrator RenameColumn(Table table, Column oldColumn, Column newColumn);
 
-        IMigrator UpdateProjectionColumnsFromDocument(Table table, ISerializer serializer, Type deserializeToType);
+        IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer);
 
-        IMigrator Do(Table table, ISerializer serializer, Type deserializeTo, Action<object, IDictionary<string, object>> action);
+        IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action);
         IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action);
 
         IMigrator Commit();

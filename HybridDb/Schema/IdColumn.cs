@@ -10,9 +10,9 @@ namespace HybridDb.Schema
             SqlColumn = new SqlColumn(DbType.Guid, isPrimaryKey: true);
         }
 
-        public object GetValue(object document)
-        {
-            return ((dynamic) document).Id;
-        }
+        //public object GetValue(object document)
+        //{
+        //    return ((dynamic) document).Id;
+        //}
     }
 }

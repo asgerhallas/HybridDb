@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using HybridDb.Logging;
 using HybridDb.Schema;
 
@@ -11,11 +13,11 @@ namespace HybridDb
 
     public class Configuration
     {
-        readonly Dictionary<Type, Table> tables;
+        readonly ConcurrentDictionary<Type, DocumentConfiguration> tables;
 
         public Configuration()
         {
-            tables = new Dictionary<Type, Table>();
+            tables = new ConcurrentDictionary<Type, DocumentConfiguration>();
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
         }
@@ -23,16 +25,28 @@ namespace HybridDb
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
-        public Dictionary<Type, Table> Tables
+        public IEnumerable<DocumentConfiguration> Tables
         {
-            get { return tables; }
+            get { return tables.Values; }
         }
 
-        public TableBuilder<TEntity> Register<TEntity>(string name)
+        public void Register(DocumentConfiguration association)
         {
-            var table = new Table(name ?? GetTableNameByConventionFor<TEntity>());
-            tables.Add(typeof (TEntity), table);
-            return new TableBuilder<TEntity>(table);
+            tables.TryAdd(association.Type, association);
+        }
+
+        public DocumentConfiguration<T> GetTableFor<T>()
+        {
+            return (DocumentConfiguration<T>) GetTableFor(typeof(T));
+        }
+
+        public DocumentConfiguration GetTableFor(Type type)
+        {
+            DocumentConfiguration table;
+            if (!tables.TryGetValue(type, out table))
+                throw new TableNotFoundException(type);
+
+            return table;
         }
 
         public string GetTableNameByConventionFor<TEntity>()
@@ -45,23 +59,10 @@ namespace HybridDb
             Serializer = serializer;
         }
 
-        public void UseSerializer(ILogger logger)
+        public void UseLogger(ILogger logger)
         {
             Logger = logger;
         }
 
-        public Table GetTableFor<T>()
-        {
-            return GetTableFor(typeof (T));
-        }
-
-        public Table GetTableFor(Type type)
-        {
-            Table value;
-            if (tables.TryGetValue(type, out value))
-                return value;
-
-            throw new TableNotFoundException(type);
-        }
     }
 }

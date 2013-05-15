@@ -18,7 +18,7 @@ namespace HybridDb
         
     //    void AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
     //    void RemoveProjection<TEntity>(string columnName);
-    //    void RenameProjection<TEntity>(string oldColumnName, string newColumnName);
+    //    void RenameColumn<TEntity>(string oldColumnName, string newColumnName);
         
     //    void Do<T>(string tableName, Action<T, IDictionary<string, object>> action);
 

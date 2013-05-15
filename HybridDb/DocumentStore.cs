@@ -17,7 +17,6 @@ namespace HybridDb
     public class DocumentStore : IDocumentStore
     {
         readonly Configuration configuration;
-        readonly Migration migration;
         readonly string connectionString;
         readonly TableMode tableMode;
 
@@ -35,7 +34,6 @@ namespace HybridDb
             this.connectionString = connectionString;
 
             configuration = new Configuration();
-            migration = new Migration(this);
         }
 
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
@@ -73,22 +71,37 @@ namespace HybridDb
             return new Migrator(this);
         }
 
-        public void InitializeDatabase(bool safe = true)
+        public void Migrate(Action<IMigrator> migration)
         {
-            foreach (var table in Configuration.Tables.Values)
+            using (var migrator = CreateMigrator())
             {
-                CreateMigrator().MigrateTo(table, safe).Commit();
+                migration(migrator);
+                migrator.Commit();
             }
         }
-        
-        public TableBuilder<TEntity> DocumentsFor<TEntity>()
+
+        public void InitializeDatabase(bool safe = true)
+        {
+            Migrate(migrator =>
+            {
+                foreach (var table in Configuration.Tables)
+                {
+                    migrator.MigrateTo(table, safe);
+                }
+            });
+        }
+
+        public DocumentConfiguration<TEntity> DocumentsFor<TEntity>()
         {
             return DocumentsFor<TEntity>(null);
         }
 
-        public TableBuilder<TEntity> DocumentsFor<TEntity>(string name)
+        public DocumentConfiguration<TEntity> DocumentsFor<TEntity>(string name)
         {
-            return configuration.Register<TEntity>(name);
+            var table = new Table(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
+            var relation = new DocumentConfiguration<TEntity>(table);
+            configuration.Register(relation);
+            return relation;
         }
 
         public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
@@ -206,7 +219,7 @@ namespace HybridDb
                 var sql = new SqlBuilder();
                 sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
                    .Append(isWindowed, ", row_number() over(ORDER BY {0}) as RowNumber", rowNumberOrderBy)
-                   .Append("from {0}", Escape(GetFormattedTableName(table)))
+                   .Append("from {0}", Escape(table.GetFormattedName(TableMode)))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
                    .Append("select *, (select count(*) from temp) as TotalResults from temp")
