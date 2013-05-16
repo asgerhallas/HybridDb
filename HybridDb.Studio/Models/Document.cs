@@ -39,17 +39,12 @@ namespace HybridDb.Studio.Models
         {
             Table = table;
             DocumentAsString = document;
-            idColumn = projections.Single(x => x.Key is IdColumn);
-            documentColumn = projections.Single(x => x.Key is DocumentColumn);
-            etagColumn = projections.Single(x => x.Key is EtagColumn);
-            this.projections = projections.Where(x => !IsMetadataColumn(x.Key)).Select(x => new Projection(x.Key, x.Value)).ToList();
-        }
-
-        bool IsMetadataColumn(Column column)
-        {
-            return column == idColumn.Key
-                   || column == documentColumn.Key
-                   || column == etagColumn.Key;
+            idColumn = projections.Single(x => x.Key == table.IdColumn);
+            documentColumn = projections.Single(x => x.Key == table.DocumentColumn);
+            etagColumn = projections.Single(x => x.Key == table.EtagColumn);
+            this.projections = projections.Where(x => !(x.Key is SystemColumn))
+                                          .Select(x => new Projection(x.Key, x.Value))
+                                          .ToList();
         }
     }
 }

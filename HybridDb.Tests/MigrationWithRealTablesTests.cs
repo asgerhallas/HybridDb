@@ -34,7 +34,7 @@ END");
             var table = new Table("Entities");
             var oldColumn = new UserColumn("Property", new SqlColumn(typeof (int)));
             store.CreateMigrator()
-                 .AddTable(table)
+                 .AddTableAndColumns(table)
                  .AddColumn(table, oldColumn)
                  .Commit()
                  .Dispose();
@@ -50,19 +50,6 @@ END");
             connection.Execute("drop table Entities");
         }
 
-        [Fact]
-        public void CanRenameTable()
-        {
-            var store = new DocumentStore(connectionString);
-            var table = new Table("Entities");
-            store.CreateMigrator().AddTable(table).Commit().Dispose();
-
-            store.CreateMigrator().RenameTable(table, new Table("NewEntities")).Commit().Dispose();
-            TableExists("Entities").ShouldBe(false);
-            TableExists("NewEntities").ShouldBe(true);
-
-            connection.Execute("drop table NewEntities");
-        }
 
         [Fact]
         public void InitializeFailsIfDatabaseIsNotEmptyWhenNotForTesting()

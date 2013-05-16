@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -11,7 +12,10 @@ namespace HybridDb.Schema
         {
             Table = table;
             Type = type;
-            Projections = new Dictionary<Column, Func<object, object>>();
+            Projections = new Dictionary<Column, Func<object, object>>
+            {
+                {Table.IdColumn, document => ((dynamic) document).Id}
+            };
         }
 
         public Table Table { get; private set; }
@@ -57,12 +61,11 @@ namespace HybridDb.Schema
             var parameterAsObject = Expression.Parameter(typeof (object));
 
             var wrappedCall =
-                Expression.Lambda(
                     Expression.Convert(
                         Expression.Invoke(
                             expression,
                             Expression.Convert(parameterAsObject, typeof (TModel))),
-                        typeof (object)));
+                        typeof (object));
 
             return Expression.Lambda<Func<object, object>>(wrappedCall, parameterAsObject);
         }
@@ -77,19 +80,19 @@ namespace HybridDb.Schema
             columns = new Dictionary<string, Column>();
             Name = name;
 
-            IdColumn = new IdColumn();
-            columns.Add(IdColumn.Name, IdColumn);
+            IdColumn = new SystemColumn("Id", new SqlColumn(DbType.Guid, isPrimaryKey: true));
+            Register(IdColumn);
 
-            EtagColumn = new EtagColumn();
-            columns.Add(EtagColumn.Name, EtagColumn);
+            EtagColumn = new SystemColumn("Etag", new SqlColumn(DbType.Guid));
+            Register(EtagColumn);
 
-            DocumentColumn = new DocumentColumn();
-            columns.Add(DocumentColumn.Name, DocumentColumn);
+            DocumentColumn = new SystemColumn("Document", new SqlColumn(DbType.Binary, Int32.MaxValue));
+            Register(DocumentColumn);
         }
 
-        public EtagColumn EtagColumn { get; private set; }
-        public IdColumn IdColumn { get; private set; }
-        public DocumentColumn DocumentColumn { get; private set; }
+        public SystemColumn IdColumn { get; private set; }
+        public SystemColumn EtagColumn { get; private set; }
+        public SystemColumn DocumentColumn { get; private set; }
         public object SizeColumn { get; private set; }
         public object CreatedAtColumn { get; private set; }
 
@@ -112,8 +115,8 @@ namespace HybridDb.Schema
                 return column;
 
             return type == null 
-                ? new DynamicColumn(name)
-                : new DynamicColumn(name, type);
+                ? new UserColumn(name)
+                : new UserColumn(name, type);
         }
 
         public string Name { get; private set; }

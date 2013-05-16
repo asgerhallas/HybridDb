@@ -108,8 +108,6 @@
     <Compile Include="DefaultBsonSerializer.cs" />
     <Compile Include="DefaultJsonSerializer.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
-    <Compile Include="Schema\DynamicColumn.cs" />
-    <Compile Include="Schema\EtagColumn.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
     <Compile Include="Logging\ILogger.cs" />
     <Compile Include="Commands\InsertCommand.cs" />
@@ -118,13 +116,12 @@
     <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Schema\UserColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
-    <Compile Include="Schema\DocumentColumn.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
     <Compile Include="SqlBuilder.cs" />
     <Compile Include="Schema\Table.cs" />
-    <Compile Include="Schema\IdColumn.cs" />
+    <Compile Include="Schema\SystemColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="Schema\ITable.cs" />

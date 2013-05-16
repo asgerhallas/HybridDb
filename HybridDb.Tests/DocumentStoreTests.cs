@@ -246,7 +246,7 @@ namespace HybridDb.Tests
                               select method).Single().MakeGenericMethod(t.GetType());
 
             var rows = (IEnumerable<dynamic>) methodInfo.Invoke(store,
-                                                                new object[] {table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}});
+                                                                new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}});
 
             rows.Count().ShouldBe(1);
             Assert.Equal("Asger", rows.Single().Field);

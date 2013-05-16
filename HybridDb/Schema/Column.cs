@@ -21,5 +21,15 @@
         {
             return Name.GetHashCode();
         }
+
+        public static bool operator ==(Column left, Column right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Column left, Column right)
+        {
+            return !Equals(left, right);
+        }
     }
 }

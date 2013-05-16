@@ -21,11 +21,8 @@ namespace HybridDb
         readonly TableMode tableMode;
 
         DbConnection ambientConnectionForTesting;
-
         Guid lastWrittenEtag;
-
         long numberOfRequests;
-
         int numberOfManagedConnections;
 
         DocumentStore(string connectionString, TableMode tableMode)

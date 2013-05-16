@@ -38,13 +38,13 @@ namespace HybridDb
                     throw new InvalidOperationException("You cannot initialize a database that is not empty.");
             }
 
-            AddTable(documentConfiguration.Table);
+            AddTableAndColumns(documentConfiguration.Table);
 
             store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
             return this;
         }
 
-        public IMigrator AddTable(Table table)
+        public IMigrator AddTableAndColumns(Table table)
         {
             var tableName = table.GetFormattedName(store.TableMode);
 
@@ -68,7 +68,7 @@ namespace HybridDb
         public IMigrator RenameTable(Table oldTable, Table newTable)
         {
             if (store.IsInTestMode)
-                throw new NotSupportedException("It is not possible to rename temp tables, therefore RenameTable is not supported when store is in test mode.");
+                throw new NotSupportedException("It is not possible to rename temp tables, so RenameTable is not supported when store is in test mode.");
 
             var oldTableName = oldTable.GetFormattedName(store.TableMode);
             var newTableName = newTable.GetFormattedName(store.TableMode);
@@ -81,7 +81,7 @@ namespace HybridDb
 
         public IMigrator AddColumn(Table table, Column column)
         {
-            var tableName = table.GetFormattedName(store.TableMode);
+            var tableName = table.GetFormattedName(store.TableMode);                                              // INLINE THIS SqlType thing
             var sql = string.Format("ALTER TABLE {0} ADD {1};", tableName, store.Escape(column.Name) + " " + column.SqlColumn.SqlType);
             
             connectionManager.Connection.Execute(sql, null);
@@ -135,12 +135,11 @@ namespace HybridDb
             string selectSql = string.Format("SELECT * FROM {0}", tableName);
             foreach (var dictionary in connectionManager.Connection.Query(selectSql).Cast<IDictionary<string, object>>())
             {
-                var documentColumn = new DocumentColumn();
-                var document = (byte[])dictionary[documentColumn.Name];
+                var document = (byte[])dictionary[relation.Table.DocumentColumn.Name];
 
                 var entity = serializer.Deserialize(document, relation.Type);
                 action(entity, dictionary);
-                dictionary[documentColumn.Name] = serializer.Serialize(entity);
+                dictionary[relation.Table.DocumentColumn.Name] = serializer.Serialize(entity);
 
                 var sql = new SqlBuilder()
                     .Append("update {0} set {1} where {2}=@Id",
