@@ -32,9 +32,9 @@ How?
 
 Like this:
 
-    var store = new DocumentStore("data source=.;Integrated Security=True");
-    store.DocumentsFor<Entity>().WithProjection(x => x.Property);
-    store.Migration.InitializeDatabase();
+    var store = DocumentStore.ForTestingWithTempTables();
+    store.Document<Entity>().Project(x => x.Property);
+    store.InitializeDatabase();
     
     using (var session = store.OpenSession())
     {
