@@ -9,8 +9,8 @@ HybridDb gives you:
 - Easy schemaless and mostly mappingless persistance of any .NET object
 - A few simple indexing features that enables querying on document properties
 - A LINQ provider for mentioned queries
-- All the consistency and transactionality of a relational database (at the expence of the P in CAP)
-- Migration tools for document changes and relational schema changes (we are not going to lie, it is still a relational database mapper)
+- All the consistency and transactionality of a relational database
+- Migration tools for document changes and database schema changes (we are not going to lie, it is still a relational database mapper)
 - A nifty little document viewer
 
 HybridDb aims to be a small and focused library with no magic and no surprises.
