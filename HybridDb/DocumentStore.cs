@@ -216,7 +216,7 @@ namespace HybridDb
                 var sql = new SqlBuilder();
                 sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
                    .Append(isWindowed, ", row_number() over(ORDER BY {0}) as RowNumber", rowNumberOrderBy)
-                   .Append("from {0}", Escape(table.GetFormattedName(TableMode)))
+                   .Append("from {0}", FormatTableNameAndEscape(table.Name))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
                    .Append("select *, (select count(*) from temp) as TotalResults from temp")
@@ -253,7 +253,7 @@ namespace HybridDb
             using (var connection = Connect())
             {
                 var sql = string.Format("select * from {0} where {1} = @Id",
-                                        Escape(table.GetFormattedName(TableMode)),
+                                        FormatTableNameAndEscape(table.Name),
                                         table.IdColumn.Name);
 
                 var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
@@ -277,9 +277,29 @@ namespace HybridDb
             get { return lastWrittenEtag; }
         }
 
+        public string FormatTableNameAndEscape(string tablename)
+        {
+            return Escape(FormatTableName(tablename));
+        }
+
         public string Escape(string identifier)
         {
             return string.Format("[{0}]", identifier);
+        }
+
+        public string FormatTableName(string tablename)
+        {
+            switch (tableMode)
+            {
+                case TableMode.UseRealTables:
+                    return tablename;
+                case TableMode.UseTempTables:
+                    return "#" + tablename;
+                case TableMode.UseGlobalTempTables:
+                    return "##" + tablename;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         ILogger Logger

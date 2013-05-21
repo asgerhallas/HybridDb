@@ -102,6 +102,8 @@
     <Compile Include="FastDynamicParameters.cs" />
     <Compile Include="Logging\ColorSetting.cs" />
     <Compile Include="Schema\Column.cs" />
+    <Compile Include="Schema\DocumentConfiguration.cs" />
+    <Compile Include="Schema\NullCheckInjector.cs" />
     <Compile Include="Schema\SqlColumn.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />

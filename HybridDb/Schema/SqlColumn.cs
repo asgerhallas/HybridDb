@@ -72,20 +72,5 @@ namespace HybridDb.Schema
         public int? Length { get; private set; }
         public DbType? Type { get; private set; }
         public bool IsPrimaryKey { get; private set; }
-
-        public string SqlType
-        {
-            get
-            {
-                var length = (Length != null)
-                                 ? "(" + (Length == Int32.MaxValue ? "MAX" : Length.ToString()) + ")"
-                                 : "";
-
-                if (Type != null)
-                    return new SqlParameter {DbType = (DbType) Type}.SqlDbType + length + " " + (IsPrimaryKey ? "NOT NULL PRIMARY KEY" : "");
-
-                return null;
-            }
-        }
     }
 }

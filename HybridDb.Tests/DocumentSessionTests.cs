@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Transactions;
-using Dapper;
 using HybridDb.Commands;
-using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 using System.Linq;
@@ -22,6 +19,7 @@ namespace HybridDb.Tests
             store.DocumentsFor<Entity>()
                 .Project(x => x.ProjectedProperty)
                 .Project(x => x.TheChild.NestedProperty)
+                .Project("SecondChildNestedProperty", x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
                 .Project("Children", x => x.Children.SelectMany(y => y.NestedProperty));
             store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
             store.InitializeDatabase();
@@ -125,7 +123,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanStoreDocumentWhenAccessToNestedPropertyIsNull()
+        public void AccessToNestedPropertyCanBeNullSafe()
         {
             using (var session = store.OpenSession())
             {
@@ -139,6 +137,20 @@ namespace HybridDb.Tests
 
             var entity = store.RawQuery("select * from #Entities").SingleOrDefault();
             Assert.Null(entity.TheChildNestedProperty);
+        }
+
+        [Fact]
+        public void AccessToNestedPropertyThrowsIfNotMadeNullSafe()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity
+                {
+                    Property = "Asger",
+                    TheSecondChild = null
+                });
+                Should.Throw<NullReferenceException>(() => session.SaveChanges());
+            }
         }
 
         [Fact]
@@ -574,6 +586,7 @@ namespace HybridDb.Tests
             public Entity()
             {
                 TheChild = new Child();
+                TheSecondChild = new Child();
                 Children = new List<Child>();
             }
 
@@ -582,7 +595,8 @@ namespace HybridDb.Tests
             public List<Child> Children { get; set; }
             public string Property { get; set; }
             public Child TheChild { get; set; }
-
+            public Child TheSecondChild { get; set; }
+            
             public class Child
             {
                 public string NestedProperty { get; set; }

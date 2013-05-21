@@ -37,32 +37,18 @@ END", uniqueDbName));
         }
 
         [Fact]
-        public void CanCreateTableAndItsColumns()
+        public void CanCreateTable()
         {
-            storeWithTempTables.Migrate(migrator => migrator.AddTableAndColumns(new Table("Entities")));
-
+            storeWithTempTables.Migrate(migrator => migrator.AddTable("Entities", "Id UniqueIdentifier"));
             TempTableExists("Entities").ShouldBe(true);
-
-            var idColumn = GetColumn("Entities", "Id");
-            idColumn.ShouldNotBe(null);
-            GetType(idColumn.system_type_id).ShouldBe("uniqueidentifier");
-
-            var documentColumn = GetColumn("Entities", "Document");
-            documentColumn.ShouldNotBe(null);
-            GetType(documentColumn.system_type_id).ShouldBe("varbinary");
-            documentColumn.max_length.ShouldBe(-1);
-
-            var etagColumn = GetColumn("Entities", "Etag");
-            etagColumn.ShouldNotBe(null);
-            GetType(etagColumn.system_type_id).ShouldBe("uniqueidentifier");
         }
 
         [Fact]
         public void CanRemoveTable()
         {
             storeWithTempTables.Migrate(
-                migrator => migrator.AddTableAndColumns(new Table("Entities"))
-                                    .RemoveTable(new Table("Entities")));
+                migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
+                                    .RemoveTable("Entities"));
 
             TempTableExists("Entities").ShouldBe(false);
         }
@@ -73,10 +59,9 @@ END", uniqueDbName));
             RealTableExists("Entities").ShouldBe(false);
             RealTableExists("NewEntities").ShouldBe(false);
 
-            var table = new Table("Entities");
             storeWithRealTables.Migrate(
-                migrator => migrator.AddTableAndColumns(table)
-                                    .RenameTable(table, new Table("NewEntities")));
+                migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
+                                    .RenameTable("Entities", "NewEntities"));
 
             RealTableExists("Entities").ShouldBe(false);
             RealTableExists("NewEntities").ShouldBe(true);
@@ -85,14 +70,11 @@ END", uniqueDbName));
         [Fact]
         public void CanAddColumn()
         {
-            var table = new Table("Entities");
-            var column = new UserColumn("Property", new SqlColumn(typeof (int)));
-
             storeWithTempTables.Migrate(
-                migrator => migrator.AddTableAndColumns(table)
-                                    .AddColumn(table, column));
+                migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
+                                    .AddColumn("Entities", "Property", "int"));
 
-            var propertyColumn = GetColumn("Entities", "Property");
+            var propertyColumn = GetTempColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
             GetType(propertyColumn.system_type_id).ShouldBe("int");
         }
@@ -100,16 +82,63 @@ END", uniqueDbName));
         [Fact]
         public void CanRemoveColumn()
         {
-            var table = new Table("Entities");
-            var column = new UserColumn("Property", new SqlColumn(typeof(int)));
-
             storeWithTempTables.Migrate(
-                migrator => migrator.AddTableAndColumns(table)
-                                    .AddColumn(table, column)
-                                    .RemoveColumn(table, column));
+                migrator => migrator.AddTable("Entities", "Id int", "Property int")
+                                    .RemoveColumn("Entities", "Property"));
 
-            GetColumn("Entities", "Property").ShouldBe(null);
+            GetTempColumn("Entities", "Property").ShouldBe(null);
         }
+
+        [Fact]
+        public void CanRenameColumn()
+        {
+            storeWithRealTables.Migrate(
+                migrator => migrator.AddTable("Entities", "Property int"));
+
+            storeWithRealTables.Migrate(
+                migrator => migrator.RenameColumn("Entities", "Property", "NewProperty"));
+
+            GetRealColumn("Entities", "Property").ShouldBe(null);
+            GetRealColumn("Entities", "NewProperty").ShouldBe(null);
+        }
+
+        [Fact]
+        public void CanCreateTableAndItsColumns()
+        {
+            storeWithTempTables.Migrate(migrator => migrator.AddTableAndColumns(new Table("Entities")));
+
+            TempTableExists("Entities").ShouldBe(true);
+
+            var idColumn = GetTempColumn("Entities", "Id");
+            idColumn.ShouldNotBe(null);
+            GetType(idColumn.system_type_id).ShouldBe("uniqueidentifier");
+
+            const string sql =
+                @"SELECT K.TABLE_NAME,
+                  K.COLUMN_NAME,
+                  K.CONSTRAINT_NAME
+                  FROM tempdb.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C
+                  JOIN tempdb.INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K
+                  ON C.TABLE_NAME = K.TABLE_NAME
+                  AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG
+                  AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA
+                  AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
+                  WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
+                  AND K.COLUMN_NAME = 'Id'";
+
+            var isPrimaryKey = storeWithTempTables.RawQuery(sql).Any();
+            isPrimaryKey.ShouldBe(true);
+
+            var documentColumn = GetTempColumn("Entities", "Document");
+            documentColumn.ShouldNotBe(null);
+            GetType(documentColumn.system_type_id).ShouldBe("varbinary");
+            documentColumn.max_length.ShouldBe(-1);
+
+            var etagColumn = GetTempColumn("Entities", "Etag");
+            etagColumn.ShouldNotBe(null);
+            GetType(etagColumn.system_type_id).ShouldBe("uniqueidentifier");
+        }
+
 
         [Fact]
         public void CanDeserializeToEntityAndPersistChangesToDocument()
@@ -230,7 +259,7 @@ END", uniqueDbName));
                 var tableToTypeRelation = storeWithTempTables.Configuration.GetTableFor<Entity>();
                 tableToTypeRelation.Project(x => x.Property);
 
-                migrator.AddColumn(tableToTypeRelation.Table, new UserColumn("Property", new SqlColumn(typeof (int))));
+                migrator.AddColumn(tableToTypeRelation.Table.Name, new UserColumn("Property", new SqlColumn(typeof (int))));
                 migrator.UpdateProjectionColumnsFromDocument(tableToTypeRelation, storeWithTempTables.Configuration.Serializer);
             });
 
@@ -243,99 +272,10 @@ END", uniqueDbName));
         }
 
         [Fact]
-        public void InitializeCreatesTables()
+        public void WillQuoteTableAndColumnNamesOnCreation()
         {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-
-            TempTableExists("Entities").ShouldBe(true);
-        }
-
-        [Fact]
-        public void InitializeCreatesDefaultColumns()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-
-            var idColumn = GetColumn("Entities", "Id");
-            idColumn.ShouldNotBe(null);
-            GetType(idColumn.system_type_id).ShouldBe("uniqueidentifier");
-
-            var documentColumn = GetColumn("Entities", "Document");
-            documentColumn.ShouldNotBe(null);
-            GetType(documentColumn.system_type_id).ShouldBe("varbinary");
-            documentColumn.max_length.ShouldBe(-1);
-        }
-
-        [Fact]
-        public void InitializeCreatesColumnsFromProperties()
-        {
-            storeWithTempTables.DocumentsFor<Entity>().Project(x => x.Property).Project(x => x.TheChild.NestedProperty);
-            storeWithTempTables.InitializeDatabase();
-
-            var column = GetColumn("Entities", "Property");
-            column.ShouldNotBe(null);
-            GetType(column.system_type_id).ShouldBe("int");
-
-            var nestedcolumn = GetColumn("Entities", "TheChildNestedProperty");
-            nestedcolumn.ShouldNotBe(null);
-            GetType(nestedcolumn.system_type_id).ShouldBe("float");
-        }
-
-        [Fact]
-        public void InitializeCreatesColumnsFromFields()
-        {
-            storeWithTempTables.DocumentsFor<Entity>().Project(x => x.Field);
-            storeWithTempTables.InitializeDatabase();
-
-            var column = GetColumn("Entities", "Field");
-            column.ShouldNotBe(null);
-            GetType(column.system_type_id).ShouldBe("nvarchar");
-            column.max_length.ShouldBe(-1); // -1 is MAX
-        }
-
-        [Fact]
-        public void InitializeCreatesIdColumnAsPrimaryKey()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-
-            const string sql =
-                @"SELECT K.TABLE_NAME,
-                  K.COLUMN_NAME,
-                  K.CONSTRAINT_NAME
-                  FROM tempdb.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C
-                  JOIN tempdb.INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K
-                  ON C.TABLE_NAME = K.TABLE_NAME
-                  AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG
-                  AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA
-                  AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
-                  WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
-                  AND K.COLUMN_NAME = 'Id'";
-
-            var isPrimaryKey = storeWithTempTables.RawQuery(sql).Any();
-            isPrimaryKey.ShouldBe(true);
-        }
-
-        [Fact]
-        public void InitializeDoesNotFailIfDatabaseIsNotEmptyWhenForTesting()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-
-            Should.NotThrow(() => storeWithTempTables.InitializeDatabase());
-        }
-
-        [Fact]
-        public void CanCreateMissingTables()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-
-            storeWithTempTables.DocumentsFor<AnotherEntity>();
-            storeWithTempTables.InitializeDatabase();
-
-            TempTableExists("AnotherEntities").ShouldBe(true);
+            Should.NotThrow(() => storeWithRealTables.Migrate(
+                migrator => migrator.AddTable("Create", "By int")));
         }
 
         [Fact]
@@ -380,11 +320,18 @@ END", uniqueDbName));
             return storeWithTempTables.RawQuery(string.Format("select OBJECT_ID('tempdb..#{0}') as Result", name)).First().Result != null;
         }
 
-        Column GetColumn(string table, string column)
+        Column GetTempColumn(string table, string column)
         {
-            return
-                storeWithTempTables.RawQuery<Column>(string.Format("select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..#{1}')", column, table))
-                                   .FirstOrDefault();
+            return storeWithTempTables
+                .RawQuery<Column>(string.Format("select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..#{1}')", column, table))
+                .FirstOrDefault();
+        }
+
+        Column GetRealColumn(string table, string column)
+        {
+            return storeWithRealTables
+                .RawQuery<Column>(string.Format("select * from master.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column, table))
+                .FirstOrDefault();
         }
 
         string GetType(int id)

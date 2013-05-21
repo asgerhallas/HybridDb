@@ -62,10 +62,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ColumnTests.cs" />
+    <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />
-    <Compile Include="MigrationWithRealTablesTests.cs" />
     <Compile Include="LinqIntegrationTests.cs" />
     <Compile Include="LinqTests.cs" />
     <Compile Include="MigrationWithTempTablesTests.cs" />

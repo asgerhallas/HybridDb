@@ -7,10 +7,6 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
-    public class Conventions
-    {
-    }
-
     public class Configuration
     {
         readonly ConcurrentDictionary<Type, DocumentConfiguration> tables;

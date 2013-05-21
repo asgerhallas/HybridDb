@@ -36,7 +36,7 @@ namespace HybridDb.Commands
             simpleProjections.Add(table.DocumentColumn, document);
 
             var sql = string.Format("insert into {0} ({1}) values ({2});",
-                                    store.Escape(table.GetFormattedName(store.TableMode)),
+                                    store.FormatTableNameAndEscape(table.Name),
                                     string.Join(", ", from column in simpleProjections.Keys select column.Name),
                                     string.Join(", ", from column in simpleProjections.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
