@@ -60,6 +60,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="IMigration.cs" />
     <Compile Include="IMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />

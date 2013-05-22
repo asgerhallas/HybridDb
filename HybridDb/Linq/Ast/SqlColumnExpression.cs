@@ -12,7 +12,7 @@ namespace HybridDb.Linq.Ast
             this.type = type;
             this.columnName = columnName;
         }
-
+            
         public override SqlNodeType NodeType
         {
             get { return SqlNodeType.Column; }

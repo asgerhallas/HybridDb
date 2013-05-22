@@ -8,8 +8,11 @@ namespace HybridDb.Schema
 {
     public class DocumentConfiguration
     {
-        public DocumentConfiguration(Table table, Type type)
+        protected readonly Configuration configuration;
+
+        public DocumentConfiguration(Configuration configuration, Table table, Type type)
         {
+            this.configuration = configuration;
             Table = table;
             Type = type;
             Projections = new Dictionary<Column, Func<object, object>>
@@ -25,18 +28,13 @@ namespace HybridDb.Schema
 
     public class DocumentConfiguration<TEntity> : DocumentConfiguration
     {
-        public DocumentConfiguration(Table table) : base(table, typeof(TEntity)) { }
+        public DocumentConfiguration(Configuration configuration, Table table) : base(configuration, table, typeof(TEntity)) { }
 
         public DocumentConfiguration<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
-            var expression = projector.ToString();
-            var name = Regex.Replace(string.Join("", expression.Split('.').Skip(1)), "[^a-zA-Z0-9]", "");
-            return Project(name, projector, makeNullSafe);
-        }
+            var name = configuration.GetColumnNameFor(projector);
 
-        public DocumentConfiguration<TEntity> Project<TMember>(string columnName, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe)
-        {
-            var column = new UserColumn(columnName, new SqlColumn(typeof(TMember)));
+            var column = new UserColumn(name, new SqlColumn(typeof(TMember)));
             Table.Register(column);
 
             if (makeNullSafe) projector = InjectNullChecks(projector);
@@ -46,13 +44,8 @@ namespace HybridDb.Schema
             return this;
         }
 
-        public DocumentConfiguration<TEntity> Project<TMember>(string columnName, Expression<Func<TEntity, IEnumerable<TMember>>> projector)
+        public DocumentConfiguration<TEntity> Project<TMember>(Expression<Func<TEntity, IEnumerable<TMember>>> projector, bool makeNullSafe = true)
         {
-            var column = new CollectionColumn(columnName, new SqlColumn(typeof(TMember)));
-            Table.Register(column);
-            
-            var compiledProjector = Cast(projector).Compile();
-            Projections.Add(column, compiledProjector);
             return this;
         }
 

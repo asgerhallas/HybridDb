@@ -2,12 +2,12 @@
 {
     public class SqlConstantExpression : SqlExpression
     {
-        public object Value { get; private set; }
-
         public SqlConstantExpression(object value)
         {
             Value = value;
         }
+
+        public object Value { get; private set; }
 
         public override SqlNodeType NodeType
         {

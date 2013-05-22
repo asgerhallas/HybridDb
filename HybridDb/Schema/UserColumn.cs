@@ -23,8 +23,12 @@ namespace HybridDb.Schema
         }
     }
 
-    public class CollectionColumn : UserColumn
+    public class CollectionColumn : Column
     {
-        public CollectionColumn(string columnName, SqlColumn sqlColumn) : base(columnName, sqlColumn) { }
+        public CollectionColumn(string columnName)
+        {
+            Name = columnName;
+            SqlColumn = new SqlColumn(typeof(int));
+        }
     }
 }

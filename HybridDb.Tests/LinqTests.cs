@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using HybridDb.Linq;
 using Shouldly;
 using Xunit;
@@ -238,6 +240,26 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryOnComplexProperties()
+        {
+            var translation = session.Query<Entity>().Where(x => x.Complex.ToString() == "something").Translate();
+            translation.Where.ShouldBe("(ComplexToString = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "something");
+        }
+
+        [Fact]
+        public void CanQueryOnInsanelyComplexProperties()
+        {
+            var translation = session.Query<Entity>()
+                                     .Where(x => x.Children.Where(child => child.NestedProperty < 10)
+                                                  .Count(child => child.NestedProperty > 1) == 1)
+                                     .Translate();
+
+            translation.Where.ShouldBe("(ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
+        [Fact]
         public void CanQueryWithSelectToAnonymous()
         {
             var translation = session.Query<Entity>().Select(x => new {x.Property}).Translate();
@@ -425,6 +447,8 @@ namespace HybridDb.Tests
             public Entity()
             {
                 TheChild = new Child();
+                Complex = new object();
+                Children = new List<Child>();
             }
 
             public Guid Id { get; set; }
@@ -434,6 +458,8 @@ namespace HybridDb.Tests
             public DateTime DateTimeProp { get; set; }
             public bool BoolProp { get; set; }
             public Child TheChild { get; set; }
+            public List<Child> Children { get; set; }
+            public object Complex { get; set; }
 
             public class Child
             {

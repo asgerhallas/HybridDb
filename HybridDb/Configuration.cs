@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
+using System.Linq.Expressions;
 using HybridDb.Logging;
 using HybridDb.Schema;
 
@@ -50,6 +50,13 @@ namespace HybridDb
             return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
         }
 
+        public string GetColumnNameFor(Expression projector)
+        {
+            var columnNameBuilder = new ColumnNameBuilder();
+            columnNameBuilder.Visit(projector);
+            return columnNameBuilder.ColumnName;
+        }
+
         public void UseSerializer(ISerializer serializer)
         {
             Serializer = serializer;
@@ -59,6 +66,5 @@ namespace HybridDb
         {
             Logger = logger;
         }
-
     }
 }

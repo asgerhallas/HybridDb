@@ -25,7 +25,9 @@ namespace HybridDb.Tests
                  .Project(x => x.StringProp)
                  .Project(x => x.DateTimeProp)
                  .Project(x => x.EnumProp)
-                 .Project("Children", x => x.Children.Select(y => y.NestedString));
+                 .Project(x => x.Complex.ToString()) // ComplexToString
+                 .Project(x => x.Children.Count()) // ChildrenCount
+                 .Project(x => x.Children.Select(y => y.NestedString));
             store.InitializeDatabase();
 
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
@@ -74,6 +76,15 @@ namespace HybridDb.Tests
 
             var row = store.RawQuery("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
+        }
+
+        [Fact]
+        public void FailsOnComplexProjections()
+        {
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetSchemaFor<Entity>();
+            Should.Throw<ArgumentException>(() => 
+                store.Insert(table.Table, id, documentAsByteArray, new { Complex = new Entity.ComplexType() }));
         }
 
         [Fact]
@@ -167,13 +178,14 @@ namespace HybridDb.Tests
         {
             var id = Guid.NewGuid();
             var table = store.Configuration.GetSchemaFor<Entity>();
-            var etag = store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
+            var etag = store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger", ComplexToString = "AB"});
 
             var row = store.Get(table.Table, id);
             row[table.Table.IdColumn].ShouldBe(id);
             row[table.Table.EtagColumn].ShouldBe(etag);
             row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
             row[table.Table["Field"]].ShouldBe("Asger");
+            row[table.Table["ComplexToString"]].ShouldBe("AB");
         }
 
         [Fact]
@@ -645,11 +657,23 @@ namespace HybridDb.Tests
             public DateTime DateTimeProp { get; set; }
             public Child TheChild { get; set; }
             public List<Child> Children { get; set; }
+            public ComplexType Complex { get; set; }
 
             public class Child
             {
                 public string NestedString { get; set; }
                 public double NestedProperty { get; set; }
+            }
+
+            public class ComplexType
+            {
+                public string A { get; set; }
+                public int B { get; set; }
+
+                public override string ToString()
+                {
+                    return A + B;
+                }
             }
         }
 

@@ -19,8 +19,8 @@ namespace HybridDb.Tests
             store.DocumentsFor<Entity>()
                 .Project(x => x.ProjectedProperty)
                 .Project(x => x.TheChild.NestedProperty)
-                .Project("SecondChildNestedProperty", x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
-                .Project("Children", x => x.Children.SelectMany(y => y.NestedProperty));
+                .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
+                .Project(x => x.Children.SelectMany(y => y.NestedProperty));
             store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
             store.InitializeDatabase();
         }

@@ -40,15 +40,14 @@ namespace HybridDb.Commands
                                     string.Join(", ", from column in simpleProjections.Keys select column.Name),
                                     string.Join(", ", from column in simpleProjections.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
-
-            //var collectionProjections = values.Where(x => x.Key is CollectionProjectionColumn)
-            //                                  .ToDictionary(x => (CollectionProjectionColumn) x.Key, x => x.Value);
+            var collectionProjections = values.Where(x => x.Key is CollectionColumn)
+                                              .ToDictionary(x => (CollectionColumn)x.Key, x => x.Value);
 
             //foreach (var collectionProjection in collectionProjections)
             //{
             //    var projectionTable = collectionProjection.Key.Table;
 
-            //    var blahs = new Dictionary<Column, object> {{collectionProjection.Key, collectionProjection.Value}};
+            //    var blahs = new Dictionary<Column, object> { { collectionProjection.Key, collectionProjection.Value } };
 
             //    blahs.Add(projectionTable.DocumentIdColumn, key);
             //    //blahs.Add(projectionTable.DocumentColumn, document);

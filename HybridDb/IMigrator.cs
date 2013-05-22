@@ -9,7 +9,7 @@ namespace HybridDb
     {
         IMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true);
 
-        IMigrator AddTableAndColumns(Table table);
+        IMigrator AddTableAndColumnsAndAssociatedTables(Table table);
         IMigrator RemoveTableAndAssociatedTables(Table table);
         IMigrator RenameTableAndAssociatedTables(Table oldTable, string newTablename);
         IMigrator AddColumn(string tablename, Column column);

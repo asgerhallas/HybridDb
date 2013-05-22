@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 
@@ -112,7 +110,13 @@ namespace HybridDb.Linq.Parsers
                     ast.Push(new SqlBinaryExpression(SqlNodeType.In, ast.Pop(), ast.Pop()));
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The method '{0}' is not supported on column", expression.Method.Name));
+                    ast.Pop();
+                    var name = new Configuration().GetColumnNameFor(expression);
+                    ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
+                    break;
+
+
+                    //throw new NotSupportedException(string.Format("The method '{0}' is not supported on column", expression.Method.Name));
             }
         }
     }

@@ -46,13 +46,17 @@ namespace HybridDb.Schema
             {typeof (DateTime?), new SqlColumn(DbType.DateTime)},
             {typeof (DateTimeOffset?), new SqlColumn(DbType.DateTimeOffset)},
             {typeof (TimeSpan?), new SqlColumn(DbType.Time)},
-            {typeof (object), new SqlColumn(DbType.Object)}
+            //{typeof (object), new SqlColumn(DbType.Object)}
         };
 
         public SqlColumn(Type type, bool isPrimaryKey = false)
         {
             type = (type.IsEnum) ? type.BaseType : type;
-            var column = typeToColumn[type];
+            
+            SqlColumn column;
+            if (!typeToColumn.TryGetValue(type, out column))
+                throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
+
             Type = column.Type;
             Length = column.Length;
             IsPrimaryKey = isPrimaryKey;

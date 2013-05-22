@@ -31,14 +31,19 @@ namespace HybridDb
                     throw new InvalidOperationException("You cannot initialize a database that is not empty.");
             }
 
-            AddTableAndColumns(documentConfiguration.Table);
+            AddTableAndColumnsAndAssociatedTables(documentConfiguration.Table);
 
             store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
             return this;
         }
 
-        public IMigrator AddTableAndColumns(Table table)
+        public IMigrator AddTableAndColumnsAndAssociatedTables(Table table)
         {
+            foreach (var column in table.Columns.OfType<CollectionColumn>())
+            {
+                AddTable(table.Name + "_" + column.Name, "Id UniqueIdentifier");
+            }
+
             return AddTable(table.Name, table.Columns.Select(col => string.Format("{0} {1}", col.Name, GetColumnSqlType(col))).ToArray());
         }
 
@@ -74,7 +79,7 @@ namespace HybridDb
 
         public IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action)
         {
-            return Do(new DocumentConfiguration(table, typeof(T)), serializer, (entity, projections) => action((T)entity, projections));
+            return Do(new DocumentConfiguration(store.Configuration, table, typeof(T)), serializer, (entity, projections) => action((T)entity, projections));
         }
 
         public IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action)

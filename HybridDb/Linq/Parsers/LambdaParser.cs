@@ -117,8 +117,10 @@ namespace HybridDb.Linq.Parsers
                     ast.Push(new SqlConstantExpression(expression.Member.GetValue(constant.Value)));
                     break;
                 case SqlNodeType.Column:
-                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(),
-                                                     ((SqlColumnExpression) ast.Pop()).ColumnName + expression.Member.Name));
+                    ast.Pop();
+                    var name = new Configuration().GetColumnNameFor(expression);
+                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
+                                                     //((SqlColumnExpression) ast.Pop()).ColumnName + expression.Member.Name));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

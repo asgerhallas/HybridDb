@@ -105,7 +105,7 @@ END", uniqueDbName));
         [Fact]
         public void CanCreateTableAndItsColumns()
         {
-            storeWithTempTables.Migrate(migrator => migrator.AddTableAndColumns(new Table("Entities")));
+            storeWithTempTables.Migrate(migrator => migrator.AddTableAndColumnsAndAssociatedTables(new Table("Entities")));
 
             TempTableExists("Entities").ShouldBe(true);
 
