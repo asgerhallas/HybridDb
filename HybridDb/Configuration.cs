@@ -50,7 +50,7 @@ namespace HybridDb
             return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
         }
 
-        public string GetColumnNameFor(Expression projector)
+        public string GetColumnNameByConventionFor(Expression projector)
         {
             var columnNameBuilder = new ColumnNameBuilder();
             columnNameBuilder.Visit(projector);

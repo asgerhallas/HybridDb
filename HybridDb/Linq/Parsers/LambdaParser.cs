@@ -80,9 +80,18 @@ namespace HybridDb.Linq.Parsers
 
         protected virtual void VisitColumnMethodCall(MethodCallExpression expression)
         {
-            ast.Pop();
-            var name = new Configuration().GetColumnNameFor(expression);
-            ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
+            switch (expression.Method.Name)
+            {
+                case "Column":
+                    var constant = (ConstantExpression)expression.Arguments[1];
+                    ast.Push(new SqlColumnExpression(expression.Method.GetGenericArguments()[0], (string) constant.Value));
+                    break;
+                default:
+                    ast.Pop();
+                    var name = new Configuration().GetColumnNameByConventionFor(expression);
+                    ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
+                    break;
+            }
         }
 
         protected override Expression VisitNewArray(NewArrayExpression expression)
@@ -120,9 +129,8 @@ namespace HybridDb.Linq.Parsers
                     break;
                 case SqlNodeType.Column:
                     ast.Pop();
-                    var name = new Configuration().GetColumnNameFor(expression);
+                    var name = new Configuration().GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
-                                                     //((SqlColumnExpression) ast.Pop()).ColumnName + expression.Member.Name));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

@@ -32,7 +32,7 @@ namespace HybridDb.Schema
 
         public DocumentConfiguration<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
-            var name = configuration.GetColumnNameFor(projector);
+            var name = configuration.GetColumnNameByConventionFor(projector);
 
             var column = new UserColumn(name, new SqlColumn(typeof(TMember)));
             Table.Register(column);

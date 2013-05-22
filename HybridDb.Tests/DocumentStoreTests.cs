@@ -25,8 +25,8 @@ namespace HybridDb.Tests
                  .Project(x => x.StringProp)
                  .Project(x => x.DateTimeProp)
                  .Project(x => x.EnumProp)
-                 .Project(x => x.Complex.ToString()) // ComplexToString
-                 .Project(x => x.Children.Count()) // ChildrenCount
+                 .Project(x => x.Complex.ToString())
+                 .Project(x => x.Children.Count())
                  .Project(x => x.Children.Select(y => y.NestedString));
             store.InitializeDatabase();
 

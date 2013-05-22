@@ -21,42 +21,42 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetColumnNameFromSimpleProjection()
         {
-            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => x.String));
+            var name = conf.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => x.String));
             name.ShouldBe("String");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithMethod()
         {
-            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => x.String.ToUpper()));
+            var name = conf.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => x.String.ToUpper()));
             name.ShouldBe("StringToUpper");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithMethodAndArgument()
         {
-            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => x.String.ToUpper(CultureInfo.InvariantCulture)));
+            var name = conf.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => x.String.ToUpper(CultureInfo.InvariantCulture)));
             name.ShouldBe("StringToUpperCultureInfoInvariantCulture");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithLambda()
         {
-            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => x.Strings.Where(y => y == "Asger")));
+            var name = conf.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => x.Strings.Where(y => y == "Asger")));
             name.ShouldBe("StringsWhereEqualAsger");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithComplexLambda()
         {
-            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => x.Strings.Where(y => y.PadLeft(2).Length > 10)));
+            var name = conf.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => x.Strings.Where(y => y.PadLeft(2).Length > 10)));
             name.ShouldBe("StringsWherePadLeft2LengthGreaterThan10");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithEnumFlags()
         {
-            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => 
+            var name = conf.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => 
                 x.String.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any()));
             
             name.ShouldBe("StringGetTypeGetPropertiesInstanceStaticAny");

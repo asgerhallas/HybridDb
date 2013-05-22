@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using HybridDb.Linq;
 using Shouldly;
@@ -263,6 +262,15 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryOnDynamicallyNamedProperties()
+        {
+            var translation = session.Query<Entity>().Where(x => x.Column<int>("SomeColumn") == 1).Translate();
+
+            translation.Where.ShouldBe("(SomeColumn = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
+        [Fact]
         public void CanQueryWithSelectToAnonymous()
         {
             var translation = session.Query<Entity>().Select(x => new {x.Property}).Translate();
@@ -297,6 +305,15 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithSelectToAnonymousWithDynamicallyNamedProperty()
+        {
+            var translation = session.Query<Entity>()
+                                     .Select(x => new { Property = x.Column<int>("SomeProperty") })
+                                     .Translate();
+            translation.Select.ShouldBe("SomeProperty AS Property");
+        }
+
+        [Fact]
         public void CanQueryWithSelectToAnonymousToOtherName()
         {
             var translation = session.Query<Entity>().Select(x => new {HansOgGrethe = x.Property}).Translate();
@@ -328,6 +345,19 @@ namespace HybridDb.Tests
                                      })
                                      .Translate();
             translation.Select.ShouldBe("ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 AS ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1");
+        }
+
+        [Fact]
+        public void CanQueryWithSelectToNamedTypeWithDynamicallyNamedProperty()
+        {
+            var translation = session.Query<Entity>()
+                                     .Select(x => new ProjectedEntity
+                                     {
+                                         Property = x.Column<int>("SomeProperty")
+                                     })
+                                     .Translate();
+
+            translation.Select.ShouldBe("SomeProperty AS Property");
         }
 
         [Fact]

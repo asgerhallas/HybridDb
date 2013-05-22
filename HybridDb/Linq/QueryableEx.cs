@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,12 @@ namespace HybridDb.Linq
 
         public static bool In<T>(this T property, params T[] list)
         {
-            return list.Any(item => property.Equals(item));
+            throw new NotSupportedException("Only for building LINQ expressions");
+        }
+        
+        public static T Column<T>(this object parameter, string name)
+        {
+            throw new NotSupportedException("Only for building LINQ expressions");
         }
         
         internal static Translation Translate(this IQueryable query)
