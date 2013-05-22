@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using HybridDb.Linq;
 using Shouldly;
 using Xunit;
@@ -242,9 +243,11 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryOnComplexProperties()
         {
-            var translation = session.Query<Entity>().Where(x => x.Complex.ToString() == "something").Translate();
-            translation.Where.ShouldBe("(ComplexToString = @Value0)");
-            translation.Parameters.ShouldContainKeyAndValue("@Value0", "something");
+            var translation = session.Query<Entity>()
+                                     .Where(x => x.Complex.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any())
+                                     .Translate();
+            translation.Where.ShouldBe("(ComplexGetTypeGetPropertiesInstanceStaticAny = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", true);
         }
 
         [Fact]
@@ -281,6 +284,19 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithSelectToAnonymousWithComplexProperty()
+        {
+            var translation = session.Query<Entity>()
+                                     .Select(x => new
+                                     {
+                                         Projection = x.Children.Where(child => child.NestedProperty < 10)
+                                                       .Count(child => child.NestedProperty > 1)
+                                     })
+                                     .Translate();
+            translation.Select.ShouldBe("ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 AS Projection");
+        }
+
+        [Fact]
         public void CanQueryWithSelectToAnonymousToOtherName()
         {
             var translation = session.Query<Entity>().Select(x => new {HansOgGrethe = x.Property}).Translate();
@@ -301,6 +317,18 @@ namespace HybridDb.Tests
             translation.Select.ShouldBe("TheChildNestedProperty AS TheChildNestedProperty");
         }
 
+        [Fact]
+        public void CanQueryWithSelectToNamedTypeWithComplexProperty()
+        {
+            var translation = session.Query<Entity>()
+                                     .Select(x => new ProjectedEntity
+                                     {
+                                         ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 =
+                                             x.Children.Where(child => child.NestedProperty < 10).Count(child => child.NestedProperty > 1)
+                                     })
+                                     .Translate();
+            translation.Select.ShouldBe("ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 AS ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1");
+        }
 
         [Fact]
         public void CanQueryWithSelectToNamedWithOtherName()
@@ -472,6 +500,7 @@ namespace HybridDb.Tests
             public int Property { get; set; }
             public string StringProp { get; set; }
             public double TheChildNestedProperty { get; set; }
+            public int ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 { get; set; }
         }
     }
 }

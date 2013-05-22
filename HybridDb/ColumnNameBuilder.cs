@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace HybridDb
 {
@@ -72,7 +73,7 @@ namespace HybridDb
 
         protected override Expression VisitConstant(ConstantExpression node)
         {
-            ColumnName += node.Value.ToString();
+            ColumnName += Regex.Replace(node.Value.ToString(), "[^a-zA-Z0-9]", "");
             return node;
         }
     }

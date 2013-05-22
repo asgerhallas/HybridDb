@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Xunit;
 using Shouldly;
 
@@ -50,6 +51,15 @@ namespace HybridDb.Tests
         {
             var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => x.Strings.Where(y => y.PadLeft(2).Length > 10)));
             name.ShouldBe("StringsWherePadLeft2LengthGreaterThan10");
+        }
+
+        [Fact]
+        public void CanGetColumnNameFromProjectionWithEnumFlags()
+        {
+            var name = conf.GetColumnNameFor((Expression<Func<Entity, object>>) (x => 
+                x.String.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any()));
+            
+            name.ShouldBe("StringGetTypeGetPropertiesInstanceStaticAny");
         }
 
         public class Entity

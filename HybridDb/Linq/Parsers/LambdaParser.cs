@@ -80,7 +80,9 @@ namespace HybridDb.Linq.Parsers
 
         protected virtual void VisitColumnMethodCall(MethodCallExpression expression)
         {
-            throw new NotSupportedException();
+            ast.Pop();
+            var name = new Configuration().GetColumnNameFor(expression);
+            ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
         }
 
         protected override Expression VisitNewArray(NewArrayExpression expression)

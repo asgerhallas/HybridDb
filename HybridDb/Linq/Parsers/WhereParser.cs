@@ -110,13 +110,8 @@ namespace HybridDb.Linq.Parsers
                     ast.Push(new SqlBinaryExpression(SqlNodeType.In, ast.Pop(), ast.Pop()));
                     break;
                 default:
-                    ast.Pop();
-                    var name = new Configuration().GetColumnNameFor(expression);
-                    ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
+                    base.VisitColumnMethodCall(expression);
                     break;
-
-
-                    //throw new NotSupportedException(string.Format("The method '{0}' is not supported on column", expression.Method.Name));
             }
         }
     }
