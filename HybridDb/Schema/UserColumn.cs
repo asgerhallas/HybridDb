@@ -23,27 +23,8 @@ namespace HybridDb.Schema
         }
     }
 
-    //public class CollectionProjectionColumn : UserColumn
-    //{
-    //    public CollectionProjectionColumn(string columnName, SqlColumn sqlColumn) : base(columnName, sqlColumn) {}
-    //    public IProjectionTable Table { get; }
-    //}
-
-    //public class CollectionProjectionColumn<TEntity, TMember> : CollectionProjectionColumn
-    //{
-    //    readonly Func<TEntity, IEnumerable<TMember>> projector;
-
-    //    public CollectionProjectionColumn(string columnName, Func<TEntity, IEnumerable<TMember>> projector)
-    //    {
-    //        this.projector = projector;
-            
-    //        Name = columnName;
-    //        SqlColumn = new SqlColumn(typeof(TMember));
-    //    }
-
-    //    //public override object GetValue(object document)
-    //    //{
-    //    //    return projector((TEntity)document);
-    //    //}
-    //}
+    public class CollectionColumn : UserColumn
+    {
+        public CollectionColumn(string columnName, SqlColumn sqlColumn) : base(columnName, sqlColumn) { }
+    }
 }

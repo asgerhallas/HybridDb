@@ -35,7 +35,7 @@ namespace HybridDb
                            : null;
             }
 
-            var table = store.Configuration.GetTableFor<T>();
+            var table = store.Configuration.GetSchemaFor<T>();
             var row = store.Get(table.Table, id);
             if (row == null)
                 return null;
@@ -45,7 +45,7 @@ namespace HybridDb
 
         public IEnumerable<T> Query<T>(string where, object parameters) where T : class
         {
-            var table = store.Configuration.GetTableFor<T>();
+            var table = store.Configuration.GetSchemaFor<T>();
             QueryStats stats;
             var rows = store.Query(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
 
@@ -55,7 +55,7 @@ namespace HybridDb
 
         public IEnumerable<TProjection> Query<T, TProjection>(string where, object parameters) where T : class
         {
-            var table = store.Configuration.GetTableFor<T>();
+            var table = store.Configuration.GetSchemaFor<T>();
             QueryStats stats;
             var rows = store.Query<TProjection>(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
             return rows;
@@ -73,14 +73,14 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            var table = store.Configuration.GetTableFor(entity.GetType());
+            var table = store.Configuration.GetSchemaFor(entity.GetType());
             var id = (Guid) table.Projections[table.Table.IdColumn](entity);
             entities.Remove(id);
         }
 
         public Guid? GetEtagFor(object entity)
         {
-            var table = store.Configuration.GetTableFor(entity.GetType());
+            var table = store.Configuration.GetSchemaFor(entity.GetType());
             var id = (Guid)table.Projections[table.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
@@ -92,7 +92,7 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var table = store.Configuration.GetTableFor(entity.GetType());
+            var table = store.Configuration.GetSchemaFor(entity.GetType());
             var id = (Guid)table.Projections[table.Table.IdColumn](entity);
             if (entities.ContainsKey(id))
                 return;
@@ -107,7 +107,7 @@ namespace HybridDb
 
         public void Delete(object entity)
         {
-            var table = store.Configuration.GetTableFor(entity.GetType());
+            var table = store.Configuration.GetSchemaFor(entity.GetType());
             var id = (Guid)table.Projections[table.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
@@ -142,7 +142,7 @@ namespace HybridDb
             foreach (var managedEntity in entities.Values)
             {
                 var id = managedEntity.Key;
-                var table = store.Configuration.GetTableFor(managedEntity.Entity.GetType());
+                var table = store.Configuration.GetSchemaFor(managedEntity.Entity.GetType());
                 var projections = table.Table.Columns.OfType<UserColumn>().ToDictionary(x => x.Name, x => table.Projections[x](managedEntity.Entity));
                 var document = serializer.Serialize(managedEntity.Entity);
 

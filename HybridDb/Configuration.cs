@@ -31,12 +31,12 @@ namespace HybridDb
             tables.TryAdd(association.Type, association);
         }
 
-        public DocumentConfiguration<T> GetTableFor<T>()
+        public DocumentConfiguration<T> GetSchemaFor<T>()
         {
-            return (DocumentConfiguration<T>) GetTableFor(typeof(T));
+            return (DocumentConfiguration<T>) GetSchemaFor(typeof(T));
         }
 
-        public DocumentConfiguration GetTableFor(Type type)
+        public DocumentConfiguration GetSchemaFor(Type type)
         {
             DocumentConfiguration table;
             if (!tables.TryGetValue(type, out table))

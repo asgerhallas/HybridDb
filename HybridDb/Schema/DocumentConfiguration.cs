@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 
 namespace HybridDb.Schema
 {
@@ -29,7 +30,7 @@ namespace HybridDb.Schema
         public DocumentConfiguration<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
             var expression = projector.ToString();
-            var name = string.Join("", expression.Split('.').Skip(1));
+            var name = Regex.Replace(string.Join("", expression.Split('.').Skip(1)), "[^a-zA-Z0-9]", "");
             return Project(name, projector, makeNullSafe);
         }
 
@@ -47,12 +48,11 @@ namespace HybridDb.Schema
 
         public DocumentConfiguration<TEntity> Project<TMember>(string columnName, Expression<Func<TEntity, IEnumerable<TMember>>> projector)
         {
-            //var column = new UserColumn(columnName, new SqlColumn(typeof(TMember)));
-            //Table.Register(column);
+            var column = new CollectionColumn(columnName, new SqlColumn(typeof(TMember)));
+            Table.Register(column);
             
-            //var compiledProjector = Cast(projector).Compile();
-            //Projections.Add(column, compiledProjector);
-
+            var compiledProjector = Cast(projector).Compile();
+            Projections.Add(column, compiledProjector);
             return this;
         }
 

@@ -41,7 +41,7 @@ namespace HybridDb.Linq
         public IEnumerable<T> ExecuteQuery<T>(Translation translation)
         {
             var store = session.Advanced.DocumentStore;
-            var table = store.Configuration.GetTableFor(typeof (TSourceElement));
+            var table = store.Configuration.GetSchemaFor(typeof (TSourceElement));
 
             QueryStats storeStats;
             var results = typeof (TSourceElement) == typeof (T)

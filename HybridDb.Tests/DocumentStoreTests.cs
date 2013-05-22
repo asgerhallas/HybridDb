@@ -40,7 +40,7 @@ namespace HybridDb.Tests
         public void CanInsert()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
             var row = store.RawQuery("select * from #Entities").Single();
@@ -80,8 +80,8 @@ namespace HybridDb.Tests
         public void CanInsertCollectionProjections()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
-            store.Insert(table.Table, id, documentAsByteArray,
+            var schema = store.Configuration.GetSchemaFor<Entity>();
+            store.Insert(schema.Table, id, documentAsByteArray,
                          new
                          {
                              Children = new[]
@@ -106,7 +106,7 @@ namespace HybridDb.Tests
         public void CanUpdate()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
             store.Update(table.Table, id, etag, new byte[] {}, new {Field = "Lars"});
@@ -120,7 +120,7 @@ namespace HybridDb.Tests
         public void CanUpdateDynamically()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
             store.Update(new Table("Entities"), id, etag, new byte[] {}, new Dictionary<string, object> {{"Field", null}, {"StringProp", "Lars"}});
@@ -135,7 +135,7 @@ namespace HybridDb.Tests
         public void CanUpdatePessimistically()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}, new {Field = "Asger"});
 
             Should.NotThrow(() => store.Update(table.Table, id, Guid.NewGuid(), new byte[] {}, new {Field = "Lars"}, lastWriteWins: true));
@@ -145,7 +145,7 @@ namespace HybridDb.Tests
         public void UpdateFailsWhenEtagNotMatch()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
             Should.Throw<ConcurrencyException>(() => store.Update(table.Table, id, Guid.NewGuid(), new byte[] {}, new {Field = "Lars"}));
@@ -156,7 +156,7 @@ namespace HybridDb.Tests
         {
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
             Should.Throw<ConcurrencyException>(() => store.Update(table.Table, Guid.NewGuid(), etag, new byte[] {}, new {Field = "Lars"}));
@@ -166,7 +166,7 @@ namespace HybridDb.Tests
         public void CanGet()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
             var row = store.Get(table.Table, id);
@@ -180,7 +180,7 @@ namespace HybridDb.Tests
         public void CanGetDynamically()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Insert(table.Table, id, documentAsByteArray, new { Field = "Asger" });
 
             var row = store.Get(new Table("Entities"), id);
@@ -194,7 +194,7 @@ namespace HybridDb.Tests
         public void CanQueryProjectToNestedProperty()
         {
             var id1 = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id1, new byte[0], new { TheChildNestedProperty = 9.8d });
 
             QueryStats stats;
@@ -209,7 +209,7 @@ namespace HybridDb.Tests
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag1 = store.Insert(table.Table, id1, documentAsByteArray, new { Field = "Asger" });
             var etag2 = store.Insert(table.Table, id2, documentAsByteArray, new { Field = "Hans" });
             store.Insert(table.Table, id3, documentAsByteArray, new { Field = "Bjarne" });
@@ -234,7 +234,7 @@ namespace HybridDb.Tests
         public void CanQueryAndReturnAnonymousProjections()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
 
             store.Insert(table.Table, id, documentAsByteArray, new { Field = "Asger" });
 
@@ -257,7 +257,7 @@ namespace HybridDb.Tests
         {
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id1, documentAsByteArray, new { Field = "Asger", StringProp = "A" });
             store.Insert(table.Table, id2, documentAsByteArray, new { Field = "Hans", StringProp = "B" });
 
@@ -274,7 +274,7 @@ namespace HybridDb.Tests
         public void CanDelete()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Insert(table.Table, id, new byte[0], new { });
 
             store.Delete(table.Table, id, etag);
@@ -286,7 +286,7 @@ namespace HybridDb.Tests
         public void CanDeletePessimistically()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, new byte[0], new { });
 
             Should.NotThrow(() => store.Delete(table.Table, id, Guid.NewGuid(), lastWriteWins: true));
@@ -296,7 +296,7 @@ namespace HybridDb.Tests
         public void DeleteFailsWhenEtagNotMatch()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, new byte[0], new { });
 
             Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, id, Guid.NewGuid()));
@@ -306,7 +306,7 @@ namespace HybridDb.Tests
         public void DeleteFailsWhenIdNotMatchAkaDocumentAlreadyDeleted()
         {
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Insert(table.Table, id, new byte[0], new { });
 
             Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, Guid.NewGuid(), etag));
@@ -317,7 +317,7 @@ namespace HybridDb.Tests
         {
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etag = store.Execute(new InsertCommand(table.Table, id1, new byte[0], new { Field = "A" }),
                                      new InsertCommand(table.Table, id2, new byte[0], new { Field = "B" }));
 
@@ -331,7 +331,7 @@ namespace HybridDb.Tests
         public void BatchesAreTransactional()
         {
             var id1 = Guid.NewGuid();
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var etagThatMakesItFail = Guid.NewGuid();
             try
             {
@@ -363,7 +363,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSplitLargeCommandBatches()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
 
             var commands = new List<DatabaseCommand>();
             for (var i = 0; i < 2100/4 + 1; i++)
@@ -378,7 +378,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryEnumProjection()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new byte[0], new { EnumProp = SomeFreakingEnum.Two });
 
@@ -389,7 +389,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryEnumProjectionToNetType()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new byte[0], new { EnumProp = SomeFreakingEnum.Two });
 
@@ -401,7 +401,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryStringProjection()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new byte[0], new { StringProp = "Hest" });
 
@@ -412,7 +412,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryOnNull()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new byte[0], new { StringProp = (string)null });
 
@@ -424,7 +424,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryDateTimeProjection()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new byte[0], new { DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1) });
 
@@ -436,7 +436,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanPage()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = i });
 
@@ -456,7 +456,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanTake()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = i });
 
@@ -473,7 +473,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSkip()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = i });
 
@@ -492,7 +492,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetTotalRowsWhenOrderingByPropertyWithSameValue()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = 10 });
             store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = 10 });
             store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = 10 });
@@ -510,7 +510,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetTotalRows()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Property = i });
 
@@ -524,7 +524,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetTotalRowsWithNoResults()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats).ToList();
@@ -536,7 +536,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWithoutWhere()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { });
 
             QueryStats stats;
@@ -548,7 +548,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanOrderBy()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Field = i });
 
@@ -566,7 +566,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanOrderByDescWhileSkippingAndTaking()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { Field = i });
 
@@ -581,7 +581,7 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsIfEntityTypeIsUnknown()
         {
-            Should.Throw<TableNotFoundException>(() => store.Configuration.GetTableFor<int>());
+            Should.Throw<TableNotFoundException>(() => store.Configuration.GetSchemaFor<int>());
         }
 
         [Fact]
@@ -589,7 +589,7 @@ namespace HybridDb.Tests
         {
             using (new TransactionScope())
             {
-                var table = store.Configuration.GetTableFor<Entity>();
+                var table = store.Configuration.GetSchemaFor<Entity>();
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { });
                 store.Insert(table.Table, Guid.NewGuid(), new byte[0], new { });
 
@@ -608,12 +608,12 @@ namespace HybridDb.Tests
                 globalStore1.InitializeDatabase();
 
                 var id = Guid.NewGuid();
-                globalStore1.Insert(globalStore1.Configuration.GetTableFor<Case>().Table, id, new byte[0], new { });
+                globalStore1.Insert(globalStore1.Configuration.GetSchemaFor<Case>().Table, id, new byte[0], new { });
 
                 using (var globalStore2 = DocumentStore.ForTestingWithGlobalTempTables())
                 {
                     globalStore2.DocumentsFor<Case>();
-                    var result = globalStore2.Get(globalStore2.Configuration.GetTableFor<Case>().Table, id);
+                    var result = globalStore2.Get(globalStore2.Configuration.GetSchemaFor<Case>().Table, id);
 
                     result.ShouldNotBe(null);
                 }

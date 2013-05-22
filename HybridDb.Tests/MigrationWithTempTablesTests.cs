@@ -256,7 +256,7 @@ END", uniqueDbName));
 
             storeWithTempTables.Migrate(migrator =>
             {
-                var tableToTypeRelation = storeWithTempTables.Configuration.GetTableFor<Entity>();
+                var tableToTypeRelation = storeWithTempTables.Configuration.GetSchemaFor<Entity>();
                 tableToTypeRelation.Project(x => x.Property);
 
                 migrator.AddColumn(tableToTypeRelation.Table.Name, new UserColumn("Property", new SqlColumn(typeof (int))));

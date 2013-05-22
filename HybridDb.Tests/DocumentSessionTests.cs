@@ -84,7 +84,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanDeferCommands()
         {
-            var table = store.Configuration.GetTableFor<Entity>();
+            var table = store.Configuration.GetSchemaFor<Entity>();
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {

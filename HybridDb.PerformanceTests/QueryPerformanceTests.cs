@@ -13,7 +13,7 @@ namespace HybridDb.PerformanceTests
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
-            store.Query(store.Configuration.GetTableFor<Entity>().Table, out rows);
+            store.Query(store.Configuration.GetSchemaFor<Entity>().Table, out rows);
             watch.ElapsedMilliseconds.ShouldBeLessThan(60);
         }
 
@@ -22,7 +22,7 @@ namespace HybridDb.PerformanceTests
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
-            store.Query(store.Configuration.GetTableFor<Entity>().Table, out rows, skip: 200, take: 500);
+            store.Query(store.Configuration.GetSchemaFor<Entity>().Table, out rows, skip: 200, take: 500);
             watch.ElapsedMilliseconds.ShouldBeLessThan(10);
         }
 
@@ -31,7 +31,7 @@ namespace HybridDb.PerformanceTests
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
-            store.Query(store.Configuration.GetTableFor<Entity>().Table, out rows, skip: 9500, take: 500);
+            store.Query(store.Configuration.GetSchemaFor<Entity>().Table, out rows, skip: 9500, take: 500);
             watch.ElapsedMilliseconds.ShouldBeLessThan(10);
         }
 
@@ -40,7 +40,7 @@ namespace HybridDb.PerformanceTests
         {
             var watch = Stopwatch.StartNew();
             QueryStats rows;
-            store.Query<Entity>(store.Configuration.GetTableFor<Entity>().Table, out rows, skip: 200, take: 500);
+            store.Query<Entity>(store.Configuration.GetSchemaFor<Entity>().Table, out rows, skip: 200, take: 500);
             watch.ElapsedMilliseconds.ShouldBeLessThan(10);
         }
 
