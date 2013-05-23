@@ -19,11 +19,13 @@ namespace HybridDb.Schema
             {
                 {Table.IdColumn, document => ((dynamic) document).Id}
             };
+            UncompiledProjections = new Dictionary<Column, Expression<Func<object, object>>>();
         }
 
         public Table Table { get; private set; }
         public Type Type { get; private set; }
         public Dictionary<Column, Func<object, object>> Projections { get; private set; }
+        public Dictionary<Column, Expression<Func<object, object>>> UncompiledProjections { get; private set; }
     }
 
     public class DocumentConfiguration<TEntity> : DocumentConfiguration
@@ -38,8 +40,9 @@ namespace HybridDb.Schema
             Table.Register(column);
 
             if (makeNullSafe) projector = InjectNullChecks(projector);
-            var compiledProjector = Cast(projector).Compile();
-            Projections.Add(column, compiledProjector);
+            var castProjector = Cast(projector);
+            Projections.Add(column, castProjector.Compile());
+            UncompiledProjections.Add(column, castProjector);
 
             return this;
         }
