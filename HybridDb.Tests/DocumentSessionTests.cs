@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using HybridDb.Commands;
 using Shouldly;
 using Xunit;
@@ -150,7 +151,7 @@ namespace HybridDb.Tests
                     Property = "Asger",
                     TheSecondChild = null
                 });
-                Should.Throw<NullReferenceException>(() => session.SaveChanges());
+                Should.Throw<TargetInvocationException>(() => session.SaveChanges());
             }
         }
 

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace HybridDb.Schema
 {
@@ -37,16 +39,11 @@ namespace HybridDb.Schema
             var column = new UserColumn(name, new SqlColumn(typeof(TMember)));
             Table.Register(column);
 
-            if (makeNullSafe)
-            {
-                var compiled = InjectNullChecks(projector).Compile();
-                Projections.Add(column, x => compiled((TEntity)x));
-            }
-            else
-            {
-                var compiled = projector.Compile();
-                Projections.Add(column, x => (object)compiled((TEntity)x));
-            }
+            var finalProjector = makeNullSafe 
+                ? Compile(name, InjectNullChecks(projector)) 
+                : Compile(name, projector);
+            
+            Projections.Add(column, finalProjector);
 
             return this;
         }
@@ -59,6 +56,23 @@ namespace HybridDb.Schema
         public static Expression<Func<TModel, object>> InjectNullChecks<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
         {
             return (Expression<Func<TModel, object>>)new NullCheckInjector().Visit(expression);
+        }
+
+        Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> func)
+        {
+            return x =>
+            {
+                try
+                {
+                    var compiled = func.Compile();
+                    return (object) compiled((TEntity) x);
+                }
+                catch (Exception ex)
+                {
+                    throw new TargetInvocationException(
+                        string.Format("The projector for column {0} threw an exception.\nThe projector code is {1}.", name, func), ex);
+                }
+            };
         }
     }
 }
