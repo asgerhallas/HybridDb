@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using HybridDb.Commands;
 using Shouldly;
 using Xunit;

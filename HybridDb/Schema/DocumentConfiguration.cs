@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text.RegularExpressions;
 
 namespace HybridDb.Schema
 {
@@ -39,10 +37,16 @@ namespace HybridDb.Schema
             var column = new UserColumn(name, new SqlColumn(typeof(TMember)));
             Table.Register(column);
 
-            if (makeNullSafe) projector = InjectNullChecks(projector);
-            var castProjector = Cast(projector);
-            Projections.Add(column, castProjector.Compile());
-            UncompiledProjections.Add(column, castProjector);
+            if (makeNullSafe)
+            {
+                var compiled = InjectNullChecks(projector).Compile();
+                Projections.Add(column, x => compiled((TEntity)x));
+            }
+            else
+            {
+                var compiled = projector.Compile();
+                Projections.Add(column, x => (object)compiled((TEntity)x));
+            }
 
             return this;
         }
@@ -52,23 +56,9 @@ namespace HybridDb.Schema
             return this;
         }
 
-        public static Expression<Func<object, object>> Cast<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
+        public static Expression<Func<TModel, object>> InjectNullChecks<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
         {
-            var parameterAsObject = Expression.Parameter(typeof (object));
-
-            var wrappedCall =
-                Expression.Convert(
-                    Expression.Invoke(
-                        expression,
-                        Expression.Convert(parameterAsObject, typeof (TModel))),
-                    typeof (object));
-
-            return Expression.Lambda<Func<object, object>>(wrappedCall, parameterAsObject);
-        }
-
-        public static Expression<Func<TModel, TProperty>> InjectNullChecks<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
-        {
-            return (Expression<Func<TModel, TProperty>>) new NullCheckInjector().Visit(expression);
+            return (Expression<Func<TModel, object>>)new NullCheckInjector().Visit(expression);
         }
     }
 }
