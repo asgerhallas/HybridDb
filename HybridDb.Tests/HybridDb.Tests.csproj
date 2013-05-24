@@ -69,11 +69,18 @@
     <Compile Include="DocumentStoreTests.cs" />
     <Compile Include="LinqIntegrationTests.cs" />
     <Compile Include="LinqTests.cs" />
-    <Compile Include="MigrationWithTempTablesTests.cs" />
+    <Compile Include="MigratorWithTempTablesTests.cs" />
+    <Compile Include="Performance\Entity.cs" />
+    <Compile Include="Performance\InsertPerformanceTests.cs" />
+    <Compile Include="Performance\QueryPerformanceFixture.cs" />
+    <Compile Include="Performance\QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Performance\large.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj">

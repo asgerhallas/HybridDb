@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HybridDb.PerformanceTests")]
+[assembly: AssemblyTitle("HybridDb.Migration")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("HybridDb.PerformanceTests")]
+[assembly: AssemblyProduct("HybridDb.Migration")]
 [assembly: AssemblyCopyright("Copyright ©  2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("1dd4f150-11b8-4128-a9fa-28017e2258f4")]
+[assembly: Guid("9874efaf-6e83-44dd-99aa-a8a52a04c65c")]
 
 // Version information for an assembly consists of the following four values:
 //

@@ -2,7 +2,7 @@
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.PerformanceTests
+namespace HybridDb.Tests.Performance
 {
     public class QueryPerformanceTests : IUseFixture<QueryPerformanceFixture>
     {

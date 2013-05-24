@@ -4,9 +4,9 @@ namespace HybridDb.Schema
 {
     public class UserColumn : Column
     {
-        public UserColumn(string columnName, SqlColumn sqlColumn)
+        public UserColumn(string name, SqlColumn sqlColumn)
         {
-            Name = columnName;
+            Name = name;
             SqlColumn = sqlColumn;
         }
 

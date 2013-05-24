@@ -11,13 +11,13 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class MigrationWithTempTablesTests : IDisposable
+    public class MigratorWithTempTablesTests : IDisposable
     {
         readonly DocumentStore storeWithTempTables;
         readonly DocumentStore storeWithRealTables;
         readonly string uniqueDbName;
 
-        public MigrationWithTempTablesTests()
+        public MigratorWithTempTablesTests()
         {
             // Make a non-temp test database needed for certain tests
             using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
