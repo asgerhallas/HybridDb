@@ -491,13 +491,6 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value1", guid2);
         }
 
-        [Fact]
-        public void CanQueryWhereWithEmptyIn()
-        {
-            var translation = session.Query<Entity>().Where(x => x.Id.In(new Guid[0])).Translate();
-            translation.Where.ShouldBe("(Id IN (NULL))");
-        }
-
         public class Entity
         {
             public string Field;

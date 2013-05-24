@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 
@@ -107,7 +109,10 @@ namespace HybridDb.Linq.Parsers
                     ast.Push(new SqlBinaryExpression(SqlNodeType.LikeStartsWith, ast.Pop(), ast.Pop()));
                     break;
                 case "In":
-                    ast.Push(new SqlBinaryExpression(SqlNodeType.In, ast.Pop(), ast.Pop()));
+                    var column = ast.Pop();
+                    var set = (SqlConstantExpression)ast.Pop();
+                    if (((IEnumerable)set.Value).Cast<object>().Any())
+                        ast.Push(new SqlBinaryExpression(SqlNodeType.In, column, set));
                     break;
                 default:
                     base.VisitColumnMethodCall(expression);
