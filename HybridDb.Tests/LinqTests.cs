@@ -476,7 +476,18 @@ namespace HybridDb.Tests
         public void CanQueryWhereWithInEmptyArray()
         {
             var translation = session.Query<Entity>().Where(x => x.Id.In(new Guid[0])).Translate();
-            translation.Where.ShouldBe("");
+            translation.Where.ShouldBe("(@Value0 <> @Value1)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+            translation.Parameters.ShouldContainKeyAndValue("@Value1", 1);
+        }
+
+        [Fact]
+        public void CanQueryWhereWithNotInEmptyArray()
+        {
+            var translation = session.Query<Entity>().Where(x => !x.Id.In(new Guid[0])).Translate();
+            translation.Where.ShouldBe(" NOT (@Value0 <> @Value1)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+            translation.Parameters.ShouldContainKeyAndValue("@Value1", 1);
         }
 
         [Fact]

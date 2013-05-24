@@ -111,8 +111,16 @@ namespace HybridDb.Linq.Parsers
                 case "In":
                     var column = ast.Pop();
                     var set = (SqlConstantExpression)ast.Pop();
-                    if (((IEnumerable)set.Value).Cast<object>().Any())
+                    if (((IEnumerable) set.Value).Cast<object>().Any())
+                    {
                         ast.Push(new SqlBinaryExpression(SqlNodeType.In, column, set));
+                    }
+                    else
+                    {
+                        // A fake false
+                        var constant1 = new SqlConstantExpression(1);
+                        ast.Push(new SqlBinaryExpression(SqlNodeType.NotEqual, constant1, constant1));
+                    }
                     break;
                 default:
                     base.VisitColumnMethodCall(expression);
