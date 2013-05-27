@@ -62,57 +62,57 @@ namespace HybridDb
             return AddColumn(tablename, column.Name, GetColumnSqlType(column));
         }
 
-        public IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer)
-        {
-            Do(documentConfiguration,
-               store.Configuration.Serializer,
-               (entity, projections) =>
-               {
-                   foreach (var column in documentConfiguration.Projections.Where(x => x.Key is UserColumn))
-                   {
-                       projections[column.Key.Name] = column.Value(entity);
-                   }
-               });
+        //public IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer)
+        //{
+        //    Do(documentConfiguration,
+        //       store.Configuration.Serializer,
+        //       (entity, projections) =>
+        //       {
+        //           foreach (var column in documentConfiguration.Projections.Where(x => x.Key is UserColumn))
+        //           {
+        //               projections[column.Key.Name] = column.Value(entity);
+        //           }
+        //       });
 
-            return this;
-        }
+        //    return this;
+        //}
 
-        public IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action)
-        {
-            return Do(new DocumentConfiguration(store.Configuration, table, typeof(T)), serializer, (entity, projections) => action((T)entity, projections));
-        }
+        //public IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action)
+        //{
+        //    return Do(new DocumentConfiguration(store.Configuration, table, typeof(T)), serializer, (entity, projections) => action((T)entity, projections));
+        //}
 
-        public IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action)
-        {
-            var tablename = store.FormatTableNameAndEscape(relation.Table.Name);
+        //public IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action)
+        //{
+        //    var tablename = store.FormatTableNameAndEscape(relation.Table.Name);
 
-            string selectSql = string.Format("select * from {0}", tablename);
-            foreach (var dictionary in connectionManager.Connection.Query(selectSql).Cast<IDictionary<string, object>>())
-            {
-                var document = (byte[])dictionary[relation.Table.DocumentColumn.Name];
+        //    string selectSql = string.Format("select * from {0}", tablename);
+        //    foreach (var dictionary in connectionManager.Connection.Query(selectSql).Cast<IDictionary<string, object>>())
+        //    {
+        //        var document = (byte[])dictionary[relation.Table.DocumentColumn.Name];
 
-                var entity = serializer.Deserialize(document, relation.Type);
-                action(entity, dictionary);
-                dictionary[relation.Table.DocumentColumn.Name] = serializer.Serialize(entity);
+        //        var entity = serializer.Deserialize(document, relation.Type);
+        //        action(entity, dictionary);
+        //        dictionary[relation.Table.DocumentColumn.Name] = serializer.Serialize(entity);
 
-                var sql = new SqlBuilder()
-                    .Append("update {0} set {1} where {2}=@Id",
-                            tablename,
-                            string.Join(", ", from column in dictionary.Keys select column + "=@" + column),
-                            relation.Table.IdColumn.Name)
-                    .ToString();
+        //        var sql = new SqlBuilder()
+        //            .Append("update {0} set {1} where {2}=@Id",
+        //                    tablename,
+        //                    string.Join(", ", from column in dictionary.Keys select column + "=@" + column),
+        //                    relation.Table.IdColumn.Name)
+        //            .ToString();
 
-                var parameters = dictionary.Select(x => new Parameter
-                {
-                    Name = x.Key,
-                    Value = x.Value
-                });
+        //        var parameters = dictionary.Select(x => new Parameter
+        //        {
+        //            Name = x.Key,
+        //            Value = x.Value
+        //        });
 
-                connectionManager.Connection.Execute(sql, new FastDynamicParameters(parameters));
-            }
+        //        connectionManager.Connection.Execute(sql, new FastDynamicParameters(parameters));
+        //    }
 
-            return this;
-        }
+        //    return this;
+        //}
 
         public IMigrator AddTable(string tablename, params string[] columns)
         {

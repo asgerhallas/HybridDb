@@ -157,7 +157,7 @@ END", uniqueDbName));
                 session.SaveChanges();
             }
 
-            var processedEntities = new List<Entity>();
+            var processedEntities = new List<Entity>(); 
             storeWithTempTables.Migrate(migrator =>
                                         migrator.Do<Entity>(
                                             new Table("Entities"),

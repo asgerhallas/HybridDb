@@ -14,10 +14,10 @@ namespace HybridDb
         IMigrator RenameTableAndAssociatedTables(Table oldTable, string newTablename);
         IMigrator AddColumn(string tablename, Column column);
 
-        IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer);
+        //IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer);
 
-        IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action);
-        IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action);
+        //IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action);
+        //IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action);
 
         IMigrator AddTable(string tablename, params string[] columns);
         IMigrator RemoveTable(string tablename);

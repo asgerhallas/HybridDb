@@ -21,13 +21,27 @@ namespace HybridDb.Schema
 
             DocumentColumn = new SystemColumn("Document", new SqlColumn(DbType.Binary, Int32.MaxValue));
             Register(DocumentColumn);
+
+            VersionColumn = new SystemColumn("Version", new SqlColumn(DbType.Int32));
+            Register(VersionColumn);
+
+            SizeColumn = new SystemColumn("Size", new SqlColumn(DbType.Int32));
+            Register(SizeColumn);
+
+            CreatedAtColumn = new SystemColumn("CreatedAt", new SqlColumn(DbType.DateTimeOffset));
+            Register(CreatedAtColumn);
+
+            ModifiedAtColumn = new SystemColumn("ModifiedAt", new SqlColumn(DbType.DateTimeOffset));
+            Register(ModifiedAtColumn);
         }
 
         public SystemColumn IdColumn { get; private set; }
         public SystemColumn EtagColumn { get; private set; }
         public SystemColumn DocumentColumn { get; private set; }
-        public object SizeColumn { get; private set; }
-        public object CreatedAtColumn { get; private set; }
+        public SystemColumn VersionColumn { get; private set; }
+        public SystemColumn SizeColumn { get; private set; }
+        public SystemColumn CreatedAtColumn { get; private set; }
+        public SystemColumn ModifiedAtColumn { get; private set; }
 
         public Column this[string name]
         {

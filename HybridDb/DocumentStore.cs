@@ -19,6 +19,7 @@ namespace HybridDb
         readonly Configuration configuration;
         readonly string connectionString;
         readonly TableMode tableMode;
+        readonly List<DocumentStoreAddIn> addIns;
 
         DbConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
@@ -31,6 +32,7 @@ namespace HybridDb
             this.connectionString = connectionString;
 
             configuration = new Configuration();
+            addIns = new List<DocumentStoreAddIn>();
         }
 
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
@@ -86,6 +88,11 @@ namespace HybridDb
                     migrator.MigrateTo(table, safe);
                 }
             });
+        }
+
+        public void RegisterAddIn(DocumentStoreAddIn addin)
+        {
+            addIns.Add(addin);
         }
 
         public DocumentConfiguration<TEntity> DocumentsFor<TEntity>()
@@ -263,7 +270,14 @@ namespace HybridDb
                 Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 connection.Complete();
-                return row != null ? row.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value) : null;
+
+                if (row == null)
+                    return null;
+
+                foreach (var addIn in addIns)
+                    addIn.OnRead(row);
+
+                return row.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
             }
         }
 

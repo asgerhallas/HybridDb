@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace HybridDb
@@ -40,7 +41,7 @@ namespace HybridDb
             }
         }
 
-        public virtual object Deserialize(byte[] data, Type type)
+        public object Deserialize(byte[] data, Type type)
         {
             using (var inStream = new MemoryStream(data))
             using (var bsonReader = new BsonReader(inStream))
