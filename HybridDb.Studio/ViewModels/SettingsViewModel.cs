@@ -23,9 +23,17 @@ namespace HybridDb.Studio.ViewModels
             if (string.IsNullOrWhiteSpace(ConnectionString))
                 return false;
 
-            using (var store = new DocumentStore(ConnectionString))
+            try
             {
-                return store.CanConnect();
+                using (var conn = new SqlConnection(ConnectionString))
+                {
+                    conn.Open();
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

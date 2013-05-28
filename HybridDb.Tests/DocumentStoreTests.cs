@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Transactions;
@@ -28,7 +29,7 @@ namespace HybridDb.Tests
                  .Project(x => x.Complex.ToString())
                  .Project(x => x.Children.Count())
                  .Project(x => x.Children.Select(y => y.NestedString));
-            store.InitializeDatabase();
+            store.MigrateSchema();
 
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
         }
@@ -364,12 +365,12 @@ namespace HybridDb.Tests
         {
             var store1 = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
             store1.DocumentsFor<Case>().Project(x => x.By);
-            store1.InitializeDatabase();
+            store1.MigrateSchema();
 
             var store2 = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
             store2.DocumentsFor<Case>().Project(x => x.By);
 
-            Should.NotThrow(() => store2.InitializeDatabase());
+            Should.NotThrow(() => store2.MigrateSchema());
         }
 
         [Fact]
@@ -617,7 +618,7 @@ namespace HybridDb.Tests
             using (var globalStore1 = DocumentStore.ForTestingWithGlobalTempTables())
             {
                 globalStore1.DocumentsFor<Case>();
-                globalStore1.InitializeDatabase();
+                globalStore1.MigrateSchema();
 
                 var id = Guid.NewGuid();
                 globalStore1.Insert(globalStore1.Configuration.GetSchemaFor<Case>().Table, id, new byte[0], new { });
@@ -633,6 +634,45 @@ namespace HybridDb.Tests
 
             var tables = store.RawQuery<string>(string.Format("select OBJECT_ID('##Cases') as Result"));
             tables.First().ShouldBe(null);
+        }
+
+        [Fact]
+        public void CallbackAfterGet()
+        {
+            var schema = store.Configuration.GetSchemaFor<Entity>();
+            var id = Guid.NewGuid();
+            store.Insert(schema.Table, id, new byte[0], new { });
+
+            int calls = 0;
+            store.OnRead += o => calls++;
+            store.Get(schema.Table, id);
+
+            calls.ShouldBe(1);
+        }
+
+        [Fact]
+        public void CallbackAfterQuery()
+        {
+            var schema = store.Configuration.GetSchemaFor<Entity>();
+            store.Insert(schema.Table, Guid.NewGuid(), new byte[0], new { });
+            store.Insert(schema.Table, Guid.NewGuid(), new byte[0], new { });
+
+            int calls = 0;
+            store.OnRead += o => calls++;
+            QueryStats stats;
+            store.Query(schema.Table, out stats).ToList(); // Evaluate the lazy enumerable
+
+            calls.ShouldBe(2);
+        }
+
+        [Fact]
+        public void CallbacksAreLoadedFromExternalAssemblies()
+        {
+            store.LoadAddIns();
+            store.AddIns.Count().ShouldBe(1);
+            
+            // The AddIn loaded in tests throws on any operation
+            Should.Throw<ThrowingAddIn.OperationException>(() => store.OnRead(null));
         }
 
         public class Case
@@ -696,6 +736,16 @@ namespace HybridDb.Tests
         {
             One,
             Two
+        }
+
+        public class ThrowingAddIn : IAddIn
+        {
+            public void OnRead(IDictionary<string, object> projections)
+            {
+                throw new OperationException();
+            }
+
+            public class OperationException : Exception { }
         }
     }
 }

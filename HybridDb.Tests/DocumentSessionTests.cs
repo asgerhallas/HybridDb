@@ -24,7 +24,7 @@ namespace HybridDb.Tests
                 .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
                 .Project(x => x.Children.SelectMany(y => y.NestedProperty));
             store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
-            store.InitializeDatabase();
+            store.MigrateSchema();
         }
 
         public void Dispose()

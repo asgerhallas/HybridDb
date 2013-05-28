@@ -21,7 +21,7 @@ namespace HybridDb.Tests.Performance
             store.DocumentsFor<Entity>()
                 .Project(x => x.SomeData)
                 .Project(x => x.SomeNumber);
-            store.InitializeDatabase();
+            store.MigrateSchema();
 
             var commands = new List<DatabaseCommand>();
             for (int i = 0; i < 10000; i++)

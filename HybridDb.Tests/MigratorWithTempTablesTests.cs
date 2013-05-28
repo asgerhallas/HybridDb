@@ -140,136 +140,136 @@ END", uniqueDbName));
         }
 
 
-        [Fact]
-        public void CanDeserializeToEntityAndPersistChangesToDocument()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+        //[Fact]
+        //public void CanDeserializeToEntityAndPersistChangesToDocument()
+        //{
+        //    storeWithTempTables.DocumentsFor<Entity>();
+        //    storeWithTempTables.InitializeDatabase();
+        //    var id1 = Guid.NewGuid();
+        //    var id2 = Guid.NewGuid();
+        //    var id3 = Guid.NewGuid();
 
-            using (var session = storeWithTempTables.OpenSession())
-            {
-                session.Store(new Entity {Id = id1, Property = 1});
-                session.Store(new Entity {Id = id2, Property = 2});
-                session.Store(new Entity {Id = id3, Property = 3});
-                session.SaveChanges();
-            }
+        //    using (var session = storeWithTempTables.OpenSession())
+        //    {
+        //        session.Store(new Entity {Id = id1, Property = 1});
+        //        session.Store(new Entity {Id = id2, Property = 2});
+        //        session.Store(new Entity {Id = id3, Property = 3});
+        //        session.SaveChanges();
+        //    }
 
-            var processedEntities = new List<Entity>(); 
-            storeWithTempTables.Migrate(migrator =>
-                                        migrator.Do<Entity>(
-                                            new Table("Entities"),
-                                            storeWithTempTables.Configuration.Serializer,
-                                            (entity, projections) => processedEntities.Add(entity)));
+        //    var processedEntities = new List<Entity>(); 
+        //    storeWithTempTables.Migrate(migrator =>
+        //                                migrator.Do<Entity>(
+        //                                    new Table("Entities"),
+        //                                    storeWithTempTables.Configuration.Serializer,
+        //                                    (entity, projections) => processedEntities.Add(entity)));
 
-            processedEntities.Count.ShouldBe(3);
-            processedEntities.ShouldContain(x => x.Id == id1 && x.Property == 1);
-            processedEntities.ShouldContain(x => x.Id == id2 && x.Property == 2);
-            processedEntities.ShouldContain(x => x.Id == id3 && x.Property == 3);
-        }
+        //    processedEntities.Count.ShouldBe(3);
+        //    processedEntities.ShouldContain(x => x.Id == id1 && x.Property == 1);
+        //    processedEntities.ShouldContain(x => x.Id == id2 && x.Property == 2);
+        //    processedEntities.ShouldContain(x => x.Id == id3 && x.Property == 3);
+        //}
 
-        [Fact]
-        public void CanDeserializeToAnyGivenTypeAndPersistChangesToDocument()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+        //[Fact]
+        //public void CanDeserializeToAnyGivenTypeAndPersistChangesToDocument()
+        //{
+        //    storeWithTempTables.DocumentsFor<Entity>();
+        //    storeWithTempTables.InitializeDatabase();
+        //    var id1 = Guid.NewGuid();
+        //    var id2 = Guid.NewGuid();
+        //    var id3 = Guid.NewGuid();
 
-            using (var session = storeWithTempTables.OpenSession())
-            {
-                session.Store(new Entity {Id = id1, Property = 1});
-                session.Store(new Entity {Id = id2, Property = 2});
-                session.Store(new Entity {Id = id3, Property = 3});
-                session.SaveChanges();
-            }
+        //    using (var session = storeWithTempTables.OpenSession())
+        //    {
+        //        session.Store(new Entity {Id = id1, Property = 1});
+        //        session.Store(new Entity {Id = id2, Property = 2});
+        //        session.Store(new Entity {Id = id3, Property = 3});
+        //        session.SaveChanges();
+        //    }
 
-            storeWithTempTables.Migrate(migrator =>
-                                        migrator.Do<JObject>(
-                                            new Table("Entities"),
-                                            storeWithTempTables.Configuration.Serializer,
-                                            (entity, projections) => { entity["StringProp"] = "SomeString"; }));
+        //    storeWithTempTables.Migrate(migrator =>
+        //                                migrator.Do<JObject>(
+        //                                    new Table("Entities"),
+        //                                    storeWithTempTables.Configuration.Serializer,
+        //                                    (entity, projections) => { entity["StringProp"] = "SomeString"; }));
 
-            using (var session = storeWithTempTables.OpenSession())
-            {
-                var entities = session.Query<Entity>().ToList();
-                entities.Count().ShouldBe(3);
-                entities.ShouldContain(x => x.Id == id1 && x.Property == 1 && x.StringProp == "SomeString");
-                entities.ShouldContain(x => x.Id == id2 && x.Property == 2 && x.StringProp == "SomeString");
-                entities.ShouldContain(x => x.Id == id3 && x.Property == 3 && x.StringProp == "SomeString");
-            }
-        }
+        //    using (var session = storeWithTempTables.OpenSession())
+        //    {
+        //        var entities = session.Query<Entity>().ToList();
+        //        entities.Count().ShouldBe(3);
+        //        entities.ShouldContain(x => x.Id == id1 && x.Property == 1 && x.StringProp == "SomeString");
+        //        entities.ShouldContain(x => x.Id == id2 && x.Property == 2 && x.StringProp == "SomeString");
+        //        entities.ShouldContain(x => x.Id == id3 && x.Property == 3 && x.StringProp == "SomeString");
+        //    }
+        //}
 
-        [Fact]
-        public void CanModifyProjection()
-        {
-            storeWithTempTables.DocumentsFor<Entity>().Project(x => x.Property);
-            storeWithTempTables.InitializeDatabase();
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+        //[Fact]
+        //public void CanModifyProjection()
+        //{
+        //    storeWithTempTables.DocumentsFor<Entity>().Project(x => x.Property);
+        //    storeWithTempTables.InitializeDatabase();
+        //    var id1 = Guid.NewGuid();
+        //    var id2 = Guid.NewGuid();
+        //    var id3 = Guid.NewGuid();
 
-            using (var session = storeWithTempTables.OpenSession())
-            {
-                session.Store(new Entity {Id = id1, Property = 1});
-                session.Store(new Entity {Id = id2, Property = 2});
-                session.Store(new Entity {Id = id3, Property = 3});
-                session.SaveChanges();
-            }
+        //    using (var session = storeWithTempTables.OpenSession())
+        //    {
+        //        session.Store(new Entity {Id = id1, Property = 1});
+        //        session.Store(new Entity {Id = id2, Property = 2});
+        //        session.Store(new Entity {Id = id3, Property = 3});
+        //        session.SaveChanges();
+        //    }
 
-            storeWithTempTables.Migrate(migrator =>
-                                        migrator.Do<Entity>(
-                                            new Table("Entities"),
-                                            storeWithTempTables.Configuration.Serializer,
-                                            (entity, projections) =>
-                                            {
-                                                var projectionValue = (int) projections["Property"];
-                                                projections["Property"] = ++projectionValue;
-                                            }));
+        //    storeWithTempTables.Migrate(migrator =>
+        //                                migrator.Do<Entity>(
+        //                                    new Table("Entities"),
+        //                                    storeWithTempTables.Configuration.Serializer,
+        //                                    (entity, projections) =>
+        //                                    {
+        //                                        var projectionValue = (int) projections["Property"];
+        //                                        projections["Property"] = ++projectionValue;
+        //                                    }));
 
-            var result = storeWithTempTables.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
-            result.ShouldContain(x => x.Id == id1 && x.Property == 2);
-            result.ShouldContain(x => x.Id == id2 && x.Property == 3);
-            result.ShouldContain(x => x.Id == id3 && x.Property == 4);
-            result.Count.ShouldBe(3);
-        }
+        //    var result = storeWithTempTables.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
+        //    result.ShouldContain(x => x.Id == id1 && x.Property == 2);
+        //    result.ShouldContain(x => x.Id == id2 && x.Property == 3);
+        //    result.ShouldContain(x => x.Id == id3 && x.Property == 4);
+        //    result.Count.ShouldBe(3);
+        //}
 
-        [Fact]
-        public void CanUpdateProjection()
-        {
-            storeWithTempTables.DocumentsFor<Entity>();
-            storeWithTempTables.InitializeDatabase();
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+        //[Fact]
+        //public void CanUpdateProjection()
+        //{
+        //    storeWithTempTables.DocumentsFor<Entity>();
+        //    storeWithTempTables.InitializeDatabase();
+        //    var id1 = Guid.NewGuid();
+        //    var id2 = Guid.NewGuid();
+        //    var id3 = Guid.NewGuid();
 
-            using (var session = storeWithTempTables.OpenSession())
-            {
-                session.Store(new Entity {Id = id1, Property = 1});
-                session.Store(new Entity {Id = id2, Property = 2});
-                session.Store(new Entity {Id = id3, Property = 3});
-                session.SaveChanges();
-            }
+        //    using (var session = storeWithTempTables.OpenSession())
+        //    {
+        //        session.Store(new Entity {Id = id1, Property = 1});
+        //        session.Store(new Entity {Id = id2, Property = 2});
+        //        session.Store(new Entity {Id = id3, Property = 3});
+        //        session.SaveChanges();
+        //    }
 
-            storeWithTempTables.Migrate(migrator =>
-            {
-                var tableToTypeRelation = storeWithTempTables.Configuration.GetSchemaFor<Entity>();
-                tableToTypeRelation.Project(x => x.Property);
+        //    storeWithTempTables.Migrate(migrator =>
+        //    {
+        //        var tableToTypeRelation = storeWithTempTables.Configuration.GetSchemaFor<Entity>();
+        //        tableToTypeRelation.Project(x => x.Property);
 
-                migrator.AddColumn(tableToTypeRelation.Table.Name, new UserColumn("Property", new SqlColumn(typeof (int))));
-                migrator.UpdateProjectionColumnsFromDocument(tableToTypeRelation, storeWithTempTables.Configuration.Serializer);
-            });
+        //        migrator.AddColumn(tableToTypeRelation.Table.Name, new UserColumn("Property", new SqlColumn(typeof (int))));
+        //        migrator.UpdateProjectionColumnsFromDocument(tableToTypeRelation, storeWithTempTables.Configuration.Serializer);
+        //    });
 
-            var result = storeWithTempTables.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
+        //    var result = storeWithTempTables.RawQuery<Entity>("SELECT * FROM #Entities").ToList();
 
-            result.ShouldContain(x => x.Id == id1 && x.Property == 1);
-            result.ShouldContain(x => x.Id == id2 && x.Property == 2);
-            result.ShouldContain(x => x.Id == id3 && x.Property == 3);
-            result.Count.ShouldBe(3);
-        }
+        //    result.ShouldContain(x => x.Id == id1 && x.Property == 1);
+        //    result.ShouldContain(x => x.Id == id2 && x.Property == 2);
+        //    result.ShouldContain(x => x.Id == id3 && x.Property == 3);
+        //    result.Count.ShouldBe(3);
+        //}
 
         [Fact]
         public void WillQuoteTableAndColumnNamesOnCreation()
@@ -278,37 +278,37 @@ END", uniqueDbName));
                 migrator => migrator.AddTable("Create", "By int")));
         }
 
-        [Fact]
-        public void MigrationsAreRolledBackOnExceptions()
-        {
-            storeWithTempTables.DocumentsFor<Entity>().Project(x => x.StringProp);
-            storeWithTempTables.InitializeDatabase();
-            var id1 = Guid.NewGuid();
+        //[Fact]
+        //public void MigrationsAreRolledBackOnExceptions()
+        //{
+        //    storeWithTempTables.DocumentsFor<Entity>().Project(x => x.StringProp);
+        //    storeWithTempTables.InitializeDatabase();
+        //    var id1 = Guid.NewGuid();
 
-            using (var session = storeWithTempTables.OpenSession())
-            {
-                session.Store(new Entity {Id = id1, Property = 1});
-                session.SaveChanges();
-            }
+        //    using (var session = storeWithTempTables.OpenSession())
+        //    {
+        //        session.Store(new Entity {Id = id1, Property = 1});
+        //        session.SaveChanges();
+        //    }
 
-            try
-            {
-                storeWithTempTables.Migrate(migrator =>
-                                            migrator.Do<Entity>(
-                                                new Table("Entities"),
-                                                storeWithTempTables.Configuration.Serializer,
-                                                (entity, projections) =>
-                                                {
-                                                    entity.StringProp = "SomeString";
-                                                    throw new Exception("Error");
-                                                }));
-            }
-            catch {}
+        //    try
+        //    {
+        //        storeWithTempTables.Migrate(migrator =>
+        //                                    migrator.Do<Entity>(
+        //                                        new Table("Entities"),
+        //                                        storeWithTempTables.Configuration.Serializer,
+        //                                        (entity, projections) =>
+        //                                        {
+        //                                            entity.StringProp = "SomeString";
+        //                                            throw new Exception("Error");
+        //                                        }));
+        //    }
+        //    catch {}
 
-            var entity1 = storeWithTempTables.RawQuery<Entity>("SELECT * FROM #Entities").Single();
-            entity1.Id.ShouldBe(id1);
-            entity1.StringProp.ShouldBe(null);
-        }
+        //    var entity1 = storeWithTempTables.RawQuery<Entity>("SELECT * FROM #Entities").Single();
+        //    entity1.Id.ShouldBe(id1);
+        //    entity1.StringProp.ShouldBe(null);
+        //}
 
         bool RealTableExists(string name)
         {

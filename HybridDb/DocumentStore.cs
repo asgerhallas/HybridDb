@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Registration;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -11,6 +13,7 @@ using Dapper;
 using HybridDb.Commands;
 using HybridDb.Logging;
 using HybridDb.Schema;
+using System.ComponentModel.Composition;
 
 namespace HybridDb
 {
@@ -19,7 +22,6 @@ namespace HybridDb
         readonly Configuration configuration;
         readonly string connectionString;
         readonly TableMode tableMode;
-        readonly List<DocumentStoreAddIn> addIns;
 
         DbConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
@@ -32,10 +34,16 @@ namespace HybridDb
             this.connectionString = connectionString;
 
             configuration = new Configuration();
-            addIns = new List<DocumentStoreAddIn>();
+
+            OnRead = x => { };
         }
 
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
+
+        [ImportMany(typeof(IAddIn))]
+        public IEnumerable<IAddIn> AddIns { get; set; }
+
+        public Action<IDictionary<string, object>> OnRead { get; set; }
 
         public TableMode TableMode
         {
@@ -47,14 +55,6 @@ namespace HybridDb
             get { return tableMode != TableMode.UseRealTables; }
         }
 
-        public void Dispose()
-        {
-            if (numberOfManagedConnections > 0)
-                Logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
-
-            if (ambientConnectionForTesting != null)
-                ambientConnectionForTesting.Dispose();
-        }
 
         /// <summary>
         /// Configuration for tables and projections used in sessions.
@@ -79,7 +79,7 @@ namespace HybridDb
             }
         }
 
-        public void InitializeDatabase(bool safe = true)
+        public void MigrateSchema(bool safe = true)
         {
             Migrate(migrator =>
             {
@@ -90,9 +90,18 @@ namespace HybridDb
             });
         }
 
-        public void RegisterAddIn(DocumentStoreAddIn addin)
+        public void LoadAddIns()
         {
-            addIns.Add(addin);
+            var registration = new RegistrationBuilder();
+            registration.ForTypesDerivedFrom<IAddIn>().Export<IAddIn>();
+
+            var container = new CompositionContainer(new DirectoryCatalog(".", registration));
+            container.ComposeParts(this);
+
+            foreach (var addIn in AddIns)
+            {
+                OnRead += addIn.OnRead;
+            }
         }
 
         public DocumentConfiguration<TEntity> DocumentsFor<TEntity>()
@@ -210,8 +219,8 @@ namespace HybridDb
             if (select.IsNullOrEmpty() || select == "*")
                 select = "";
 
-            var isTypedProjection = !typeof (TProjection).IsA<IDictionary<Column, object>>();
-            if (isTypedProjection)
+            var projectToDictionary = typeof (TProjection).IsA<IDictionary<Column, object>>();
+            if (!projectToDictionary)
                 select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
 
             var timer = Stopwatch.StartNew();
@@ -232,13 +241,24 @@ namespace HybridDb
                    .Append(isWindowed, "order by RowNumber")
                    .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
-                var result = isTypedProjection
-                                 ? InternalQuery<TProjection>(connection, sql, parameters, out stats)
-                                 : (IEnumerable<TProjection>) (InternalQuery<object>(connection, sql, parameters, out stats)
-                                                                  .Cast<IDictionary<string, object>>()
-                                                                  .Select(row => row.ToDictionary(
-                                                                      column => table.GetColumnOrDefaultDynamicColumn(column.Key, column.Value.GetTypeOrDefault()),
-                                                                      column => column.Value)));
+                IEnumerable<TProjection> result;
+                if (projectToDictionary)
+                {
+                    result = (IEnumerable<TProjection>)
+                             InternalQuery<object>(connection, sql, parameters, out stats)
+                                 .Cast<IDictionary<string, object>>()
+                                 .Select(row =>
+                                 {
+                                     OnRead(row);
+                                     return row.ToDictionary(
+                                         column => table.GetColumnOrDefaultDynamicColumn(column.Key, column.Value.GetTypeOrDefault()),
+                                         column => column.Value);
+                                 });
+                }
+                else
+                {
+                    result = InternalQuery<TProjection>(connection, sql, parameters, out stats);
+                }
 
                 Interlocked.Increment(ref numberOfRequests);
                 Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
@@ -274,12 +294,12 @@ namespace HybridDb
                 if (row == null)
                     return null;
 
-                foreach (var addIn in addIns)
-                    addIn.OnRead(row);
+                OnRead(row);
 
                 return row.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
             }
         }
+
 
         public long NumberOfRequests
         {
@@ -314,6 +334,15 @@ namespace HybridDb
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        public void Dispose()
+        {
+            if (numberOfManagedConnections > 0)
+                Logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+
+            if (ambientConnectionForTesting != null)
+                ambientConnectionForTesting.Dispose();
         }
 
         ILogger Logger
@@ -434,22 +463,6 @@ namespace HybridDb
         }
 
         public class MissingProjectionValueException : Exception {}
-
-        public bool CanConnect()
-        {
-            try
-            {
-                using (var conn = new SqlConnection(connectionString))
-                {
-                    conn.Open();
-                    return true;
-                }
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
     }
 
     public enum TableMode

@@ -4,7 +4,6 @@ using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Linq;
 using HybridDb.Schema;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb
 {
@@ -153,7 +152,7 @@ namespace HybridDb
                         commands.Add(managedEntity, new InsertCommand(table.Table, id, document, projections));
                         break;
                     case EntityState.Loaded:
-                        if (!managedEntity.Document.DeepEquals(document))
+                        if (!managedEntity.Document.SequenceEqual(document))
                             commands.Add(managedEntity, new UpdateCommand(table.Table, id, managedEntity.Etag, document, projections, lastWriteWins));
                         break;
                     case EntityState.Deleted:
@@ -255,7 +254,7 @@ namespace HybridDb
             public Guid Key { get; set; }
             public Guid Etag { get; set; }
             public EntityState State { get; set; }
-            public JObject Document { get; set; }
+            public byte[] Document { get; set; }
         }
     }
 }

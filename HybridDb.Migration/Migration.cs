@@ -1,106 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using HybridDb.Schema;
-using System.Linq;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Migration
 {
-    public class MigrationAddIn : DocumentStoreAddIn
-    {
-        readonly Migration migration;
-
-        public MigrationAddIn(Migration migration)
-        {
-            this.migration = migration;
-        }
-
-        public void OnRead(Dictionary<string, object> projections)
-        {
-            new Migrator().OnRead(migration, projections);
-        }
-    }
-
-    public class Migrator
-    {
-        public void OnRead(Migration migration, Dictionary<string, object> projections)
-        {
-            var table = new Table(migration.DocumentMigration.Tablename);
-            var id = (Guid)projections[table.IdColumn.Name];
-            var version = (int)projections[table.VersionColumn.Name];
-            var expectedVersion = migration.DocumentMigration.Version - 1;
-
-            if (version != expectedVersion)
-            {
-                throw new ArgumentException(string.Format("Row with id {0} is version {1}. " +
-                                                          "This document migration requires the current version to be {2}. " +
-                                                          "Please migrate all documents to version {2} and retry.",
-                                                          id, version, expectedVersion));
-            }
-
-            var document = migration.DocumentMigration.Serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
-            migration.DocumentMigration.MigrationOnRead(document);
-            projections[table.VersionColumn.Name] = version + 1;
-            projections[table.DocumentColumn.Name] = migration.DocumentMigration.Serializer.Serialize(document);
-        }
-    }
-
-    public class Runner
-    {
-        readonly IDocumentStore store;
-
-        public Runner(IDocumentStore store)
-        {
-            this.store = store;
-        }
-
-        public void Run(Migration migration)
-        {
-            var migrator = new Migrator();
-
-            var documentMigration = migration.DocumentMigration;
-            if (documentMigration != null)
-            {
-                if (documentMigration.Tablename == null)
-                    throw new ArgumentException("Document migration must have a tablename");
-
-                if (documentMigration.Version == 0)
-                    throw new ArgumentException("Document migration must have a version number larger than 0");
-
-                var table = new Table(documentMigration.Tablename);
-                while (true)
-                {
-                    QueryStats stats;
-                    var @where = string.Format("Version < {0}", documentMigration.Version);
-                    
-                    var rows = store.Query<Dictionary<string, object>>(table, out stats, where: @where, take: 100).ToList();
-                    if (rows.Count == 0)
-                        break;
-
-                    foreach (var row in rows)
-                    {
-                        migrator.OnRead(migration, row);
-
-                        var id = (Guid)row[table.IdColumn.Name];
-                        var etag = (Guid)row[table.EtagColumn.Name];
-                        var document = (Guid)row[table.EtagColumn.Name];
-
-
-                        try
-                        {
-                            store.Update(table, id, etag, (byte[])row[table.DocumentColumn], row);
-                        }
-                        catch (ConcurrencyException)
-                        {
-                            // We don't care. Either the version is bumped by other user or we'll retry in next round.
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public abstract class Migration
+    public abstract class Migration : IAddIn
     {
         public DocumentMigrationDefinition DocumentMigration { get; private set; }
         public SchemaMigrationDefinition SchemaMigration { get; private set; }
@@ -233,6 +136,11 @@ namespace HybridDb.Migration
         {
             IDocumentMigrationBuilderStep5 MigrateOnRead<T>(Action<T> migration);
             IDocumentMigrationBuilderStep5 MigrateOnWrite<T>(Action<T, IDictionary<string, object>> migration);
+        }
+
+        void IAddIn.OnRead(IDictionary<string, object> projections)
+        {
+            new Migrator().OnRead(this, projections);
         }
     }
 }

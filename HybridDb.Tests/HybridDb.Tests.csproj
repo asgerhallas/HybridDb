@@ -50,6 +50,7 @@
       <HintPath>..\packages\Shouldly.1.1.1.1\lib\35\Shouldly.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
@@ -64,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
     <Compile Include="ConfigurationTests.cs" />
+    <Compile Include="MigrationTests.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />

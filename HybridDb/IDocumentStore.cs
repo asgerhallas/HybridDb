@@ -5,21 +5,20 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
-    public abstract class DocumentStoreAddIn
+    public interface IAddIn
     {
-        public void OnRead(IDictionary<string, object> projections)
-        {
-        }
+        void OnRead(IDictionary<string, object> projections);
     }
 
     public interface IDocumentStore : IDisposable
     {
+        Action<IDictionary<string, object>> OnRead { get; set; }
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         IMigrator CreateMigrator();
-        void InitializeDatabase(bool safe = true);
-        void RegisterAddIn(DocumentStoreAddIn addin);
+        void MigrateSchema(bool safe = true);
+        void LoadAddIns();
         IDocumentSession OpenSession();
         DocumentConfiguration<TEntity> DocumentsFor<TEntity>();
         Guid Execute(params DatabaseCommand[] commands);
