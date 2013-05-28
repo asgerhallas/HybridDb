@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HybridDb.Commands;
+using HybridDb.Migration;
 using HybridDb.Schema;
 
 namespace HybridDb
@@ -16,7 +17,7 @@ namespace HybridDb
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
-        IMigrator CreateMigrator();
+        ISchemaMigrator CreateMigrator();
         void MigrateSchema(bool safe = true);
         void LoadAddIns();
         IDocumentSession OpenSession();

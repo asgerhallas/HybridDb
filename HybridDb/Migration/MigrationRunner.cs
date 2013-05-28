@@ -5,11 +5,11 @@ using HybridDb.Schema;
 
 namespace HybridDb.Migration
 {
-    public class Runner
+    public class MigrationRunner
     {
         readonly IDocumentStore store;
 
-        public Runner(IDocumentStore store)
+        public MigrationRunner(IDocumentStore store)
         {
             this.store = store;
         }

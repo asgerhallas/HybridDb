@@ -21,7 +21,7 @@ namespace HybridDb.Migration
                 .MigrateOnWrite<JObject>(MigrateOnWrite);
         }
 
-        void SchemaMigration(ISchemaMigrator migrator)
+        void SchemaMigration(IMigrator migrator)
         {
             migrator.AddColumn("Cases", new UserColumn("BuildingsCount", typeof (int)));
         }

@@ -24,7 +24,7 @@ namespace HybridDb.Migration
                                                  ISchemaMigrationBuilderStep2
         {
             public int Version { get; private set; }
-            protected Action<ISchemaMigrator> Migration { get; private set; }
+            protected Action<IMigrator> Migration { get; private set; }
             protected Func<string, string> Rewrite { get; private set; }
 
             ISchemaMigrationBuilderStep2 ISchemaMigrationBuilderStep1.ToVersion(int version)
@@ -33,7 +33,7 @@ namespace HybridDb.Migration
                 return this;
             }
 
-            ISchemaMigrationBuilderStep2 ISchemaMigrationBuilderStep2.Migrate(Action<ISchemaMigrator> migration)
+            ISchemaMigrationBuilderStep2 ISchemaMigrationBuilderStep2.Migrate(Action<IMigrator> migration)
             {
                 Migration = migration;
                 return this;
@@ -53,7 +53,7 @@ namespace HybridDb.Migration
 
         public interface ISchemaMigrationBuilderStep2
         {
-            ISchemaMigrationBuilderStep2 Migrate(Action<ISchemaMigrator> migration);
+            ISchemaMigrationBuilderStep2 Migrate(Action<IMigrator> migration);
             ISchemaMigrationBuilderStep2 RewriteQueryUntilMigrated(Func<string, string> rewrite);
         }
 

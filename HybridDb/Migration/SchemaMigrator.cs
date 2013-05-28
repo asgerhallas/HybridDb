@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -7,20 +6,20 @@ using System.Linq;
 using Dapper;
 using HybridDb.Schema;
 
-namespace HybridDb
+namespace HybridDb.Migration
 {
-    public class Migrator : IMigrator
+    public class SchemaMigrator : ISchemaMigrator
     {
         readonly DocumentStore store;
         readonly ManagedConnection connectionManager;
 
-        public Migrator(DocumentStore store)
+        public SchemaMigrator(DocumentStore store)
         {
             this.store = store;
             connectionManager = store.Connect();
         }
         
-        public IMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
+        public ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
         {
             var timer = Stopwatch.StartNew();
 
@@ -37,7 +36,7 @@ namespace HybridDb
             return this;
         }
 
-        public IMigrator AddTableAndColumnsAndAssociatedTables(Table table)
+        public ISchemaMigrator AddTableAndColumnsAndAssociatedTables(Table table)
         {
             foreach (var column in table.Columns.OfType<CollectionColumn>())
             {
@@ -47,74 +46,22 @@ namespace HybridDb
             return AddTable(table.Name, table.Columns.Select(col => string.Format("{0} {1}", col.Name, GetColumnSqlType(col))).ToArray());
         }
 
-        public IMigrator RemoveTableAndAssociatedTables(Table table)
+        public ISchemaMigrator RemoveTableAndAssociatedTables(Table table)
         {
             return RemoveTable(table.Name);
         }
 
-        public IMigrator RenameTableAndAssociatedTables(Table oldTable, string newTablename)
+        public ISchemaMigrator RenameTableAndAssociatedTables(Table oldTable, string newTablename)
         {
             return RenameTable(oldTable.Name, newTablename);
         }
 
-        public IMigrator AddColumn(string tablename, Column column)
+        public ISchemaMigrator AddColumn(string tablename, Column column)
         {
             return AddColumn(tablename, column.Name, GetColumnSqlType(column));
         }
 
-        //public IMigrator UpdateProjectionColumnsFromDocument(DocumentConfiguration documentConfiguration, ISerializer serializer)
-        //{
-        //    Do(documentConfiguration,
-        //       store.Configuration.Serializer,
-        //       (entity, projections) =>
-        //       {
-        //           foreach (var column in documentConfiguration.Projections.Where(x => x.Key is UserColumn))
-        //           {
-        //               projections[column.Key.Name] = column.Value(entity);
-        //           }
-        //       });
-
-        //    return this;
-        //}
-
-        //public IMigrator Do<T>(Table table, ISerializer serializer, Action<T, IDictionary<string, object>> action)
-        //{
-        //    return Do(new DocumentConfiguration(store.Configuration, table, typeof(T)), serializer, (entity, projections) => action((T)entity, projections));
-        //}
-
-        //public IMigrator Do(DocumentConfiguration relation, ISerializer serializer, Action<object, IDictionary<string, object>> action)
-        //{
-        //    var tablename = store.FormatTableNameAndEscape(relation.Table.Name);
-
-        //    string selectSql = string.Format("select * from {0}", tablename);
-        //    foreach (var dictionary in connectionManager.Connection.Query(selectSql).Cast<IDictionary<string, object>>())
-        //    {
-        //        var document = (byte[])dictionary[relation.Table.DocumentColumn.Name];
-
-        //        var entity = serializer.Deserialize(document, relation.Type);
-        //        action(entity, dictionary);
-        //        dictionary[relation.Table.DocumentColumn.Name] = serializer.Serialize(entity);
-
-        //        var sql = new SqlBuilder()
-        //            .Append("update {0} set {1} where {2}=@Id",
-        //                    tablename,
-        //                    string.Join(", ", from column in dictionary.Keys select column + "=@" + column),
-        //                    relation.Table.IdColumn.Name)
-        //            .ToString();
-
-        //        var parameters = dictionary.Select(x => new Parameter
-        //        {
-        //            Name = x.Key,
-        //            Value = x.Value
-        //        });
-
-        //        connectionManager.Connection.Execute(sql, new FastDynamicParameters(parameters));
-        //    }
-
-        //    return this;
-        //}
-
-        public IMigrator AddTable(string tablename, params string[] columns)
+        public ISchemaMigrator AddTable(string tablename, params string[] columns)
         {
             var escaptedColumns =
                 from column in columns
@@ -130,13 +77,13 @@ namespace HybridDb
                               string.Join(", ", escaptedColumns)));
         }
 
-        public IMigrator RemoveTable(string tablename)
+        public ISchemaMigrator RemoveTable(string tablename)
         {
             return Execute(
                 string.Format("drop table {0};", store.FormatTableNameAndEscape(tablename)));
         }
 
-        public IMigrator RenameTable(string oldTablename, string newTablename)
+        public ISchemaMigrator RenameTable(string oldTablename, string newTablename)
         {
             if (store.IsInTestMode)
                 throw new NotSupportedException("It is not possible to rename temp tables, so RenameTable is not supported when store is in test mode.");
@@ -145,19 +92,19 @@ namespace HybridDb
                 string.Format("sp_rename {0}, {1};", store.FormatTableNameAndEscape(oldTablename), store.FormatTableNameAndEscape(newTablename)));
         }
 
-        public IMigrator AddColumn(string tablename, string columnname, string columntype)
+        public ISchemaMigrator AddColumn(string tablename, string columnname, string columntype)
         {
             return Execute(
                 string.Format("alter table {0} add {1} {2};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname), columntype));
         }
 
-        public IMigrator RemoveColumn(string tablename, string columnname)
+        public ISchemaMigrator RemoveColumn(string tablename, string columnname)
         {
             return Execute(
                 string.Format("alter table {0} drop column {1};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname)));
         }
 
-        public IMigrator RenameColumn(string tablename, string oldColumnname, string newColumnname)
+        public ISchemaMigrator RenameColumn(string tablename, string oldColumnname, string newColumnname)
         {
             if (store.IsInTestMode)
                 throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameColumn is not supported when store is in test mode.");
@@ -167,13 +114,13 @@ namespace HybridDb
         }
 
 
-        public IMigrator Commit()
+        public ISchemaMigrator Commit()
         {
             connectionManager.Complete();
             return this;
         }
 
-        public IMigrator Execute(string sql, object param = null)
+        public ISchemaMigrator Execute(string sql, object param = null)
         {
             connectionManager.Connection.Execute(sql, param);
             return this;

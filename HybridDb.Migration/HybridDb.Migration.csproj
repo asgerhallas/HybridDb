@@ -46,7 +46,7 @@
   <ItemGroup>
     <Compile Include="AddBuildingCountToCase.cs" />
     <Compile Include="Migration.cs" />
-    <Compile Include="Migrator.cs" />
+    <Compile Include="DocumentMigrator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoveDeletedBuildings.cs" />
     <Compile Include="RenameCol.cs" />

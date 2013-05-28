@@ -12,6 +12,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Logging;
+using HybridDb.Migration;
 using HybridDb.Schema;
 using System.ComponentModel.Composition;
 
@@ -65,12 +66,12 @@ namespace HybridDb
             get { return configuration; }
         }
 
-        public IMigrator CreateMigrator()
+        public ISchemaMigrator CreateMigrator()
         {
-            return new Migrator(this);
+            return new SchemaMigrator(this);
         }
 
-        public void Migrate(Action<IMigrator> migration)
+        public void Migrate(Action<ISchemaMigrator> migration)
         {
             using (var migrator = CreateMigrator())
             {

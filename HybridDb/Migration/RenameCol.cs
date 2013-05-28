@@ -18,7 +18,7 @@ namespace HybridDb.Migration
             return s.Replace("FROM Cases", "FROM Casez");
         }
 
-        void Migration(ISchemaMigrator iMigrator)
+        void Migration(IMigrator iMigrator)
         {
             
         }

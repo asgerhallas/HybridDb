@@ -65,7 +65,8 @@
   <ItemGroup>
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
     <Compile Include="ConfigurationTests.cs" />
-    <Compile Include="MigrationTests.cs" />
+    <Compile Include="DocumentMigratorTests.cs" />
+    <Compile Include="MigrationRunnerTests.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />

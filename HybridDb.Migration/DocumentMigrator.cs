@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Migration
 {
-    public class Migrator
+    public class DocumentMigrator
     {
         public void OnRead(Migration migration, IDictionary<string, object> projections)
         {

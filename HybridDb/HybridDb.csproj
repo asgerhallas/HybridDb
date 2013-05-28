@@ -65,7 +65,7 @@
   <ItemGroup>
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="IMigration.cs" />
-    <Compile Include="IMigrator.cs" />
+    <Compile Include="Migration\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />
     <Compile Include="Linq\Ast\SqlProjectionExpression.cs" />
@@ -100,7 +100,13 @@
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="ManagedConnection.cs" />
     <Compile Include="MemberInfoEx.cs" />
-    <Compile Include="Migrator.cs" />
+    <Compile Include="Migration\AddBuildingCountToCase.cs" />
+    <Compile Include="Migration\DocumentMigrator.cs" />
+    <Compile Include="Migration\Migration.cs" />
+    <Compile Include="Migration\RemoveDeletedBuildings.cs" />
+    <Compile Include="Migration\RenameCol.cs" />
+    <Compile Include="Migration\MigrationRunner.cs" />
+    <Compile Include="Migration\SchemaMigrator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />
@@ -140,6 +146,7 @@
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Migration\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
