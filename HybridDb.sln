@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{D7310F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HybridDb.Studio", "HybridDb.Studio\HybridDb.Studio.csproj", "{B2D23338-C8E8-4740-B525-8199E80CCBF6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HybridDb.MigrationRunner", "HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj", "{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{B2D23338-C8E8-4740-B525-8199E80CCBF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2D23338-C8E8-4740-B525-8199E80CCBF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2D23338-C8E8-4740-B525-8199E80CCBF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -67,6 +67,9 @@
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
     <Compile Include="MigrationRunnerTests.cs" />
+    <Compile Include="Migrations\AddBuildingCountToCase.cs" />
+    <Compile Include="Migrations\RemoveDeletedBuildings.cs" />
+    <Compile Include="Migrations\RenameCol.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />

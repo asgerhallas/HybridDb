@@ -100,12 +100,8 @@
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="ManagedConnection.cs" />
     <Compile Include="MemberInfoEx.cs" />
-    <Compile Include="Migration\AddBuildingCountToCase.cs" />
     <Compile Include="Migration\DocumentMigrator.cs" />
     <Compile Include="Migration\Migration.cs" />
-    <Compile Include="Migration\RemoveDeletedBuildings.cs" />
-    <Compile Include="Migration\RenameCol.cs" />
-    <Compile Include="Migration\MigrationRunner.cs" />
     <Compile Include="Migration\SchemaMigrator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />

@@ -9,6 +9,9 @@ namespace HybridDb.Migration
     {
         public void OnRead(Migration migration, IDictionary<string, object> projections)
         {
+            if (migration.DocumentMigration.MigrationOnRead == null)
+                return;
+
             var table = new Table(migration.DocumentMigration.Tablename);
             var id = (Guid)projections[table.IdColumn.Name];
             var version = (int)projections[table.VersionColumn.Name];
