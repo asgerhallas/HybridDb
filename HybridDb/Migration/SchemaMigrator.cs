@@ -3,38 +3,40 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Transactions;
 using Dapper;
 using HybridDb.Schema;
+using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migration
 {
     public class SchemaMigrator : ISchemaMigrator
     {
-        readonly DocumentStore store;
-        readonly ManagedConnection connectionManager;
+        readonly IDocumentStore store;
+        readonly TransactionScope tx;
 
-        public SchemaMigrator(DocumentStore store)
+        public SchemaMigrator(IDocumentStore store)
         {
             this.store = store;
-            connectionManager = store.Connect();
+            tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable});
         }
         
-        public ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
-        {
-            var timer = Stopwatch.StartNew();
+        //public ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
+        //{
+        //    var timer = Stopwatch.StartNew();
 
-            if (!store.IsInTestMode)
-            {
-                var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null);
-                if (existingTables.Any())
-                    throw new InvalidOperationException("You cannot initialize a database that is not empty.");
-            }
+        //    if (!store.IsInTestMode)
+        //    {
+        //        var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null);
+        //        if (existingTables.Any())
+        //            throw new InvalidOperationException("You cannot initialize a database that is not empty.");
+        //    }
 
-            AddTableAndColumnsAndAssociatedTables(documentConfiguration.Table);
+        //    AddTableAndColumnsAndAssociatedTables(documentConfiguration.Table);
 
-            store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
-            return this;
-        }
+        //    store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
+        //    return this;
+        //}
 
         public ISchemaMigrator AddTableAndColumnsAndAssociatedTables(Table table)
         {
@@ -113,22 +115,21 @@ namespace HybridDb.Migration
                 string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.FormatTableNameAndEscape(tablename), oldColumnname, newColumnname));
         }
 
-
         public ISchemaMigrator Commit()
         {
-            connectionManager.Complete();
+            tx.Complete();
             return this;
         }
 
         public ISchemaMigrator Execute(string sql, object param = null)
         {
-            connectionManager.Connection.Execute(sql, param);
+            store.RawExecute(sql, param);
             return this;
         }
 
         public void Dispose()
         {
-            connectionManager.Dispose();
+            tx.Dispose();
         }
 
         string GetColumnSqlType(Column column)

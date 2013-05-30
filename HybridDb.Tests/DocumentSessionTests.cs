@@ -18,7 +18,7 @@ namespace HybridDb.Tests
         {
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
-            store.DocumentsFor<Entity>()
+            store.Document<Entity>()
                 .Project(x => x.ProjectedProperty)
                 .Project(x => x.TheChild.NestedProperty)
                 .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
@@ -96,7 +96,7 @@ namespace HybridDb.Tests
                 store.NumberOfRequests.ShouldBe(1);
             }
 
-            var entity = store.RawQuery(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
+            var entity = store.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
             Assert.NotNull(entity);
         }
 
@@ -118,7 +118,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.RawQuery("select * from #Entities").SingleOrDefault();
+            var entity = store.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);
@@ -137,7 +137,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.RawQuery("select * from #Entities").SingleOrDefault();
+            var entity = store.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.Null(entity.TheChildNestedProperty);
         }
 

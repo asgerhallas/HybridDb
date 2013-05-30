@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Performance
         {
             const string connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
-            store.DocumentsFor<Entity>().Project(x => x.SomeNumber);
+            store.Document<Entity>().Project(x => x.SomeNumber);
             store.MigrateSchema();
         }
 

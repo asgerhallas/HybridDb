@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using Dapper;
 using HybridDb.Schema;
@@ -17,17 +18,21 @@ namespace HybridDb.Commands
                         .ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value));
         }
 
-        protected static List<Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)
+        protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)
         {
-            return (from projection in projections
-                    let column = projection.Key
-                    select new Parameter
-                    {
-                        Name = "@" + column.Name + i, 
-                        Value = projection.Value, 
-                        DbType = column.SqlColumn.Type,
-                        Size = column.SqlColumn.Length
-                    }).ToList();
+            var parameters = new Dictionary<string, Parameter>();
+            foreach (var projection in projections)
+            {
+                var column = projection.Key;
+                AddTo(parameters, "@" + column.Name + i, projection.Value, column.SqlColumn.Type, column.SqlColumn.Length);
+            }
+
+            return parameters;
+        }
+
+        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, DbType? dbType, int? size)
+        {
+            parameters[name] = new Parameter {Name = name, Value = value, DbType = dbType, Size = size};
         }
 
         public class PreparedDatabaseCommand

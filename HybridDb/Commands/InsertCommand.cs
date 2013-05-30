@@ -63,7 +63,7 @@ namespace HybridDb.Commands
             return new PreparedDatabaseCommand
             {
                 Sql = sql,
-                Parameters = parameters,
+                Parameters = parameters.Values.ToList(),
                 ExpectedRowCount = 1
             };
         }

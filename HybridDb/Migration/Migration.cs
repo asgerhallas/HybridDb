@@ -24,8 +24,8 @@ namespace HybridDb.Migration
                                                  ISchemaMigrationBuilderStep2
         {
             public int Version { get; private set; }
-            protected Action<ISchemaMigrator> Migration { get; private set; }
-            protected Func<string, string> Rewrite { get; private set; }
+            public Action<ISchemaMigrator> Migration { get; private set; }
+            public Func<string, string> Rewrite { get; private set; }
 
             ISchemaMigrationBuilderStep2 ISchemaMigrationBuilderStep1.ToVersion(int version)
             {
@@ -136,7 +136,7 @@ namespace HybridDb.Migration
             IDocumentMigrationBuilderStep5 MigrateOnWrite<T>(Action<T, IDictionary<string, object>> migration);
         }
 
-        void IAddIn.OnRead(IDictionary<string, object> projections)
+        void IAddIn.OnRead(Dictionary<string, object> projections)
         {
             new DocumentMigrator().OnRead(this, projections);
         }

@@ -126,7 +126,7 @@ END", uniqueDbName));
                   WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
                   AND K.COLUMN_NAME = 'Id'";
 
-            var isPrimaryKey = storeWithTempTables.RawQuery(sql).Any();
+            var isPrimaryKey = storeWithTempTables.RawQuery<dynamic>(sql).Any();
             isPrimaryKey.ShouldBe(true);
 
             var documentColumn = GetTempColumn("Entities", "Document");
@@ -312,12 +312,12 @@ END", uniqueDbName));
 
         bool RealTableExists(string name)
         {
-            return storeWithRealTables.RawQuery(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
+            return storeWithRealTables.RawQuery<dynamic>(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
         }
 
         bool TempTableExists(string name)
         {
-            return storeWithTempTables.RawQuery(string.Format("select OBJECT_ID('tempdb..#{0}') as Result", name)).First().Result != null;
+            return storeWithTempTables.RawQuery<dynamic>(string.Format("select OBJECT_ID('tempdb..#{0}') as Result", name)).First().Result != null;
         }
 
         Column GetTempColumn(string table, string column)
@@ -366,7 +366,6 @@ END", uniqueDbName));
         {
             public Guid Id { get; private set; }
         }
-
 
         public enum SomeFreakingEnum
         {

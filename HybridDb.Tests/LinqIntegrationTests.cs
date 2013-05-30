@@ -16,7 +16,7 @@ namespace HybridDb.Tests
         {
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
-            store.DocumentsFor<Entity>()
+            store.Document<Entity>()
                  .Project(x => x.Property)
                  .Project(x => x.StringProp)
                  .Project(x => x.TheChild.NestedProperty);

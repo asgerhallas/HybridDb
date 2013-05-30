@@ -44,7 +44,7 @@ namespace HybridDb
         [ImportMany(typeof(IAddIn))]
         public IEnumerable<IAddIn> AddIns { get; set; }
 
-        public Action<IDictionary<string, object>> OnRead { get; set; }
+        public Action<Dictionary<string, object>> OnRead { get; set; }
 
         public TableMode TableMode
         {
@@ -66,14 +66,9 @@ namespace HybridDb
             get { return configuration; }
         }
 
-        public ISchemaMigrator CreateMigrator()
-        {
-            return new SchemaMigrator(this);
-        }
-
         public void Migrate(Action<ISchemaMigrator> migration)
         {
-            using (var migrator = CreateMigrator())
+            using (var migrator = new SchemaMigrator(this))
             {
                 migration(migrator);
                 migrator.Commit();
@@ -86,7 +81,7 @@ namespace HybridDb
             {
                 foreach (var table in Configuration.Tables)
                 {
-                    migrator.MigrateTo(table, safe);
+                    //migrator.MigrateTo(table, safe);
                 }
             });
         }
@@ -105,7 +100,7 @@ namespace HybridDb
             }
         }
 
-        public DocumentConfiguration<TEntity> DocumentsFor<TEntity>()
+        public DocumentConfiguration<TEntity> Document<TEntity>()
         {
             return DocumentsFor<TEntity>(null);
         }
@@ -250,7 +245,8 @@ namespace HybridDb
                                  .Cast<IDictionary<string, object>>()
                                  .Select(row =>
                                  {
-                                     OnRead(row);
+                                     var dictRow = row.ToDictionary();
+                                     OnRead(dictRow);
                                      return row.ToDictionary(
                                          column => table.GetColumnOrDefaultDynamicColumn(column.Key, column.Value.GetTypeOrDefault()),
                                          column => column.Value);
@@ -262,7 +258,18 @@ namespace HybridDb
                 }
 
                 Interlocked.Increment(ref numberOfRequests);
-                Logger.Info("Retrieved {0} in {1}ms", "", timer.ElapsedMilliseconds);
+
+                if (isWindowed)
+                {
+                    var potential = stats.TotalResults - skip;
+                    stats.RetrievedResults = take > 0 && potential > take ? take : potential;
+                }
+                else
+                {
+                    stats.RetrievedResults = stats.TotalResults;
+                }
+
+                Logger.Info("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, timer.ElapsedMilliseconds);
 
                 connection.Complete();
                 return result;
@@ -295,12 +302,12 @@ namespace HybridDb
                 if (row == null)
                     return null;
 
-                OnRead(row);
+                var dictRow = row.ToDictionary();
+                OnRead(dictRow);
 
-                return row.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
+                return dictRow.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
             }
         }
-
 
         public long NumberOfRequests
         {
@@ -337,21 +344,7 @@ namespace HybridDb
             }
         }
 
-        public void Dispose()
-        {
-            if (numberOfManagedConnections > 0)
-                Logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
-
-            if (ambientConnectionForTesting != null)
-                ambientConnectionForTesting.Dispose();
-        }
-
-        ILogger Logger
-        {
-            get { return Configuration.Logger; }
-        }
-
-        internal ManagedConnection Connect()
+        ManagedConnection Connect()
         {
             Action complete = () => { };
             Action dispose = () => { numberOfManagedConnections--; };
@@ -402,20 +395,30 @@ namespace HybridDb
             }
         }
 
-        internal IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
+        public void Dispose()
         {
-            using (var connection = Connect())
-            {
-                return connection.Connection.Query<T>(sql, parameters);
-            }
+            if (numberOfManagedConnections > 0)
+                Logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+
+            if (ambientConnectionForTesting != null)
+                ambientConnectionForTesting.Dispose();
         }
 
-        internal IEnumerable<dynamic> RawQuery(string sql, object parameters = null)
+        public void RawExecute(string sql, object parameters = null)
         {
             using (var connection = Connect())
-            {
-                return connection.Connection.Query(sql, parameters);
-            }
+                connection.Connection.Execute(sql, parameters);
+        }
+
+        public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
+        {
+            using (var connection = Connect())
+                return connection.Connection.Query<T>(sql, parameters);
+        }
+
+        ILogger Logger
+        {
+            get { return Configuration.Logger; }
         }
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
@@ -442,9 +445,11 @@ namespace HybridDb
                                        (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
                                         select new Parameter {Name = "@" + projection.Key, Value = projection.Value}).ToList();
 
-            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(sql.ToString(), Tuple.Create,
-                                                                                        new FastDynamicParameters(normalizedParameters),
-                                                                                        splitOn: "TotalResults");
+            var rows = connection.Connection.Query<T, object, QueryStats, Tuple<T, QueryStats>>(
+                sql.ToString(), 
+                (projection, rowcount, totalresults) => Tuple.Create(projection, totalresults), 
+                new FastDynamicParameters(normalizedParameters),
+                splitOn: "RowNumber,TotalResults");
 
             var firstRow = rows.FirstOrDefault();
             metadata = firstRow != null ? new QueryStats {TotalResults = firstRow.Item2.TotalResults} : new QueryStats();

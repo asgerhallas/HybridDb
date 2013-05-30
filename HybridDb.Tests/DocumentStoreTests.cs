@@ -19,7 +19,7 @@ namespace HybridDb.Tests
         public DocumentStoreTests()
         {
             store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            store.DocumentsFor<Entity>()
+            store.Document<Entity>()
                  .Project(x => x.Field)
                  .Project(x => x.Property)
                  .Project(x => x.TheChild.NestedProperty)
@@ -46,7 +46,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetSchemaFor<Entity>();
             store.Insert(table.Table, id, documentAsByteArray, new {Field = "Asger"});
 
-            var row = store.RawQuery("select * from #Entities").Single();
+            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -60,7 +60,7 @@ namespace HybridDb.Tests
             store.Insert(new Table("Entities"), id,
                          documentAsByteArray, new {Field = "Asger"});
 
-            var row = store.RawQuery("select * from #Entities").Single();
+            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -75,7 +75,7 @@ namespace HybridDb.Tests
                          documentAsByteArray,
                          new Dictionary<string, object> {{"Field", null}});
 
-            var row = store.RawQuery("select * from #Entities").Single();
+            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
         }
 
@@ -103,10 +103,10 @@ namespace HybridDb.Tests
                              }
                          });
 
-            var mainrow = store.RawQuery("select * from #Entities").Single();
+            var mainrow = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid)mainrow.Id).ShouldBe(id);
 
-            var utilrows = store.RawQuery("select * from #Entities_Children").ToList();
+            var utilrows = store.RawQuery<dynamic>("select * from #Entities_Children").ToList();
             utilrows.Count.ShouldBe(2);
             
             var utilrow = utilrows.First();
@@ -123,7 +123,7 @@ namespace HybridDb.Tests
 
             store.Update(table.Table, id, etag, new byte[] {}, new {Field = "Lars"});
 
-            var row = store.RawQuery("select * from #Entities").Single();
+            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
         }
@@ -137,7 +137,7 @@ namespace HybridDb.Tests
 
             store.Update(new Table("Entities"), id, etag, new byte[] {}, new Dictionary<string, object> {{"Field", null}, {"StringProp", "Lars"}});
 
-            var row = store.RawQuery("select * from #Entities").Single();
+            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe(null);
             ((string) row.StringProp).ShouldBe("Lars");
@@ -292,7 +292,7 @@ namespace HybridDb.Tests
 
             store.Delete(table.Table, id, etag);
 
-            store.RawQuery("select * from #Entities").Count().ShouldBe(0);
+            store.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -356,7 +356,7 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            store.RawQuery("select * from #Entities").Count().ShouldBe(0);
+            store.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
 
@@ -364,11 +364,11 @@ namespace HybridDb.Tests
         public void WillNotCreateSchemaIfItAlreadyExists()
         {
             var store1 = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            store1.DocumentsFor<Case>().Project(x => x.By);
+            store1.Document<Case>().Project(x => x.By);
             store1.MigrateSchema();
 
             var store2 = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            store2.DocumentsFor<Case>().Project(x => x.By);
+            store2.Document<Case>().Project(x => x.By);
 
             Should.NotThrow(() => store2.MigrateSchema());
         }
@@ -609,7 +609,7 @@ namespace HybridDb.Tests
                 // No tx complete here
             }
 
-            store.RawQuery("select * from #Entities").Count().ShouldBe(0);
+            store.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -617,7 +617,7 @@ namespace HybridDb.Tests
         {
             using (var globalStore1 = DocumentStore.ForTestingWithGlobalTempTables())
             {
-                globalStore1.DocumentsFor<Case>();
+                globalStore1.Document<Case>();
                 globalStore1.MigrateSchema();
 
                 var id = Guid.NewGuid();
@@ -625,7 +625,7 @@ namespace HybridDb.Tests
 
                 using (var globalStore2 = DocumentStore.ForTestingWithGlobalTempTables())
                 {
-                    globalStore2.DocumentsFor<Case>();
+                    globalStore2.Document<Case>();
                     var result = globalStore2.Get(globalStore2.Configuration.GetSchemaFor<Case>().Table, id);
 
                     result.ShouldNotBe(null);
@@ -740,7 +740,7 @@ namespace HybridDb.Tests
 
         public class ThrowingAddIn : IAddIn
         {
-            public void OnRead(IDictionary<string, object> projections)
+            public void OnRead(Dictionary<string, object> projections)
             {
                 throw new OperationException();
             }

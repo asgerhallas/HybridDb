@@ -32,8 +32,8 @@ namespace HybridDb.Commands
         {
             var values = ConvertAnonymousToProjections(table, projections);
 
-            values.Add(table.EtagColumn, etag);
-            values.Add(table.DocumentColumn, document);
+            values[table.EtagColumn] = etag;
+            values[table.DocumentColumn] = document;
 
             var sql = new SqlBuilder()
                 .Append("update {0} set {1} where {2}=@Id{3}",
@@ -47,17 +47,17 @@ namespace HybridDb.Commands
                 .ToString();
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
-            parameters.Add(new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.SqlColumn.Type});
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, table.IdColumn.SqlColumn.Type, null);
 
             if (!lastWriteWins)
             {
-                parameters.Add(new Parameter {Name = "@CurrentEtag" + uniqueParameterIdentifier, Value = currentEtag, DbType = table.EtagColumn.SqlColumn.Type});
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, table.EtagColumn.SqlColumn.Type, null);
             }
 
             return new PreparedDatabaseCommand
             {
                 Sql = sql,
-                Parameters = parameters,
+                Parameters = parameters.Values.ToList(),
                 ExpectedRowCount = 1
             };
         }

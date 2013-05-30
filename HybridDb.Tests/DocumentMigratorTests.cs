@@ -42,19 +42,76 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsOnReadIfCurrentDocumentIsWrongVersion()
         {
-            var serializer = new DefaultBsonSerializer();
-
             var migration = new Migration.Migration();
-            migration.MigrateDocument().FromTable("Entities").ToVersion(3);
+            migration.MigrateDocument()
+                .FromTable("Entities")
+                .ToVersion(3)
+                .RequireSchemaVersion(1)
+                .UseSerializer(null)
+                .MigrateOnRead<object>(x => { });
 
             var projections = new Dictionary<string, object>
             {
                 {"Id", Guid.NewGuid()}, 
                 {"Version", 1}, 
-                {"Document", serializer.Serialize(JObject.Parse("{ Property: 1 }"))},
+                {"Document", new byte[0]},
             };
             
             Should.Throw<ArgumentException>(() => new DocumentMigrator().OnRead(migration, projections));
+        }
+
+        [Fact]
+        public void CanManipulateDocumentOnWrite()
+        {
+            var serializer = new DefaultBsonSerializer();
+
+            var migration = new Migration.Migration();
+            migration.MigrateDocument()
+                     .FromTable("Entities")
+                     .ToVersion(2)
+                     .RequireSchemaVersion(1)
+                     .UseSerializer(serializer)
+                     .MigrateOnWrite<JObject>((doc, projection) =>
+                     {
+                         doc["Property"] = 10;
+                         projection["Something"] = "Lars";
+                     });
+
+            var projections = new Dictionary<string, object>
+            {
+                {"Id", Guid.NewGuid()}, 
+                {"Version", 1}, 
+                {"Something", "Asger"}, 
+                {"Document", serializer.Serialize(JObject.Parse("{ Property: 1 }"))},
+            };
+
+            new DocumentMigrator().OnWrite(migration, projections);
+
+            var document = (JObject)serializer.Deserialize((byte[])projections["Document"], typeof(JObject));
+            ((int)document["Property"]).ShouldBe(10);
+            ((string)projections["Something"]).ShouldBe("Lars");
+            ((int)projections["Version"]).ShouldBe(2);
+        }
+
+        [Fact]
+        public void FailsOnWriteIfCurrentDocumentIsWrongVersion()
+        {
+            var migration = new Migration.Migration();
+            migration.MigrateDocument()
+                .FromTable("Entities")
+                .ToVersion(3)
+                .RequireSchemaVersion(1)
+                .UseSerializer(null)
+                .MigrateOnWrite<object>((x, y) => { });
+
+            var projections = new Dictionary<string, object>
+            {
+                {"Id", Guid.NewGuid()}, 
+                {"Version", 1}, 
+                {"Document", new byte[0]},
+            };
+
+            Should.Throw<ArgumentException>(() => new DocumentMigrator().OnWrite(migration, projections));
         }
 
         public class Entity

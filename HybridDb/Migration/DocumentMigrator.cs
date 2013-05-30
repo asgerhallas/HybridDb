@@ -7,15 +7,49 @@ namespace HybridDb.Migration
 {
     public class DocumentMigrator
     {
-        public void OnRead(Migration migration, IDictionary<string, object> projections)
+        public void OnRead(Migration migration, Dictionary<string, object> projections)
         {
-            if (migration.DocumentMigration.MigrationOnRead == null)
+            var documentMigration = migration.DocumentMigration;
+            if (migration.DocumentMigration == null)
                 return;
 
-            var table = new Table(migration.DocumentMigration.Tablename);
+            if (documentMigration.MigrationOnRead == null)
+                return;
+
+            var table = new Table(documentMigration.Tablename);
+            var currentVersion = AssertCorrectVersion(documentMigration, table, projections);
+
+            var serializer = documentMigration.Serializer;
+            var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
+            documentMigration.MigrationOnRead(document);
+            projections[table.VersionColumn.Name] = currentVersion + 1;
+            projections[table.DocumentColumn.Name] = serializer.Serialize(document);
+        }
+
+        public void OnWrite(Migration migration, Dictionary<string, object> projections)
+        {
+            var documentMigration = migration.DocumentMigration;
+            if (migration.DocumentMigration == null)
+                return;
+
+            if (documentMigration.MigrationOnWrite == null)
+                return;
+
+            var table = new Table(documentMigration.Tablename);
+            var currentVersion = AssertCorrectVersion(documentMigration, table, projections);
+
+            var serializer = documentMigration.Serializer;
+            var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
+            documentMigration.MigrationOnWrite(document, projections);
+            projections[table.VersionColumn.Name] = currentVersion + 1;
+            projections[table.DocumentColumn.Name] = serializer.Serialize(document);
+        }
+
+        static int AssertCorrectVersion(Migration.DocumentMigrationDefinition documentMigration, Table table, IDictionary<string, object> projections)
+        {
             var id = (Guid)projections[table.IdColumn.Name];
             var version = (int)projections[table.VersionColumn.Name];
-            var expectedVersion = migration.DocumentMigration.Version - 1;
+            var expectedVersion = documentMigration.Version - 1;
 
             if (version != expectedVersion)
             {
@@ -25,11 +59,7 @@ namespace HybridDb.Migration
                                                           id, version, expectedVersion));
             }
 
-            var serializer = migration.DocumentMigration.Serializer;
-            var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
-            migration.DocumentMigration.MigrationOnRead(document);
-            projections[table.VersionColumn.Name] = version + 1;
-            projections[table.DocumentColumn.Name] = serializer.Serialize(document);
+            return version;
         }
     }
 }
