@@ -17,7 +17,7 @@ namespace HybridDb.Tests.Migrations
                 .ToVersion(1)
                 .RequireSchemaVersion(1)
                 .UseSerializer(new DefaultBsonSerializer())
-                .MigrateOnWrite<JObject>((document, projections) => projections["BuildingsCount"] = document["buildings"].Count());
+                .MigrateOnRead<JObject>((document, projections) => projections["BuildingsCount"] = document["buildings"].Count());
         }
     }
 }

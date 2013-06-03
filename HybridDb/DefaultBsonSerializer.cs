@@ -41,7 +41,7 @@ namespace HybridDb
             }
         }
 
-        public object Deserialize(byte[] data, Type type)
+        public virtual object Deserialize(byte[] data, Type type)
         {
             using (var inStream = new MemoryStream(data))
             using (var bsonReader = new BsonReader(inStream))

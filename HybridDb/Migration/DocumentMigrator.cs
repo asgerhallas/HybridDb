@@ -21,26 +21,7 @@ namespace HybridDb.Migration
 
             var serializer = documentMigration.Serializer;
             var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
-            documentMigration.MigrationOnRead(document);
-            projections[table.VersionColumn.Name] = currentVersion + 1;
-            projections[table.DocumentColumn.Name] = serializer.Serialize(document);
-        }
-
-        public void OnWrite(Migration migration, Dictionary<string, object> projections)
-        {
-            var documentMigration = migration.DocumentMigration;
-            if (migration.DocumentMigration == null)
-                return;
-
-            if (documentMigration.MigrationOnWrite == null)
-                return;
-
-            var table = new Table(documentMigration.Tablename);
-            var currentVersion = AssertCorrectVersion(documentMigration, table, projections);
-
-            var serializer = documentMigration.Serializer;
-            var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
-            documentMigration.MigrationOnWrite(document, projections);
+            documentMigration.MigrationOnRead(document, projections);
             projections[table.VersionColumn.Name] = currentVersion + 1;
             projections[table.DocumentColumn.Name] = serializer.Serialize(document);
         }

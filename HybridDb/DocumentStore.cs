@@ -42,7 +42,7 @@ namespace HybridDb
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
 
         [ImportMany(typeof(IAddIn))]
-        public IEnumerable<IAddIn> AddIns { get; set; }
+        IEnumerable<IAddIn> AddIns { get; set; }
 
         public Action<Dictionary<string, object>> OnRead { get; set; }
 
@@ -55,7 +55,6 @@ namespace HybridDb
         {
             get { return tableMode != TableMode.UseRealTables; }
         }
-
 
         /// <summary>
         /// Configuration for tables and projections used in sessions.
@@ -81,31 +80,36 @@ namespace HybridDb
             {
                 foreach (var table in Configuration.Tables)
                 {
-                    //migrator.MigrateTo(table, safe);
+                    migrator.MigrateTo(table, safe);
                 }
             });
         }
 
-        public void LoadAddIns()
+        public void LoadAddIns(string path, Func<IAddIn, bool> predicate)
         {
             var registration = new RegistrationBuilder();
             registration.ForTypesDerivedFrom<IAddIn>().Export<IAddIn>();
 
-            var container = new CompositionContainer(new DirectoryCatalog(".", registration));
+            var container = new CompositionContainer(new DirectoryCatalog(path, registration));
             container.ComposeParts(this);
 
-            foreach (var addIn in AddIns)
+            foreach (var addIn in AddIns.Where(predicate))
             {
-                OnRead += addIn.OnRead;
+                RegisterAddIn(addIn);
             }
+        }
+
+        public void RegisterAddIn(IAddIn addIn)
+        {
+            OnRead += addIn.OnRead;
         }
 
         public DocumentConfiguration<TEntity> Document<TEntity>()
         {
-            return DocumentsFor<TEntity>(null);
+            return Document<TEntity>(null);
         }
 
-        public DocumentConfiguration<TEntity> DocumentsFor<TEntity>(string name)
+        public DocumentConfiguration<TEntity> Document<TEntity>(string name)
         {
             var table = new Table(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
             var relation = new DocumentConfiguration<TEntity>(Configuration, table);
@@ -194,6 +198,15 @@ namespace HybridDb
             }
         }
 
+        void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
+        {
+            var fastParameters = new FastDynamicParameters(parameters);
+            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+            Interlocked.Increment(ref numberOfRequests);
+            if (rowcount != expectedRowCount)
+                throw new ConcurrencyException();
+        }
+
         public Guid Insert(Table table, Guid key, byte[] document, object projections)
         {
             return Execute(new InsertCommand(table, key, document, projections));
@@ -243,10 +256,11 @@ namespace HybridDb
                     result = (IEnumerable<TProjection>)
                              InternalQuery<object>(connection, sql, parameters, out stats)
                                  .Cast<IDictionary<string, object>>()
+                                 .Select(row => row.ToDictionary())
                                  .Select(row =>
                                  {
-                                     var dictRow = row.ToDictionary();
-                                     OnRead(dictRow);
+                                     row.Remove("RowNumber");
+                                     OnRead(row);
                                      return row.ToDictionary(
                                          column => table.GetColumnOrDefaultDynamicColumn(column.Key, column.Value.GetTypeOrDefault()),
                                          column => column.Value);
@@ -280,6 +294,45 @@ namespace HybridDb
                                                               int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             return Query<IDictionary<Column, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
+        }
+
+
+        static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
+        {
+            var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
+            var selectedColumns = from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                  let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
+                                  let column = split[0]
+                                  let alias = split.Length > 1 ? split[1] : null
+                                  where neededColumns.Contains(alias)
+                                  select new { column, alias = alias ?? column };
+
+            var missingColumns = from column in neededColumns
+                                 where !selectedColumns.Select(x => x.alias).Contains(column)
+                                 select new { column, alias = column };
+
+            select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
+            return select;
+        }
+
+        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)
+        {
+            var normalizedParameters = parameters as IEnumerable<Parameter> ??
+                                       (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
+                                        select new Parameter { Name = "@" + projection.Key, Value = projection.Value }).ToList();
+
+            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(
+                sql.ToString(),
+                Tuple.Create,
+                new FastDynamicParameters(normalizedParameters),
+                splitOn: "TotalResults");
+
+            var firstRow = rows.FirstOrDefault();
+            metadata = firstRow != null ? new QueryStats { TotalResults = firstRow.Item2.TotalResults } : new QueryStats();
+
+            Interlocked.Increment(ref numberOfRequests);
+
+            return rows.Select(x => x.Item1);
         }
 
         public IDictionary<Column, object> Get(Table table, Guid key)
@@ -407,65 +460,24 @@ namespace HybridDb
         public void RawExecute(string sql, object parameters = null)
         {
             using (var connection = Connect())
+            {
                 connection.Connection.Execute(sql, parameters);
+                connection.Complete();
+            }
+
         }
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
         {
             using (var connection = Connect())
+            {
                 return connection.Connection.Query<T>(sql, parameters);
+            }
         }
 
         ILogger Logger
         {
             get { return Configuration.Logger; }
-        }
-
-        static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
-        {
-            var neededColumns = typeof (TProjection).GetProperties().Select(x => x.Name).ToList();
-            var selectedColumns = from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
-                                  let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
-                                  let column = split[0]
-                                  let alias = split.Length > 1 ? split[1] : null
-                                  where neededColumns.Contains(alias)
-                                  select new {column, alias = alias ?? column};
-
-            var missingColumns = from column in neededColumns
-                                 where !selectedColumns.Select(x => x.alias).Contains(column)
-                                 select new {column, alias = column};
-
-            select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
-            return select;
-        }
-
-        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)
-        {
-            var normalizedParameters = parameters as IEnumerable<Parameter> ??
-                                       (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
-                                        select new Parameter {Name = "@" + projection.Key, Value = projection.Value}).ToList();
-
-            var rows = connection.Connection.Query<T, object, QueryStats, Tuple<T, QueryStats>>(
-                sql.ToString(), 
-                (projection, rowcount, totalresults) => Tuple.Create(projection, totalresults), 
-                new FastDynamicParameters(normalizedParameters),
-                splitOn: "RowNumber,TotalResults");
-
-            var firstRow = rows.FirstOrDefault();
-            metadata = firstRow != null ? new QueryStats {TotalResults = firstRow.Item2.TotalResults} : new QueryStats();
-
-            Interlocked.Increment(ref numberOfRequests);
-
-            return rows.Select(x => x.Item1);
-        }
-
-        void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
-        {
-            var fastParameters = new FastDynamicParameters(parameters);
-            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
-            Interlocked.Increment(ref numberOfRequests);
-            if (rowcount != expectedRowCount)
-                throw new ConcurrencyException();
         }
 
         public class MissingProjectionValueException : Exception {}

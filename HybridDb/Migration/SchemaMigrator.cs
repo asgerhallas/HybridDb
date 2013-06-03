@@ -18,25 +18,25 @@ namespace HybridDb.Migration
         public SchemaMigrator(IDocumentStore store)
         {
             this.store = store;
-            tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable});
+            tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable});
         }
-        
-        //public ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
-        //{
-        //    var timer = Stopwatch.StartNew();
 
-        //    if (!store.IsInTestMode)
-        //    {
-        //        var existingTables = connectionManager.Connection.Query("select * from information_schema.tables where table_catalog = db_name()", null);
-        //        if (existingTables.Any())
-        //            throw new InvalidOperationException("You cannot initialize a database that is not empty.");
-        //    }
+        public ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
+        {
+            var timer = Stopwatch.StartNew();
 
-        //    AddTableAndColumnsAndAssociatedTables(documentConfiguration.Table);
+            if (!store.IsInTestMode)
+            {
+                var existingTables = store.RawQuery<dynamic>("select * from information_schema.tables where table_catalog = db_name()", null);
+                if (existingTables.Any())
+                    throw new InvalidOperationException("You cannot initialize a database that is not empty.");
+            }
 
-        //    store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
-        //    return this;
-        //}
+            AddTableAndColumnsAndAssociatedTables(documentConfiguration.Table);
+
+            store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
+            return this;
+        }
 
         public ISchemaMigrator AddTableAndColumnsAndAssociatedTables(Table table)
         {

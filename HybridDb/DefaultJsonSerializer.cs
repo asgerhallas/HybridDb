@@ -17,13 +17,13 @@ namespace HybridDb
             }
         }
 
-        //public override object Deserialize(byte[] data, Type type)
-        //{
-        //    using (var textReader = new StringReader(Encoding.UTF8.GetString(data)))
-        //    using (var jsonReader = new JsonTextReader(textReader))
-        //    {
-        //        return CreateSerializer().Deserialize(jsonReader, type);
-        //    }
-        //}
+        public override object Deserialize(byte[] data, Type type)
+        {
+            using (var textReader = new StringReader(Encoding.UTF8.GetString(data)))
+            using (var jsonReader = new JsonTextReader(textReader))
+            {
+                return CreateSerializer().Deserialize(jsonReader, type);
+            }
+        }
     }
 }

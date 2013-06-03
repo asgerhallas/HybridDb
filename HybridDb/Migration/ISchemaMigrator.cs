@@ -5,7 +5,7 @@ namespace HybridDb.Migration
 {
     public interface ISchemaMigrator : IDisposable
     {
-        //ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true);
+        ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true);
 
         ISchemaMigrator AddTableAndColumnsAndAssociatedTables(Table table);
         ISchemaMigrator RemoveTableAndAssociatedTables(Table table);

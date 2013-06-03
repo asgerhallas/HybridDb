@@ -668,11 +668,22 @@ namespace HybridDb.Tests
         [Fact]
         public void CallbacksAreLoadedFromExternalAssemblies()
         {
-            store.LoadAddIns();
-            store.AddIns.Count().ShouldBe(1);
+            store.LoadAddIns(".", addin => addin is ThrowingAddIn);
+            
+            // OnRead is initialized with a no-op delegate
+            store.OnRead.GetInvocationList().Length.ShouldBe(2);
             
             // The AddIn loaded in tests throws on any operation
             Should.Throw<ThrowingAddIn.OperationException>(() => store.OnRead(null));
+        }
+
+        [Fact]
+        public void CreatesStandardMetadataTable()
+        {
+            store.TableExists("HybridDb").ShouldBe(true);
+            store.GetColumn("HybridDb", "Table");
+            store.GetColumn("HybridDb", "SchemaVersion");
+            store.GetColumn("HybridDb", "DocumentVersion");
         }
 
         public class Case

@@ -68,8 +68,7 @@ namespace HybridDb.Migration
             public string Tablename { get; private set; }
             public ISerializer Serializer { get; private set; }
             public Type Type { get; private set; }
-            public Action<object> MigrationOnRead { get; private set; }
-            public Action<object, IDictionary<string, object>> MigrationOnWrite { get; private set; }
+            public Action<object, IDictionary<string, object>> MigrationOnRead { get; private set; }
 
             IDocumentMigrationBuilderStep2 IDocumentMigrationBuilderStep1.FromTable(string tablename)
             {
@@ -95,17 +94,10 @@ namespace HybridDb.Migration
                 return this;
             }
 
-            IDocumentMigrationBuilderStep5 IDocumentMigrationBuilderStep5.MigrateOnRead<T>(Action<T> migration)
+            IDocumentMigrationBuilderStep5 IDocumentMigrationBuilderStep5.MigrateOnRead<T>(Action<T, IDictionary<string, object>> migration)
             {
                 Type = typeof (T);
-                MigrationOnRead = x => migration((T) x);
-                return this;
-            }
-
-            IDocumentMigrationBuilderStep5 IDocumentMigrationBuilderStep5.MigrateOnWrite<T>(Action<T, IDictionary<string, object>> migration)
-            {
-                Type = typeof(T);
-                MigrationOnWrite = (x, y) => migration((T) x, y);
+                MigrationOnRead = (doc, projections) => migration((T) doc, projections);
                 return this;
             }
         }
@@ -132,8 +124,7 @@ namespace HybridDb.Migration
 
         public interface IDocumentMigrationBuilderStep5
         {
-            IDocumentMigrationBuilderStep5 MigrateOnRead<T>(Action<T> migration);
-            IDocumentMigrationBuilderStep5 MigrateOnWrite<T>(Action<T, IDictionary<string, object>> migration);
+            IDocumentMigrationBuilderStep5 MigrateOnRead<T>(Action<T, IDictionary<string, object>> migration);
         }
 
         void IAddIn.OnRead(Dictionary<string, object> projections)

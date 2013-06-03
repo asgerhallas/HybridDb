@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using HybridDb.Commands;
-using HybridDb.Migration;
 using HybridDb.Schema;
 
 namespace HybridDb
@@ -19,7 +18,8 @@ namespace HybridDb
         Guid LastWrittenEtag { get; }
         bool IsInTestMode { get; }
         void MigrateSchema(bool safe = true);
-        void LoadAddIns();
+        void LoadAddIns(string path, Func<IAddIn, bool> predicate);
+        void RegisterAddIn(IAddIn addIn);
         IDocumentSession OpenSession();
         DocumentConfiguration<TEntity> Document<TEntity>();
         Guid Execute(params DatabaseCommand[] commands);

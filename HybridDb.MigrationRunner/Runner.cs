@@ -6,7 +6,6 @@ using System.Threading;
 using HybridDb.Migration;
 using HybridDb.Schema;
 using Serilog;
-using Serilog.Events;
 
 namespace HybridDb.MigrationRunner
 {
@@ -122,7 +121,6 @@ namespace HybridDb.MigrationRunner
                     foreach (var row in rows.Select(x => x.ToDictionary()))
                     {
                         migrator.OnRead(migration, row);
-                        migrator.OnWrite(migration, row);
 
                         var id = (Guid) row[table.IdColumn.Name];
                         var etag = (Guid) row[table.EtagColumn.Name];

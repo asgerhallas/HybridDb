@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Tests.Migrations
@@ -15,7 +16,7 @@ namespace HybridDb.Tests.Migrations
                 .MigrateOnRead<JObject>(MigrateOnRead);
         }
 
-        public void MigrateOnRead(JObject document)
+        public void MigrateOnRead(JObject document, IDictionary<string, object> projections)
         {
             foreach (var building in document["buildings"].Where(x => x.Value<bool>("IsDeleted")))
             {

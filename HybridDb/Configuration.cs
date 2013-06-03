@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using HybridDb.Logging;
 using HybridDb.Schema;
@@ -16,6 +17,13 @@ namespace HybridDb
             tables = new ConcurrentDictionary<Type, DocumentConfiguration>();
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
+
+            var meta = new Table("HybridDb");
+            meta.Register(new UserColumn("Table", new SqlColumn(DbType.AnsiStringFixedLength, 255)));
+            meta.Register(new UserColumn("SchemaVersion", new SqlColumn(DbType.Int32)));
+            meta.Register(new UserColumn("DocumentVersion", new SqlColumn(DbType.Int32)));
+
+            Register(new DocumentConfiguration(this, meta, typeof(object)));
         }
 
         public ILogger Logger { get; private set; }
@@ -41,7 +49,7 @@ namespace HybridDb
             DocumentConfiguration table;
             if (!tables.TryGetValue(type, out table))
                 throw new TableNotFoundException(type);
-
+                
             return table;
         }
 
