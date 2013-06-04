@@ -18,7 +18,7 @@ namespace HybridDb.MigrationRunner
         int numberOfMigrations;
 
         [ImportMany(typeof(Migration.Migration), AllowRecomposition = true)]
-        public IEnumerable<Migration.Migration> Migrations { get; set; }
+        public Migration.Migration Migration { get; set; }
 
         public Runner(IDocumentStore store)
         {
@@ -49,14 +49,13 @@ namespace HybridDb.MigrationRunner
 
             recentLogs.Clear();
 
-            numberOfMigrations = Migrations.Count();
-            if (numberOfMigrations == 0)
+            if (Migration == null)
                 return;
 
-            var migration = Migrations.First();
+            numberOfMigrations = Migration.DocumentMigrations.Count;
 
-            if (!MigrateSchema(migration)) return;
-            MigrateDocuments(migration);
+            if (!MigrateSchema(Migration)) return;
+            MigrateDocuments(Migration);
         }
 
         bool MigrateSchema(Migration.Migration migration)
@@ -90,7 +89,7 @@ namespace HybridDb.MigrationRunner
 
         void MigrateDocuments(Migration.Migration migration)
         {
-            var documentMigration = migration.DocumentMigration;
+            var documentMigration = migration.DocumentMigrations.First();
             if (documentMigration != null)
             {
                 var migrator = new DocumentMigrator();
@@ -101,7 +100,7 @@ namespace HybridDb.MigrationRunner
                 if (documentMigration.Version == 0)
                     throw new ArgumentException("Document migration must have a version number larger than 0");
 
-                var table = new Table(documentMigration.Tablename);
+                var table = new DocumentTable(documentMigration.Tablename);
                 while (true)
                 {
                     PauseOnSpacebar();
@@ -120,15 +119,14 @@ namespace HybridDb.MigrationRunner
 
                     foreach (var row in rows.Select(x => x.ToDictionary()))
                     {
-                        migrator.OnRead(migration, row);
+                        migrator.OnRead(migration, table, row);
 
                         var id = (Guid) row[table.IdColumn.Name];
                         var etag = (Guid) row[table.EtagColumn.Name];
-                        var document = (byte[]) row[table.DocumentColumn.Name];
 
                         try
                         {
-                            store.Update(table, id, etag, document, row);
+                            store.Update(table, id, etag, row);
                         }
                         catch (ConcurrencyException)
                         {
@@ -190,7 +188,7 @@ namespace HybridDb.MigrationRunner
             {
                 Console.SetCursorPosition(0, 3);
                 Console.WriteLine("Migration queue:");
-                foreach (var queuedMigration in Migrations.Skip(1))
+                foreach (var queuedMigration in Migration.DocumentMigrations.Skip(1))
                 {
                     Console.Write(queuedMigration.GetType().Name);
                     ClearRestOfLine();

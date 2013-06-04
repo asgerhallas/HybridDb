@@ -2,21 +2,21 @@
 using System.Collections.Generic;
 using HybridDb.Schema;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace HybridDb.Migration
 {
     public class DocumentMigrator
     {
-        public void OnRead(Migration migration, Dictionary<string, object> projections)
+        public void OnRead(Migration migration, DocumentTable table, Dictionary<string, object> projections)
         {
-            var documentMigration = migration.DocumentMigration;
-            if (migration.DocumentMigration == null)
+            var documentMigration = migration.DocumentMigrations.SingleOrDefault(x => x.Tablename == table.Name);
+            if (documentMigration == null)
                 return;
 
             if (documentMigration.MigrationOnRead == null)
                 return;
 
-            var table = new Table(documentMigration.Tablename);
             var currentVersion = AssertCorrectVersion(documentMigration, table, projections);
 
             var serializer = documentMigration.Serializer;
@@ -26,7 +26,7 @@ namespace HybridDb.Migration
             projections[table.DocumentColumn.Name] = serializer.Serialize(document);
         }
 
-        static int AssertCorrectVersion(Migration.DocumentMigrationDefinition documentMigration, Table table, IDictionary<string, object> projections)
+        static int AssertCorrectVersion(Migration.DocumentMigrationDefinition documentMigration, DocumentTable table, IDictionary<string, object> projections)
         {
             var id = (Guid)projections[table.IdColumn.Name];
             var version = (int)projections[table.VersionColumn.Name];

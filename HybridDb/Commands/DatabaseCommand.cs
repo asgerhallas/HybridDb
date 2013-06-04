@@ -15,7 +15,7 @@ namespace HybridDb.Commands
         {
             return (projections as IDictionary<Column, object> ??
                     (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
-                        .ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value));
+                        .ToDictionary(x => table.GetColumnOrDefaultColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value));
         }
 
         protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)

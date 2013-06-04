@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using HybridDb.Schema;
 
 namespace HybridDb.Migration
 {
-    public class Migration : IAddIn
+    public class Migration : IHybridDbExtension
     {
-        public DocumentMigrationDefinition DocumentMigration { get; private set; }
+        public List<DocumentMigrationDefinition> DocumentMigrations { get; private set; }
         public SchemaMigrationDefinition SchemaMigration { get; private set; }
+
+        public Migration()
+        {
+            DocumentMigrations = new List<DocumentMigrationDefinition>();
+        }
 
         public ISchemaMigrationBuilderStep1 MigrateSchema()
         {
@@ -16,8 +22,9 @@ namespace HybridDb.Migration
 
         public IDocumentMigrationBuilderStep1 MigrateDocument()
         {
-            DocumentMigration = new DocumentMigrationDefinition();
-            return DocumentMigration;
+            var documentMigration = new DocumentMigrationDefinition();
+            DocumentMigrations.Add(documentMigration);
+            return documentMigration;
         }
 
         public class SchemaMigrationDefinition : ISchemaMigrationBuilderStep1,
@@ -25,7 +32,7 @@ namespace HybridDb.Migration
         {
             public int Version { get; private set; }
             public Action<ISchemaMigrator> Migration { get; private set; }
-            public Func<string, string> Rewrite { get; private set; }
+            public Func<string, string> RewriteQueries { get; private set; }
 
             ISchemaMigrationBuilderStep2 ISchemaMigrationBuilderStep1.ToVersion(int version)
             {
@@ -41,7 +48,7 @@ namespace HybridDb.Migration
 
             ISchemaMigrationBuilderStep2 ISchemaMigrationBuilderStep2.RewriteQueryUntilMigrated(Func<string, string> rewrite)
             {
-                Rewrite = rewrite;
+                RewriteQueries = rewrite;
                 return this;
             }
         }
@@ -127,9 +134,13 @@ namespace HybridDb.Migration
             IDocumentMigrationBuilderStep5 MigrateOnRead<T>(Action<T, IDictionary<string, object>> migration);
         }
 
-        void IAddIn.OnRead(Dictionary<string, object> projections)
+        void IHybridDbExtension.OnRead(Table table, Dictionary<string, object> projections)
         {
-            new DocumentMigrator().OnRead(this, projections);
+            var documentTable = table as DocumentTable;
+            if (documentTable != null)
+            {
+                new DocumentMigrator().OnRead(this, documentTable, projections);
+            }
         }
     }
 }

@@ -35,7 +35,7 @@ namespace HybridDb
                            : null;
             }
 
-            var table = store.Configuration.GetSchemaFor<T>();
+            var table = store.Configuration.GetDesignFor<T>();
             var row = store.Get(table.Table, id);
             if (row == null)
                 return null;
@@ -45,7 +45,7 @@ namespace HybridDb
 
         public IEnumerable<T> Query<T>(string where, object parameters) where T : class
         {
-            var table = store.Configuration.GetSchemaFor<T>();
+            var table = store.Configuration.GetDesignFor<T>();
             QueryStats stats;
             var rows = store.Query(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
 
@@ -55,7 +55,7 @@ namespace HybridDb
 
         public IEnumerable<TProjection> Query<T, TProjection>(string where, object parameters) where T : class
         {
-            var table = store.Configuration.GetSchemaFor<T>();
+            var table = store.Configuration.GetDesignFor<T>();
             QueryStats stats;
             var rows = store.Query<TProjection>(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
             return rows;
@@ -73,14 +73,14 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            var table = store.Configuration.GetSchemaFor(entity.GetType());
+            var table = store.Configuration.GetDesignFor(entity.GetType());
             var id = (Guid) table.Projections[table.Table.IdColumn](entity);
             entities.Remove(id);
         }
 
         public Guid? GetEtagFor(object entity)
         {
-            var table = store.Configuration.GetSchemaFor(entity.GetType());
+            var table = store.Configuration.GetDesignFor(entity.GetType());
             var id = (Guid)table.Projections[table.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
@@ -92,7 +92,7 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var table = store.Configuration.GetSchemaFor(entity.GetType());
+            var table = store.Configuration.GetDesignFor(entity.GetType());
             var id = (Guid)table.Projections[table.Table.IdColumn](entity);
             if (entities.ContainsKey(id))
                 return;
@@ -107,7 +107,7 @@ namespace HybridDb
 
         public void Delete(object entity)
         {
-            var table = store.Configuration.GetSchemaFor(entity.GetType());
+            var table = store.Configuration.GetDesignFor(entity.GetType());
             var id = (Guid)table.Projections[table.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
@@ -136,27 +136,25 @@ namespace HybridDb
 
         void SaveChangesInternal(bool lastWriteWins)
         {
-            var serializer = store.Configuration.Serializer;
-
-            var commands = new Dictionary<ManagedEntity, DatabaseCommand>();
+            var commands = new List<Tuple<ManagedEntity, byte[], DatabaseCommand>>();
             foreach (var managedEntity in entities.Values)
             {
                 var id = managedEntity.Key;
-                var table = store.Configuration.GetSchemaFor(managedEntity.Entity.GetType());
-                var projections = table.Table.Columns.OfType<UserColumn>().ToDictionary(x => x.Name, x => table.Projections[x](managedEntity.Entity));
-                var document = serializer.Serialize(managedEntity.Entity);
+                var table = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
+                var projections = table.Projections.ToDictionary(x => x.Key.Name, x => x.Value(managedEntity.Entity));
+                var document = (byte[])projections[table.Table.DocumentColumn.Name];
 
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(managedEntity, new InsertCommand(table.Table, id, document, projections));
+                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(table.Table, id, projections)));
                         break;
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))
-                            commands.Add(managedEntity, new UpdateCommand(table.Table, id, managedEntity.Etag, document, projections, lastWriteWins));
+                            commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new UpdateCommand(table.Table, id, managedEntity.Etag, projections, lastWriteWins)));
                         break;
                     case EntityState.Deleted:
-                        commands.Add(managedEntity, new DeleteCommand(table.Table, id, managedEntity.Etag, lastWriteWins));
+                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new DeleteCommand(table.Table, id, managedEntity.Etag, lastWriteWins)));
                         break;
                 }
             }
@@ -164,19 +162,20 @@ namespace HybridDb
             if (commands.Count + deferredCommands.Count == 0)
                 return;
 
-            var etag = store.Execute(commands.Values.Concat(deferredCommands).ToArray());
+            var etag = store.Execute(commands.Select(x => x.Item3).Concat(deferredCommands).ToArray());
 
             foreach (var change in commands)
             {
-                var managedEntity = change.Key;
-                var command = change.Value;
+                var managedEntity = change.Item1;
+                var document = change.Item2;
+                var command = change.Item3;
 
                 var insertCommand = command as InsertCommand;
                 if (insertCommand != null)
                 {
                     managedEntity.State = EntityState.Loaded;
                     managedEntity.Etag = etag;
-                    managedEntity.Document = insertCommand.Document;
+                    managedEntity.Document = document;
                     continue;
                 }
 
@@ -184,7 +183,7 @@ namespace HybridDb
                 if (updateCommand != null)
                 {
                     managedEntity.Etag = etag;
-                    managedEntity.Document = updateCommand.Document;
+                    managedEntity.Document = document;
                     continue;
                 }
 
@@ -197,7 +196,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal T ConvertToEntityAndPutUnderManagement<T>(Table table, IDictionary<Column, object> row)
+        internal T ConvertToEntityAndPutUnderManagement<T>(DocumentTable table, IDictionary<Column, object> row)
         {
             var id = (Guid) row[table.IdColumn];
 

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Schema;
 
@@ -8,32 +6,24 @@ namespace HybridDb.Commands
 {
     public class InsertCommand : DatabaseCommand
     {
-        readonly byte[] document;
         readonly Guid key;
         readonly object projections;
         readonly Table table;
 
-        public InsertCommand(Table table, Guid key, byte[] document, object projections)
+        public InsertCommand(Table table, Guid key, object projections)
         {
             this.table = table;
             this.key = key;
-            this.document = document;
             this.projections = projections;
-        }
-
-        public byte[] Document
-        {
-            get { return document; }
         }
 
         internal override PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier)
         {
             var values = ConvertAnonymousToProjections(table, projections);
 
-            var simpleProjections = (from value in values where value.Key is UserColumn select value).ToDictionary();
+            var simpleProjections = (from value in values where !(value.Key is SystemColumn) select value).ToDictionary();
             simpleProjections.Add(table.EtagColumn, etag);
             simpleProjections.Add(table.IdColumn, key);
-            simpleProjections.Add(table.DocumentColumn, document);
 
             var sql = string.Format("insert into {0} ({1}) values ({2});",
                                     store.FormatTableNameAndEscape(table.Name),
@@ -41,7 +31,7 @@ namespace HybridDb.Commands
                                     string.Join(", ", from column in simpleProjections.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
             var collectionProjections = values.Where(x => x.Key is CollectionColumn)
-                                              .ToDictionary(x => (CollectionColumn)x.Key, x => x.Value);
+                                              .ToDictionary(x => (CollectionColumn) x.Key, x => x.Value);
 
             //foreach (var collectionProjection in collectionProjections)
             //{

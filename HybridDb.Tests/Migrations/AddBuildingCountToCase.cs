@@ -10,7 +10,7 @@ namespace HybridDb.Tests.Migrations
         {
             MigrateSchema()
                 .ToVersion(1)
-                .Migrate(migrator => migrator.AddColumn("Cases", new UserColumn("BuildingsCount", typeof (int))));
+                .Migrate(migrator => migrator.AddColumn("Cases", new Column("BuildingsCount", typeof (int))));
 
             MigrateDocument()
                 .FromTable("Cases")

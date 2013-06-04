@@ -7,25 +7,18 @@ namespace HybridDb.Commands
     public class UpdateCommand : DatabaseCommand
     {
         protected readonly Guid currentEtag;
-        protected readonly byte[] document;
         protected readonly Guid key;
         protected readonly object projections;
         protected readonly bool lastWriteWins;
         protected readonly Table table;
 
-        public UpdateCommand(Table table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins)
+        public UpdateCommand(Table table, Guid key, Guid etag, object projections, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;
             currentEtag = etag;
-            this.document = document;
             this.projections = projections;
             this.lastWriteWins = lastWriteWins;
-        }
-
-        public byte[] Document
-        {
-            get { return document; }
         }
 
         internal override PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier)
@@ -33,7 +26,6 @@ namespace HybridDb.Commands
             var values = ConvertAnonymousToProjections(table, projections);
 
             values[table.EtagColumn] = etag;
-            values[table.DocumentColumn] = document;
 
             var sql = new SqlBuilder()
                 .Append("update {0} set {1} where {2}=@Id{3}",

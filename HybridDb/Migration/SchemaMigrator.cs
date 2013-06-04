@@ -4,7 +4,6 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Transactions;
-using Dapper;
 using HybridDb.Schema;
 using IsolationLevel = System.Transactions.IsolationLevel;
 
@@ -21,7 +20,7 @@ namespace HybridDb.Migration
             tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable});
         }
 
-        public ISchemaMigrator MigrateTo(DocumentConfiguration documentConfiguration, bool safe = true)
+        public ISchemaMigrator MigrateTo(Table table, bool safe = true)
         {
             var timer = Stopwatch.StartNew();
 
@@ -32,7 +31,7 @@ namespace HybridDb.Migration
                     throw new InvalidOperationException("You cannot initialize a database that is not empty.");
             }
 
-            AddTableAndColumnsAndAssociatedTables(documentConfiguration.Table);
+            AddTableAndColumnsAndAssociatedTables(table);
 
             store.Configuration.Logger.Info("HybridDb store is initialized in {0}ms", timer.ElapsedMilliseconds);
             return this;

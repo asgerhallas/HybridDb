@@ -121,8 +121,10 @@ namespace HybridDb.Studio.ViewModels
             StatusMessage = string.Format("Saving document {0}", documentId);
             var sw = Stopwatch.StartNew();
 
+            var projections = document.Projections.ToDictionary(x => x.Column, x => x.Value);
             byte[] serializedDocument = store.Configuration.Serializer.Serialize(JObject.Parse(document.DocumentAsString));
-            store.Update(document.Table, document.Id, document.Etag ?? Guid.NewGuid(), serializedDocument, document.Projections.ToDictionary(x => x.Column, x => x.Value));
+            projections[document.Table.DocumentColumn] = serializedDocument;
+            store.Update(document.Table, document.Id, document.Etag ?? Guid.NewGuid(), projections);
             StatusMessage = string.Format("Saved document {0} in {1}ms", documentId, sw.ElapsedMilliseconds);
 
             FindDocument(document.Table, document.Id);
@@ -147,7 +149,7 @@ namespace HybridDb.Studio.ViewModels
             if (string.IsNullOrWhiteSpace(TableName))
                 return;
 
-            var table = new Table(TableName);
+            var table = new DocumentTable(TableName);
 
             Guid documentId;
             if (!Guid.TryParse(DocumentId, out documentId))
@@ -164,7 +166,7 @@ namespace HybridDb.Studio.ViewModels
             StatusMessage = string.Format("Fetched document {0} in {1}ms", documentId, sw.ElapsedMilliseconds);
         }
 
-        void FindDocument(Table table, Guid documentId)
+        void FindDocument(DocumentTable table, Guid documentId)
         {
             QueryStats stats;
             IDictionary<Column, object> projections;

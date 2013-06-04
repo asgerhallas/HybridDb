@@ -10,44 +10,47 @@ namespace HybridDb
 {
     public class Configuration
     {
-        readonly ConcurrentDictionary<Type, DocumentConfiguration> tables;
-
         public Configuration()
         {
-            tables = new ConcurrentDictionary<Type, DocumentConfiguration>();
+            Tables = new List<Table>();
+            DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
 
-            var meta = new Table("HybridDb");
-            meta.Register(new UserColumn("Table", new SqlColumn(DbType.AnsiStringFixedLength, 255)));
-            meta.Register(new UserColumn("SchemaVersion", new SqlColumn(DbType.Int32)));
-            meta.Register(new UserColumn("DocumentVersion", new SqlColumn(DbType.Int32)));
+            var metadata = new Table("HybridDb");
+            metadata.Register(new Column("Table", new SqlColumn(DbType.AnsiStringFixedLength, 255)));
+            metadata.Register(new Column("SchemaVersion", new SqlColumn(DbType.Int32)));
+            metadata.Register(new Column("DocumentVersion", new SqlColumn(DbType.Int32)));
 
-            Register(new DocumentConfiguration(this, meta, typeof(object)));
+            Add(metadata);
         }
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
-        public IEnumerable<DocumentConfiguration> Tables
+        public List<Table> Tables { get; private set; }
+        public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
+
+        public void Add(Table table)
         {
-            get { return tables.Values; }
+            Tables.Add(table);
         }
 
-        public void Register(DocumentConfiguration association)
+        public void Add(DocumentDesign design)
         {
-            tables.TryAdd(association.Type, association);
+            Add(design.Table);
+            DocumentDesigns.TryAdd(design.Type, design);
         }
 
-        public DocumentConfiguration<T> GetSchemaFor<T>()
+        public DocumentDesign<T> GetDesignFor<T>()
         {
-            return (DocumentConfiguration<T>) GetSchemaFor(typeof(T));
+            return (DocumentDesign<T>) GetDesignFor(typeof(T));
         }
 
-        public DocumentConfiguration GetSchemaFor(Type type)
+        public DocumentDesign GetDesignFor(Type type)
         {
-            DocumentConfiguration table;
-            if (!tables.TryGetValue(type, out table))
+            DocumentDesign table;
+            if (!DocumentDesigns.TryGetValue(type, out table))
                 throw new TableNotFoundException(type);
                 
             return table;

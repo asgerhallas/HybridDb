@@ -108,7 +108,7 @@
     <Compile Include="FastDynamicParameters.cs" />
     <Compile Include="Logging\ColorSetting.cs" />
     <Compile Include="Schema\Column.cs" />
-    <Compile Include="Schema\DocumentConfiguration.cs" />
+    <Compile Include="Schema\DocumentDesign.cs" />
     <Compile Include="NullCheckInjector.cs" />
     <Compile Include="Schema\SqlColumn.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
@@ -122,7 +122,7 @@
     <Compile Include="ISerializer.cs" />
     <Compile Include="Logging\LoggingColors.cs" />
     <Compile Include="Logging\LogLevel.cs" />
-    <Compile Include="Schema\UserColumn.cs" />
+    <Compile Include="Schema\CollectionColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />

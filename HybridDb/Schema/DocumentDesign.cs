@@ -5,35 +5,36 @@ using System.Reflection;
 
 namespace HybridDb.Schema
 {
-    public class DocumentConfiguration
+    public class DocumentDesign
     {
         protected readonly Configuration configuration;
 
-        public DocumentConfiguration(Configuration configuration, Table table, Type type)
+        public DocumentDesign(Configuration configuration, DocumentTable table, Type type)
         {
             this.configuration = configuration;
             Table = table;
             Type = type;
             Projections = new Dictionary<Column, Func<object, object>>
             {
-                {Table.IdColumn, document => ((dynamic) document).Id}
+                {Table.IdColumn, document => ((dynamic) document).Id},
+                {Table.DocumentColumn, document => configuration.Serializer.Serialize(document)}
             };
         }
 
-        public Table Table { get; private set; }
+        public DocumentTable Table { get; private set; }
         public Type Type { get; private set; }
         public Dictionary<Column, Func<object, object>> Projections { get; private set; }
     }
 
-    public class DocumentConfiguration<TEntity> : DocumentConfiguration
+    public class DocumentDesign<TEntity> : DocumentDesign
     {
-        public DocumentConfiguration(Configuration configuration, Table table) : base(configuration, table, typeof(TEntity)) { }
+        public DocumentDesign(Configuration configuration, DocumentTable table) : base(configuration, table, typeof(TEntity)) { }
 
-        public DocumentConfiguration<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
             var name = configuration.GetColumnNameByConventionFor(projector);
 
-            var column = new UserColumn(name, new SqlColumn(typeof(TMember)));
+            var column = new Column(name, new SqlColumn(typeof(TMember)));
             Table.Register(column);
 
             var finalProjector = makeNullSafe 
@@ -45,7 +46,7 @@ namespace HybridDb.Schema
             return this;
         }
 
-        public DocumentConfiguration<TEntity> Project<TMember>(Expression<Func<TEntity, IEnumerable<TMember>>> projector, bool makeNullSafe = true)
+        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, IEnumerable<TMember>>> projector, bool makeNullSafe = true)
         {
             return this;
         }

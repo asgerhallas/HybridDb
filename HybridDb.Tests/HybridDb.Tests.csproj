@@ -75,7 +75,7 @@
     <Compile Include="DocumentStoreTests.cs" />
     <Compile Include="LinqIntegrationTests.cs" />
     <Compile Include="LinqTests.cs" />
-    <Compile Include="MigratorWithTempTablesTests.cs" />
+    <Compile Include="SchemaMigratorTests.cs" />
     <Compile Include="Performance\Entity.cs" />
     <Compile Include="Performance\InsertPerformanceTests.cs" />
     <Compile Include="Performance\QueryPerformanceFixture.cs" />

@@ -1,7 +1,21 @@
-﻿namespace HybridDb.Schema
+﻿using System;
+
+namespace HybridDb.Schema
 {
-    public abstract class Column
+    public class Column
     {
+        public Column(string name, SqlColumn sqlColumn)
+        {
+            Name = name;
+            SqlColumn = sqlColumn;
+        }
+
+        public Column(string name, Type type)
+        {
+            Name = name;
+            SqlColumn = type != null ? new SqlColumn(type) : new SqlColumn();
+        }
+
         public string Name { get; protected set; }
         public SqlColumn SqlColumn { get; protected set; }
 

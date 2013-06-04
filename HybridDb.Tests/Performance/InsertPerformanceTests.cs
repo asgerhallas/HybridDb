@@ -16,20 +16,20 @@ namespace HybridDb.Tests.Performance
             const string connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.Document<Entity>().Project(x => x.SomeNumber);
-            store.MigrateSchema();
+            store.MigrateSchemaToMatchConfiguration();
         }
 
         [Fact]
         public void InsertPerformance()
         {
             // warm up
-            store.Execute(new InsertCommand(store.Configuration.GetSchemaFor<Entity>().Table, Guid.NewGuid(), new byte[0], new { SomeNumber = -1 }));
+            store.Execute(new InsertCommand(store.Configuration.GetDesignFor<Entity>().Table, Guid.NewGuid(), new { SomeNumber = -1 }));
 
             var watch = Stopwatch.StartNew();
             var commands = new List<DatabaseCommand>();
             for (int i = 0; i < 10000; i++)
             {
-                commands.Add(new InsertCommand(store.Configuration.GetSchemaFor<Entity>().Table, Guid.NewGuid(), new byte[0], new { SomeNumber = i }));
+                commands.Add(new InsertCommand(store.Configuration.GetDesignFor<Entity>().Table, Guid.NewGuid(), new { SomeNumber = i }));
             }
 
             store.Execute(commands.ToArray());

@@ -9,13 +9,13 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class MigratorWithTempTablesTests : IDisposable
+    public class SchemaMigratorTests : IDisposable
     {
         readonly DocumentStore storeWithTempTables;
         readonly DocumentStore storeWithRealTables;
         readonly string uniqueDbName;
 
-        public MigratorWithTempTablesTests()
+        public SchemaMigratorTests()
         {
             // Make a non-temp test database needed for certain tests
             using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
@@ -127,14 +127,22 @@ END", uniqueDbName));
             var isPrimaryKey = storeWithTempTables.RawQuery<dynamic>(sql).Any();
             isPrimaryKey.ShouldBe(true);
 
+            var etagColumn = GetTempColumn("Entities", "Etag");
+            etagColumn.ShouldNotBe(null);
+            GetType(etagColumn.system_type_id).ShouldBe("uniqueidentifier");
+        }
+
+        [Fact]
+        public void CanCreateDocumentTableAndItsExtraColumns()
+        {
+            storeWithTempTables.Migrate(migrator => migrator.AddTableAndColumnsAndAssociatedTables(new DocumentTable("Entities")));
+
+            TempTableExists("Entities").ShouldBe(true);
+
             var documentColumn = GetTempColumn("Entities", "Document");
             documentColumn.ShouldNotBe(null);
             GetType(documentColumn.system_type_id).ShouldBe("varbinary");
             documentColumn.max_length.ShouldBe(-1);
-
-            var etagColumn = GetTempColumn("Entities", "Etag");
-            etagColumn.ShouldNotBe(null);
-            GetType(etagColumn.system_type_id).ShouldBe("uniqueidentifier");
         }
 
         [Fact]
@@ -148,7 +156,7 @@ END", uniqueDbName));
         public void MigrationsAreRolledBackOnExceptions()
         {
             storeWithTempTables.Document<Entity>();
-            storeWithTempTables.MigrateSchema();
+            storeWithTempTables.MigrateSchemaToMatchConfiguration();
 
             try
             {

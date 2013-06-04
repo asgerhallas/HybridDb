@@ -10,7 +10,7 @@ namespace HybridDb.Schema
         SystemColumn DocumentIdColumn { get; }
         Column this[string name] { get; }
         Column GetColumnOrDefaultDynamicColumn(string name, Type type);
-        void AddProjection(UserColumn column);
+        void AddProjection(Column column);
     }
     
     //public interface ITable

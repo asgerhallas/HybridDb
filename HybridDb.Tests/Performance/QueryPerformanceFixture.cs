@@ -21,12 +21,12 @@ namespace HybridDb.Tests.Performance
             store.Document<Entity>()
                 .Project(x => x.SomeData)
                 .Project(x => x.SomeNumber);
-            store.MigrateSchema();
+            store.MigrateSchemaToMatchConfiguration();
 
             var commands = new List<DatabaseCommand>();
             for (int i = 0; i < 10000; i++)
             {
-                commands.Add(new InsertCommand(store.Configuration.GetSchemaFor<Entity>().Table, Guid.NewGuid(), new byte[0], new { SomeNumber = i }));
+                commands.Add(new InsertCommand(store.Configuration.GetDesignFor<Entity>().Table, Guid.NewGuid(), new { SomeNumber = i }));
             }
 
             store.Execute(commands.ToArray());
@@ -35,7 +35,7 @@ namespace HybridDb.Tests.Performance
             var watch = Stopwatch.StartNew();
 
             QueryStats rows;
-            store.Query(store.Configuration.GetSchemaFor<Entity>().Table, out rows);
+            store.Query(store.Configuration.GetDesignFor<Entity>().Table, out rows);
 
             if (watch.ElapsedMilliseconds > 200)
                 Console.WriteLine("Warm up takes longer than expected");

@@ -21,7 +21,7 @@ namespace HybridDb.Tests
                  .Project(x => x.StringProp)
                  .Project(x => x.TheChild.NestedProperty);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            store.MigrateSchema();
+            store.MigrateSchemaToMatchConfiguration();
 
             session = store.OpenSession();
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger" });

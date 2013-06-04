@@ -36,15 +36,15 @@ namespace HybridDb
 
             configuration = new Configuration();
 
-            OnRead = x => { };
+            OnRead = (table, projections) => { };
         }
 
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
 
-        [ImportMany(typeof(IAddIn))]
-        IEnumerable<IAddIn> AddIns { get; set; }
+        [ImportMany(typeof(IHybridDbExtension))]
+        IEnumerable<IHybridDbExtension> AddIns { get; set; }
 
-        public Action<Dictionary<string, object>> OnRead { get; set; }
+        public Action<Table, Dictionary<string, object>> OnRead { get; set; }
 
         public TableMode TableMode
         {
@@ -74,7 +74,7 @@ namespace HybridDb
             }
         }
 
-        public void MigrateSchema(bool safe = true)
+        public void MigrateSchemaToMatchConfiguration(bool safe = true)
         {
             Migrate(migrator =>
             {
@@ -85,35 +85,35 @@ namespace HybridDb
             });
         }
 
-        public void LoadAddIns(string path, Func<IAddIn, bool> predicate)
+        public void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate)
         {
             var registration = new RegistrationBuilder();
-            registration.ForTypesDerivedFrom<IAddIn>().Export<IAddIn>();
+            registration.ForTypesDerivedFrom<IHybridDbExtension>().Export<IHybridDbExtension>();
 
             var container = new CompositionContainer(new DirectoryCatalog(path, registration));
             container.ComposeParts(this);
 
             foreach (var addIn in AddIns.Where(predicate))
             {
-                RegisterAddIn(addIn);
+                RegisterExtension(addIn);
             }
         }
 
-        public void RegisterAddIn(IAddIn addIn)
+        public void RegisterExtension(IHybridDbExtension hybridDbExtension)
         {
-            OnRead += addIn.OnRead;
+            OnRead += hybridDbExtension.OnRead;
         }
 
-        public DocumentConfiguration<TEntity> Document<TEntity>()
+        public DocumentDesign<TEntity> Document<TEntity>()
         {
             return Document<TEntity>(null);
         }
 
-        public DocumentConfiguration<TEntity> Document<TEntity>(string name)
+        public DocumentDesign<TEntity> Document<TEntity>(string name)
         {
-            var table = new Table(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
-            var relation = new DocumentConfiguration<TEntity>(Configuration, table);
-            configuration.Register(relation);
+            var table = new DocumentTable(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
+            var relation = new DocumentDesign<TEntity>(Configuration, table);
+            configuration.Add(relation);
             return relation;
         }
 
@@ -207,14 +207,14 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        public Guid Insert(Table table, Guid key, byte[] document, object projections)
+        public Guid Insert(Table table, Guid key, object projections)
         {
-            return Execute(new InsertCommand(table, key, document, projections));
+            return Execute(new InsertCommand(table, key, projections));
         }
 
-        public Guid Update(Table table, Guid key, Guid etag, byte[] document, object projections, bool lastWriteWins = false)
+        public Guid Update(Table table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
         {
-            return Execute(new UpdateCommand(table, key, etag, document, projections, lastWriteWins));
+            return Execute(new UpdateCommand(table, key, etag, projections, lastWriteWins));
         }
 
         public void Delete(Table table, Guid key, Guid etag, bool lastWriteWins = false)
@@ -260,9 +260,9 @@ namespace HybridDb
                                  .Select(row =>
                                  {
                                      row.Remove("RowNumber");
-                                     OnRead(row);
+                                     OnRead(table, row);
                                      return row.ToDictionary(
-                                         column => table.GetColumnOrDefaultDynamicColumn(column.Key, column.Value.GetTypeOrDefault()),
+                                         column => table.GetColumnOrDefaultColumn(column.Key, column.Value.GetTypeOrDefault()),
                                          column => column.Value);
                                  });
                 }
@@ -344,7 +344,7 @@ namespace HybridDb
                                         FormatTableNameAndEscape(table.Name),
                                         table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault()).ToDictionary();
 
                 Interlocked.Increment(ref numberOfRequests);
 
@@ -355,10 +355,9 @@ namespace HybridDb
                 if (row == null)
                     return null;
 
-                var dictRow = row.ToDictionary();
-                OnRead(dictRow);
+                OnRead(table, row);
 
-                return dictRow.ToDictionary(x => table.GetColumnOrDefaultDynamicColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
+                return row.ToDictionary(x => table.GetColumnOrDefaultColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
             }
         }
 

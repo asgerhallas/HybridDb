@@ -24,7 +24,7 @@ namespace HybridDb.Tests
                 .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
                 .Project(x => x.Children.SelectMany(y => y.NestedProperty));
             store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
-            store.MigrateSchema();
+            store.MigrateSchemaToMatchConfiguration();
         }
 
         public void Dispose()
@@ -86,11 +86,11 @@ namespace HybridDb.Tests
         [Fact]
         public void CanDeferCommands()
         {
-            var table = store.Configuration.GetSchemaFor<Entity>();
+            var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(new InsertCommand(table.Table, id, new byte[0], new{}));
+                session.Advanced.Defer(new InsertCommand(table.Table, id, new{}));
                 store.NumberOfRequests.ShouldBe(0);
                 session.SaveChanges();
                 store.NumberOfRequests.ShouldBe(1);

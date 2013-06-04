@@ -19,15 +19,6 @@ namespace HybridDb.Schema
             EtagColumn = new SystemColumn("Etag", new SqlColumn(DbType.Guid));
             Register(EtagColumn);
 
-            DocumentColumn = new SystemColumn("Document", new SqlColumn(DbType.Binary, Int32.MaxValue));
-            Register(DocumentColumn);
-
-            VersionColumn = new SystemColumn("Version", new SqlColumn(DbType.Int32));
-            Register(VersionColumn);
-
-            SizeColumn = new SystemColumn("Size", new SqlColumn(DbType.Int32));
-            Register(SizeColumn);
-
             CreatedAtColumn = new SystemColumn("CreatedAt", new SqlColumn(DbType.DateTimeOffset));
             Register(CreatedAtColumn);
 
@@ -37,9 +28,6 @@ namespace HybridDb.Schema
 
         public SystemColumn IdColumn { get; private set; }
         public SystemColumn EtagColumn { get; private set; }
-        public SystemColumn DocumentColumn { get; private set; }
-        public SystemColumn VersionColumn { get; private set; }
-        public SystemColumn SizeColumn { get; private set; }
         public SystemColumn CreatedAtColumn { get; private set; }
         public SystemColumn ModifiedAtColumn { get; private set; }
 
@@ -55,15 +43,13 @@ namespace HybridDb.Schema
             }
         }
 
-        public Column GetColumnOrDefaultDynamicColumn(string name, Type type)
+        public Column GetColumnOrDefaultColumn(string name, Type type)
         {
             Column column;
             if (columns.TryGetValue(name, out column))
                 return column;
 
-            return type == null 
-                ? new UserColumn(name)
-                : new UserColumn(name, type);
+            return new Column(name, type);
         }
 
         public string Name { get; private set; }
@@ -77,5 +63,24 @@ namespace HybridDb.Schema
         {
             columns.Add(column.Name, column);
         }
+    }
+
+    public class DocumentTable : Table
+    {
+        public DocumentTable(string name) : base(name)
+        {
+            DocumentColumn = new Column("Document", new SqlColumn(DbType.Binary, Int32.MaxValue));
+            Register(DocumentColumn);
+
+            VersionColumn = new Column("Version", new SqlColumn(DbType.Int32));
+            Register(VersionColumn);
+
+            SizeColumn = new Column("Size", new SqlColumn(DbType.Int32));
+            Register(SizeColumn);
+        }
+
+        public Column DocumentColumn { get; private set; }
+        public Column VersionColumn { get; private set; }
+        public Column SizeColumn { get; private set; }
     }
 }
