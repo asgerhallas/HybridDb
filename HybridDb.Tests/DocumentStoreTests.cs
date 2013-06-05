@@ -19,17 +19,15 @@ namespace HybridDb.Tests
         public DocumentStoreTests()
         {
             store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            store.Document<Entity>()
-                 .Project(x => x.Field)
-                 .Project(x => x.Property)
-                 .Project(x => x.TheChild.NestedProperty)
-                 .Project(x => x.StringProp)
-                 .Project(x => x.DateTimeProp)
-                 .Project(x => x.EnumProp)
-                 .Project(x => x.Complex.ToString())
-                 .Project(x => x.Children.Count())
-                 .Project(x => x.Children.Select(y => y.NestedString));
-            store.MigrateSchemaToMatchConfiguration();
+            //store.Document<Entity>()
+            //     .Project(x => x.Field)
+            //     .Project(x => x.StringProp);
+
+            //     //.Project(x => x.Property);
+            //     //.Project(x => x.TheChild.NestedProperty)
+            //     //.Project(x => x.DateTimeProp)
+            //     //.Project(x => x.EnumProp);
+            //store.MigrateSchemaToMatchConfiguration();
 
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
         }
@@ -42,6 +40,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanInsert()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
@@ -56,6 +56,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanInsertDynamically()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             store.Insert(new Table("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
 
@@ -69,6 +71,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanInsertNullsDynamically()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             store.Insert(new Table("Entities"),
                          Guid.NewGuid(),
                          new Dictionary<string, object> {{"Field", null}});
@@ -80,6 +84,8 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsOnComplexProjections()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             Should.Throw<ArgumentException>(() => 
@@ -89,6 +95,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanInsertCollectionProjections()
         {
+            store.Document<Entity>().Project(x => x.Children.Select(y => y.NestedString)).MigrateSchema();
+
             var id = Guid.NewGuid();
             var schema = store.Configuration.GetDesignFor<Entity>();
             store.Insert(schema.Table, id,
@@ -115,6 +123,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUpdate()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger"});
@@ -129,6 +139,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUpdateDynamically()
         {
+            store.Document<Entity>().Project(x => x.Field).Project(x => x.StringProp).MigrateSchema();
+            
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger"});
@@ -144,6 +156,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUpdatePessimistically()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}});
@@ -154,6 +168,8 @@ namespace HybridDb.Tests
         [Fact]
         public void UpdateFailsWhenEtagNotMatch()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+            
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
@@ -164,6 +180,8 @@ namespace HybridDb.Tests
         [Fact]
         public void UpdateFailsWhenIdNotMatchAkaObjectDeleted()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var etag = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
@@ -175,6 +193,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGet()
         {
+            store.Document<Entity>().Project(x => x.Field).Project(x => x.Complex.ToString()).MigrateSchema();
+            
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
@@ -190,6 +210,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetDynamically()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
@@ -204,6 +226,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryProjectToNestedProperty()
         {
+            store.Document<Entity>().Project(x => x.TheChild.NestedProperty).MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id1, new { TheChildNestedProperty = 9.8d });
@@ -217,6 +241,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnFullDocuments()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
@@ -244,6 +270,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnAnonymousProjections()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
 
@@ -265,6 +293,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryDynamicTable()
         {
+            store.Document<Entity>().Project(x => x.Field).Project(x => x.StringProp).MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
@@ -283,6 +313,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanDelete()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
@@ -295,6 +327,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanDeletePessimistically()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
@@ -305,6 +339,8 @@ namespace HybridDb.Tests
         [Fact]
         public void DeleteFailsWhenEtagNotMatch()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
@@ -315,6 +351,8 @@ namespace HybridDb.Tests
         [Fact]
         public void DeleteFailsWhenIdNotMatchAkaDocumentAlreadyDeleted()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
@@ -325,6 +363,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanBatchCommandsAndGetEtag()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
@@ -340,6 +380,8 @@ namespace HybridDb.Tests
         [Fact]
         public void BatchesAreTransactional()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etagThatMakesItFail = Guid.NewGuid();
@@ -373,6 +415,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSplitLargeCommandBatches()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
 
             var commands = new List<DatabaseCommand>();
@@ -388,6 +432,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryEnumProjection()
         {
+            store.Document<Entity>().Project(x => x.EnumProp).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
@@ -399,6 +445,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryEnumProjectionToNetType()
         {
+            store.Document<Entity>().Project(x => x.EnumProp).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
@@ -411,6 +459,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryStringProjection()
         {
+            store.Document<Entity>().Project(x => x.StringProp).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new { StringProp = "Hest" });
@@ -422,6 +472,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryOnNull()
         {
+            store.Document<Entity>().Project(x => x.StringProp).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new { StringProp = (string)null });
@@ -434,6 +486,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndQueryDateTimeProjection()
         {
+            store.Document<Entity>().Project(x => x.DateTimeProp).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(table.Table, id, new { DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1) });
@@ -446,6 +500,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanPage()
         {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
@@ -466,6 +522,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanTake()
         {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
@@ -483,6 +541,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSkip()
         {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
@@ -502,6 +562,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetTotalRowsWhenOrderingByPropertyWithSameValue()
         {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
             store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
@@ -520,6 +582,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetTotalRows()
         {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
@@ -534,6 +598,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetTotalRowsWithNoResults()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
 
             QueryStats stats;
@@ -546,6 +612,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWithoutWhere()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, Guid.NewGuid(), new { });
 
@@ -558,6 +626,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanOrderBy()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, Guid.NewGuid(), new { Field = i });
@@ -576,6 +646,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanOrderByDescWhileSkippingAndTaking()
         {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, Guid.NewGuid(), new { Field = i });
@@ -597,6 +669,8 @@ namespace HybridDb.Tests
         [Fact]
         public void WillEnlistCommandsInAmbientTransactions()
         {
+            store.Document<Entity>().MigrateSchema();
+
             using (new TransactionScope())
             {
                 var table = store.Configuration.GetDesignFor<Entity>();
@@ -636,12 +710,14 @@ namespace HybridDb.Tests
         [Fact]
         public void CallbackAfterGet()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var schema = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             store.Insert(schema.Table, id, new { });
 
             int calls = 0;
-            store.OnRead += o => calls++;
+            store.OnRead += (t,o) => calls++;
             store.Get(schema.Table, id);
 
             calls.ShouldBe(1);
@@ -650,12 +726,14 @@ namespace HybridDb.Tests
         [Fact]
         public void CallbackAfterQuery()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var schema = store.Configuration.GetDesignFor<Entity>();
             store.Insert(schema.Table, Guid.NewGuid(), new { });
             store.Insert(schema.Table, Guid.NewGuid(), new { });
 
             int calls = 0;
-            store.OnRead += o => calls++;
+            store.OnRead += (t,o) => calls++;
             QueryStats stats;
             store.Query(schema.Table, out stats).ToList(); // Evaluate the lazy enumerable
 
@@ -671,12 +749,13 @@ namespace HybridDb.Tests
             store.OnRead.GetInvocationList().Length.ShouldBe(2);
             
             // The AddIn loaded in tests throws on any operation
-            Should.Throw<ThrowingHybridDbExtension.OperationException>(() => store.OnRead(null));
+            Should.Throw<ThrowingHybridDbExtension.OperationException>(() => store.OnRead(null, null));
         }
 
         [Fact]
         public void CreatesStandardMetadataTable()
         {
+            store.MigrateSchemaToMatchConfiguration();
             store.TableExists("HybridDb").ShouldBe(true);
             store.GetColumn("HybridDb", "Table");
             store.GetColumn("HybridDb", "SchemaVersion");
@@ -748,7 +827,7 @@ namespace HybridDb.Tests
 
         public class ThrowingHybridDbExtension : IHybridDbExtension
         {
-            public void OnRead(Dictionary<string, object> projections)
+            public void OnRead(Table table, Dictionary<string, object> projections)
             {
                 throw new OperationException();
             }

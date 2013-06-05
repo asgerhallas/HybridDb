@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
@@ -169,6 +170,21 @@ END", uniqueDbName));
             catch { }
 
             TempTableExists("Entities").ShouldBe(true);
+        }
+
+        [Fact]
+        public void CanCreateColumnWithDefaultValue()
+        {
+            storeWithTempTables.Document<Entity>();
+            storeWithTempTables.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            storeWithTempTables.Insert(new Table("Entities"), id, new { });
+
+            storeWithTempTables.Migrate(migrator => migrator.AddColumn("Entities", new Column("hest", new SqlColumn(DbType.Int32, defaultValue: 1))));
+
+            var first = storeWithTempTables.RawQuery<int?>("SELECT hest FROM #Entities").First();
+            first.ShouldBe(1);
         }
 
         bool RealTableExists(string name)

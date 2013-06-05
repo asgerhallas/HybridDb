@@ -69,13 +69,13 @@ namespace HybridDb.Schema
     {
         public DocumentTable(string name) : base(name)
         {
-            DocumentColumn = new Column("Document", new SqlColumn(DbType.Binary, Int32.MaxValue));
+            DocumentColumn = new Column("Document", new SqlColumn(DbType.Binary, Int32.MaxValue, nullable: true));
             Register(DocumentColumn);
 
-            VersionColumn = new Column("Version", new SqlColumn(DbType.Int32));
+            VersionColumn = new Column("Version", new SqlColumn(DbType.Int32, nullable: true));
             Register(VersionColumn);
 
-            SizeColumn = new Column("Size", new SqlColumn(DbType.Int32));
+            SizeColumn = new Column("Size", new SqlColumn(DbType.Int32, defaultValue: 0));
             Register(SizeColumn);
         }
 

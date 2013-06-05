@@ -112,7 +112,7 @@ namespace HybridDb
         public DocumentDesign<TEntity> Document<TEntity>(string name)
         {
             var table = new DocumentTable(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
-            var relation = new DocumentDesign<TEntity>(Configuration, table);
+            var relation = new DocumentDesign<TEntity>(this, Configuration, table);
             configuration.Add(relation);
             return relation;
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using HybridDb.Migration;
+using HybridDb.Schema;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
@@ -32,7 +33,7 @@ namespace HybridDb.Tests
                 {"Document", serializer.Serialize(JObject.Parse("{ Property: 1 }"))},
             };
             
-            new DocumentMigrator().OnRead(migration, projections);
+            new DocumentMigrator().OnRead(migration, new DocumentTable("Entities"), projections);
 
             var document = (JObject)serializer.Deserialize((byte[]) projections["Document"], typeof(JObject));
             ((int)document["Property"]).ShouldBe(10);
@@ -56,8 +57,8 @@ namespace HybridDb.Tests
                 {"Version", 1}, 
                 {"Document", new byte[0]},
             };
-            
-            Should.Throw<ArgumentException>(() => new DocumentMigrator().OnRead(migration, projections));
+
+            Should.Throw<ArgumentException>(() => new DocumentMigrator().OnRead(migration, new DocumentTable("Entities"), projections));
         }
 
         public class Entity

@@ -26,7 +26,7 @@ namespace HybridDb.Migration
 
             if (!store.IsInTestMode)
             {
-                var existingTables = store.RawQuery<dynamic>("select * from information_schema.tables where table_catalog = db_name()", null);
+                var existingTables = store.RawQuery<dynamic>("select * from information_schema.tables where table_catalog = '" + table.Name + "'", null);
                 if (existingTables.Any())
                     throw new InvalidOperationException("You cannot initialize a database that is not empty.");
             }
@@ -138,8 +138,10 @@ namespace HybridDb.Migration
 
             var sqlDbTypeString = new SqlParameter { DbType = (DbType) column.SqlColumn.Type }.SqlDbType.ToString();
             var lengthString = (column.SqlColumn.Length != null) ? "(" + (column.SqlColumn.Length == Int32.MaxValue ? "MAX" : column.SqlColumn.Length.ToString()) + ")" : "";
-            var asPrimaryKeyString = column.SqlColumn.IsPrimaryKey ? " NOT NULL PRIMARY KEY" : "";
-            return sqlDbTypeString + lengthString + asPrimaryKeyString;
+            var nullable = column.SqlColumn.Nullable ? " NULL" : " NOT NULL";
+            var asPrimaryKeyString = column.SqlColumn.IsPrimaryKey ? " PRIMARY KEY" : "";
+            var defaultValue = column.SqlColumn.DefaultValue != null ? " DEFAULT(" + column.SqlColumn.DefaultValue + ")" : "";
+            return sqlDbTypeString + lengthString + nullable + defaultValue + asPrimaryKeyString;
         }
 
         string GetTableExistsSql(string tablename)

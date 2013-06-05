@@ -7,10 +7,12 @@ namespace HybridDb.Schema
 {
     public class DocumentDesign
     {
+        readonly DocumentStore store;
         protected readonly Configuration configuration;
 
-        public DocumentDesign(Configuration configuration, DocumentTable table, Type type)
+        public DocumentDesign(DocumentStore store, Configuration configuration, DocumentTable table, Type type)
         {
+            this.store = store;
             this.configuration = configuration;
             Table = table;
             Type = type;
@@ -24,11 +26,16 @@ namespace HybridDb.Schema
         public DocumentTable Table { get; private set; }
         public Type Type { get; private set; }
         public Dictionary<Column, Func<object, object>> Projections { get; private set; }
+
+        public void MigrateSchema()
+        {
+            store.Migrate(migrator => migrator.MigrateTo(Table));
+        }
     }
 
     public class DocumentDesign<TEntity> : DocumentDesign
     {
-        public DocumentDesign(Configuration configuration, DocumentTable table) : base(configuration, table, typeof(TEntity)) { }
+        public DocumentDesign(DocumentStore store, Configuration configuration, DocumentTable table) : base(store, configuration, table, typeof(TEntity)) { }
 
         public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
