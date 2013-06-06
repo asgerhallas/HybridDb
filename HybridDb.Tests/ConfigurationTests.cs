@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using HybridDb.Schema;
 using Xunit;
 using Shouldly;
 

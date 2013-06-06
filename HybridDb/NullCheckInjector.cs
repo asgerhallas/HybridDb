@@ -32,15 +32,22 @@ namespace HybridDb
 
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
-            CanBeTrustedToNeverReturnNull = false;
-            
             if (node.Object != null)
             {
                 var nullCheckedBlock = Visit(node.Object);
-                
+
+                var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
+
+                if (!node.Method.ReturnType.CanBeNull())
+                {
+                    return Expression.Block(nullCheckedBlock, assignCurrentValue);
+                }
+
+                CanBeTrustedToNeverReturnNull = false;
+
                 return Expression.Block(
                     nullCheckedBlock,
-                    Expression.Assign(currentValue, node),
+                    assignCurrentValue,
                     Expression.IfThen(
                         Expression.Equal(currentValue, Expression.Constant(null)),
                         Expression.Return(returnTarget, Expression.Constant(null))));
@@ -58,20 +65,18 @@ namespace HybridDb
             else if (node.Member is FieldInfo) type = ((FieldInfo) node.Member).FieldType;
             else throw new ArgumentOutOfRangeException("Member access of type " + node.Member.GetType() + " is not supported.");
 
-            if (type.IsValueType)
+            var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof (object)));
+
+            if (!type.CanBeNull())
             {
-                return Expression.Block(
-                    nullCheckedBlock,
-                    Expression.Assign(
-                        currentValue,
-                        Expression.Convert(node, typeof(object))));
+                return Expression.Block(nullCheckedBlock, assignCurrentValue);
             }
 
             CanBeTrustedToNeverReturnNull = false;
 
             return Expression.Block(
                 nullCheckedBlock,
-                Expression.Assign(currentValue, node),
+                assignCurrentValue,
                 Expression.IfThen(
                     Expression.Equal(currentValue, Expression.Constant(null)),
                     Expression.Return(returnTarget, Expression.Constant(null))));

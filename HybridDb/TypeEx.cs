@@ -55,16 +55,12 @@ namespace HybridDb
 
         public static bool IsNullable(this Type type)
         {
-            return type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>);
+            return Nullable.GetUnderlyingType(type) != null;
         }
 
-        public static Type AsNonNullable(this Type type)
+        public static bool CanBeNull(this Type type)
         {
-            if (IsNullable(type))
-            {
-                return type.GetGenericArguments()[0];
-            }
-            return type;
+            return !type.IsValueType || type.IsNullable();
         }
 
         public static MethodInfo GetGenericMethod(this Type type, string name, Type[] parameterTypes)

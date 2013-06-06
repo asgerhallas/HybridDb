@@ -108,6 +108,43 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(() => value.Property.Field.Property.Property.Property).ShouldBe(null);
         }
 
+        //[Fact]
+        //public void AccessThroughNullMethodToMethod()
+        //{
+        //    Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Method().Method()));
+        //    InvokeWithNullCheck(() => value.Method().Method()).ShouldBe(null);
+        //}
+
+        [Fact]
+        public void NullableValueTypesWillNotBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x.NullableValueType).ShouldBe(false);
+        }
+
+        [Fact]
+        public void MethodReturningReferenceTypesWillNotBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x.Method()).ShouldBe(false);
+        }
+
+        [Fact]
+        public void MethodReturningValueTypesWillBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x.MethodReturningValueType()).ShouldBe(true);
+        }
+
+        [Fact]
+        public void ClosedVariablesWillNotBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => value).ShouldBe(false);
+        }
+
+        [Fact]
+        public void ParametersWillBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x).ShouldBe(true);
+        }
+
         [Fact]
         public void AllValueTypesWillBeTrustedToNeverReturnNull()
         {
@@ -149,7 +186,13 @@ namespace HybridDb.Tests
 
             public int NonNullableThingy { get; set; }
             public ValueType NonNullableThingy2 { get; set; }
+            public ValueType? NullableValueType { get; set; }
             public List<Root> Properties { get; set; }
+
+            public ValueType MethodReturningValueType()
+            {
+                return default(ValueType);
+            }
         }
 
         public struct ValueType

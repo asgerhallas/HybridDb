@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
     <Compile Include="ConfigurationTests.cs" />
+    <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
     <Compile Include="MigrationRunnerTests.cs" />
     <Compile Include="Migrations\AddBuildingCountToCase.cs" />
