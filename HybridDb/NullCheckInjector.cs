@@ -1,10 +1,18 @@
-﻿using System.Linq.Expressions;
+﻿using System;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace HybridDb
 {
     public class NullCheckInjector : ExpressionVisitor
     {
+        readonly bool forceDefaultToNull;
+
+        public NullCheckInjector(bool forceDefaultToNull)
+        {
+            this.forceDefaultToNull = forceDefaultToNull;
+        }
+
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
             // Change the return type of the lambda to the new body's return type
@@ -30,10 +38,15 @@ namespace HybridDb
             if (property != null)
             {
                 var expression = Visit(node.Expression);
+
+                var value = property.PropertyType.IsValueType && !forceDefaultToNull ? Activator.CreateInstance(property.PropertyType) : null;
+                var defaultValue = expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
+
                 var condition = Expression.Condition(
-                    Expression.Equal(expression, Expression.Constant(null)),
-                    Expression.Convert(Expression.Constant(null), typeof(object)),
+                    Expression.Equal(expression, Expression.Constant(defaultValue)),
+                    Expression.Convert(Expression.Constant(value), typeof(object)),
                     Expression.Convert(node, typeof(object)));
+
                 return condition;
             }
 

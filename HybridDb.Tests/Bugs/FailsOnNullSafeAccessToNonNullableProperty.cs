@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Bugs
         public void Fails()
         {
             Expression<Func<Case, long>> test = x => x.Submission.EnergyLabelSerialIdentifier;
-            var expression = new NullCheckInjector().Visit(test);
+            var expression = new NullCheckInjector(forceDefaultToNull: true).Visit(test);
             var nullsafe = (Expression<Func<Case, object>>)expression;
             Should.NotThrow(() => nullsafe.Compile()(new Case()));
         }

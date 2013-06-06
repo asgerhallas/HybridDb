@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using HybridDb.Schema;
 using Xunit;
 using Shouldly;
 
@@ -66,7 +65,27 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void AccessWhereLastMemberIsNull()
+        public void AccessReturnsDefaultValueIfSpecified()
+        {
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.NonNullableThingy));
+            InvokeWithNullCheck(() => value.Property.NonNullableThingy, defaultToNull: false).ShouldBe(0);
+        }
+
+        [Fact]
+        public void AccessReturnsNullIfSpecified()
+        {
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.NonNullableThingy));
+            InvokeWithNullCheck(() => value.Property.NonNullableThingy, defaultToNull: true).ShouldBe(null);
+        }
+
+        [Fact]
+        public void AccessReturnsDefaultIfColumnIsNonNullable()
+        {
+            InvokeWithNullCheck(() => value.NonNullableThingy2.Property.NonNullableThingy2.Property, defaultToNull: false).ShouldBe(null);
+        }
+
+        [Fact]
+        public void AccessWhereLastMemberIsNullReturnsNull()
         {
             value.Property = new Root { Field = new Root { Property = new Root() } };
 
@@ -88,9 +107,9 @@ namespace HybridDb.Tests
             return exp.Compile()();
         }
 
-        static object InvokeWithNullCheck(Expression<Func<object>> exp)
+        static object InvokeWithNullCheck<T>(Expression<Func<T>> exp, bool defaultToNull = true)
         {
-            var nullChecked = new NullCheckInjector().Visit(exp);
+            var nullChecked = new NullCheckInjector(defaultToNull).Visit(exp);
             return ((Expression<Func<object>>) nullChecked).Compile()();
         }
 
@@ -103,7 +122,14 @@ namespace HybridDb.Tests
                 return null;
             }
 
+            public int NonNullableThingy { get; set; }
+            public ValueType NonNullableThingy2 { get; set; }
             public List<Root> Properties { get; set; }
+        }
+
+        public struct ValueType
+        {
+            public Root Property { get; set; }
         }
     }
 }

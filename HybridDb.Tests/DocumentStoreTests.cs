@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Transactions;
@@ -19,16 +18,6 @@ namespace HybridDb.Tests
         public DocumentStoreTests()
         {
             store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            //store.Document<Entity>()
-            //     .Project(x => x.Field)
-            //     .Project(x => x.StringProp);
-
-            //     //.Project(x => x.Property);
-            //     //.Project(x => x.TheChild.NestedProperty)
-            //     //.Project(x => x.DateTimeProp)
-            //     //.Project(x => x.EnumProp);
-            //store.MigrateSchemaToMatchConfiguration();
-
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
         }
 

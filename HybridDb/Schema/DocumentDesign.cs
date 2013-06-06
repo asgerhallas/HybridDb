@@ -60,7 +60,7 @@ namespace HybridDb.Schema
 
         public static Expression<Func<TModel, object>> InjectNullChecks<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
         {
-            return (Expression<Func<TModel, object>>)new NullCheckInjector().Visit(expression);
+            return (Expression<Func<TModel, object>>)new NullCheckInjector(true).Visit(expression);
         }
 
         Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> projector)
