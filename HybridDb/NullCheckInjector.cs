@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace HybridDb
 {
@@ -32,28 +33,29 @@ namespace HybridDb
 
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
-            if (node.Object != null)
+            var receiver = node.Object;
+
+            // Check for extension method
+            if (receiver == null && node.Method.IsDefined(typeof(ExtensionAttribute)))
+                receiver = node.Arguments[0];
+
+            var nullCheckedBlock = receiver != null ? Visit(receiver): node;
+
+            var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
+
+            if (!node.Method.ReturnType.CanBeNull())
             {
-                var nullCheckedBlock = Visit(node.Object);
-
-                var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
-
-                if (!node.Method.ReturnType.CanBeNull())
-                {
-                    return Expression.Block(nullCheckedBlock, assignCurrentValue);
-                }
-
-                CanBeTrustedToNeverReturnNull = false;
-
-                return Expression.Block(
-                    nullCheckedBlock,
-                    assignCurrentValue,
-                    Expression.IfThen(
-                        Expression.Equal(currentValue, Expression.Constant(null)),
-                        Expression.Return(returnTarget, Expression.Constant(null))));
+                return Expression.Block(nullCheckedBlock, assignCurrentValue);
             }
 
-            return Expression.Convert(node, typeof(object));
+            CanBeTrustedToNeverReturnNull = false;
+
+            return Expression.Block(
+                nullCheckedBlock,
+                assignCurrentValue,
+                Expression.IfThen(
+                    Expression.Equal(currentValue, Expression.Constant(null)),
+                    Expression.Return(returnTarget, Expression.Constant(null))));
         }
 
         protected override Expression VisitMember(MemberExpression node)

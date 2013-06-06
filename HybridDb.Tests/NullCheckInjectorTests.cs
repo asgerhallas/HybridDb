@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Xunit;
 using Shouldly;
+using System.Linq;
 
 namespace HybridDb.Tests
 {
@@ -108,12 +109,25 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(() => value.Property.Field.Property.Property.Property).ShouldBe(null);
         }
 
-        //[Fact]
-        //public void AccessThroughNullMethodToMethod()
-        //{
-        //    Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Method().Method()));
-        //    InvokeWithNullCheck(() => value.Method().Method()).ShouldBe(null);
-        //}
+        [Fact]
+        public void AccessToExtensionMethodReturningValueType()
+        {
+            Should.Throw<ArgumentNullException>(() => InvokeWithoutNullCheck(() => value.Properties.Count()));
+            InvokeWithNullCheck(() => value.Properties.Count()).ShouldBe(null);
+        }
+
+        [Fact]
+        public void AccessThrougStaticMethodReturningNullableType()
+        {
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => Root.StaticMethod().Property));
+            InvokeWithNullCheck(() => Root.StaticMethod().Property).ShouldBe(null);
+        }
+
+        [Fact]
+        public void StaticMethodReturningValueTypeWillBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => Root.StaticMethodReturningValueType()).ShouldBe(true);
+        }
 
         [Fact]
         public void NullableValueTypesWillNotBeTrustedToNeverReturnNull()
@@ -192,6 +206,16 @@ namespace HybridDb.Tests
             public ValueType MethodReturningValueType()
             {
                 return default(ValueType);
+            }
+
+            public static ValueType StaticMethodReturningValueType()
+            {
+                return default(ValueType);
+            }
+
+            public static Root StaticMethod()
+            {
+                return null;
             }
         }
 
