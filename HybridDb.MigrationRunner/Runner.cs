@@ -100,6 +100,8 @@ namespace HybridDb.MigrationRunner
                 if (documentMigration.Version == 0)
                     throw new ArgumentException("Document migration must have a version number larger than 0");
 
+                store.RegisterExtension(migration);
+
                 var table = new DocumentTable(documentMigration.Tablename);
                 while (true)
                 {
@@ -110,7 +112,7 @@ namespace HybridDb.MigrationRunner
 
                     UpdateConsole(migration, null);
 
-                    var rows = store.Query<object>(table, out stats, @where: @where, take: 100).Cast<IDictionary<string, object>>();
+                    var rows = store.Query(table, out stats, @where: @where, take: 100);
 
                     UpdateConsole(migration, stats.TotalResults.ToString());
 
@@ -119,10 +121,8 @@ namespace HybridDb.MigrationRunner
 
                     foreach (var row in rows.Select(x => x.ToDictionary()))
                     {
-                        migrator.OnRead(migration, table, row);
-
-                        var id = (Guid) row[table.IdColumn.Name];
-                        var etag = (Guid) row[table.EtagColumn.Name];
+                        var id = (Guid) row[table.IdColumn];
+                        var etag = (Guid) row[table.EtagColumn];
 
                         try
                         {

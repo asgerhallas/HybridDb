@@ -751,6 +751,17 @@ namespace HybridDb.Tests
             store.GetColumn("HybridDb", "DocumentVersion");
         }
 
+        [Fact]
+        public void UtilityColsAreRemovedFromQueryResults()
+        {
+            store.Document<Entity>().MigrateSchema();
+            var table = new Table("Entities");
+            store.Insert(table, Guid.NewGuid(), new { Version = 1 });
+            QueryStats stats;
+            var result = store.Query(table, out stats, skip: 0, take: 2).Single();
+            result.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
+        }
+
         public class Case
         {
             public Guid Id { get; private set; }
