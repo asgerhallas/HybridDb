@@ -17,7 +17,7 @@ namespace HybridDb.MigrationRunner
         readonly WriteThroughLogger logger;
         int numberOfMigrations;
 
-        [Import(typeof(Migration.Migration), AllowRecomposition = true)]
+        [Import(typeof(Migration.Migration), AllowRecomposition = true, AllowDefault = true)]
         public Migration.Migration Migration { get; set; }
 
         public Runner(IDocumentStore store)
@@ -89,7 +89,7 @@ namespace HybridDb.MigrationRunner
 
         void MigrateDocuments(Migration.Migration migration)
         {
-            var documentMigration = migration.DocumentMigrations.First();
+            var documentMigration = migration.DocumentMigrations.FirstOrDefault();
             if (documentMigration != null)
             {
                 var migrator = new DocumentMigrator();
