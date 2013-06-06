@@ -17,7 +17,7 @@ namespace HybridDb.MigrationRunner
         readonly WriteThroughLogger logger;
         int numberOfMigrations;
 
-        [ImportMany(typeof(Migration.Migration), AllowRecomposition = true)]
+        [Import(typeof(Migration.Migration), AllowRecomposition = true)]
         public Migration.Migration Migration { get; set; }
 
         public Runner(IDocumentStore store)
