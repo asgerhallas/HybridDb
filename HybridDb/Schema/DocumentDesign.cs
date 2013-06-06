@@ -41,14 +41,28 @@ namespace HybridDb.Schema
         {
             var name = configuration.GetColumnNameByConventionFor(projector);
 
-            var column = new Column(name, new SqlColumn(typeof(TMember)));
-            Table.Register(column);
+            if (makeNullSafe)
+            {
+                var nullCheckInjector = new NullCheckInjector();
+                var nullCheckedProjector = (Expression<Func<TEntity, object>>) nullCheckInjector.Visit(projector);
 
-            var finalProjector = makeNullSafe 
-                ? Compile(name, InjectNullChecks(projector)) 
-                : Compile(name, projector);
-            
-            Projections.Add(column, finalProjector);
+                var column = new Column(name, new SqlColumn(typeof(TMember)))
+                {
+                    SqlColumn =
+                    {
+                        Nullable = !nullCheckInjector.CanBeTrustedToNeverReturnNull
+                    }
+                };
+
+                Table.Register(column);
+                Projections.Add(column, Compile(name, nullCheckedProjector));
+            }
+            else
+            {
+                var column = new Column(name, new SqlColumn(typeof(TMember)));
+                Table.Register(column);
+                Projections.Add(column, Compile(name, projector));
+            }
 
             return this;
         }
@@ -60,7 +74,7 @@ namespace HybridDb.Schema
 
         public static Expression<Func<TModel, object>> InjectNullChecks<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
         {
-            return (Expression<Func<TModel, object>>)new NullCheckInjector(true).Visit(expression);
+            return (Expression<Func<TModel, object>>)new NullCheckInjector().Visit(expression);
         }
 
         Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> projector)

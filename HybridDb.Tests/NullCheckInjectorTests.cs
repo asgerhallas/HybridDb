@@ -65,23 +65,29 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void AccessReturnsDefaultValueIfSpecified()
+        public void AccessToValueTypeThroughNullableTypeReturnsNull()
         {
             Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.NonNullableThingy));
-            InvokeWithNullCheck(() => value.Property.NonNullableThingy, defaultToNull: false).ShouldBe(0);
+            InvokeWithNullCheck(() => value.Property.NonNullableThingy).ShouldBe(null);
         }
 
         [Fact]
-        public void AccessReturnsNullIfSpecified()
+        public void AccessToValueTypeCanReturnNullIfSpecified()
         {
             Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.NonNullableThingy));
-            InvokeWithNullCheck(() => value.Property.NonNullableThingy, defaultToNull: true).ShouldBe(null);
+            InvokeWithNullCheck(() => value.Property.NonNullableThingy).ShouldBe(null);
         }
 
         [Fact]
-        public void AccessReturnsDefaultIfColumnIsNonNullable()
+        public void DirectAccessToValueTypeReturnsValue()
         {
-            InvokeWithNullCheck(() => value.NonNullableThingy2.Property.NonNullableThingy2.Property, defaultToNull: false).ShouldBe(null);
+            InvokeWithNullCheck(() => value.NonNullableThingy).ShouldBe(0);
+        }
+
+        [Fact]
+        public void AccessThroughValueTypeCanReturnNull()
+        {
+            InvokeWithNullCheck(() => value.Property.NonNullableThingy2.Property).ShouldBe(null);
         }
 
         [Fact]
@@ -102,15 +108,34 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(() => value.Property.Field.Property.Property.Property).ShouldBe(null);
         }
 
+        [Fact]
+        public void AllValueTypesWillBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x.NonNullableThingy).ShouldBe(true);
+        }
+
+        [Fact]
+        public void AllValueTypesMixedWithReferenceTypesWillNotBeTrustedToNeverReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x.Property.NonNullableThingy).ShouldBe(false);
+        }
+
         static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
         {
             return exp.Compile()();
         }
 
-        static object InvokeWithNullCheck<T>(Expression<Func<T>> exp, bool defaultToNull = true)
+        static object InvokeWithNullCheck<T>(Expression<Func<T>> exp)
         {
-            var nullChecked = new NullCheckInjector(defaultToNull).Visit(exp);
+            var nullChecked = new NullCheckInjector().Visit(exp);
             return ((Expression<Func<object>>) nullChecked).Compile()();
+        }
+
+        static bool CanItBeTrustedToNeverBeNull<T>(Expression<Func<Root, T>> exp)
+        {
+            var nullCheckInjector = new NullCheckInjector();
+            nullCheckInjector.Visit(exp);
+            return nullCheckInjector.CanBeTrustedToNeverReturnNull;
         }
 
         public class Root

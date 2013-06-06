@@ -7,7 +7,7 @@ namespace HybridDb.Schema
 {
     public class SqlColumn
     {
-        static readonly Dictionary<Type, SqlColumn> typeToColumn = new Dictionary<Type, SqlColumn>
+        static readonly Dictionary<Type, SqlColumn> prototypes = new Dictionary<Type, SqlColumn>
         {
             {typeof (byte), new SqlColumn(DbType.Byte)},
             {typeof (sbyte), new SqlColumn(DbType.SByte)},
@@ -49,19 +49,19 @@ namespace HybridDb.Schema
             //{typeof (object), new SqlColumn(DbType.Object)}
         };
 
-        public SqlColumn(Type type, bool isPrimaryKey = false)
+        public SqlColumn(Type type)
         {
             type = (type.IsEnum) ? type.BaseType : type;
             
             SqlColumn column;
-            if (!typeToColumn.TryGetValue(type, out column))
+            if (!prototypes.TryGetValue(type, out column))
                 throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
 
             Type = column.Type;
             Length = column.Length;
             Nullable = column.Nullable;
             DefaultValue = column.DefaultValue;
-            IsPrimaryKey = isPrimaryKey;
+            IsPrimaryKey = false;
         }
 
         public SqlColumn(DbType dbType, int? length = null, bool nullable = false, object defaultValue = null, bool isPrimaryKey = false)
@@ -77,10 +77,10 @@ namespace HybridDb.Schema
         {
         }
 
-        public DbType? Type { get; private set; }
-        public int? Length { get; private set; }
-        public bool Nullable { get; private set; }
-        public object DefaultValue { get; private set; }
-        public bool IsPrimaryKey { get; private set; }
+        public DbType? Type { get; set; }
+        public int? Length { get; set; }
+        public bool Nullable { get; set; }
+        public object DefaultValue { get; set; }
+        public bool IsPrimaryKey { get; set; }
     }
 }
