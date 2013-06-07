@@ -1,12 +1,40 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using Shouldly;
 using Xunit;
+using System.Linq;
 
 namespace HybridDb.Tests.Performance
 {
     public class QueryPerformanceTests : IUseFixture<QueryPerformanceFixture>
     {
         DocumentStore store;
+
+        [Fact]
+        public void test()
+        {
+            QueryStats rows;
+            store.Query(store.Configuration.GetDesignFor<Entity>().Table, out rows).ToList();
+            var watch = Stopwatch.StartNew();
+            store.Query(store.Configuration.GetDesignFor<Entity>().Table, out rows).ToList();
+            Console.WriteLine(watch.ElapsedMilliseconds);
+            watch.Restart();
+            store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out rows).ToList();
+            Console.WriteLine(watch.ElapsedMilliseconds);
+        }
+
+        [Fact]
+        public void test2()
+        {
+            QueryStats rows;
+            var watch = Stopwatch.StartNew();
+            for (int i = 0; i < 100; i++)
+            {
+                store.Query(store.Configuration.GetDesignFor<Entity>().Table, out rows).ToList();
+            }
+            Console.WriteLine(watch.ElapsedMilliseconds);
+        }
 
         [Fact]
         public void SimpleQuery()

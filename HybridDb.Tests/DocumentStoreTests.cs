@@ -757,9 +757,15 @@ namespace HybridDb.Tests
             store.Document<Entity>().MigrateSchema();
             var table = new Table("Entities");
             store.Insert(table, Guid.NewGuid(), new { Version = 1 });
+
             QueryStats stats;
-            var result = store.Query(table, out stats, skip: 0, take: 2).Single();
-            result.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
+            var result1 = store.Query(table, out stats, skip: 0, take: 2).Single();
+            result1.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
+            result1.ContainsKey(new Column("TotalResults", typeof(int))).ShouldBe(false);
+
+            var result2 = store.Query<object>(table, out stats, skip: 0, take: 2).Single();
+            ((IDictionary<string, object>)result2).ContainsKey("RowNumber").ShouldBe(false);
+            ((IDictionary<string, object>)result2).ContainsKey("TotalResults").ShouldBe(false);
         }
 
         public class Case

@@ -72,7 +72,7 @@ namespace HybridDb.Schema
             DocumentColumn = new Column("Document", new SqlColumn(DbType.Binary, Int32.MaxValue, nullable: true));
             Register(DocumentColumn);
 
-            VersionColumn = new Column("Version", new SqlColumn(DbType.Int32, nullable: false));
+            VersionColumn = new Column("Version", new SqlColumn(DbType.Int32, nullable: true));
             Register(VersionColumn);
 
             SizeColumn = new Column("Size", new SqlColumn(DbType.Int32, defaultValue: 0));
