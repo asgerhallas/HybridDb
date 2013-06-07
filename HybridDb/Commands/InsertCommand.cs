@@ -24,8 +24,8 @@ namespace HybridDb.Commands
             var simpleProjections = (from value in values where !(value.Key is SystemColumn) select value).ToDictionary();
             simpleProjections.Add(table.IdColumn, key);
             simpleProjections.Add(table.EtagColumn, etag);
-            //simpleProjections.Add(table.CreatedAtColumn, DateTimeOffset.Now);
-            //simpleProjections.Add(table.ModifiedAtColumn, DateTimeOffset.Now);
+            simpleProjections.Add(table.CreatedAtColumn, DateTimeOffset.Now);
+            simpleProjections.Add(table.ModifiedAtColumn, DateTimeOffset.Now);
 
             var sql = string.Format("insert into {0} ({1}) values ({2});",
                                     store.FormatTableNameAndEscape(table.Name),
