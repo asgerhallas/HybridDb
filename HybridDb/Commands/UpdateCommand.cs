@@ -26,6 +26,7 @@ namespace HybridDb.Commands
             var values = ConvertAnonymousToProjections(table, projections);
 
             values[table.EtagColumn] = etag;
+            values[table.ModifiedAtColumn] = DateTimeOffset.Now;
 
             var sql = new SqlBuilder()
                 .Append("update {0} set {1} where {2}=@Id{3}",

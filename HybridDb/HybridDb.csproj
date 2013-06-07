@@ -110,6 +110,7 @@
     <Compile Include="Schema\Column.cs" />
     <Compile Include="Schema\DocumentDesign.cs" />
     <Compile Include="NullCheckInjector.cs" />
+    <Compile Include="Schema\DocumentTable.cs" />
     <Compile Include="Schema\SqlColumn.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />

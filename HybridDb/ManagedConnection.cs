@@ -1,22 +1,23 @@
 ﻿using System;
-using System.Data;
+using System.Collections.Generic;
+using System.Data.SqlClient;
 
 namespace HybridDb
 {
     public class ManagedConnection : IDisposable
     {
-        readonly IDbConnection connection;
+        readonly SqlConnection connection;
         readonly Action complete;
         readonly Action dispose;
 
-        public ManagedConnection(IDbConnection connection, Action complete, Action dispose)
+        public ManagedConnection(SqlConnection connection, Action complete, Action dispose)
         {
             this.connection = connection;
             this.complete = complete;
             this.dispose = dispose;
         }
 
-        public IDbConnection Connection
+        public SqlConnection Connection
         {
             get { return connection; }
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dapper;
 using HybridDb.Schema;
 
@@ -33,25 +34,18 @@ namespace HybridDb.Commands
                         uniqueParameterIdentifier)
                 .ToString();
 
-            var parameters = new List<Parameter>
-            {
-                new Parameter {Name = "@Id" + uniqueParameterIdentifier, Value = key, DbType = table.IdColumn.SqlColumn.Type}
-            };
+            var parameters = new Dictionary<string, Parameter>();
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, table.IdColumn.SqlColumn.Type, null);
 
             if (!lastWriteWins)
             {
-                parameters.Add(new Parameter
-                {
-                    Name = "@CurrentEtag" + uniqueParameterIdentifier, 
-                    Value = currentEtag, 
-                    DbType = table.EtagColumn.SqlColumn.Type
-                });
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, table.EtagColumn.SqlColumn.Type, null);
             }
 
             return new PreparedDatabaseCommand
             {
                 Sql = sql,
-                Parameters = parameters,
+                Parameters = parameters.Values.ToList(),
                 ExpectedRowCount = 1
             };
         }

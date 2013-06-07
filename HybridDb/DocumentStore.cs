@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Registration;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
@@ -24,7 +23,7 @@ namespace HybridDb
         readonly string connectionString;
         readonly TableMode tableMode;
 
-        DbConnection ambientConnectionForTesting;
+        SqlConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
         long numberOfRequests;
         int numberOfManagedConnections;
@@ -36,14 +35,16 @@ namespace HybridDb
 
             configuration = new Configuration();
 
+            OnMessage = message => { };
             OnRead = (table, projections) => { };
         }
 
         public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
 
+        public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
+
         [ImportMany(typeof(IHybridDbExtension))]
         IEnumerable<IHybridDbExtension> AddIns { get; set; }
-
         public Action<Table, Dictionary<string, object>> OnRead { get; set; }
 
         public TableMode TableMode
@@ -256,11 +257,11 @@ namespace HybridDb
                     result = (IEnumerable<TProjection>)
                              InternalQuery<object>(connection, sql, parameters, out stats)
                                  .Cast<IDictionary<string, object>>()
-                                 .Select(row => row.ToDictionary())
+                                 //.Select(row => row.ToDictionary())
                                  .Select(row =>
                                  {
-                                     row.Remove("RowNumber");
-                                     OnRead(table, row);
+                                     //row.Remove("RowNumber");
+                                     //OnRead(table, row);
                                      return row.ToDictionary(
                                          column => table.GetColumnOrDefaultColumn(column.Key, column.Value.GetTypeOrDefault()),
                                          column => column.Value);
@@ -283,7 +284,9 @@ namespace HybridDb
                     stats.RetrievedResults = stats.TotalResults;
                 }
 
-                Logger.Info("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, timer.ElapsedMilliseconds);
+                stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
+
+                Logger.Info("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
 
                 connection.Complete();
                 return result;
@@ -410,14 +413,16 @@ namespace HybridDb
                     dispose += tx.Dispose;
                 }
 
-                DbConnection connection;
+                SqlConnection connection;
                 if (IsInTestMode)
                 {
                     // We don't care about thread safety in test mode
                     if (ambientConnectionForTesting == null)
                     {
                         ambientConnectionForTesting = new SqlConnection(connectionString);
+                        ambientConnectionForTesting.InfoMessage += (obj, args) => OnMessage(args);
                         ambientConnectionForTesting.Open();
+
                     }
 
                     connection = ambientConnectionForTesting;
@@ -425,6 +430,7 @@ namespace HybridDb
                 else
                 {
                     connection = new SqlConnection(connectionString);
+                    connection.InfoMessage += (obj, args) => OnMessage(args);
                     connection.Open();
 
                     complete = connection.Dispose + complete;
@@ -437,6 +443,7 @@ namespace HybridDb
                 connection.EnlistTransaction(Transaction.Current);
 
                 numberOfManagedConnections++;
+
 
                 return new ManagedConnection(connection, complete, dispose);
             }
@@ -463,7 +470,6 @@ namespace HybridDb
                 connection.Connection.Execute(sql, parameters);
                 connection.Complete();
             }
-
         }
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
