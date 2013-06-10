@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -49,7 +50,66 @@ namespace HybridDb.Tests.Performance
         }
     }
 
-    public unsafe static class Hallo
+    public class DifferTests
     {
+        [Fact]
+        public void Test()
+        {
+            var a = File.ReadAllBytes("Performance\\large.json");
+            var b = new byte[a.Length];
+            Array.Copy(a, b, a.Length);
+
+            b[b.Length / 2] = 0;
+
+            Differ.Diff(a, b);
+        }
+    }
+
+    public static class Differ
+    {
+        public static List<Operation> Diff(byte[] a, byte[] b)
+        {
+            var ops = new List<Operation>();
+
+            const int chunksize = 8040;
+            var shortest = a.Length < b.Length ? a.Length : b.Length;
+            var longest = a.Length > b.Length ? a.Length : b.Length;
+
+            for (int i = 0; i < shortest-chunksize; i+=chunksize)
+            {
+                if (!BuffersAreEqual(a, i, b, i, 8000))
+                {
+                    var data = new byte[chunksize];
+                    b.CopyTo(data, i);
+
+                    ops.Add(new Operation
+                    {
+                        Offset = i,
+                        Length = chunksize,
+                        Data = 
+                    });
+                }
+            }
+
+            return ops;
+        }
+
+        [DllImport("msvcrt.dll")]
+        unsafe static extern int memcmp(byte* b1, byte* b2, int count);
+
+        unsafe static bool BuffersAreEqual(byte[] buffer1, int offset1, byte[] buffer2, int offset2, int count)
+        {
+            fixed (byte* b1 = buffer1, b2 = buffer2)
+            {
+                return memcmp(b1 + offset1, b2 + offset2, count) == 0;
+            }
+        }
+    }
+
+    public class Operation
+    {
+        public int Offset { get; set; }
+        public int Length { get; set; }
+        public byte[] Data { get; set; }
     }
 }

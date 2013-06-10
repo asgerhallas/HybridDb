@@ -75,7 +75,7 @@ namespace HybridDb.Tests.Performance
             AssertTiming(() => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500).ToList(), 25);
         }
 
-        http://stackoverflow.com/a/16157458/64105
+        //http://stackoverflow.com/a/16157458/64105
         void AssertTiming(Action action, int ms, bool minusQueryTime = false)
         {
             // warmup
