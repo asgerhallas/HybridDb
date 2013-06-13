@@ -8,7 +8,7 @@ namespace HybridDb.Migration
 {
     public class DocumentMigrator
     {
-        public void OnRead(Migration migration, DocumentTable table, Dictionary<string, object> projections)
+        public void OnRead(Migration migration, DocumentTable table, IDictionary<string, object> projections)
         {
             var documentMigration = migration.DocumentMigrations.SingleOrDefault(x => x.Tablename == table.Name);
             if (documentMigration == null)

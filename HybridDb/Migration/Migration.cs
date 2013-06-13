@@ -134,7 +134,7 @@ namespace HybridDb.Migration
             IDocumentMigrationBuilderStep5 MigrateOnRead<T>(Action<T, IDictionary<string, object>> migration);
         }
 
-        void IHybridDbExtension.OnRead(Table table, Dictionary<string, object> projections)
+        void IHybridDbExtension.OnRead(Table table, IDictionary<string, object> projections)
         {
             var documentTable = table as DocumentTable;
             if (documentTable != null)

@@ -12,13 +12,9 @@ namespace HybridDb.Schema
 
             VersionColumn = new Column("Version", new SqlColumn(DbType.Int32, nullable: true));
             Register(VersionColumn);
-
-            SizeColumn = new Column("Size", new SqlColumn(DbType.Int32, defaultValue: 0));
-            Register(SizeColumn);
         }
 
         public Column DocumentColumn { get; private set; }
         public Column VersionColumn { get; private set; }
-        public Column SizeColumn { get; private set; }
     }
 }

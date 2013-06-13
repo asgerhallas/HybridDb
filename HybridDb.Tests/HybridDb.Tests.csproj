@@ -78,6 +78,7 @@
     <Compile Include="LinqIntegrationTests.cs" />
     <Compile Include="LinqTests.cs" />
     <Compile Include="Performance\BinaryComparisonPerformance.cs" />
+    <Compile Include="Performance\PerformanceTests.cs" />
     <Compile Include="SchemaMigratorTests.cs" />
     <Compile Include="Performance\Entity.cs" />
     <Compile Include="Performance\PerformanceFixture.cs" />

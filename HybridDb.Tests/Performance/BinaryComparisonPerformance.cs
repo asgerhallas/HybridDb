@@ -82,12 +82,12 @@ namespace HybridDb.Tests.Performance
                     var data = new byte[chunksize];
                     b.CopyTo(data, i);
 
-                    ops.Add(new Operation
-                    {
-                        Offset = i,
-                        Length = chunksize,
-                        Data = 
-                    });
+                    //ops.Add(new Operation
+                    //{
+                    //    Offset = i,
+                    //    Length = chunksize,
+                    //    Data = 
+                    //});
                 }
             }
 

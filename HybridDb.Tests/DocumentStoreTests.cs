@@ -547,57 +547,6 @@ namespace HybridDb.Tests
             stats.TotalResults.ShouldBe(10);
         }
 
-
-        [Fact]
-        public void CanGetTotalRowsWhenOrderingByPropertyWithSameValue()
-        {
-            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
-
-            var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 11 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 11 });
-
-            QueryStats stats;
-            var result = store.Query(table.Table, out stats, @orderby: "Property", skip: 1).ToList();
-            result.Count.ShouldBe(5);
-            stats.TotalResults.ShouldBe(6);
-        }
-
-
-        [Fact]
-        public void CanGetTotalRows()
-        {
-            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
-
-            var table = store.Configuration.GetDesignFor<Entity>();
-            for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
-
-            QueryStats stats;
-            var result = store.Query(table.Table, out stats, where: "Property >= 5", skip: 1).ToList();
-
-            result.Count.ShouldBe(4);
-            stats.TotalResults.ShouldBe(5);
-        }
-
-        [Fact]
-        public void CanGetTotalRowsWithNoResults()
-        {
-            store.Document<Entity>().MigrateSchema();
-
-            var table = store.Configuration.GetDesignFor<Entity>();
-
-            QueryStats stats;
-            var result = store.Query(table.Table, out stats).ToList();
-
-            result.Count.ShouldBe(0);
-            stats.TotalResults.ShouldBe(0);
-        }
-
         [Fact]
         public void CanQueryWithoutWhere()
         {
@@ -610,6 +559,120 @@ namespace HybridDb.Tests
             var result = store.Query(table.Table, out stats).ToList();
 
             result.Count.ShouldBe(1);
+        }
+
+        [Fact]
+        public void CanGetStats()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 10; i++)
+                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+
+            QueryStats stats;
+            store.Query(table.Table, out stats, where: "Property >= 5");
+
+            stats.RetrievedResults.ShouldBe(5);
+            stats.TotalResults.ShouldBe(5);
+        }
+
+        [Fact]
+        public void CanGetStatsWhenSkipping()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 10; i++)
+                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+
+            QueryStats stats;
+            store.Query(table.Table, out stats, where: "Property >= 5", skip: 1);
+
+            stats.RetrievedResults.ShouldBe(4);
+            stats.TotalResults.ShouldBe(5);
+        }
+
+        [Fact]
+        public void CanGetStatsWithNoResults()
+        {
+            store.Document<Entity>().MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            QueryStats stats;
+            store.Query(table.Table, out stats);
+
+            stats.RetrievedResults.ShouldBe(0);
+            stats.TotalResults.ShouldBe(0);
+        }
+
+        [Fact]
+        public void CanGetStatsWhenOrderingByPropertyWithSameValue()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
+            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
+            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
+            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
+            store.Insert(table.Table, Guid.NewGuid(), new { Property = 11 });
+            store.Insert(table.Table, Guid.NewGuid(), new { Property = 11 });
+
+            QueryStats stats;
+            store.Query(table.Table, out stats, @orderby: "Property", skip: 1);
+            
+            stats.RetrievedResults.ShouldBe(5);
+            stats.TotalResults.ShouldBe(6);
+        }
+
+        [Fact]
+        public void CanGetStatsWhenSkippingAllOrMore()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 10; i++)
+                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+
+            QueryStats stats;
+            store.Query(table.Table, out stats, where: "Property >= 5", skip: 10);
+
+            stats.RetrievedResults.ShouldBe(0);
+            stats.TotalResults.ShouldBe(5);
+        }
+
+        [Fact]
+        public void CanGetStatsWhenTaking()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 10; i++)
+                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+
+            QueryStats stats;
+            store.Query(table.Table, out stats, where: "Property >= 5", take: 2);
+
+            stats.RetrievedResults.ShouldBe(2);
+            stats.TotalResults.ShouldBe(5);
+        }
+
+        [Fact]
+        public void CanGetStatsWhenTakingAllOrMore()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 10; i++)
+                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+
+            QueryStats stats;
+            store.Query(table.Table, out stats, where: "Property >= 5", take: 20);
+
+            stats.RetrievedResults.ShouldBe(5);
+            stats.TotalResults.ShouldBe(5);
         }
 
         [Fact]
@@ -833,7 +896,7 @@ namespace HybridDb.Tests
 
         public class ThrowingHybridDbExtension : IHybridDbExtension
         {
-            public void OnRead(Table table, Dictionary<string, object> projections)
+            public void OnRead(Table table, IDictionary<string, object> projections)
             {
                 throw new OperationException();
             }

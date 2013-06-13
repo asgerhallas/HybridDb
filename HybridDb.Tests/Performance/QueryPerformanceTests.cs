@@ -1,106 +1,96 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
+using System.Collections.Generic;
+using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 using System.Linq;
 
 namespace HybridDb.Tests.Performance
 {
-    public class QueryPerformanceTests : IUseFixture<PerformanceFixture>
+    public class QueryPerformanceTests : PerformanceTests, IUseFixture<QueryPerformanceTests.Fixture>
     {
-        readonly Stopwatch watch;
-        
-        DocumentStore store;
-        decimal baseline;
-        QueryStats stats;
-
-        public void SetFixture(PerformanceFixture data)
-        {
-            store = data.Store;
-            baseline = data.Baseline;
-            Console.WriteLine("Baseline is " + baseline);
-        }
-
-        public QueryPerformanceTests()
-        {
-            watch = new Stopwatch();
-
-            //prevent the JIT Compiler from optimizing Fkt calls away
-            long seed = Environment.TickCount;
-
-            //use the second Core/Processor for the test
-            Process.GetCurrentProcess().ProcessorAffinity = new IntPtr(2);
-
-            //prevent "Normal" Processes from interrupting Threads
-            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-
-            //prevent "Normal" Threads from interrupting this thread
-            Thread.CurrentThread.Priority = ThreadPriority.Highest;
-        }
+        protected DocumentStore store;
 
         [Fact]
         public void SimpleQueryWithoutMaterialization()
         {
-            AssertTiming(() => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats), 40);
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats))
+                .DbTimeLowest.ShouldBeLessThan(40);
         }
 
         [Fact]
         public void SimpleQueryWithMaterializationToDictionary()
         {
-            AssertTiming(() => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats).ToList(), 40, true);
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats).ToList())
+                .CodeTimeLowest.ShouldBeLessThan(40);
         }
 
         [Fact]
         public void SimpleQueryWithMaterializationToProjection()
         {
-            AssertTiming(() => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats).ToList(), 22, true);
+            Time((out QueryStats stats) => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats).ToList())
+                .CodeTimeLowest.ShouldBeLessThan(5);
         }
 
         [Fact]
         public void QueryWithWindow()
         {
-            AssertTiming(() => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500), 7);
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500))
+                .DbTimeLowest.ShouldBeLessThan(3);
         }
 
         [Fact]
         public void QueryWithLateWindow()
         {
-            AssertTiming(() => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 9500, take: 500), 8);
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 9500, take: 500))
+                .DbTimeLowest.ShouldBeLessThan(4);
         }
 
         [Fact]
         public void QueryWithWindowMaterializedToProjection()
         {
-            AssertTiming(() => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500).ToList(), 25);
+            Time((out QueryStats stats) => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500).ToList())
+                .TotalTimeLowest.ShouldBeLessThan(20);
         }
 
-        //http://stackoverflow.com/a/16157458/64105
-        void AssertTiming(Action action, int ms, bool minusQueryTime = false)
+        public void SetFixture(Fixture data)
         {
-            // warmup
-            action();
+            store = data.Store;
+        }
 
-            const int iterations = 100;
+        public class Fixture : IDisposable
+        {
+            readonly DocumentStore store;
 
-            long highest = long.MinValue;
-            long lowest = long.MaxValue;
-            for (int i = 0; i < iterations; i++)
+            public DocumentStore Store
             {
-                watch.Restart();
-                action();
-
-                var actual = watch.ElapsedMilliseconds;
-                if (minusQueryTime)
-                    actual -= stats.QueryDurationInMilliseconds;
-
-                highest = Math.Max(highest, actual);
-                lowest = Math.Min(lowest, actual);
+                get { return store; }
             }
 
-            Console.WriteLine("Assert that runtime " + lowest + " is less than expected " + ms * baseline);
+            public Fixture()
+            {
+                const string connectionString = "data source=.;Integrated Security=True";
+                store = DocumentStore.ForTestingWithTempTables(connectionString);
+                store.Document<Entity>()
+                    .Project(x => x.SomeData)
+                    .Project(x => x.SomeNumber);
+                store.MigrateSchemaToMatchConfiguration();
 
-            lowest.ShouldBeLessThan(ms * baseline);
+                var commands = new List<DatabaseCommand>();
+                for (int i = 0; i < 10000; i++)
+                {
+                    commands.Add(new InsertCommand(store.Configuration.GetDesignFor<Entity>().Table,
+                                                   Guid.NewGuid(),
+                                                   new { SomeNumber = i, SomeData = "ABC" }));
+                }
+
+                store.Execute(commands.ToArray());
+            }
+
+            public void Dispose()
+            {
+                store.Dispose();
+            }
         }
     }
 }

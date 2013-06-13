@@ -7,12 +7,12 @@ namespace HybridDb
 {
     public interface IHybridDbExtension
     {
-        void OnRead(Table table, Dictionary<string, object> projections);
+        void OnRead(Table table, IDictionary<string, object> projections);
     }
 
     public interface IDocumentStore : IDisposable
     {
-        Action<Table, Dictionary<string, object>> OnRead { get; set; }
+        Action<Table, IDictionary<string, object>> OnRead { get; set; }
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }

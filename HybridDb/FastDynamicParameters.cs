@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using Dapper;
-using System.Linq;
 
 namespace HybridDb
 {

@@ -45,7 +45,7 @@ namespace HybridDb
 
         [ImportMany(typeof(IHybridDbExtension))]
         IEnumerable<IHybridDbExtension> AddIns { get; set; }
-        public Action<Table, Dictionary<string, object>> OnRead { get; set; }
+        public Action<Table, IDictionary<string, object>> OnRead { get; set; }
 
         public TableMode TableMode
         {
@@ -242,6 +242,7 @@ namespace HybridDb
                 var sql = new SqlBuilder();
                 sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
                    .Append(isWindowed, ", row_number() over(ORDER BY {0}) as RowNumber", rowNumberOrderBy)
+                   .Append(!isWindowed, ", 0 as RowNumber")
                    .Append("from {0}", FormatTableNameAndEscape(table.Name))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(")")
@@ -257,11 +258,9 @@ namespace HybridDb
                     result = (IEnumerable<TProjection>)
                              InternalQuery<object>(connection, sql, parameters, out stats)
                                  .Cast<IDictionary<string, object>>()
-                                 //.Select(row => row.ToDictionary())
                                  .Select(row =>
                                  {
-                                     //row.Remove("RowNumber");
-                                     //OnRead(table, row);
+                                     OnRead(table, row);
                                      return row.ToDictionary(
                                          column => table.GetColumnOrDefaultColumn(column.Key, column.Value.GetTypeOrDefault()),
                                          column => column.Value);
@@ -272,11 +271,14 @@ namespace HybridDb
                     result = InternalQuery<TProjection>(connection, sql, parameters, out stats);
                 }
 
-                Interlocked.Increment(ref numberOfRequests);
+                stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
 
                 if (isWindowed)
                 {
                     var potential = stats.TotalResults - skip;
+                    if (potential < 0)
+                        potential = 0;
+
                     stats.RetrievedResults = take > 0 && potential > take ? take : potential;
                 }
                 else
@@ -284,7 +286,7 @@ namespace HybridDb
                     stats.RetrievedResults = stats.TotalResults;
                 }
 
-                stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
+                Interlocked.Increment(ref numberOfRequests);
 
                 Logger.Info("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
 
@@ -318,24 +320,31 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats metadata)
+        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats stats)
         {
-            var normalizedParameters = parameters as IEnumerable<Parameter> ??
-                                       (from projection in (parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters))
-                                        select new Parameter { Name = "@" + projection.Key, Value = projection.Value }).ToList();
+            var normalizedParameters = new FastDynamicParameters(
+                parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
 
             var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(
                 sql.ToString(),
                 Tuple.Create,
-                new FastDynamicParameters(normalizedParameters),
-                splitOn: "TotalResults");
+                normalizedParameters,
+                splitOn: "RowNumber,TotalResults");
 
             var firstRow = rows.FirstOrDefault();
-            metadata = firstRow != null ? new QueryStats { TotalResults = firstRow.Item2.TotalResults } : new QueryStats();
+            stats = firstRow != null
+                           ? new QueryStats {TotalResults = firstRow.Item2.TotalResults}
+                           : new QueryStats();
 
             Interlocked.Increment(ref numberOfRequests);
 
             return rows.Select(x => x.Item1);
+        }
+
+        static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)
+        {
+            return from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
+                   select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
         }
 
         public IDictionary<Column, object> Get(Table table, Guid key)
