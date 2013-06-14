@@ -19,11 +19,11 @@ namespace HybridDb
         /// That will result in each serialization to be different and we lose the ability to use it for change tracking.
         /// Therefore we need to create a new serializer each and every time we serialize.
         /// </summary>
-        protected JsonSerializer CreateSerializer()
+        public JsonSerializer CreateSerializer()
         {
             return new JsonSerializer
             {
-                ContractResolver = new DefaultContractResolver(true),
+                ContractResolver = new DefaultContractResolver(false),
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 TypeNameHandling = TypeNameHandling.All,
                 PreserveReferencesHandling = PreserveReferencesHandling.All,

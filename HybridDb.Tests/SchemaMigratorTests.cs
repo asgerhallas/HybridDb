@@ -79,6 +79,30 @@ END", uniqueDbName));
         }
 
         [Fact]
+        public void CanAddIntColumnWithDefault()
+        {
+            storeWithTempTables.Migrate(
+                migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
+                                    .AddColumn("Entities", new Column("Property", new SqlColumn(DbType.Int32, defaultValue: 10))));
+
+            var propertyColumn = GetTempColumn("Entities", "Property");
+            propertyColumn.ShouldNotBe(null);
+            GetType(propertyColumn.system_type_id).ShouldBe("int");
+        }
+
+        [Fact]
+        public void CanAddDateTimeColumnWithDefault()
+        {
+            storeWithTempTables.Migrate(
+                migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
+                                    .AddColumn("Entities", new Column("Property", new SqlColumn(DbType.DateTimeOffset, defaultValue: DateTimeOffset.Now))));
+
+            var propertyColumn = GetTempColumn("Entities", "Property");
+            propertyColumn.ShouldNotBe(null);
+            GetType(propertyColumn.system_type_id).ShouldBe("datetimeoffset");
+        }
+
+        [Fact]
         public void CanRemoveColumn()
         {
             storeWithTempTables.Migrate(

@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using HybridDb.Commands;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
 
@@ -11,13 +16,10 @@ namespace HybridDb.Tests.Performance
 {
     public class PerformanceTests : IUseFixture<PerformanceTests.SystemModifierFixture>
     {
-        protected readonly Stopwatch watch;
         protected decimal systemModifier;
 
         public PerformanceTests()
         {
-            watch = new Stopwatch();
-
             //prevent the JIT Compiler from optimizing Fkt calls away
             long seed = Environment.TickCount;
 
@@ -31,33 +33,17 @@ namespace HybridDb.Tests.Performance
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
         }
 
-        //http://stackoverflow.com/a/16157458/64105
-        void AssertQueryTiming(Func<QueryStats> action, int ms)
-        {
-            // warmup
-            action();
-
-            const int iterations = 100;
-
-            long highest = long.MinValue;
-            long lowest = long.MaxValue;
-            for (int i = 0; i < iterations; i++)
-            {
-                var stats = action();
-                var actual = stats.QueryDurationInMilliseconds;
-                highest = Math.Max(highest, actual);
-                lowest = Math.Min(lowest, actual);
-            }
-
-            Console.WriteLine("Assert that query " + lowest + " is less than expected " + ms * systemModifier);
-
-            lowest.ShouldBeLessThan(ms * systemModifier);
-        }
-
         public delegate void HybridAction(out QueryStats stats);
 
         protected Timings Time(HybridAction action, int iterations = 100)
         {
+            return Time(action, systemModifier, iterations);
+        }
+
+        protected static Timings Time(HybridAction action, decimal modifier, int iterations = 100)
+        {
+            var watch = new Stopwatch();
+
             QueryStats stats;
 
             // warmup
@@ -82,13 +68,42 @@ namespace HybridDb.Tests.Performance
                     watch.ElapsedMilliseconds - stats.QueryDurationInMilliseconds);
             }
 
-            timings.DbTimeLowest = (long)(timings.DbTimeLowest / systemModifier);
-            timings.CodeTimeLowest = (long)(timings.CodeTimeLowest / systemModifier);
+            timings.DbTimeLowest = (long)(timings.DbTimeLowest / modifier);
+            timings.CodeTimeLowest = (long)(timings.CodeTimeLowest / modifier);
 
             Console.WriteLine("Lowest db time was " + timings.DbTimeLowest);
             Console.WriteLine("Lowest code time was " + timings.CodeTimeLowest);
 
             return timings;
+        }
+
+        protected decimal Time(Action action, int iterations = 100)
+        {
+            return Time(action, systemModifier, iterations);
+        }
+
+        protected static decimal Time(Action action, decimal modifier, int iterations = 100)
+        {
+            var watch = new Stopwatch();
+
+            // warmup
+            action();
+
+            var ticksPerMillisecond = (decimal)Stopwatch.Frequency/1000;
+            
+            var timeLowest = decimal.MaxValue;
+            for (var i = 0; i < iterations; i++)
+            {
+                watch.Restart();
+                action();
+                timeLowest = Math.Min(timeLowest, watch.ElapsedTicks / ticksPerMillisecond);
+            }
+
+            timeLowest = timeLowest / modifier;
+
+            Console.WriteLine("Lowest time was " + timeLowest);
+
+            return timeLowest;
         }
 
         public class Timings
@@ -131,14 +146,16 @@ namespace HybridDb.Tests.Performance
 
                     store.Execute(commands.ToArray());
 
-                    // do some warmup
-                    store.RawQuery<object>("select * from #Entities").ToList();
-
-                    //Establish baseline
-                    var watch = Stopwatch.StartNew();
-                    for (int i = 0; i < 100; i++)
-                        store.RawQuery<object>("select * from #Entities").ToList();
-                    SystemModifier = watch.ElapsedMilliseconds / 20m;
+                    decimal time = 0;
+                    for (int i = 0; i < 10; i++)
+                    {
+                        time += Time(() => store.RawQuery<object>("select * from #Entities").ToList(), 1m);
+                    }
+                    
+                    // The below constant is chosen to get as close 1.0 on my machine as possible.
+                    // This must not be changed without changing the test timings accordingly.
+                    // if you are writing new tests on another machine 
+                    SystemModifier = time / 1.6m;
                 }
             }
 

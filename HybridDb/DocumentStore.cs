@@ -236,22 +236,38 @@ namespace HybridDb
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
             {
-                var isWindowed = skip > 0 || take > 0;
-                var rowNumberOrderBy = string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby;
-
                 var sql = new SqlBuilder();
-                sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
-                   .Append(isWindowed, ", row_number() over(ORDER BY {0}) as RowNumber", rowNumberOrderBy)
-                   .Append(!isWindowed, ", 0 as RowNumber")
+
+                sql.Append("select count(*) as TotalResults")
                    .Append("from {0}", FormatTableNameAndEscape(table.Name))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
-                   .Append(")")
-                   .Append("select *, (select count(*) from temp) as TotalResults from temp")
-                   .Append(isWindowed, "where RowNumber >= {0}", skip + 1)
-                   .Append(isWindowed && take > 0, "and RowNumber <= {0}", skip + take)
-                   .Append(isWindowed, "order by RowNumber")
-                   .Append(!isWindowed && !string.IsNullOrEmpty(orderby), "order by {0}", orderby);
+                   .Append(";");
 
+                var isWindowed = skip > 0 || take > 0;
+
+                if (isWindowed)
+                {
+                    sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
+                       .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
+                       .Append("from {0}", FormatTableNameAndEscape(table.Name))
+                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                       .Append(")")
+                       .Append("select * from temp")
+                       .Append("where RowNumber >= {0}", skip + 1)
+                       .Append(take > 0, "and RowNumber <= {0}", skip + take)
+                       .Append("order by RowNumber");
+                }
+                else
+                {
+                    sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
+                       .Append(", 0 as RowNumber")
+                       .Append("from {0}", FormatTableNameAndEscape(table.Name))
+                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                       .Append(")")
+                       .Append("select * from temp")
+                       .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
+                }
+                
                 IEnumerable<TProjection> result;
                 if (projectToDictionary)
                 {
@@ -325,20 +341,15 @@ namespace HybridDb
             var normalizedParameters = new FastDynamicParameters(
                 parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
 
-            var rows = connection.Connection.Query<T, QueryStats, Tuple<T, QueryStats>>(
-                sql.ToString(),
-                Tuple.Create,
-                normalizedParameters,
-                splitOn: "RowNumber,TotalResults");
+            using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
+            {
+                stats = reader.Read<QueryStats>().Single();
+                var rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", true);
 
-            var firstRow = rows.FirstOrDefault();
-            stats = firstRow != null
-                           ? new QueryStats {TotalResults = firstRow.Item2.TotalResults}
-                           : new QueryStats();
+                Interlocked.Increment(ref numberOfRequests);
 
-            Interlocked.Increment(ref numberOfRequests);
-
-            return rows.Select(x => x.Item1);
+                return rows;
+            }
         }
 
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)
