@@ -485,6 +485,10 @@ namespace HybridDb
 
         public void RawExecute(string sql, object parameters = null)
         {
+            var hdbParams = parameters as IEnumerable<Parameter>;
+            if (hdbParams != null)
+                parameters = new FastDynamicParameters(hdbParams);
+
             using (var connection = Connect())
             {
                 connection.Connection.Execute(sql, parameters);
@@ -494,6 +498,10 @@ namespace HybridDb
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
         {
+            var hdbParams = parameters as IEnumerable<Parameter>;
+            if (hdbParams != null)
+                parameters = new FastDynamicParameters(hdbParams);
+
             using (var connection = Connect())
             {
                 return connection.Connection.Query<T>(sql, parameters);

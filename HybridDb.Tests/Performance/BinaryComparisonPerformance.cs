@@ -52,7 +52,7 @@ namespace HybridDb.Tests.Performance
 
     public class DifferTests
     {
-        [Fact]
+//        [Fact]
         public void Test()
         {
             var a = File.ReadAllBytes("Performance\\large.json");

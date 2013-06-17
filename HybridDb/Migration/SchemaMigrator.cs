@@ -59,7 +59,8 @@ namespace HybridDb.Migration
 
         public ISchemaMigrator AddColumn(string tablename, Column column)
         {
-            return AddColumn(tablename, column.Name, GetColumnSqlType(column));
+            var sql = GetColumnSqlType(column);
+            return AddColumn(tablename, column.Name, sql.ToString(), sql.Parameters);
         }
 
         public ISchemaMigrator AddTable(string tablename, params string[] columns)
@@ -93,10 +94,10 @@ namespace HybridDb.Migration
                 string.Format("sp_rename {0}, {1};", store.FormatTableNameAndEscape(oldTablename), store.FormatTableNameAndEscape(newTablename)));
         }
 
-        public ISchemaMigrator AddColumn(string tablename, string columnname, string columntype)
+        public ISchemaMigrator AddColumn(string tablename, string columnname, string columntype, object parameters = null)
         {
             return Execute(
-                string.Format("alter table {0} add {1} {2};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname), columntype));
+                string.Format("alter table {0} add {1} {2};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname), columntype), parameters);
         }
 
         public ISchemaMigrator RemoveColumn(string tablename, string columnname)
@@ -131,17 +132,20 @@ namespace HybridDb.Migration
             tx.Dispose();
         }
 
-        string GetColumnSqlType(Column column)
+        SqlBuilder GetColumnSqlType(Column column)
         {
             if (column.SqlColumn.Type == null)
                 throw new ArgumentException(string.Format("Column {0} must have a type", column.Name));
 
-            var sqlDbTypeString = new SqlParameter { DbType = (DbType) column.SqlColumn.Type }.SqlDbType.ToString();
-            var lengthString = (column.SqlColumn.Length != null) ? "(" + (column.SqlColumn.Length == Int32.MaxValue ? "MAX" : column.SqlColumn.Length.ToString()) + ")" : "";
-            var nullable = column.SqlColumn.Nullable ? " NULL" : " NOT NULL";
-            var asPrimaryKeyString = column.SqlColumn.IsPrimaryKey ? " PRIMARY KEY" : "";
-            var defaultValue = column.SqlColumn.DefaultValue != null ? " DEFAULT(" + column.SqlColumn.DefaultValue + ")" : "";
-            return sqlDbTypeString + lengthString + nullable + defaultValue + asPrimaryKeyString;
+            var sql = new SqlBuilder();
+
+            sql.Append(new SqlParameter {DbType = (DbType) column.SqlColumn.Type}.SqlDbType.ToString());
+            sql.Append(column.SqlColumn.Length != null, "(" + (column.SqlColumn.Length == Int32.MaxValue ? "MAX" : column.SqlColumn.Length.ToString()) + ")");
+            sql.Append(column.SqlColumn.Nullable, "NULL").Or(" NOT NULL");
+            sql.Append(column.SqlColumn.DefaultValue != null, "DEFAULT({0})", column.SqlColumn.DefaultValue);
+            sql.Append(column.SqlColumn.IsPrimaryKey, " PRIMARY KEY");
+
+            return sql;
         }
 
         string GetTableExistsSql(string tablename)

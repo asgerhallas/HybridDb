@@ -81,7 +81,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, id, new { Complex = new Entity.ComplexType() }));
         }
 
-        [Fact]
+        [Fact(Skip = "Feature on hold")]
         public void CanInsertCollectionProjections()
         {
             store.Document<Entity>().Project(x => x.Children.Select(y => y.NestedString)).MigrateSchema();
