@@ -367,7 +367,7 @@ namespace HybridDb
                                         FormatTableNameAndEscape(table.Name),
                                         table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault()).ToDictionary();
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 

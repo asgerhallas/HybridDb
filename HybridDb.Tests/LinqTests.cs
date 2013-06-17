@@ -450,17 +450,31 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", true);
         }
 
-        bool WackyCustomEqualityCheck(int x, int y)
-        {
-            return x == y;
-        }
-
         [Fact]
         public void CanQueryWhereWithConstantMethodCall()
         {
             var translation = session.Query<Entity>().Where(x => x.BoolProp == WackyCustomEqualityCheck(1, 1)).Translate();
             translation.Where.ShouldBe("(BoolProp = @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", true);
+        }
+
+        bool WackyCustomEqualityCheck(int x, int y)
+        {
+            return x == y;
+        }
+
+        [Fact]
+        public void CanQueryWhereWithConstantStaticMethodCall()
+        {
+            var translation = session.Query<Entity>().Where(x => LinqTests.StaticNoise(2) > 1).Translate();
+            translation.Where.ShouldBe("(@Value0 > @Value1)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 2);
+            translation.Parameters.ShouldContainKeyAndValue("@Value1", 1);
+        }
+
+        static int StaticNoise(int arg)
+        {
+            return arg;
         }
 
         [Fact]

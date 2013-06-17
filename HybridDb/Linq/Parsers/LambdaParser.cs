@@ -70,12 +70,23 @@ namespace HybridDb.Linq.Parsers
 
         protected virtual void VisitConstantMethodCall(MethodCallExpression expression)
         {
-            var target = ((SqlConstantExpression) ast.Pop()).Value;
-            var arguments = ast.Pop(expression.Arguments.Count)
-                               .Cast<SqlConstantExpression>()
-                               .Select(x => x.Value);
+            if (expression.Object == null)
+            {
+                var arguments = ast.Pop(expression.Arguments.Count)
+                                   .Cast<SqlConstantExpression>()
+                                   .Select(x => x.Value);
 
-            ast.Push(new SqlConstantExpression(expression.Method.Invoke(target, arguments.ToArray())));
+                ast.Push(new SqlConstantExpression(expression.Method.Invoke(null, arguments.ToArray())));
+            }
+            else
+            {
+                var receiver = ((SqlConstantExpression)ast.Pop()).Value;
+                var arguments = ast.Pop(expression.Arguments.Count)
+                                   .Cast<SqlConstantExpression>()
+                                   .Select(x => x.Value);
+
+                ast.Push(new SqlConstantExpression(expression.Method.Invoke(receiver, arguments.ToArray())));
+            }
         }
 
         protected virtual void VisitColumnMethodCall(MethodCallExpression expression)
