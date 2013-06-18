@@ -1,8 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace HybridDb
 {
+    public class Sql
+    {
+        readonly string sql;
+        readonly List<Parameter> parameters;
+
+        public Sql(string sql, object parameters)
+        {
+            this.sql = "";
+            this.parameters = new List<Parameter>();
+        }
+
+        public IEnumerable<Parameter> Parameters
+        {
+            get { return parameters; }
+        }
+
+        public static implicit operator Sql(string s)
+        {
+            return new Sql(s, null);
+        }
+
+        public override string ToString()
+        {
+            return sql;
+        }
+    }
+
     public class SqlBuilder
     {
         readonly List<string> strings;
@@ -61,9 +89,31 @@ namespace HybridDb
             return this;
         }
 
+        public SqlBuilder Append(SqlBuilder builder)
+        {
+            strings.AddRange(builder.strings);
+            parameters.AddRange(builder.parameters);
+            return this;
+        }
+
         public override string ToString()
         {
             return string.Join(" ", strings.ToArray());
+        }
+
+        public string ToDynamicSql()
+        {
+            var sql = "declare @sql nvarchar(4000) = " +
+                      string.Join(" + ", strings.Select(x => "' " + x + " '").ToArray()) +
+                      "; exec(@sql);";
+
+            sql = parameters
+                .OrderByDescending(x => x.Name.Length)
+                .Select(parameter => "@" + parameter.Name)
+                .Aggregate(sql, (current, sqlName) =>
+                                current.Replace(sqlName, "' + quotename(" + sqlName + ", '''') + '"));
+
+            return sql;
         }
     }
 }

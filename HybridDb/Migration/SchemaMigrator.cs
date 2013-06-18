@@ -60,7 +60,7 @@ namespace HybridDb.Migration
         public ISchemaMigrator AddColumn(string tablename, Column column)
         {
             var sql = GetColumnSqlType(column);
-            return AddColumn(tablename, column.Name, sql.ToString(), sql.Parameters);
+            return AddColumn(tablename, column.Name, sql);
         }
 
         public ISchemaMigrator AddTable(string tablename, params string[] columns)
@@ -94,10 +94,14 @@ namespace HybridDb.Migration
                 string.Format("sp_rename {0}, {1};", store.FormatTableNameAndEscape(oldTablename), store.FormatTableNameAndEscape(newTablename)));
         }
 
-        public ISchemaMigrator AddColumn(string tablename, string columnname, string columntype, object parameters = null)
+        public ISchemaMigrator AddColumn(string tablename, string columnname, SqlBuilder columntype)
         {
-            return Execute(
-                string.Format("alter table {0} add {1} {2};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname), columntype), parameters);
+            var sql = new SqlBuilder();
+            sql.Append("alter table {0} add {1}", store.FormatTableNameAndEscape(tablename), store.Escape(columnname));
+            sql.Append(columntype);
+
+            return Execute(sql.ToDynamicSql(), sql.Parameters);
+//                string.Format("declare @sql nvarchar(4000) = 'alter table {0} add {1} ' + {2}; exec(@sql);", store.FormatTableNameAndEscape(tablename), store.Escape(columnname), columntype), parameters);
         }
 
         public ISchemaMigrator RemoveColumn(string tablename, string columnname)
@@ -141,8 +145,15 @@ namespace HybridDb.Migration
 
             sql.Append(new SqlParameter {DbType = (DbType) column.SqlColumn.Type}.SqlDbType.ToString());
             sql.Append(column.SqlColumn.Length != null, "(" + (column.SqlColumn.Length == Int32.MaxValue ? "MAX" : column.SqlColumn.Length.ToString()) + ")");
-            sql.Append(column.SqlColumn.Nullable, "NULL").Or(" NOT NULL");
-            sql.Append(column.SqlColumn.DefaultValue != null, "DEFAULT({0})", column.SqlColumn.DefaultValue);
+            sql.Append(column.SqlColumn.Nullable, "NULL").Or("NOT NULL");
+            sql.Append(column.SqlColumn.DefaultValue != null,
+                       "DEFAULT @DefaultValue",
+                       new Parameter
+                       {
+                           Name = "DefaultValue",
+                           DbType = column.SqlColumn.Type,
+                           Value = column.SqlColumn.DefaultValue
+                       });
             sql.Append(column.SqlColumn.IsPrimaryKey, " PRIMARY KEY");
 
             return sql;

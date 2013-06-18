@@ -16,7 +16,7 @@ namespace HybridDb.Migration
         ISchemaMigrator RemoveTable(string tablename);
         ISchemaMigrator RenameTable(string oldTablename, string newTablename);
 
-        ISchemaMigrator AddColumn(string tablename, string columnname, string columntype, object parameters = null);
+        ISchemaMigrator AddColumn(string tablename, string columnname, SqlBuilder columntype);
         ISchemaMigrator RemoveColumn(string tablename, string columnname);
         ISchemaMigrator RenameColumn(string tablename, string oldColumnname, string newColumnname);
         

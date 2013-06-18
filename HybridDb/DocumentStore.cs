@@ -343,8 +343,8 @@ namespace HybridDb
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                stats = reader.Read<QueryStats>().Single();
-                var rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", true);
+                stats = reader.Read<QueryStats>(buffered: false).Single();
+                var rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: false);
 
                 Interlocked.Increment(ref numberOfRequests);
 

@@ -71,7 +71,7 @@ END", uniqueDbName));
         {
             storeWithTempTables.Migrate(
                 migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
-                                    .AddColumn("Entities", "Property", "int"));
+                                    .AddColumn("Entities", "Property", new SqlBuilder().Append("int")));
 
             var propertyColumn = GetTempColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
