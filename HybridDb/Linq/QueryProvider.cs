@@ -54,6 +54,7 @@ namespace HybridDb.Linq
                                             translation.OrderBy,
                                             translation.Parameters)
                                      .Select(result => session.ConvertToEntityAndPutUnderManagement<T>(table.Table, result))
+                                     .Where(result => result != null)
                               : store.Query<T>(table.Table,
                                                out storeStats,
                                                translation.Select,

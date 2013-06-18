@@ -6,6 +6,7 @@ using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 using System.Linq;
+using HybridDb.Linq;
 
 namespace HybridDb.Tests
 {
@@ -481,7 +482,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entities = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).ToList();
+                var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").ToList();
                 
                 entities.Count.ShouldBe(1);
                 entities[0].Property.ShouldBe("Asger");
@@ -499,7 +500,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).Single();
+                var entity = session.Query<Entity>().Single(x => x.ProjectedProperty == "Large");
 
                 entity.Property = "Lars";
                 session.SaveChanges();
@@ -520,7 +521,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var instance1 = session.Load<Entity>(id);
-                var instance2 = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).Single();
+                var instance2 = session.Query<Entity>().Single(x => x.ProjectedProperty == "Large");
 
                 instance1.ShouldBe(instance2);
             }
@@ -539,7 +540,7 @@ namespace HybridDb.Tests
                 var entity = session.Load<Entity>(id);
                 session.Delete(entity);
 
-                var entities = session.Query<Entity>("ProjectedProperty = @Size", new { Size = "Large"}).ToList();
+                var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").ToList();
 
                 entities.Count.ShouldBe(0);
             }
@@ -556,7 +557,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entities = session.Query<Entity, EntityProjection>("ProjectedProperty = @Size", new { Size = "Large" }).ToList();
+                var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").AsProjection<EntityProjection>().ToList();
 
                 entities.Count.ShouldBe(1);
                 entities[0].ProjectedProperty.ShouldBe("Large");
@@ -574,7 +575,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Query<Entity, EntityProjection>("ProjectedProperty = @Size", new { Size = "Large" }).Single();
+                var entity = session.Query<Entity>().AsProjection<EntityProjection>().Single(x => x.ProjectedProperty == "Large");
                 entity.ProjectedProperty = "Small";
                 session.SaveChanges();
                 session.Advanced.Clear();

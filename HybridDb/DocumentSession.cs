@@ -43,24 +43,6 @@ namespace HybridDb
             return ConvertToEntityAndPutUnderManagement<T>(table.Table, row);
         }
 
-        public IEnumerable<T> Query<T>(string where, object parameters) where T : class
-        {
-            var table = store.Configuration.GetDesignFor<T>();
-            QueryStats stats;
-            var rows = store.Query(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
-
-            return rows.Select(row => ConvertToEntityAndPutUnderManagement<T>(table.Table, row))
-                       .Where(entity => entity != null);
-        }
-
-        public IEnumerable<TProjection> Query<T, TProjection>(string where, object parameters) where T : class
-        {
-            var table = store.Configuration.GetDesignFor<T>();
-            QueryStats stats;
-            var rows = store.Query<TProjection>(table.Table, out stats, where: @where, skip: 0, take: 0, orderby: "", parameters: parameters);
-            return rows;
-        }
-
         public IQueryable<T> Query<T>() where T : class
         {
             return new Query<T>(new QueryProvider<T>(this));
