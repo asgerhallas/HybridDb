@@ -20,7 +20,7 @@ namespace HybridDb.Migration
             var currentVersion = AssertCorrectVersion(documentMigration, table, projections);
 
             var serializer = documentMigration.Serializer;
-            var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], typeof (JObject));
+            var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], documentMigration.Type);
             documentMigration.MigrationOnRead(document, projections);
             projections[table.VersionColumn.Name] = currentVersion + 1;
             projections[table.DocumentColumn.Name] = serializer.Serialize(document);
