@@ -87,7 +87,7 @@
 	</Target>
 	
 	
-	<Target Name="DeployRelease" DependsOnTargets="Build">
+	<Target Name="DeployRelease" DependsOnTargets="Build;Test">
 		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.release.nuspec" />
 		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.release.nuspec" Query="//version" Value="%(AssemblyIdentity.Version)" />
 		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.release.nuspec -OutputDirectory $(OutputFolder)"/>

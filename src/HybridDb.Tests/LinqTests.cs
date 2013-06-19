@@ -367,14 +367,14 @@ namespace HybridDb.Tests
             translation.Select.ShouldBe("Field AS StringProp");
         }
 
-        [Fact]
+        [Fact(Skip="Feature tbd")]
         public void CanQueryWithTwoSelects()
         {
             var translation = session.Query<Entity>().Select(x => new {x.Field}).Select(x => x.Field).Translate();
             translation.Select.ShouldBe("Field AS Field");
         }
 
-        [Fact]
+        [Fact(Skip = "Feature tbd")]
         public void CanQueryWithTwoSelects2()
         {
             var translation = session.Query<Entity>().Select(x => new { Something = x.Column<string>("Field") }).Select(x => x.Something).Translate();
