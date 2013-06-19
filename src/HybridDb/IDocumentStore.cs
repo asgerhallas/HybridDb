@@ -5,11 +5,6 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
-    public interface IHybridDbExtension
-    {
-        void OnRead(Table table, IDictionary<string, object> projections);
-    }
-
     public interface IDocumentStore : IDisposable
     {
         Action<Table, IDictionary<string, object>> OnRead { get; set; }

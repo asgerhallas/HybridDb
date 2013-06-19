@@ -63,7 +63,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\GlobalAssemblyInfo.cs">
+      <Link>Properties\GlobalAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
+    <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="IMigration.cs" />
     <Compile Include="Migration\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />

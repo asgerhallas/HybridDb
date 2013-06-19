@@ -79,6 +79,7 @@ namespace HybridDb.MigrationRunner
                         return false;
                     }
 
+                    UpdateConsole(migration, "Committing schema migration");
                     schemaMigrator.Commit();
                 }
 

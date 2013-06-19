@@ -1,0 +1,108 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<UsingTask TaskName="Microsoft.Build.Tasks.XmlPoke" AssemblyName="Microsoft.Build.Tasks.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
+
+	<UsingTask TaskName="Now" TaskFactory="CodeTaskFactory"  AssemblyName="Microsoft.Build.Tasks.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+		<ParameterGroup>
+			<Timestamp ParameterType="System.String" Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System"/>
+			<Code Type="Fragment" Language="cs">
+			<![CDATA[
+				Timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+			]]>
+			</Code>
+		</Task>
+	</UsingTask>
+	
+	<UsingTask AssemblyFile="tools\xunit\xunit.runner.msbuild.dll" TaskName="Xunit.Runner.MSBuild.xunit"/>
+	
+	<PropertyGroup>
+		<OutputFolder>build</OutputFolder>
+		<TempFolder>$(OutputFolder)\temp</TempFolder>
+		<ToolsFolder>tools</ToolsFolder>
+		<IlMerge>$(ToolsFolder)\IlMerge.exe</IlMerge>
+		<Nuget>$(ToolsFolder)\Nuget.exe</Nuget>
+		
+		<SrcFolder>src</SrcFolder>
+		<BinFolder>bin\Release</BinFolder>
+		<MSBuildCommunityTasksLib>tools\</MSBuildCommunityTasksLib>
+	</PropertyGroup>
+
+	<Target Name="Build" DependsOnTargets="HybridDb;Studio;MigrationRunner" />
+	
+	<Target Name="Prepare">
+		<RemoveDir Directories="$(OutputFolder)" ContinueOnError="true"/>
+		<MakeDir Directories="$(OutputFolder)" ContinueOnError="true"/>
+		<MakeDir Directories="$(OutputFolder)\lib" ContinueOnError="false"/>
+		<MakeDir Directories="$(OutputFolder)\tools" ContinueOnError="false"/>
+	</Target>
+
+	<Target Name="HybridDb" DependsOnTargets="Prepare">
+		<MSBuild Projects="$(SrcFolder)\HybridDb\HybridDb.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
+
+		<ItemGroup>
+			<HybridDbFiles Include="HybridDb.dll" />
+			<HybridDbFiles Include="Dapper.dll" />
+			<HybridDbFiles Include="Newtonsoft.Json.dll" />
+			<HybridDbFiles Include="Inflector.dll" />
+		</ItemGroup>
+		
+	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(OutputFolder)\lib\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
+
+		<GetAssemblyIdentity AssemblyFiles="$(OutputFolder)\lib\HybridDb.dll">
+			<Output TaskParameter="Assemblies" ItemName="AssemblyIdentity"/>
+		</GetAssemblyIdentity>
+	</Target>
+
+	<Target Name="Studio" DependsOnTargets="Prepare">
+		<MSBuild Projects="$(SrcFolder)\HybridDb.Studio\HybridDb.Studio.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
+
+		<ItemGroup>
+			<StudioFiles Include="HybridDb.Studio.exe" />
+			<StudioFiles Include="HybridDb.Studio.pdb" />
+			<StudioFiles Include="HybridDb.Studio.exe.config" />
+		</ItemGroup>
+		
+		<Copy SourceFiles="@(StudioFiles -> '$(SrcFolder)\HybridDb.Studio\$(BinFolder)\%(Identity)')" DestinationFolder="$(OutputFolder)\tools" />		
+	</Target>
+
+	<Target Name="MigrationRunner" DependsOnTargets="Prepare;HybridDb">
+		<MSBuild Projects="$(SrcFolder)\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
+
+	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:winexe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe $(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe $(OutputFolder)\lib\HybridDb.dll"/>
+		
+		<ItemGroup>
+			<MigrationRunnerFiles Include="HybridDb.MigrationRunner.exe.config" />
+		</ItemGroup>
+		
+		<Copy SourceFiles="$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />
+	</Target>
+	
+	<Target Name="Test">
+		<MSBuild Projects="$(SrcFolder)\HybridDb.Tests\HybridDb.Tests.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
+
+		<!--<Copy SourceFiles="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />-->
+		<xunit Assembly="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.Tests.dll" />
+	</Target>
+	
+	
+	<Target Name="DeployRelease" DependsOnTargets="Build">
+		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.release.nuspec" />
+		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.release.nuspec" Query="//version" Value="%(AssemblyIdentity.Version)" />
+		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.release.nuspec -OutputDirectory $(OutputFolder)"/>
+		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.%(AssemblyIdentity.Version).nupkg"/>
+	</Target>
+
+	<Target Name="DeployPreRelease" DependsOnTargets="Build">
+		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.prerelease.nuspec" />
+
+		<Now><Output TaskParameter="Timestamp" PropertyName="Timestamp" /></Now>
+	
+		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.prerelease.nuspec" Query="//version" Value="%(AssemblyIdentity.Version)-pre$(Timestamp)" />
+
+		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.prerelease.nuspec -OutputDirectory $(OutputFolder)"/>
+		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.%(AssemblyIdentity.Version)-pre$(Timestamp).nupkg"/>
+	</Target>	
+	
+</Project>

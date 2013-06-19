@@ -39,7 +39,7 @@
     <StartupObject>HybridDb.Studio.Program</StartupObject>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Media\hybriddb.ico</ApplicationIcon>
+    <ApplicationIcon>hybriddb.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Caliburn.Micro">
@@ -70,6 +70,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="..\GlobalAssemblyInfo.cs">
+      <Link>Properties\GlobalAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -139,14 +142,13 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Media\hybriddb.ico" />
-    <Resource Include="Media\hybriddb.png" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj">
       <Project>{97e49da1-c846-4900-ba32-e17c0163a331}</Project>
       <Name>HybridDb</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="hybriddb.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

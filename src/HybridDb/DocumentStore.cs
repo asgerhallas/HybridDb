@@ -341,15 +341,18 @@ namespace HybridDb
             var normalizedParameters = new FastDynamicParameters(
                 parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
 
+            IEnumerable<T> rows;
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
                 stats = reader.Read<QueryStats>(buffered: true).Single();
-                var rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
+                rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                return rows;
             }
+            rows.ToList();
+
+            return rows;
         }
 
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)
