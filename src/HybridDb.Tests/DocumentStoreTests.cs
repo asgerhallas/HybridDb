@@ -696,6 +696,41 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanOrderByIdAndSelectOtherField()
+        {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 5; i > 0; i--)
+                store.Insert(table.Table, new Guid("00000000-0000-0000-0000-00000000000" + i), new { Field = i });
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id").ToList();
+
+            var props = result.Select(x => x[table.Table["Field"]]).ToList();
+            props[0].ShouldBe("1");
+            props[1].ShouldBe("2");
+            props[2].ShouldBe("3");
+            props[3].ShouldBe("4");
+            props[4].ShouldBe("5");
+        }
+
+        [Fact]
+        public void CanOrderByIdAndSelectOtherFieldWindowed()
+        {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 5; i > 0; i--)
+                store.Insert(table.Table, new Guid("00000000-0000-0000-0000-00000000000" + i), new { Field = i });
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id", skip: 1, take:1).Single();
+
+            result[table.Table["Field"]].ShouldBe("2");
+        }
+
+        [Fact]
         public void CanOrderByDescWhileSkippingAndTaking()
         {
             store.Document<Entity>().Project(x => x.Field).MigrateSchema();

@@ -70,7 +70,7 @@
 	<Target Name="MigrationRunner" DependsOnTargets="Prepare;HybridDb">
 		<MSBuild Projects="$(SrcFolder)\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
 
-	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:winexe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe $(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe $(OutputFolder)\lib\HybridDb.dll"/>
+	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:exe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe $(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe $(OutputFolder)\lib\HybridDb.dll"/>
 		
 		<ItemGroup>
 			<MigrationRunnerFiles Include="HybridDb.MigrationRunner.exe.config" />

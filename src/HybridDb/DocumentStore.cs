@@ -247,24 +247,24 @@ namespace HybridDb
 
                 if (isWindowed)
                 {
-                    sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
+                    sql.Append(@"with temp as (select *")
                        .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
                        .Append("from {0}", FormatTableNameAndEscape(table.Name))
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                        .Append(")")
-                       .Append("select * from temp")
+                       .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
                        .Append("where RowNumber >= {0}", skip + 1)
                        .Append(take > 0, "and RowNumber <= {0}", skip + take)
                        .Append("order by RowNumber");
                 }
                 else
                 {
-                    sql.Append(@"with temp as (select {0}", select.IsNullOrEmpty() ? "*" : select)
+                    sql.Append(@"with temp as (select *")
                        .Append(", 0 as RowNumber")
                        .Append("from {0}", FormatTableNameAndEscape(table.Name))
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                        .Append(")")
-                       .Append("select * from temp")
+                       .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
                        .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
                 }
                 

@@ -168,7 +168,6 @@ namespace HybridDb.Studio.ViewModels
 
         void FindDocument(DocumentTable table, Guid documentId)
         {
-            QueryStats stats;
             IDictionary<Column, object> projections;
             try
             {
