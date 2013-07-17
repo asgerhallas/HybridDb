@@ -467,7 +467,6 @@ namespace HybridDb
 
                 numberOfManagedConnections++;
 
-
                 return new ManagedConnection(connection, complete, dispose);
             }
             catch (Exception)
