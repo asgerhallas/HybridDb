@@ -90,25 +90,24 @@ namespace HybridDb.MigrationRunner
 
         void MigrateDocuments(Migration.Migration migration)
         {
-            foreach (var documentMigration in migration.DocumentMigrations)
+            foreach (var documentMigrations in migration.DocumentMigrations.OrderBy(x => x.Version).GroupBy(x => x.Tablename))
             {
                 var migrator = new DocumentMigrator();
 
-                if (documentMigration.Tablename == null)
+                if (documentMigrations.Key == null)
                     throw new ArgumentException("Document migration must have a tablename");
 
-                if (documentMigration.Version == 0)
-                    throw new ArgumentException("Document migration must have a version number larger than 0");
-
-                store.RegisterExtension(migration);
-
-                var table = new DocumentTable(documentMigration.Tablename);
+                var table = new DocumentTable(documentMigrations.Key);
                 while (true)
                 {
                     PauseOnSpacebar();
 
                     QueryStats stats;
-                    var @where = String.Format("Version < {0}", documentMigration.Version);
+
+                    if (documentMigrations.First().Version == 0)
+                        throw new ArgumentException("Document migration must have a version number larger than 0");
+                    
+                    var @where = String.Format("Version < {0}", documentMigrations.First().Version);
 
                     UpdateConsole(migration, null);
 
@@ -119,10 +118,15 @@ namespace HybridDb.MigrationRunner
                     if (stats.TotalResults == 0)
                         break;
 
-                    foreach (var row in rows.Select(x => x.ToDictionary()))
+                    foreach (var row in rows.Select(x => x.ToDictionary(col => col.Key.Name, col => col.Value)))
                     {
-                        var id = (Guid) row[table.IdColumn];
-                        var etag = (Guid) row[table.EtagColumn];
+                        var id = (Guid) row[table.IdColumn.Name];
+                        var etag = (Guid) row[table.EtagColumn.Name];
+
+                        foreach (var documentMigration in documentMigrations)
+                        {
+                            migrator.OnRead(documentMigration, table, row);
+                        }
 
                         try
                         {

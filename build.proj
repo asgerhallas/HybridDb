@@ -70,11 +70,13 @@
 	<Target Name="MigrationRunner" DependsOnTargets="Prepare;HybridDb">
 		<MSBuild Projects="$(SrcFolder)\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
 
-	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:exe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe $(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe $(OutputFolder)\lib\HybridDb.dll"/>
-		
 		<ItemGroup>
-			<MigrationRunnerFiles Include="HybridDb.MigrationRunner.exe.config" />
+			<MigrationRunnerFiles Include="HybridDb.MigrationRunner.exe" />
+			<MigrationRunnerFiles Include="Serilog.dll" />
+			<MigrationRunnerFiles Include="Serilog.FullNetFx.dll" />
 		</ItemGroup>
+		
+	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:exe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe @(MigrationRunnerFiles -> '$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\%(Identity)', ' ')  $(OutputFolder)\lib\HybridDb.dll"/>
 		
 		<Copy SourceFiles="$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />
 	</Target>

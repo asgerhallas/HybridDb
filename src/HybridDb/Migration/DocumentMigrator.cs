@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using HybridDb.Schema;
-using Newtonsoft.Json.Linq;
 using System.Linq;
+using HybridDb.Schema;
 
 namespace HybridDb.Migration
 {
@@ -10,10 +9,14 @@ namespace HybridDb.Migration
     {
         public void OnRead(Migration migration, DocumentTable table, IDictionary<string, object> projections)
         {
-            var documentMigration = migration.DocumentMigrations.SingleOrDefault(x => x.Tablename == table.Name);
-            if (documentMigration == null)
-                return;
+            foreach (var documentMigration in migration.DocumentMigrations.Where(x => x.Tablename == table.Name))
+            {
+                OnRead(documentMigration, table, projections);
+            }
+        }
 
+        public void OnRead(Migration.DocumentMigrationDefinition documentMigration, DocumentTable table, IDictionary<string, object> projections)
+        {
             if (documentMigration.MigrationOnRead == null)
                 return;
 
@@ -26,10 +29,10 @@ namespace HybridDb.Migration
             projections[table.DocumentColumn.Name] = serializer.Serialize(document);
         }
 
-        static int AssertCorrectVersion(Migration.DocumentMigrationDefinition documentMigration, DocumentTable table, IDictionary<string, object> projections)
+        private static int AssertCorrectVersion(Migration.DocumentMigrationDefinition documentMigration, DocumentTable table, IDictionary<string, object> projections)
         {
-            var id = (Guid)projections[table.IdColumn.Name];
-            var version = (int)projections[table.VersionColumn.Name];
+            var id = (Guid) projections[table.IdColumn.Name];
+            var version = (int) projections[table.VersionColumn.Name];
             var expectedVersion = documentMigration.Version - 1;
 
             if (version != expectedVersion)
