@@ -90,8 +90,7 @@ namespace HybridDb.MigrationRunner
 
         void MigrateDocuments(Migration.Migration migration)
         {
-            var documentMigration = migration.DocumentMigrations.FirstOrDefault();
-            if (documentMigration != null)
+            foreach (var documentMigration in migration.DocumentMigrations)
             {
                 var migrator = new DocumentMigrator();
 
