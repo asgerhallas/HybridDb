@@ -279,6 +279,18 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void LoadingAManagedDocumentWithWrongTypeReturnsNothing()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                var otherEntity = session.Load<OtherEntity>(id);
+                otherEntity.ShouldBe(null);
+            }
+        }
+
+        [Fact]
         public void CanClearSession()
         {
             var id = Guid.NewGuid();
@@ -680,6 +692,11 @@ namespace HybridDb.Tests
         {
             public string ProjectedProperty { get; set; }
             public string TheChildNestedProperty { get; set; }
+        }
+
+        public class OtherEntity
+        {
+            public Guid Id { get; set; }
         }
     }
 }

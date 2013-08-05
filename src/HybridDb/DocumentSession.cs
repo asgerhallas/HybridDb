@@ -31,7 +31,7 @@ namespace HybridDb
             if (entities.TryGetValue(id, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? (T) managedEntity.Entity
+                           ? managedEntity.Entity as T
                            : null;
             }
 
