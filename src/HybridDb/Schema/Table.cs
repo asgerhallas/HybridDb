@@ -61,7 +61,16 @@ namespace HybridDb.Schema
 
         public void Register(Column column)
         {
-            columns.Add(column.Name, column);
+            Column existingColumn;
+            if (columns.TryGetValue(column.Name, out existingColumn))
+            {
+                if (!Equals(existingColumn.SqlColumn, column.SqlColumn))
+                    throw new ColumnAlreadRegisteredException(this, column);
+            }
+            else
+            {
+                columns.Add(column.Name, column);
+            }
         }
     }
 }

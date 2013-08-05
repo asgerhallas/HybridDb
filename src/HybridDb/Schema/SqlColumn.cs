@@ -77,10 +77,41 @@ namespace HybridDb.Schema
         {
         }
 
-        public DbType? Type { get; set; }
-        public int? Length { get; set; }
+        public DbType? Type { get; internal set; }
+        public int? Length { get; private set; }
         public bool Nullable { get; set; }
-        public object DefaultValue { get; set; }
-        public bool IsPrimaryKey { get; set; }
+        public object DefaultValue { get; private set; }
+        public bool IsPrimaryKey { get; private set; }
+
+        protected bool Equals(SqlColumn other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Type == other.Type &&
+                Length == other.Length &&
+                Nullable.Equals(other.Nullable) &&
+                Equals(DefaultValue, other.DefaultValue) &&
+                IsPrimaryKey.Equals(other.IsPrimaryKey);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as SqlColumn);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Type.GetHashCode();
+                hashCode = (hashCode * 397) ^ Length.GetHashCode();
+                hashCode = (hashCode * 397) ^ Nullable.GetHashCode();
+                hashCode = (hashCode * 397) ^ (DefaultValue != null ? DefaultValue.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ IsPrimaryKey.GetHashCode();
+                return hashCode;
+            }
+        }
+
     }
 }

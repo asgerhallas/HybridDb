@@ -40,7 +40,11 @@ namespace HybridDb.Schema
         public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
             var name = configuration.GetColumnNameByConventionFor(projector);
+            return Project(name, projector, makeNullSafe);
+        }
 
+        public DocumentDesign<TEntity> Project<TMember>(string name, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        {
             if (makeNullSafe)
             {
                 var nullCheckInjector = new NullCheckInjector();

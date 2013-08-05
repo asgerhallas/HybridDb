@@ -17,4 +17,10 @@ namespace HybridDb
             : base(string.Format("No table was registered for type {0}. " +
                                  "Please run store.ForDocument<{0}>() to register it before use.", type.Name)) {}
     }
+
+    public class ColumnAlreadRegisteredException : HybridDbException
+    {
+        public ColumnAlreadRegisteredException(Table table, Column column)
+            : base(string.Format("The table {0} already has a column named {1} and is not of the same type.", table.Name, column.Name)) {}
+    }
 }

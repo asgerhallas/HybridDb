@@ -584,6 +584,65 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void DerivedEntityIsSavedToBaseTableWithDiscriminator()
+        {
+            store.Document<AbstractEntity>().Project(x => x.Number);
+            store.Document<DerivedEntity>();
+            store.Document<MoreDerivedEntity1>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new DerivedEntity { Id = id, Number = 1 });
+                session.Store(new MoreDerivedEntity1 { Id = id, Number = 2});
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = store.RawQuery<string>("select Discriminator from #AbstractEntities order by Number").ToList();
+                entities[0].ShouldBe("DerivedEntity");
+                entities[1].ShouldBe("MoreDerivedEntity1");
+            }
+        }
+
+        [Fact]
+        public void CanLoadByBaseType()
+        {
+            store.Document<AbstractEntity>().MigrateSchema();
+            store.Document<DerivedEntity>().MigrateSchema();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new DerivedEntity { Id = id });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Load<AbstractEntity>(id);
+                entity.ShouldNotBeTypeOf<DerivedEntity>();
+            }
+        }
+
+        [Fact]
+        public void CanQueryByBaseType()
+        {
+            store.Document<AbstractEntity>().Project(x => x.Property).MigrateSchema();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new DerivedEntity { Id = id, Property = "Asger "});
+                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger"});
+                session.Store(new MoreDerivedEntity2 { Id = id, Property = "Lars"});
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").ToList();
+                entities.Count().ShouldBe(2);
+            }
+        }
+
         public class Entity
         {
             public Entity()
@@ -605,6 +664,17 @@ namespace HybridDb.Tests
                 public string NestedProperty { get; set; }
             }
         }
+
+        public abstract class AbstractEntity
+        {
+            public Guid Id { get; set; }
+            public string Property { get; set; }
+            public int Number { get; set; }
+        }
+
+        public class DerivedEntity : AbstractEntity { }
+        public class MoreDerivedEntity1 : DerivedEntity { }
+        public class MoreDerivedEntity2 : DerivedEntity { }
 
         public class EntityProjection
         {

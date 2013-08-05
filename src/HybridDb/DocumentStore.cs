@@ -112,10 +112,29 @@ namespace HybridDb
 
         public DocumentDesign<TEntity> Document<TEntity>(string name)
         {
-            var table = new DocumentTable(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
-            var relation = new DocumentDesign<TEntity>(this, Configuration, table);
-            configuration.Add(relation);
-            return relation;
+            var existingDesign = configuration.DocumentDesigns
+                .Select(x => new { x.Key, x.Value })
+                .FirstOrDefault(x => typeof (TEntity).IsA(x.Key));
+
+            DocumentDesign<TEntity> design;
+            if (existingDesign != null)
+            {
+                var table = existingDesign.Value.Table;
+                design = new DocumentDesign<TEntity>(this, Configuration, table);
+
+                foreach (var projection in existingDesign.Value.Projections)
+                    design.Projections.Add(projection.Key, projection.Value);
+
+                design.Project("Discriminator", x => x.GetType().Name);
+            }
+            else
+            {
+                var table = new DocumentTable(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
+                design = new DocumentDesign<TEntity>(this, Configuration, table);
+            }
+
+            configuration.Add(design);
+            return design;
         }
 
         public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
