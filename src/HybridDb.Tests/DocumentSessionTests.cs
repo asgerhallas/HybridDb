@@ -632,7 +632,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Load<AbstractEntity>(id);
-                entity.ShouldNotBeTypeOf<DerivedEntity>();
+                entity.ShouldBeTypeOf<DerivedEntity>();
             }
         }
 
