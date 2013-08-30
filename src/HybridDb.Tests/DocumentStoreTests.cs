@@ -866,6 +866,15 @@ namespace HybridDb.Tests
             ((IDictionary<string, object>)result2).ContainsKey("TotalResults").ShouldBe(false);
         }
 
+
+        [Fact]
+        public void CanQueryWithConcatenation()
+        {
+            store.Document<Entity>().Project(x => x.Property).MigrateSchema();
+            store.Document<OtherEntityWithSomeSimilarities>().Project(x => x.Property).MigrateSchema();
+
+        }
+
         public class Case
         {
             public Guid Id { get; private set; }
@@ -906,6 +915,13 @@ namespace HybridDb.Tests
                     return A + B;
                 }
             }
+        }
+
+        public class OtherEntityWithSomeSimilarities
+        {
+            public Guid Id { get; set; }
+            public int Property { get; set; }
+            public string StringProp { get; set; }
         }
 
         public class ProjectionWithNestedProperty

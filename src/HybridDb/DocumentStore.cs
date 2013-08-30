@@ -33,7 +33,7 @@ namespace HybridDb
             this.tableMode = tableMode;
             this.connectionString = connectionString;
 
-            configuration = new Configuration();
+            configuration = new Configuration(this);
 
             OnMessage = message => { };
             OnRead = (table, projections) => { };
@@ -64,6 +64,11 @@ namespace HybridDb
         public Configuration Configuration
         {
             get { return configuration; }
+        }
+
+        public DocumentDesign<TEntity> Document<TEntity>()
+        {
+            return configuration.Document<TEntity>(null);
         }
 
         public void Migrate(Action<ISchemaMigrator> migration)
@@ -105,37 +110,6 @@ namespace HybridDb
             OnRead += hybridDbExtension.OnRead;
         }
 
-        public DocumentDesign<TEntity> Document<TEntity>()
-        {
-            return Document<TEntity>(null);
-        }
-
-        public DocumentDesign<TEntity> Document<TEntity>(string name)
-        {
-            var existingDesign = configuration.DocumentDesigns
-                .Select(x => new { x.Key, x.Value })
-                .FirstOrDefault(x => typeof (TEntity).IsA(x.Key));
-
-            DocumentDesign<TEntity> design;
-            if (existingDesign != null)
-            {
-                var table = existingDesign.Value.Table;
-                design = new DocumentDesign<TEntity>(this, Configuration, table);
-
-                foreach (var projection in existingDesign.Value.Projections)
-                    design.Projections.Add(projection.Key, projection.Value);
-
-                design.Project("Discriminator", x => x.GetType().Name);
-            }
-            else
-            {
-                var table = new DocumentTable(name ?? Configuration.GetTableNameByConventionFor<TEntity>());
-                design = new DocumentDesign<TEntity>(this, Configuration, table);
-            }
-
-            configuration.Add(design);
-            return design;
-        }
 
         public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
         {
@@ -389,7 +363,40 @@ namespace HybridDb
                                         FormatTableNameAndEscape(table.Name),
                                         table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
+                var row = ((IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault());
+
+                Interlocked.Increment(ref numberOfRequests);
+
+                Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
+
+                connection.Complete();
+
+                if (row == null)
+                    return null;
+
+                OnRead(table, row);
+
+                return row.ToDictionary(x => table.GetColumnOrDefaultColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
+            }
+        }
+
+        public IDictionary<Column, object> GetByIndex(Table table, Guid key)
+        {
+            var timer = Stopwatch.StartNew();
+            using (var connection = Connect())
+            {
+                var sql = new SqlBuilder();
+                sql.Append("declare @i nvarchar(255) = select Discriminator from {0} where {1} = @;",
+                            FormatTableNameAndEscape(table.Name),
+                            table.IdColumn.Name);
+
+                sql.Append("select * from @i where {0} = @Id", table.IdColumn.Name);
+
+                //var sql = string.Format("select * from {0} where "select * from {0} where {1} = @Id",
+                //                        FormatTableNameAndEscape(table.Name),
+                //                        table.IdColumn.Name);
+
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql.ToDynamicSql(), new {Id = key}).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 

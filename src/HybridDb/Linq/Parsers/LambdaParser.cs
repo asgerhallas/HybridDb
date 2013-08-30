@@ -99,7 +99,7 @@ namespace HybridDb.Linq.Parsers
                     break;
                 default:
                     ast.Pop();
-                    var name = new Configuration().GetColumnNameByConventionFor(expression);
+                    var name = Configuration.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
                     break;
             }
@@ -140,7 +140,7 @@ namespace HybridDb.Linq.Parsers
                     break;
                 case SqlNodeType.Column:
                     ast.Pop();
-                    var name = new Configuration().GetColumnNameByConventionFor(expression);
+                    var name = Configuration.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
                     break;
                 default:

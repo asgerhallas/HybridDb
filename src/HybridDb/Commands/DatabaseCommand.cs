@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using Dapper;
 using HybridDb.Schema;
 
 namespace HybridDb.Commands
@@ -13,9 +12,11 @@ namespace HybridDb.Commands
 
         protected static IDictionary<Column, object> ConvertAnonymousToProjections(Table table, object projections)
         {
-            return (projections as IDictionary<Column, object> ??
-                    (projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections))
-                        .ToDictionary(x => table.GetColumnOrDefaultColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value));
+            return projections as IDictionary<Column, object> ??
+                   (from projection in projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections)
+                    let column = table[projection.Key]
+                    where column != null
+                    select new KeyValuePair<Column, object>(column, projection.Value)).ToDictionary();
         }
 
         protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)

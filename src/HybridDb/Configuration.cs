@@ -10,8 +10,10 @@ namespace HybridDb
 {
     public class Configuration
     {
-        public Configuration()
+        public Configuration(IDocumentStore store)
         {
+            Store = store;
+            
             Tables = new List<Table>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
             Serializer = new DefaultBsonSerializer();
@@ -25,21 +27,33 @@ namespace HybridDb
             Add(metadata);
         }
 
+        public IDocumentStore Store { get; set; }
+        
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
         public List<Table> Tables { get; private set; }
         public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
 
+        public static string GetColumnNameByConventionFor(Expression projector)
+        {
+            var columnNameBuilder = new ColumnNameBuilder();
+            columnNameBuilder.Visit(projector);
+            return columnNameBuilder.ColumnName;
+        }
+
+        public DocumentDesign<TEntity> Document<TEntity>(string name)
+        {
+            var table = new DocumentTable(name ?? GetTableNameByConventionFor<TEntity>());
+            var design = new DocumentDesign<TEntity>(this, table);
+            Add(design.Table);
+            DocumentDesigns.TryAdd(design.Type, design);
+            return design;
+        }
+
         public void Add(Table table)
         {
             Tables.Add(table);
-        }
-
-        public void Add(DocumentDesign design)
-        {
-            Add(design.Table);
-            DocumentDesigns.TryAdd(design.Type, design);
         }
 
         public DocumentDesign<T> GetDesignFor<T>()
@@ -59,13 +73,6 @@ namespace HybridDb
         public string GetTableNameByConventionFor<TEntity>()
         {
             return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
-        }
-
-        public string GetColumnNameByConventionFor(Expression projector)
-        {
-            var columnNameBuilder = new ColumnNameBuilder();
-            columnNameBuilder.Visit(projector);
-            return columnNameBuilder.ColumnName;
         }
 
         public void UseSerializer(ISerializer serializer)

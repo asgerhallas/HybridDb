@@ -110,8 +110,7 @@ namespace HybridDb
             sql = parameters
                 .OrderByDescending(x => x.Name.Length)
                 .Select(parameter => "@" + parameter.Name)
-                .Aggregate(sql, (current, sqlName) =>
-                                current.Replace(sqlName, "' + quotename(" + sqlName + ", '''') + '"));
+                .Aggregate(sql, (current, sqlName) => current.Replace(sqlName, "' + quotename(" + sqlName + ", '''') + '"));
 
             return sql;
         }

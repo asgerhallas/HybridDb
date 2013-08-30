@@ -19,13 +19,13 @@ namespace HybridDb.Tests
         {
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
-            store.Document<Entity>()
-                .Project(x => x.ProjectedProperty)
-                .Project(x => x.TheChild.NestedProperty)
-                .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
-                .Project(x => x.Children.SelectMany(y => y.NestedProperty));
-            store.Configuration.UseSerializer(new DefaultJsonSerializer()); 
-            store.MigrateSchemaToMatchConfiguration();
+            store.Configuration.UseSerializer(new DefaultJsonSerializer());
+            //store.Document<Entity>()
+            //    .Project(x => x.ProjectedProperty)
+            //    .Project(x => x.TheChild.NestedProperty)
+            //    .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
+            //    .Project(x => x.Children.SelectMany(y => y.NestedProperty));
+            //store.MigrateSchemaToMatchConfiguration();
         }
 
         public void Dispose()
@@ -56,6 +56,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanEvictEntity()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -70,6 +72,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanGetEtagForEntity()
         {
+            store.Document<Entity>().MigrateSchema();
+
             using (var session = store.OpenSession())
             {
                 var entity1 = new Entity { Id = Guid.NewGuid(), Property = "Asger" };
@@ -87,6 +91,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanDeferCommands()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
@@ -110,12 +116,11 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreDocument()
         {
+            store.Document<Entity>().MigrateSchema();
+
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity
-                {
-                    Property = "Asger"
-                });
+                session.Store(new Entity());
                 session.SaveChanges();
             }
 
@@ -128,11 +133,12 @@ namespace HybridDb.Tests
         [Fact]
         public void AccessToNestedPropertyCanBeNullSafe()
         {
+            store.Document<Entity>().Project(x => x.TheChild.NestedProperty).MigrateSchema();
+
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity
                 {
-                    Property = "Asger",
                     TheChild = null
                 });
                 session.SaveChanges();
@@ -145,12 +151,13 @@ namespace HybridDb.Tests
         [Fact]
         public void AccessToNestedPropertyThrowsIfNotMadeNullSafe()
         {
+            store.Document<Entity>().Project(x => x.TheChild.NestedProperty, makeNullSafe: false).MigrateSchema();
+
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity
                 {
-                    Property = "Asger",
-                    TheSecondChild = null
+                    TheChild = null
                 });
                 Should.Throw<TargetInvocationException>(() => session.SaveChanges());
             }
@@ -159,16 +166,24 @@ namespace HybridDb.Tests
         [Fact]
         public void StoresIdRetrievedFromObject()
         {
+            store.Document<Entity>().MigrateSchema();
+
+            var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity());
+                session.Store(new Entity { Id = id });
                 session.SaveChanges();
             }
+
+            var retrivedId = store.RawQuery<Guid>("select Id from #Entities").SingleOrDefault();
+            retrivedId.ShouldBe(id);
         }
 
         [Fact]
         public void StoringDocumentWithSameIdTwiceIsIgnored()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -183,6 +198,8 @@ namespace HybridDb.Tests
         [Fact]
         public void SessionWillNotSaveWhenSaveChangesIsNotCalled()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -198,6 +215,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSaveChangesWithPessimisticConcurrency()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session1 = store.OpenSession())
             using (var session2 = store.OpenSession())
@@ -221,6 +240,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanDeleteDocument()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -240,6 +261,8 @@ namespace HybridDb.Tests
         [Fact]
         public void DeletingATransientEntityRemovesItFromSession()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -253,6 +276,8 @@ namespace HybridDb.Tests
         [Fact]
         public void DeletingAnEntityNotLoadedInSessionIsIgnored()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -265,6 +290,8 @@ namespace HybridDb.Tests
         [Fact]
         public void LoadingADocumentMarkedForDeletionReturnNothing()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -281,6 +308,8 @@ namespace HybridDb.Tests
         [Fact]
         public void LoadingAManagedDocumentWithWrongTypeReturnsNothing()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -293,6 +322,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanClearSession()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -305,6 +336,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanCheckIfEntityIsLoadedInSession()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -317,6 +350,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanLoadDocument()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -332,6 +367,8 @@ namespace HybridDb.Tests
         [Fact]
         public void LoadingSameDocumentTwiceInSameSessionReturnsSameInstance()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -348,6 +385,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanLoadATransientEntity()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -360,6 +399,8 @@ namespace HybridDb.Tests
         [Fact]
         public void LoadingANonExistingDocumentReturnsNull()
         {
+            store.Document<Entity>().MigrateSchema();
+
             using (var session = store.OpenSession())
             {
                 session.Load<Entity>(Guid.NewGuid()).ShouldBe(null);
@@ -369,6 +410,8 @@ namespace HybridDb.Tests
         [Fact]
         public void SavesChangesWhenObjectHasChanged()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -389,6 +432,8 @@ namespace HybridDb.Tests
         [Fact]
         public void DoesNotSaveChangesWhenObjectHasNotChanged()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -406,6 +451,8 @@ namespace HybridDb.Tests
         [Fact]
         public void BatchesMultipleChanges()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
@@ -433,6 +480,8 @@ namespace HybridDb.Tests
         [Fact]
         public void SavingChangesTwiceInARowDoesNothing()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             var id3 = Guid.NewGuid();
@@ -464,6 +513,8 @@ namespace HybridDb.Tests
         [Fact]
         public void IssuesConcurrencyExceptionWhenTwoSessionsChangeSameDocument()
         {
+            store.Document<Entity>().MigrateSchema();
+
             var id1 = Guid.NewGuid();
 
             using (var session1 = store.OpenSession())
@@ -486,6 +537,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryDocument()
         {
+            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -505,6 +558,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSaveChangesOnAQueriedDocument()
         {
+            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -525,6 +580,8 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryingALoadedDocumentReturnsSameInstance()
         {
+            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -542,6 +599,8 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryingALoadedDocumentMarkedForDeletionReturnsNothing()
         {
+            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -561,6 +620,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnProjection()
         {
+            store.Document<Entity>().Project(x => x.ProjectedProperty).Project(x => x.TheChild.NestedProperty).MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -580,6 +641,8 @@ namespace HybridDb.Tests
         [Fact]
         public void WillNotSaveChangesToProjectedValues()
         {
+            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
@@ -655,6 +718,65 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void SavesProjectionsToIndexByConvention()
+        {
+            store.Document<Entity>().Index<EntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Number = 1, Property = "Asger" });
+                session.SaveChanges();
+
+                var entities = store.RawQuery<dynamic>("select * from #EntityIndex").ToList();
+                entities[0].ShouldBe(id);
+            }
+        }
+
+        [Fact]
+        public void SavesDiscriminatorsToIndex()
+        {
+            store.Document<Entity>().Index<EntityIndex>();
+            store.Document<OtherEntity>().Index<EntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Number = 1 });
+                session.Store(new OtherEntity { Id = id2, Number = 2 });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = store.RawQuery<dynamic>("select Id, Discriminator from #EntityIndex order by Number").ToList();
+                Assert.Equal(id, entities[0].Id);
+                Assert.Equal("Entities", entities[0].Discriminator);
+                Assert.Equal(id2, entities[1].Id);
+                Assert.Equal("OtherEntities", entities[1].Discriminator);
+            }
+        }
+
+        [Fact]
+        public void CanLoadByIndex()
+        {
+            store.Document<Entity>().Index<EntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Load<Entity, EntityIndex>(id);
+                entity.ShouldBeTypeOf<Entity>();
+            }
+        }
+
         public class Entity
         {
             public Entity()
@@ -668,6 +790,7 @@ namespace HybridDb.Tests
             public string ProjectedProperty { get; set; }
             public List<Child> Children { get; set; }
             public string Property { get; set; }
+            public int Number { get; set; }
             public Child TheChild { get; set; }
             public Child TheSecondChild { get; set; }
             
@@ -675,6 +798,12 @@ namespace HybridDb.Tests
             {
                 public string NestedProperty { get; set; }
             }
+        }
+
+        public class OtherEntity
+        {
+            public Guid Id { get; set; }
+            public int Number { get; set; }
         }
 
         public abstract class AbstractEntity
@@ -694,9 +823,10 @@ namespace HybridDb.Tests
             public string TheChildNestedProperty { get; set; }
         }
 
-        public class OtherEntity
+        public class EntityIndex
         {
-            public Guid Id { get; set; }
+            public string Property { get; set; }
+            public int Number { get; set; }
         }
     }
 }

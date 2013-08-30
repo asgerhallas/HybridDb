@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HybridDb.Commands;
+using HybridDb.Migration;
 using HybridDb.Schema;
 
 namespace HybridDb
@@ -12,16 +13,18 @@ namespace HybridDb
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         bool IsInTestMode { get; }
+        DocumentDesign<TEntity> Document<TEntity>();
+        void Migrate(Action<ISchemaMigrator> migration);
         void MigrateSchemaToMatchConfiguration(bool safe = true);
         void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate);
         void RegisterExtension(IHybridDbExtension hybridDbExtension);
         IDocumentSession OpenSession();
-        DocumentDesign<TEntity> Document<TEntity>();
         Guid Execute(params DatabaseCommand[] commands);
         Guid Insert(Table table, Guid key, object projections);
         Guid Update(Table table, Guid key, Guid etag, object projections, bool lastWriteWins = false);
         void Delete(Table table, Guid key, Guid etag, bool lastWriteWins = false);
         IDictionary<Column, object> Get(Table table, Guid key);
+        IDictionary<Column, object> GetByIndex(Table table, Guid key);
         IEnumerable<IDictionary<Column, object>> Query(Table table, out QueryStats stats, string select = "", string where = "", int skip = 0, int take = 0, string orderby = "", object parameters = null);
         IEnumerable<TProjection> Query<TProjection>(Table table, out QueryStats stats, string select = "", string where = "", int skip = 0, int take = 0, string orderby = "", object parameters = null);
         string Escape(string name);

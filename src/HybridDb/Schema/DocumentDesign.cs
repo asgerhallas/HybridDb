@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -7,15 +8,12 @@ namespace HybridDb.Schema
 {
     public class DocumentDesign
     {
-        readonly DocumentStore store;
-        protected readonly Configuration configuration;
-
-        public DocumentDesign(DocumentStore store, Configuration configuration, DocumentTable table, Type type)
+        public DocumentDesign(Configuration configuration, DocumentTable table, Type type)
         {
-            this.store = store;
-            this.configuration = configuration;
             Table = table;
             Type = type;
+            IndexTables = new List<Table>();
+            Configuration = configuration;
             Projections = new Dictionary<Column, Func<object, object>>
             {
                 {Table.IdColumn, document => ((dynamic) document).Id},
@@ -23,65 +21,18 @@ namespace HybridDb.Schema
             };
         }
 
-        public DocumentTable Table { get; private set; }
         public Type Type { get; private set; }
+        public DocumentTable Table { get; private set; }
+        public List<Table> IndexTables { get; private set; }
         public Dictionary<Column, Func<object, object>> Projections { get; private set; }
+        public Configuration Configuration { get; private set; }
 
         public void MigrateSchema()
         {
-            store.Migrate(migrator => migrator.MigrateTo(Table));
-        }
-    }
-
-    public class DocumentDesign<TEntity> : DocumentDesign
-    {
-        public DocumentDesign(DocumentStore store, Configuration configuration, DocumentTable table) : base(store, configuration, table, typeof(TEntity)) { }
-
-        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
-        {
-            var name = configuration.GetColumnNameByConventionFor(projector);
-            return Project(name, projector, makeNullSafe);
+            Configuration.Store.Migrate(migrator => migrator.MigrateTo(Table));
         }
 
-        public DocumentDesign<TEntity> Project<TMember>(string name, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
-        {
-            if (makeNullSafe)
-            {
-                var nullCheckInjector = new NullCheckInjector();
-                var nullCheckedProjector = (Expression<Func<TEntity, object>>) nullCheckInjector.Visit(projector);
-
-                var column = new Column(name, new SqlColumn(typeof(TMember)))
-                {
-                    SqlColumn =
-                    {
-                        Nullable = !nullCheckInjector.CanBeTrustedToNeverReturnNull
-                    }
-                };
-
-                Table.Register(column);
-                Projections.Add(column, Compile(name, nullCheckedProjector));
-            }
-            else
-            {
-                var column = new Column(name, new SqlColumn(typeof(TMember)));
-                Table.Register(column);
-                Projections.Add(column, Compile(name, projector));
-            }
-
-            return this;
-        }
-
-        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, IEnumerable<TMember>>> projector, bool makeNullSafe = true)
-        {
-            return this;
-        }
-
-        public static Expression<Func<TModel, object>> InjectNullChecks<TModel, TProperty>(Expression<Func<TModel, TProperty>> expression)
-        {
-            return (Expression<Func<TModel, object>>)new NullCheckInjector().Visit(expression);
-        }
-
-        Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> projector)
+        protected Func<object, object> Compile<TEntity, TMember>(string name, Expression<Func<TEntity, TMember>> projector)
         {
             return x =>
             {
@@ -97,5 +48,86 @@ namespace HybridDb.Schema
                 }
             };
         }
+    }
+
+    public class DocumentDesign<TEntity> : DocumentDesign
+    {
+        public DocumentDesign(Configuration configuration, DocumentTable table) : base(configuration, table, typeof (TEntity)) {}
+
+        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        {
+            var name = Configuration.GetColumnNameByConventionFor(projector);
+            return Project(name, projector, makeNullSafe);
+        }
+
+        public DocumentDesign<TEntity> Project<TMember>(string name, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        {
+            if (makeNullSafe)
+            {
+                var nullCheckInjector = new NullCheckInjector();
+                var nullCheckedProjector = (Expression<Func<TEntity, object>>) nullCheckInjector.Visit(projector);
+
+                var column = new Column(name, new SqlColumn(typeof (TMember)))
+                {
+                    SqlColumn =
+                    {
+                        Nullable = !nullCheckInjector.CanBeTrustedToNeverReturnNull
+                    }
+                };
+
+                Table.Register(column);
+                Projections.Add(column, Compile(name, nullCheckedProjector));
+            }
+            else
+            {
+                var column = new Column(name, new SqlColumn(typeof (TMember)));
+                Table.Register(column);
+                Projections.Add(column, Compile(name, projector));
+            }
+
+            return this;
+        }
+
+        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, IEnumerable<TMember>>> projector, bool makeNullSafe = true)
+        {
+            return this;
+        }
+
+        public void Index<TIndex>(string name = null)
+        {
+            var table = new Table(name ?? typeof(TIndex).Name);
+
+            var discriminator = new Column("Discriminator", new SqlColumn(DbType.String, 255, false));
+            table.Register(discriminator);
+            Projections.Add(discriminator, x => Table.Name);
+
+            foreach (var property in typeof (TIndex).GetProperties())
+            {
+                var projectedProperty = Type.GetProperty(property.Name, property.PropertyType);
+                if (projectedProperty == null)
+                    continue;
+
+                var parameter = Expression.Parameter(typeof(object));
+
+                var projector =
+                    Expression.Lambda<Func<object, object>>(
+                        Expression.Convert(
+                            Expression.Property(
+                                Expression.Convert(parameter, Type),
+                                Type.GetProperty(property.Name)),
+                            typeof (object)),
+                        parameter);
+
+                var columnName = Configuration.GetColumnNameByConventionFor(projector);
+                var column = new Column(columnName, new SqlColumn(property.PropertyType));
+
+                table.Register(column);
+                Projections.Add(column, Compile(columnName, projector));
+            }
+
+            IndexTables.Add(table);
+            Configuration.Add(table);
+        }
+
     }
 }

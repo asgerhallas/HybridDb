@@ -101,7 +101,6 @@ namespace HybridDb.Migration
             sql.Append(columntype);
 
             return Execute(sql.ToDynamicSql(), sql.Parameters);
-//                string.Format("declare @sql nvarchar(4000) = 'alter table {0} add {1} ' + {2}; exec(@sql);", store.FormatTableNameAndEscape(tablename), store.Escape(columnname), columntype), parameters);
         }
 
         public ISchemaMigrator RemoveColumn(string tablename, string columnname)
