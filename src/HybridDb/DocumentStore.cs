@@ -359,9 +359,24 @@ namespace HybridDb
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
             {
-                var sql = string.Format("select * from {0} where {1} = @Id",
+                var sql = "";
+                var indexTable = table as IndexTable;
+                if (indexTable != null)
+                {
+                    sql = string.Format("declare @table varchar(255) = (select {0} from {1} where {2} = @Id);" +
+                                        "declare @sql varchar(255) = 'select * from ' + quotename(@table, '[]') + ' where {2} = ''' + cast(@Id as varchar(36)) + '''';" +
+                                        "exec(@sql);",
+                                        indexTable.TableReferenceColumn.Name,
+                                        FormatTableNameAndEscape(indexTable.Name),
+                                        indexTable.IdColumn.Name);
+                }
+                else
+                {
+                    sql = string.Format("select * from {0} where {1} = @Id",
                                         FormatTableNameAndEscape(table.Name),
                                         table.IdColumn.Name);
+                }
+
 
                 var row = ((IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault());
 

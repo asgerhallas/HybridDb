@@ -18,6 +18,7 @@ namespace HybridDb.Tests
         public DocumentStoreTests()
         {
             store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
+            //store = new DocumentStore("data source=.;Integrated Security=True;Initial Catalog=HybridDbTests");
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
         }
 
@@ -210,6 +211,24 @@ namespace HybridDb.Tests
             row[table.Table.EtagColumn].ShouldBe(etag);
             row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
             row[table.Table["Field"]].ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanGetByIndex()
+        {
+            store.Document<Entity>().Index<EntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            var design = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(design.Table, id, new { Document = documentAsByteArray });
+            
+            var indexTable = design.IndexTables.Single();
+            store.Insert(indexTable, id, new { StringProp = "Asger", TableReference = store.FormatTableName(design.Table.Name) });
+
+            var row = store.Get(indexTable, id);
+            row[design.Table.IdColumn].ShouldBe(id);
+            row[design.Table.DocumentColumn].ShouldBe(documentAsByteArray);
         }
 
         [Fact]
@@ -944,6 +963,12 @@ namespace HybridDb.Tests
             One,
             Two
         }
+
+        public class EntityIndex
+        {
+            public string StringProp { get; set; }
+        }
+
 
         public class ThrowingHybridDbExtension : IHybridDbExtension
         {

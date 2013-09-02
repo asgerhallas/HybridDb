@@ -36,6 +36,23 @@ namespace HybridDb
             }
 
             var table = store.Configuration.GetDesignFor<T>();
+
+            //var designs = store.Configuration.DocumentDesigns
+            //    .Where(x => x.Key.IsA<T>())
+            //    .Select(x => x.Value)
+            //    .ToList();
+
+            //var @groups = from design in designs
+            //              from indexTable in design.IndexTables
+            //              group indexTable by indexTable
+            //              into @group 
+            //              where @group.Count() == designs.Count
+            //              select @group;
+
+            //var index = @groups.FirstOrDefault();
+            //if (index == null)
+            //    throw new InvalidOperationException("NO");
+
             var row = store.Get(table.Table, id);
             if (row == null)
                 return null;
@@ -52,6 +69,8 @@ namespace HybridDb
                            ? managedEntity.Entity as T
                            : null;
             }
+
+//            store.Configuration.DocumentDesigns.FirstOrDefault(x => x.Value.IndexTables)
 
             var design = store.Configuration.GetDesignFor<T>();
             

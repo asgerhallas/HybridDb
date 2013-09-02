@@ -762,18 +762,18 @@ namespace HybridDb.Tests
         [Fact]
         public void CanLoadByIndex()
         {
-            store.Document<Entity>().Index<EntityIndex>();
+            store.Document<DerivedEntity>().Index<EntityIndex>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id });
+                session.Store(new DerivedEntity { Id = id });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load<Entity, EntityIndex>(id);
-                entity.ShouldBeTypeOf<Entity>();
+                var entity = session.Load<AbstractEntity>(id);
+                entity.ShouldBeTypeOf<DerivedEntity>();
             }
         }
 
