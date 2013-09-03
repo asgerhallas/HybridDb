@@ -168,7 +168,7 @@ namespace HybridDb.Studio.ViewModels
 
         void FindDocument(DocumentTable table, Guid documentId)
         {
-            IDictionary<Column, object> projections;
+            IDictionary<string, object> projections;
             try
             {
                 projections = store.Get(table, documentId);

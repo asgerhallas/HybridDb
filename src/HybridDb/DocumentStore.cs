@@ -84,7 +84,7 @@ namespace HybridDb
         {
             Migrate(migrator =>
             {
-                foreach (var table in Configuration.Tables)
+                foreach (var table in Configuration.Tables.Values)
                 {
                     migrator.MigrateTo(table, safe);
                 }
@@ -222,7 +222,7 @@ namespace HybridDb
             if (select.IsNullOrEmpty() || select == "*")
                 select = "";
 
-            var projectToDictionary = typeof (TProjection).IsA<IDictionary<Column, object>>();
+            var projectToDictionary = typeof (TProjection).IsA<IDictionary<string, object>>();
             if (!projectToDictionary)
                 select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
 
@@ -270,9 +270,7 @@ namespace HybridDb
                                  .Select(row =>
                                  {
                                      OnRead(table, row);
-                                     return row.ToDictionary(
-                                         column => table.GetColumnOrDefaultColumn(column.Key, column.Value.GetTypeOrDefault()),
-                                         column => column.Value);
+                                     return row;
                                  });
                 }
                 else
@@ -304,10 +302,10 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<IDictionary<Column, object>> Query(Table table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<IDictionary<string, object>> Query(Table table, out QueryStats stats, string select = null, string where = "",
                                                               int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
-            return Query<IDictionary<Column, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
+            return Query<IDictionary<string, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
         }
 
 
@@ -354,7 +352,7 @@ namespace HybridDb
                    select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
         }
 
-        public IDictionary<Column, object> Get(Table table, Guid key)
+        public IDictionary<string, object> Get(Table table, Guid key)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
@@ -364,11 +362,12 @@ namespace HybridDb
                 if (indexTable != null)
                 {
                     sql = string.Format("declare @table varchar(255) = (select {0} from {1} where {2} = @Id);" +
-                                        "declare @sql varchar(255) = 'select * from ' + quotename(@table) + ' where {2} = ' + quotename(cast(@Id as varchar(36)), '''');" +
+                                        "declare @sql varchar(255) = 'select *, ' + quotename(@table, '''') + ' as TableReference from ' + quotename('{3}' + @table) + ' where {2} = ' + quotename(cast(@Id as varchar(36)), '''');" +
                                         "exec(@sql);",
                                         indexTable.TableReferenceColumn.Name,
                                         FormatTableNameAndEscape(indexTable.Name),
-                                        indexTable.IdColumn.Name);
+                                        indexTable.IdColumn.Name,
+                                        GetTablePrefix());
                 }
                 else
                 {
@@ -391,7 +390,7 @@ namespace HybridDb
 
                 OnRead(table, row);
 
-                return row.ToDictionary(x => table.GetColumnOrDefaultColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
+                return row;
             }
         }
 
@@ -417,17 +416,31 @@ namespace HybridDb
 
         public string FormatTableName(string tablename)
         {
+            return GetTablePrefix() + tablename;
+        }
+
+        public string GetTablePrefix()
+        {
             switch (tableMode)
             {
                 case TableMode.UseRealTables:
-                    return tablename;
+                    return "";
                 case TableMode.UseTempTables:
-                    return "#" + tablename;
+                    return "#";
                 case TableMode.UseGlobalTempTables:
-                    return "##" + tablename;
+                    return "##";
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        static Dictionary<Column, object> ConvertToColumnValueDictionary(Table table, IDictionary<string, object> row)
+        {
+            return (from value in row
+                    let column = table[value]
+                    where column != null
+                    select new KeyValuePair<Column, object>(column, value.Value))
+                .ToDictionary();
         }
 
         ManagedConnection Connect()
@@ -517,6 +530,7 @@ namespace HybridDb
                 return connection.Connection.Query<T>(sql, parameters);
             }
         }
+
 
         ILogger Logger
         {

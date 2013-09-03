@@ -4,10 +4,10 @@ namespace HybridDb.Studio.Models
 {
     public class Projection
     {
-        public Column Column { get; private set; }
+        public string Column { get; private set; }
         public object Value { get; set; }
 
-        public Projection(Column column, object value)
+        public Projection(string column, object value)
         {
             Column = column;
             Value = value;

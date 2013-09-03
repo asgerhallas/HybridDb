@@ -118,7 +118,7 @@ namespace HybridDb.MigrationRunner
                     if (stats.TotalResults == 0)
                         break;
 
-                    foreach (var row in rows.Select(x => x.ToDictionary(col => col.Key.Name, col => col.Value)))
+                    foreach (var row in rows.Select(x => x.ToDictionary(col => col.Key, col => col.Value)))
                     {
                         var id = (Guid) row[table.IdColumn.Name];
                         var etag = (Guid) row[table.EtagColumn.Name];

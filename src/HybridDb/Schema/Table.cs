@@ -43,14 +43,19 @@ namespace HybridDb.Schema
             }
         }
 
-        public Column GetColumnOrDefaultColumn(string name, Type type)
+        public virtual Column this[KeyValuePair<string, object> namedValue]
         {
-            Column column;
-            if (columns.TryGetValue(name, out column))
-                return column;
-
-            return new Column(name, type);
+            get { return this[namedValue.Key]; }
         }
+
+        //public virtual Column GetColumn(string name, Type type)
+        //{
+        //    Column column;
+        //    if (columns.TryGetValue(name, out column))
+        //        return column;
+
+        //    return new Column(name, type);
+        //}
 
         public string Name { get; private set; }
 
@@ -71,6 +76,16 @@ namespace HybridDb.Schema
             {
                 columns.Add(column.Name, column);
             }
+        }
+    }
+
+    public class DynamicTable : Table
+    {
+        public DynamicTable(string name) : base(name) {}
+
+        public override Column this[KeyValuePair<string, object> namedValue]
+        {
+            get { return this[namedValue.Key] ?? new Column(namedValue.Key, namedValue.Value.GetTypeOrDefault()); }
         }
     }
 }

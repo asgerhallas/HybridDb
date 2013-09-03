@@ -45,5 +45,10 @@ namespace HybridDb.Schema
         {
             return !Equals(left, right);
         }
+
+        public static implicit operator string(Column self)
+        {
+            return self.Name;
+        }
     }
 }

@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using HybridDb.Schema;
 
 namespace HybridDb.Linq
 {
-    public class QueryProvider<TSourceElement> : IHybridQueryProvider
+    public class QueryProvider<TSourceElement> : IHybridQueryProvider where TSourceElement : class
     {
         readonly DocumentSession session;
         readonly QueryStats lastQueryStats;
@@ -41,32 +42,48 @@ namespace HybridDb.Linq
         public IEnumerable<T> ExecuteQuery<T>(Translation translation)
         {
             var store = session.Advanced.DocumentStore;
-            var table = store.Configuration.GetDesignFor(typeof (TSourceElement));
+            var design = store.Configuration.TryGetDesignFor<TSourceElement>();
 
-            QueryStats storeStats;
-            var results = typeof (TSourceElement) == typeof (T)
-                              ? store.Query(table.Table,
-                                            out storeStats,
-                                            translation.Select,
-                                            translation.Where,
-                                            translation.Skip,
-                                            translation.Take,
-                                            translation.OrderBy,
-                                            translation.Parameters)
-                                     .Select(result => session.ConvertToEntityAndPutUnderManagement<T>(table.Table, result))
-                                     .Where(result => result != null)
-                              : store.Query<T>(table.Table,
-                                               out storeStats,
-                                               translation.Select,
-                                               translation.Where,
-                                               translation.Skip,
-                                               translation.Take,
-                                               translation.OrderBy,
-                                               translation.Parameters);
+            if (typeof (TSourceElement) == typeof (T) && design != null)
+            {
+                QueryStats storeStats;
+                var results = store.Query(design.Table,
+                                          out storeStats,
+                                          translation.Select,
+                                          translation.Where,
+                                          translation.Skip,
+                                          translation.Take,
+                                          translation.OrderBy,
+                                          translation.Parameters)
+                    .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
+                    .Where(result => result != null)
+                    .Cast<T>();
+  
+                storeStats.CopyTo(lastQueryStats);
+                return results;
+            }
+            else
+            {
+                var table = design != null 
+                    ? (Table)design.Table
+                    : store.Configuration.Tables[typeof(T)];
 
-            storeStats.CopyTo(lastQueryStats);
-            return results;
+                QueryStats storeStats;
+                var results = store.Query<T>(table,
+                                             out storeStats,
+                                             translation.Select,
+                                             translation.Where,
+                                             translation.Skip,
+                                             translation.Take,
+                                             translation.OrderBy,
+                                             translation.Parameters);
+
+                storeStats.CopyTo(lastQueryStats);
+                return results;
+            }
         }
+
+
 
         public string GetQueryText(IQueryable query)
         {

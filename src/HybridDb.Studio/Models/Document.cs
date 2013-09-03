@@ -8,9 +8,9 @@ namespace HybridDb.Studio.Models
     public class Document
     {
         readonly IEnumerable<Projection> projections;
-        readonly KeyValuePair<Column, object> idColumn;
-        readonly KeyValuePair<Column, object> documentColumn;
-        readonly KeyValuePair<Column, object> etagColumn;
+        readonly KeyValuePair<string, object> idColumn;
+        readonly KeyValuePair<string, object> documentColumn;
+        readonly KeyValuePair<string, object> etagColumn;
 
         public DocumentTable Table { get; private set; }
         public string DocumentAsString { get; set; }
@@ -35,13 +35,13 @@ namespace HybridDb.Studio.Models
             get { return (Guid?)etagColumn.Value; }
         }
 
-        public Document(DocumentTable table, string document, IDictionary<Column, object> projections)
+        public Document(DocumentTable table, string document, IDictionary<string, object> projections)
         {
             Table = table;
             DocumentAsString = document;
-            idColumn = projections.Single(x => x.Key == table.IdColumn);
-            documentColumn = projections.Single(x => x.Key == table.DocumentColumn);
-            etagColumn = projections.Single(x => x.Key == table.EtagColumn);
+            idColumn = projections.Single(x => x.Key == table.IdColumn.Name);
+            documentColumn = projections.Single(x => x.Key == table.DocumentColumn.Name);
+            etagColumn = projections.Single(x => x.Key == table.EtagColumn.Name);
             this.projections = projections.Where(x => !(x.Key is SystemColumn))
                                           .Select(x => new Projection(x.Key, x.Value))
                                           .ToList();

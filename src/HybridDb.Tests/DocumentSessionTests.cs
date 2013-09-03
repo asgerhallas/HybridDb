@@ -20,12 +20,6 @@ namespace HybridDb.Tests
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            //store.Document<Entity>()
-            //    .Project(x => x.ProjectedProperty)
-            //    .Project(x => x.TheChild.NestedProperty)
-            //    .Project(x => x.TheSecondChild.NestedProperty, makeNullSafe: false)
-            //    .Project(x => x.Children.SelectMany(y => y.NestedProperty));
-            //store.MigrateSchemaToMatchConfiguration();
         }
 
         public void Dispose()
@@ -33,7 +27,7 @@ namespace HybridDb.Tests
             store.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
         {
             var id = Guid.NewGuid();
@@ -641,12 +635,15 @@ namespace HybridDb.Tests
         [Fact]
         public void WillNotSaveChangesToProjectedValues()
         {
-            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+            store.Document<Entity>()
+                .Project(x => x.ProjectedProperty)
+                .Project(x => x.TheChild.NestedProperty)
+                .MigrateSchema();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity {Id = id, Property = "Asger", ProjectedProperty = "Large"});
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -656,65 +653,6 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 session.Load<Entity>(id).ProjectedProperty.ShouldBe("Large");
-            }
-        }
-
-        [Fact]
-        public void DerivedEntityIsSavedToBaseTableWithDiscriminator()
-        {
-            store.Document<AbstractEntity>().Project(x => x.Number);
-            store.Document<DerivedEntity>();
-            store.Document<MoreDerivedEntity1>();
-            store.MigrateSchemaToMatchConfiguration();
-
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new DerivedEntity { Id = id, Number = 1 });
-                session.Store(new MoreDerivedEntity1 { Id = id, Number = 2});
-                session.SaveChanges();
-                session.Advanced.Clear();
-
-                var entities = store.RawQuery<string>("select Discriminator from #AbstractEntities order by Number").ToList();
-                entities[0].ShouldBe("DerivedEntity");
-                entities[1].ShouldBe("MoreDerivedEntity1");
-            }
-        }
-
-        [Fact]
-        public void CanLoadByBaseType()
-        {
-            store.Document<AbstractEntity>().MigrateSchema();
-            store.Document<DerivedEntity>().MigrateSchema();
-
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new DerivedEntity { Id = id });
-                session.SaveChanges();
-                session.Advanced.Clear();
-
-                var entity = session.Load<AbstractEntity>(id);
-                entity.ShouldBeTypeOf<DerivedEntity>();
-            }
-        }
-
-        [Fact]
-        public void CanQueryByBaseType()
-        {
-            store.Document<AbstractEntity>().Project(x => x.Property).MigrateSchema();
-
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new DerivedEntity { Id = id, Property = "Asger "});
-                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger"});
-                session.Store(new MoreDerivedEntity2 { Id = id, Property = "Lars"});
-                session.SaveChanges();
-                session.Advanced.Clear();
-
-                var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").ToList();
-                entities.Count().ShouldBe(2);
             }
         }
 
@@ -736,7 +674,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void SavesDiscriminatorsToIndex()
+        public void SavesTableReferenceToIndex()
         {
             store.Document<Entity>().Index<EntityIndex>();
             store.Document<OtherEntity>().Index<EntityIndex>();
@@ -751,29 +689,49 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entities = store.RawQuery<dynamic>("select Id, Discriminator from #EntityIndex order by Number").ToList();
+                var entities = store.RawQuery<dynamic>("select Id, TableReference from #EntityIndex order by Number").ToList();
                 Assert.Equal(id, entities[0].Id);
-                Assert.Equal("Entities", entities[0].Discriminator);
+                Assert.Equal("Entities", entities[0].TableReference);
                 Assert.Equal(id2, entities[1].Id);
-                Assert.Equal("OtherEntities", entities[1].Discriminator);
+                Assert.Equal("OtherEntities", entities[1].TableReference);
             }
         }
 
         [Fact]
-        public void CanLoadByIndex()
+        public void CanLoadByBestMatchingIndex()
         {
-            store.Document<DerivedEntity>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity1>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity2>().Index<EntityIndex>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Store(new DerivedEntity { Id = id });
+                session.Store(new MoreDerivedEntity1 { Id = id });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
                 var entity = session.Load<AbstractEntity>(id);
-                entity.ShouldBeTypeOf<DerivedEntity>();
+                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+            }
+        }
+
+        [Fact]
+        public void CanQueryIndex()
+        {
+            store.Document<MoreDerivedEntity1>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity2>().Index<EntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity2 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = session.Query<EntityIndex>().Where(x => x.Property == "Asger").ToList();
+                entities.Count().ShouldBe(2);
             }
         }
 

@@ -12,7 +12,7 @@ namespace HybridDb.Schema
         {
             Table = table;
             Type = type;
-            IndexTables = new List<IndexTable>();
+            IndexTables = new Dictionary<Type, IndexTable>();
             Configuration = configuration;
             Projections = new Dictionary<Column, Func<object, object>>
             {
@@ -23,7 +23,7 @@ namespace HybridDb.Schema
 
         public Type Type { get; private set; }
         public DocumentTable Table { get; private set; }
-        public List<IndexTable> IndexTables { get; private set; }
+        public Dictionary<Type, IndexTable> IndexTables { get; private set; }
         public Dictionary<Column, Func<object, object>> Projections { get; private set; }
         public Configuration Configuration { get; private set; }
 
@@ -95,7 +95,9 @@ namespace HybridDb.Schema
 
         public void Index<TIndex>(string name = null)
         {
-            var table = new IndexTable(name ?? typeof(TIndex).Name);
+            name = name ?? typeof (TIndex).Name;
+
+            var table = Configuration.TryGetIndexTableByName(name) ?? new IndexTable(typeof(TIndex), name);
 
             Projections.Add(table.TableReferenceColumn, x => Table.Name);
 
@@ -123,9 +125,8 @@ namespace HybridDb.Schema
                 Projections.Add(column, Compile(columnName, projector));
             }
 
-            IndexTables.Add(table);
+            IndexTables.Add(table.IndexType, table);
             Configuration.Add(table);
         }
-
     }
 }

@@ -25,61 +25,38 @@ namespace HybridDb
             get { return this; }
         }
 
-        public T Load<T>(Guid id) where T : class
+        public T Load<T>(Guid key) where T : class
         {
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(id, out managedEntity))
+            if (entities.TryGetValue(key, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                            ? managedEntity.Entity as T
                            : null;
             }
 
-            var table = store.Configuration.GetDesignFor<T>();
-
-            //var designs = store.Configuration.DocumentDesigns
-            //    .Where(x => x.Key.IsA<T>())
-            //    .Select(x => x.Value)
-            //    .ToList();
-
-            //var @groups = from design in designs
-            //              from indexTable in design.IndexTables
-            //              group indexTable by indexTable
-            //              into @group 
-            //              where @group.Count() == designs.Count
-            //              select @group;
-
-            //var index = @groups.FirstOrDefault();
-            //if (index == null)
-            //    throw new InvalidOperationException("NO");
-
-            var row = store.Get(table.Table, id);
-            if (row == null)
-                return null;
-
-            return ConvertToEntityAndPutUnderManagement<T>(table.Table, row);
-        }
-
-        public T Load<T, TIndex>(Guid id) where T : class
-        {
-            ManagedEntity managedEntity;
-            if (entities.TryGetValue(id, out managedEntity))
+            var design = store.Configuration.TryGetDesignFor<T>();
+            if (design != null)
             {
-                return managedEntity.State != EntityState.Deleted
-                           ? managedEntity.Entity as T
-                           : null;
+                var row = store.Get(design.Table, key);
+                return (T) (row != null ? ConvertToEntityAndPutUnderManagement(design, row) : null);
             }
-
-//            store.Configuration.DocumentDesigns.FirstOrDefault(x => x.Value.IndexTables)
-
-            var design = store.Configuration.GetDesignFor<T>();
             
-            var row = store.Get(design.IndexTables.Single(), id);
-            if (row == null)
+            var index = store.Configuration.TryGetBestMatchingIndexTableFor<T>();
+            
+            if (index == null)
+                throw new InvalidOperationException("");
+
+            var row2 = store.Get(index, key);
+
+            if (row2 == null)
                 return null;
 
-            return ConvertToEntityAndPutUnderManagement<T>(design.Table, row);
+            var design2 = store.Configuration.TryGetDesignFor((string)row2[index.TableReferenceColumn]);
+
+            return (T) ConvertToEntityAndPutUnderManagement(design2, row2);
         }
+
 
         public IQueryable<T> Query<T>() where T : class
         {
@@ -93,15 +70,15 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            var table = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid) table.Projections[table.Table.IdColumn](entity);
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = (Guid) design.Projections[design.Table.IdColumn](entity);
             entities.Remove(id);
         }
 
         public Guid? GetEtagFor(object entity)
         {
-            var table = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid)table.Projections[table.Table.IdColumn](entity);
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = (Guid)design.Projections[design.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -112,8 +89,8 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var table = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid)table.Projections[table.Table.IdColumn](entity);
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = (Guid)design.Projections[design.Table.IdColumn](entity);
             if (entities.ContainsKey(id))
                 return;
 
@@ -127,8 +104,8 @@ namespace HybridDb
 
         public void Delete(object entity)
         {
-            var table = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid)table.Projections[table.Table.IdColumn](entity);
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = (Guid)design.Projections[design.Table.IdColumn](entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -168,7 +145,7 @@ namespace HybridDb
                 {
                     case EntityState.Transient:
                         commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, projections)));
-                        commands.AddRange(design.IndexTables.Select(indexTable => Tuple.Create(managedEntity, document, (DatabaseCommand) new InsertCommand(indexTable, id, projections))));
+                        commands.AddRange(design.IndexTables.Select(indexTable => Tuple.Create(managedEntity, document, (DatabaseCommand) new InsertCommand(indexTable.Value, id, projections))));
                         break;
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))
@@ -217,20 +194,21 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal T ConvertToEntityAndPutUnderManagement<T>(DocumentTable table, IDictionary<Column, object> row)
+        internal object ConvertToEntityAndPutUnderManagement(DocumentDesign design, IDictionary<string, object> row)
         {
+            var table = design.Table;
             var id = (Guid) row[table.IdColumn];
 
             ManagedEntity managedEntity;
             if (entities.TryGetValue(id, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? (T) managedEntity.Entity
-                           : default(T);
+                           ? managedEntity.Entity
+                           : null;
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize(document, typeof (T));
+            var entity = store.Configuration.Serializer.Deserialize(document, design.Type);
 
             managedEntity = new ManagedEntity
             {
@@ -242,7 +220,7 @@ namespace HybridDb
             };
 
             entities.Add(id, managedEntity);
-            return (T) entity;
+            return entity;
         }
 
 

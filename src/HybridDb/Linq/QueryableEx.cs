@@ -1,9 +1,6 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using HybridDb.Linq.Ast;
 using HybridDb.Linq.Parsers;
 
 namespace HybridDb.Linq
@@ -15,7 +12,7 @@ namespace HybridDb.Linq
             return query.Provider.CreateQuery<T>(query.OfType<T>().Expression);
         }
 
-        public static IQueryable<T> Statistics<T>(this IQueryable<T> query, out QueryStats stats)
+        public static IQueryable<T> Statistics<T>(this IQueryable<T> query, out QueryStats stats) where T : class
         {
             ((QueryProvider<T>)query.Provider).WriteStatisticsTo(out stats);
             return query;
