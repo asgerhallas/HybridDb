@@ -74,7 +74,7 @@ namespace HybridDb
 
             var design = store.Configuration.GetDesignFor<T>();
             
-            var row = store.GetByIndex(design.IndexTables.Single(), id);
+            var row = store.Get(design.IndexTables.Single(), id);
             if (row == null)
                 return null;
 

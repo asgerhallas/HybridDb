@@ -359,12 +359,12 @@ namespace HybridDb
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())
             {
-                var sql = "";
+                string sql;
                 var indexTable = table as IndexTable;
                 if (indexTable != null)
                 {
                     sql = string.Format("declare @table varchar(255) = (select {0} from {1} where {2} = @Id);" +
-                                        "declare @sql varchar(255) = 'select * from ' + quotename(@table, '[]') + ' where {2} = ''' + cast(@Id as varchar(36)) + '''';" +
+                                        "declare @sql varchar(255) = 'select * from ' + quotename(@table) + ' where {2} = ' + quotename(cast(@Id as varchar(36)), '''');" +
                                         "exec(@sql);",
                                         indexTable.TableReferenceColumn.Name,
                                         FormatTableNameAndEscape(indexTable.Name),
@@ -379,39 +379,6 @@ namespace HybridDb
 
 
                 var row = ((IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault());
-
-                Interlocked.Increment(ref numberOfRequests);
-
-                Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
-
-                connection.Complete();
-
-                if (row == null)
-                    return null;
-
-                OnRead(table, row);
-
-                return row.ToDictionary(x => table.GetColumnOrDefaultColumn(x.Key, x.Value.GetTypeOrDefault()), x => x.Value);
-            }
-        }
-
-        public IDictionary<Column, object> GetByIndex(Table table, Guid key)
-        {
-            var timer = Stopwatch.StartNew();
-            using (var connection = Connect())
-            {
-                var sql = new SqlBuilder();
-                sql.Append("declare @i nvarchar(255) = select Discriminator from {0} where {1} = @;",
-                            FormatTableNameAndEscape(table.Name),
-                            table.IdColumn.Name);
-
-                sql.Append("select * from @i where {0} = @Id", table.IdColumn.Name);
-
-                //var sql = string.Format("select * from {0} where "select * from {0} where {1} = @Id",
-                //                        FormatTableNameAndEscape(table.Name),
-                //                        table.IdColumn.Name);
-
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql.ToDynamicSql(), new {Id = key}).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 
