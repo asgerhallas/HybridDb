@@ -97,7 +97,7 @@ namespace HybridDb.Schema
         {
             name = name ?? typeof (TIndex).Name;
 
-            var table = Configuration.TryGetIndexTableByName(name) ?? new IndexTable(typeof(TIndex), name);
+            var table = Configuration.TryGetIndexTableByName(name) ?? new IndexTable(name);
 
             Projections.Add(table.TableReferenceColumn, x => Table.Name);
 
@@ -125,8 +125,9 @@ namespace HybridDb.Schema
                 Projections.Add(column, Compile(columnName, projector));
             }
 
-            IndexTables.Add(table.IndexType, table);
-            Configuration.Add(table);
+            IndexTables.Add(typeof(TIndex), table);
+            Configuration.Tables.TryAdd(table.Name, table);
+            Configuration.IndexTables.TryAdd(typeof(TIndex), table);
         }
     }
 }

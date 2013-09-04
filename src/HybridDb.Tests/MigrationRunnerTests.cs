@@ -5,7 +5,7 @@ namespace HybridDb.Tests
 {
     public class MigrationRunnerTests
     {
-        [Fact]
+        [Fact(Skip = "In progress")]
         public void FactMethodName()
         {
             var store = DocumentStore.ForTestingWithTempTables();

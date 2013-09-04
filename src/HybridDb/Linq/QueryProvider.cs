@@ -39,12 +39,12 @@ namespace HybridDb.Linq
             }
         }
 
-        public IEnumerable<T> ExecuteQuery<T>(Translation translation)
+        public IEnumerable<TProjection> ExecuteQuery<TProjection>(Translation translation)
         {
             var store = session.Advanced.DocumentStore;
             var design = store.Configuration.TryGetDesignFor<TSourceElement>();
 
-            if (typeof (TSourceElement) == typeof (T) && design != null)
+            if (typeof (TSourceElement) == typeof (TProjection) && design != null)
             {
                 QueryStats storeStats;
                 var results = store.Query(design.Table,
@@ -57,19 +57,19 @@ namespace HybridDb.Linq
                                           translation.Parameters)
                     .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
                     .Where(result => result != null)
-                    .Cast<T>();
+                    .Cast<TProjection>();
   
                 storeStats.CopyTo(lastQueryStats);
                 return results;
             }
             else
             {
-                var table = design != null 
-                    ? (Table)design.Table
-                    : store.Configuration.Tables[typeof(T)];
+                var table = design != null
+                                ? (Table) design.Table
+                                : store.Configuration.TryGetIndexTableByType(typeof (TSourceElement));
 
                 QueryStats storeStats;
-                var results = store.Query<T>(table,
+                var results = store.Query<TProjection>(table,
                                              out storeStats,
                                              translation.Select,
                                              translation.Where,
