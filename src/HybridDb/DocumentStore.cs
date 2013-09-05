@@ -66,9 +66,9 @@ namespace HybridDb
             get { return configuration; }
         }
 
-        public DocumentDesign<TEntity> Document<TEntity>()
+        public DocumentDesign<TEntity> Document<TEntity>(string tablename = null)
         {
-            return configuration.Document<TEntity>(null);
+            return configuration.Document<TEntity>(tablename);
         }
 
         public void Migrate(Action<ISchemaMigrator> migration)

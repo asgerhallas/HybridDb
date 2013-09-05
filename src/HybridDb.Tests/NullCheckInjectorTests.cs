@@ -124,6 +124,19 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanHandleConstant()
+        {
+            InvokeWithNullCheck(() => 10).ShouldBe(10);
+        }
+
+        [Fact]
+        public void CanHandleNullConstant()
+        {
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => ((string)null).Length));
+            InvokeWithNullCheck(() => ((string)null).Length).ShouldBe(null);
+        }
+
+        [Fact]
         public void StaticMethodReturningValueTypeWillBeTrustedToNeverReturnNull()
         {
             CanItBeTrustedToNeverBeNull(x => Root.StaticMethodReturningValueType()).ShouldBe(true);
@@ -170,6 +183,7 @@ namespace HybridDb.Tests
         {
             CanItBeTrustedToNeverBeNull(x => x.Property.NonNullableThingy).ShouldBe(false);
         }
+
 
         static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
         {

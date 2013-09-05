@@ -48,15 +48,6 @@ namespace HybridDb.Schema
             get { return this[namedValue.Key]; }
         }
 
-        //public virtual Column GetColumn(string name, Type type)
-        //{
-        //    Column column;
-        //    if (columns.TryGetValue(name, out column))
-        //        return column;
-
-        //    return new Column(name, type);
-        //}
-
         public string Name { get; private set; }
 
         public IEnumerable<Column> Columns
@@ -66,16 +57,7 @@ namespace HybridDb.Schema
 
         public void Register(Column column)
         {
-            Column existingColumn;
-            if (columns.TryGetValue(column.Name, out existingColumn))
-            {
-                if (!Equals(existingColumn.SqlColumn, column.SqlColumn))
-                    throw new ColumnAlreadRegisteredException(this, column);
-            }
-            else
-            {
-                columns.Add(column.Name, column);
-            }
+            columns.Add(column.Name, column);
         }
     }
 

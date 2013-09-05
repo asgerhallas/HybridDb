@@ -49,7 +49,7 @@ namespace HybridDb.Schema
             //{typeof (object), new SqlColumn(DbType.Object)}
         };
 
-        public SqlColumn(Type type)
+        public SqlColumn(Type type, bool? nullable = null)
         {
             type = (type.IsEnum) ? type.BaseType : type;
             
@@ -59,7 +59,7 @@ namespace HybridDb.Schema
 
             Type = column.Type;
             Length = column.Length;
-            Nullable = column.Nullable;
+            Nullable = nullable ?? column.Nullable;
             DefaultValue = column.DefaultValue;
             IsPrimaryKey = false;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Linq;
 
 namespace HybridDb.Schema
 {
@@ -10,21 +11,21 @@ namespace HybridDb.Schema
     {
         public DocumentDesign(Configuration configuration, DocumentTable table, Type type)
         {
+            Configuration = configuration;
             Table = table;
             Type = type;
-            IndexTables = new Dictionary<Type, IndexTable>();
-            Configuration = configuration;
-            Projections = new Dictionary<Column, Func<object, object>>
+            Projections = new Dictionary<string, Func<object, object>>
             {
                 {Table.IdColumn, document => ((dynamic) document).Id},
                 {Table.DocumentColumn, document => configuration.Serializer.Serialize(document)}
             };
+            Indexes = new Dictionary<IndexTable, Dictionary<string, Func<object, object>>>();
         }
 
         public Type Type { get; private set; }
         public DocumentTable Table { get; private set; }
-        public Dictionary<Type, IndexTable> IndexTables { get; private set; }
-        public Dictionary<Column, Func<object, object>> Projections { get; private set; }
+        public Dictionary<IndexTable, Dictionary<string, Func<object, object>>> Indexes { get; private set; }
+        public Dictionary<string, Func<object, object>> Projections { get; private set; }
         public Configuration Configuration { get; private set; }
 
         public void MigrateSchema()
@@ -93,41 +94,99 @@ namespace HybridDb.Schema
             return this;
         }
 
-        public void Index<TIndex>(string name = null)
+        public IndexDesigner<TIndex> Index<TIndex>(string name = null)
         {
             name = name ?? typeof (TIndex).Name;
 
-            var table = Configuration.TryGetIndexTableByName(name) ?? new IndexTable(name);
-
-            Projections.Add(table.TableReferenceColumn, x => Table.Name);
-
-            foreach (var property in typeof (TIndex).GetProperties())
+            var table = Configuration.TryGetIndexTableByName(name);
+            if (table == null)
             {
-                var projectedProperty = Type.GetProperty(property.Name, property.PropertyType);
+                table = new IndexTable(name);
+
+                foreach (var property in typeof (TIndex).GetProperties())
+                {
+                    var column = new Column(property.Name, new SqlColumn(property.PropertyType));
+
+                    if (!table.Columns.Contains(column))
+                        table.Register(column);
+                }
+            }
+
+            var projections = new Dictionary<string, Func<object, object>>
+            {
+                {table.IdColumn, x => ((dynamic) x).Id},
+                {table.TableReferenceColumn, x => Table.Name}
+            };
+
+            AddDefaultProjections<TIndex>(table, projections);
+
+            Indexes.Add(table, projections);
+            Configuration.Tables.TryAdd(table.Name, table);
+            Configuration.IndexTables.TryAdd(typeof (TIndex), table);
+
+            return new IndexDesigner<TIndex>(this, table);
+        }
+
+        void AddDefaultProjections<TIndex>(IndexTable table, Dictionary<string, Func<object, object>> projections)
+        {
+            foreach (var column in table.Columns)
+            {
+                if (projections.ContainsKey(column.Name))
+                    continue;
+
+                var projectedProperty = Type.GetProperty(column.Name);
                 if (projectedProperty == null)
                     continue;
 
-                var parameter = Expression.Parameter(typeof(object));
+                var indexProperty = typeof (TIndex).GetProperty(column.Name, projectedProperty.PropertyType);
+                if (indexProperty == null)
+                {
+                    throw new ArgumentException(
+                        string.Format("Type of property named {0} on index {1} does not match type of property on document {2}",
+                            column.Name, typeof (TIndex).Name, typeof (TEntity).Name));
+                }
+
+                var parameter = Expression.Parameter(typeof (object));
 
                 var projector =
                     Expression.Lambda<Func<object, object>>(
                         Expression.Convert(
                             Expression.Property(
                                 Expression.Convert(parameter, Type),
-                                Type.GetProperty(property.Name)),
+                                Type.GetProperty(column.Name)),
                             typeof (object)),
                         parameter);
 
-                var columnName = Configuration.GetColumnNameByConventionFor(projector);
-                var column = new Column(columnName, new SqlColumn(property.PropertyType));
+                projections.Add(column.Name, Compile(column.Name, projector));
+            }
+        }
 
-                table.Register(column);
-                Projections.Add(column, Compile(columnName, projector));
+        public class IndexDesigner<TIndex>
+        {
+            readonly DocumentDesign<TEntity> design;
+            readonly IndexTable table;
+
+            public IndexDesigner(DocumentDesign<TEntity> design, IndexTable table)
+            {
+                this.design = design;
+                this.table = table;
             }
 
-            IndexTables.Add(typeof(TIndex), table);
-            Configuration.Tables.TryAdd(table.Name, table);
-            Configuration.IndexTables.TryAdd(typeof(TIndex), table);
+            public IndexDesigner<TIndex> With<TMember>(Expression<Func<TIndex, TMember>> property, Expression<Func<TEntity, TMember>> projector)
+            {
+                var nullCheckInjector = new NullCheckInjector();
+                var nullCheckedProjector = (Expression<Func<TEntity, object>>)nullCheckInjector.Visit(projector);
+
+                var columnName = ((MemberExpression)property.Body).Member.Name;
+                design.Indexes[table].Add(table[columnName], design.Compile(columnName, nullCheckedProjector));
+
+                return this;
+            }
+
+            public IndexDesigner<T> Index<T>(string name = null)
+            {
+                return design.Index<T>(name);
+            }
         }
     }
 }

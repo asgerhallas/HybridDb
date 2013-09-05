@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Data.SqlClient;
 using System.Reflection;
 using HybridDb.Commands;
 using Shouldly;
@@ -657,27 +657,10 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void SavesProjectionsToIndexByConvention()
-        {
-            store.Document<Entity>().Index<EntityIndex>();
-            store.MigrateSchemaToMatchConfiguration();
-
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Entity { Id = id, Number = 1, Property = "Asger" });
-                session.SaveChanges();
-
-                var entities = store.RawQuery<dynamic>("select * from #EntityIndex").ToList();
-                entities[0].ShouldBe(id);
-            }
-        }
-
-        [Fact]
         public void SavesTableReferenceToIndex()
         {
-            store.Document<Entity>().Index<EntityIndex>();
-            store.Document<OtherEntity>().Index<EntityIndex>();
+            store.Document<Entity>().Index<OtherEntityIndex>();
+            store.Document<OtherEntity>().Index<OtherEntityIndex>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -689,11 +672,86 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entities = store.RawQuery<dynamic>("select Id, TableReference from #EntityIndex order by Number").ToList();
+                var entities = store.RawQuery<dynamic>("select Id, TableReference from #OtherEntityIndex order by Number").ToList();
                 Assert.Equal(id, entities[0].Id);
                 Assert.Equal("Entities", entities[0].TableReference);
                 Assert.Equal(id2, entities[1].Id);
                 Assert.Equal("OtherEntities", entities[1].TableReference);
+            }
+        }
+
+        [Fact]
+        public void InsertsInIndexes()
+        {
+            store.Document<Entity>().Index<EntityIndex>().Index<OtherEntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Number = 1, Property = "Asger" });
+                session.SaveChanges();
+
+                var index1 = store.RawQuery<dynamic>("select * from #EntityIndex").ToList();
+                Assert.Equal(id, index1[0].Id);
+                Assert.Equal("Asger", index1[0].Property);
+
+                var index2 = store.RawQuery<dynamic>("select * from #OtherEntityIndex").ToList();
+                Assert.Equal(id, index2[0].Id);
+                Assert.Equal(1, index2[0].Number);
+            }
+        }
+
+        [Fact]
+        public void UpdatesIndexes()
+        {
+            store.Document<Entity>().Index<EntityIndex>().Index<OtherEntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Number = 1, Property = "Asger" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Load<Entity>(id);
+                entity.Property = "Lars";
+                entity.Number = 2;
+                session.SaveChanges();
+
+                var index1 = store.RawQuery<dynamic>("select * from #EntityIndex").ToList();
+                Assert.Equal(id, index1[0].Id);
+                Assert.Equal("Lars", index1[0].Property);
+
+                var index2 = store.RawQuery<dynamic>("select * from #OtherEntityIndex").ToList();
+                Assert.Equal(id, index2[0].Id);
+                Assert.Equal(2, index2[0].Number);
+            }
+        }
+
+        [Fact]
+        public void DeletesFromIndexes()
+        {
+            store.Document<Entity>().Index<EntityIndex>().Index<OtherEntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Number = 1, Property = "Asger" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Load<Entity>(id);
+                session.Delete(entity);
+                session.SaveChanges();
+
+                var index1 = store.RawQuery<dynamic>("select * from #EntityIndex").ToList();
+                index1.Count.ShouldBe(0);
+
+                var index2 = store.RawQuery<dynamic>("select * from #OtherEntityIndex").ToList();
+                index2.Count.ShouldBe(0);
             }
         }
 
@@ -732,6 +790,37 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<EntityIndex>().Where(x => x.Property == "Asger").ToList();
                 entities.Count().ShouldBe(2);
+            }
+        }
+
+        [Fact]
+        public void FailsWhenNonNullableIndexPropertyNameIsNotPresentOnDocument()
+        {
+            store.Document<OtherEntity>().Index<BadMatchIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new OtherEntity { Id = id, Number = 1 });
+                Should.Throw<SqlException>(() => session.SaveChanges());
+            }
+        }
+
+        [Fact]
+        public void DoesNotFailWhenIndexPropertyNameIsNotPresentOnDocumentButHasOverride()
+        {
+            store.Document<OtherEntity>().Index<BadMatchIndex>().With(x => x.BadMatch, x => 10);
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new OtherEntity { Id = id, Number = 1 });
+                session.SaveChanges();
+
+                var index1 = store.RawQuery<long>("select BadMatch from #BadMatchIndex").Single();
+                index1.ShouldBe(10);
             }
         }
 
@@ -784,7 +873,16 @@ namespace HybridDb.Tests
         public class EntityIndex
         {
             public string Property { get; set; }
+        }
+
+        public class OtherEntityIndex
+        {
             public int Number { get; set; }
+        }
+
+        public class BadMatchIndex
+        {
+            public long BadMatch { get; set; }
         }
     }
 }

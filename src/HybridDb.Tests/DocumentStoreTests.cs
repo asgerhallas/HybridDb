@@ -226,7 +226,7 @@ namespace HybridDb.Tests
             var design = store.Configuration.GetDesignFor<Entity>();
             store.Insert(design.Table, id, new { Document = documentAsByteArray });
             
-            var indexTable = design.IndexTables.Single().Value;
+            var indexTable = design.Indexes.Single().Key;
             store.Insert(indexTable, id, new { StringProp = "Asger", TableReference = design.Table.Name });
 
             var row = store.Get(indexTable, id);

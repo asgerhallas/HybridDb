@@ -13,7 +13,7 @@ namespace HybridDb
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         bool IsInTestMode { get; }
-        DocumentDesign<TEntity> Document<TEntity>();
+        DocumentDesign<TEntity> Document<TEntity>(string tablename = null);
         void Migrate(Action<ISchemaMigrator> migration);
         void MigrateSchemaToMatchConfiguration(bool safe = true);
         void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate);

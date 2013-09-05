@@ -31,6 +31,17 @@ namespace HybridDb
             return Expression.Lambda(nullCheckedBody, node.Parameters);
         }
 
+        protected override Expression VisitConstant(ConstantExpression node)
+        {
+            if (node.Value == null)
+            {
+                CanBeTrustedToNeverReturnNull = false;
+                return Expression.Return(returnTarget, node);
+            }
+
+            return Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
+        }
+
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
             var receiver = node.Object;

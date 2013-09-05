@@ -45,13 +45,18 @@ namespace HybridDb
             return columnNameBuilder.ColumnName;
         }
 
-        public DocumentDesign<TEntity> Document<TEntity>(string name)
+        public string GetTableNameByConventionFor<TEntity>()
         {
-            name = name ?? GetTableNameByConventionFor<TEntity>();
-            var table = new DocumentTable(name);
+            return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
+        }
+
+        public DocumentDesign<TEntity> Document<TEntity>(string tablename)
+        {
+            tablename = tablename ?? GetTableNameByConventionFor<TEntity>();
+            var table = new DocumentTable(tablename);
             var design = new DocumentDesign<TEntity>(this, table);
             
-            Tables.TryAdd(name, design.Table);
+            Tables.TryAdd(tablename, design.Table);
             DocumentDesigns.TryAdd(design.Type, design);
             return design;
         }
@@ -104,18 +109,13 @@ namespace HybridDb
                 .ToList();
 
             var @groups = from design in designs
-                          from indexTable in design.IndexTables
-                          group indexTable.Value by indexTable.Key
+                          from indexTable in design.Indexes.Keys
+                          group indexTable by indexTable
                               into @group
                               where @group.Count() == designs.Count
                               select @group.First();
 
             return @groups.FirstOrDefault();
-        }
-
-        public string GetTableNameByConventionFor<TEntity>()
-        {
-            return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
         }
 
         public void UseSerializer(ISerializer serializer)

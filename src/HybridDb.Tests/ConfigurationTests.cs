@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using HybridDb.Schema;
 using Xunit;
 using Shouldly;
 
@@ -115,6 +114,39 @@ namespace HybridDb.Tests
             indexTable.ShouldBe(null);
         }
 
+        [Fact]
+        public void IndexTypeCanContainId()
+        {
+            var configuration = new Configuration(null);
+            Should.NotThrow(() => configuration.Document<MoreDerivedEntity2>(null).Index<IndexWithId>());
+        }
+
+        [Fact]
+        public void FailOnIndexPropertyOfWrongType()
+        {
+            var configuration = new Configuration(null);
+            Should.Throw<ArgumentException>(() => configuration.Document<Entity>(null).Index<WrongTypeIndex>());
+        }
+
+        [Fact()]
+        public void CanOverrideProjectionsForIndexProperties()
+        {
+            var configuration = new Configuration(null);
+            configuration.Document<OtherEntity>(null).Index<Index>().With(x => x.Number, x => x.String.Length);
+
+            var indexTable = configuration.IndexTables[typeof (Index)];
+            var projection = configuration.GetDesignFor<OtherEntity>().Indexes[indexTable]["Number"];
+            projection(new OtherEntity { String = "Asger" }).ShouldBe(5);
+        }
+
+        [Fact(Skip = "Not now")]
+        public void CanOverrideProjectionsForIndexPropertiesWithSameNameButDifferentType()
+        {
+            var configuration = new Configuration(null);
+            configuration.Document<Entity>(null).Index<WrongTypeIndex>().With(x => x.String, x => x.String.Length);
+        }
+
+
         public class Entity
         {
             public string String { get; set; }
@@ -144,10 +176,23 @@ namespace HybridDb.Tests
             public int Number { get; set; }
         }
 
+        public class IndexWithId
+        {
+            public Guid Id { get; set; }
+            public string String { get; set; }
+            public int Number { get; set; }
+        }
+
         public class OtherIndex
         {
             public string String { get; set; }
             public int Number { get; set; }
+        }
+
+
+        public class WrongTypeIndex
+        {
+            public int String { get; set; }
         }
     }
 }
