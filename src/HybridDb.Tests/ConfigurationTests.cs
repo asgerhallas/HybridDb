@@ -122,13 +122,26 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void FailOnIndexPropertyOfWrongType()
+        public void DoesNotCreateDefaultProjectionForIndexPropertyThatDoesNotMatchAnyDocumentProperty()
         {
             var configuration = new Configuration(null);
-            Should.Throw<ArgumentException>(() => configuration.Document<Entity>(null).Index<WrongTypeIndex>());
+            configuration.Document<Entity>(null).Index<BadMatchIndex>();
+
+            var indexTable = configuration.IndexTables[typeof(BadMatchIndex)];
+            configuration.GetDesignFor<Entity>().Indexes[indexTable].ContainsKey("BadMatch").ShouldBe(false);
         }
 
-        [Fact()]
+        [Fact]
+        public void DoesNotCreateDefaultProjectionForIndexPropertyOfWrongType()
+        {
+            var configuration = new Configuration(null);
+            configuration.Document<Entity>(null).Index<WrongTypeIndex>();
+
+            var indexTable = configuration.IndexTables[typeof(WrongTypeIndex)];
+            configuration.GetDesignFor<Entity>().Indexes[indexTable].ContainsKey("String").ShouldBe(false);
+        }
+
+        [Fact]
         public void CanOverrideProjectionsForIndexProperties()
         {
             var configuration = new Configuration(null);
@@ -138,14 +151,6 @@ namespace HybridDb.Tests
             var projection = configuration.GetDesignFor<OtherEntity>().Indexes[indexTable]["Number"];
             projection(new OtherEntity { String = "Asger" }).ShouldBe(5);
         }
-
-        [Fact(Skip = "Not now")]
-        public void CanOverrideProjectionsForIndexPropertiesWithSameNameButDifferentType()
-        {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<WrongTypeIndex>().With(x => x.String, x => x.String.Length);
-        }
-
 
         public class Entity
         {
@@ -189,10 +194,14 @@ namespace HybridDb.Tests
             public int Number { get; set; }
         }
 
-
         public class WrongTypeIndex
         {
             public int String { get; set; }
+        }
+
+        public class BadMatchIndex
+        {
+            public int BadMatch { get; set; }
         }
     }
 }

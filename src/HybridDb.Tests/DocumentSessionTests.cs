@@ -13,12 +13,11 @@ namespace HybridDb.Tests
     public class DocumentSessionTests : IDisposable
     {
         readonly DocumentStore store;
-        readonly string connectionString;
 
         public DocumentSessionTests()
         {
-            connectionString = "data source=.;Integrated Security=True";
-            store = DocumentStore.ForTestingWithTempTables(connectionString);
+            store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True;");
+            //store = new DocumentStore("data source=.;Integrated Security=True;Initial Catalog=Test");
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
         }
 
@@ -774,6 +773,21 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void LoadCanReturnNullFromIndex()
+        {
+            store.Document<MoreDerivedEntity1>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity2>().Index<EntityIndex>();
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<AbstractEntity>(id);
+                entity.ShouldBe(null);
+            }
+        }
+        
         [Fact]
         public void CanQueryIndex()
         {

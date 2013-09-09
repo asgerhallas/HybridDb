@@ -35,12 +35,12 @@ namespace HybridDb.Schema
 
         protected Func<object, object> Compile<TEntity, TMember>(string name, Expression<Func<TEntity, TMember>> projector)
         {
-            return x =>
+            var compiled = projector.Compile();
+            return entity =>
             {
                 try
                 {
-                    var compiled = projector.Compile();
-                    return (object) compiled((TEntity) x);
+                    return (object) compiled((TEntity) entity);
                 }
                 catch (Exception ex)
                 {
@@ -140,11 +140,7 @@ namespace HybridDb.Schema
 
                 var indexProperty = typeof (TIndex).GetProperty(column.Name, projectedProperty.PropertyType);
                 if (indexProperty == null)
-                {
-                    throw new ArgumentException(
-                        string.Format("Type of property named {0} on index {1} does not match type of property on document {2}",
-                            column.Name, typeof (TIndex).Name, typeof (TEntity).Name));
-                }
+                    continue;
 
                 var parameter = Expression.Parameter(typeof (object));
 

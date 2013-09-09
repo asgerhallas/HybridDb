@@ -31,12 +31,20 @@ namespace HybridDb
             return Expression.Lambda(nullCheckedBody, node.Parameters);
         }
 
+        protected override Expression VisitUnary(UnaryExpression node)
+        {
+            if (node.NodeType == ExpressionType.Convert)
+                return Visit(node.Operand);
+
+            return base.VisitUnary(node);
+        }
+
         protected override Expression VisitConstant(ConstantExpression node)
         {
             if (node.Value == null)
             {
                 CanBeTrustedToNeverReturnNull = false;
-                return Expression.Return(returnTarget, node);
+                return Expression.Return(returnTarget, Expression.Convert(node, typeof(object)));
             }
 
             return Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));

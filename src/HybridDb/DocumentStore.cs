@@ -362,7 +362,8 @@ namespace HybridDb
                 if (indexTable != null)
                 {
                     sql = string.Format("declare @table varchar(255) = (select {0} from {1} where {2} = @Id);" +
-                                        "declare @sql varchar(255) = 'select *, ' + quotename(@table, '''') + ' as TableReference from ' + quotename('{3}' + @table) + ' where {2} = ' + quotename(cast(@Id as varchar(36)), '''');" +
+                                        "if @table is null select null where 1<>1;" +
+	                                    "declare @sql varchar(255) = 'select *, ' + quotename(@table, '''') + ' as TableReference from ' + quotename('{3}' + @table) + ' where {2} = ' + quotename(cast(@Id as varchar(36)), '''');" +
                                         "exec(@sql);",
                                         indexTable.TableReferenceColumn.Name,
                                         FormatTableNameAndEscape(indexTable.Name),

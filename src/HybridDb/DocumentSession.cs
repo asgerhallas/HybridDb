@@ -35,28 +35,26 @@ namespace HybridDb
                            : null;
             }
 
-            var design = store.Configuration.TryGetDesignFor<T>();
+            DocumentDesign design = store.Configuration.TryGetDesignFor<T>();
             if (design != null)
             {
                 var row = store.Get(design.Table, key);
                 return (T) (row != null ? ConvertToEntityAndPutUnderManagement(design, row) : null);
             }
-            
-            var index = store.Configuration.TryGetBestMatchingIndexTableFor<T>();
-            
-            if (index == null)
-                throw new InvalidOperationException("");
+            else
+            {
+                var index = store.Configuration.TryGetBestMatchingIndexTableFor<T>();
+                if (index == null)
+                    throw new InvalidOperationException(string.Format("No document type or index supporting {0} was found.", typeof(T)));
 
-            var row2 = store.Get(index, key);
+                var row = store.Get(index, key);
+                if (row == null) return null;
 
-            if (row2 == null)
-                return null;
+                design = store.Configuration.TryGetDesignFor((string)row[index.TableReferenceColumn]);
 
-            var design2 = store.Configuration.TryGetDesignFor((string)row2[index.TableReferenceColumn]);
-
-            return (T) ConvertToEntityAndPutUnderManagement(design2, row2);
+                return (T)ConvertToEntityAndPutUnderManagement(design, row);
+            }
         }
-
 
         public IQueryable<T> Query<T>() where T : class
         {

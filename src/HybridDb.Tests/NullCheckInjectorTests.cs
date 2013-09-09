@@ -137,6 +137,12 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanReturnNullConstantAsNullable()
+        {
+            InvokeWithNullCheck<DateTime?>(() => null).ShouldBe(null);
+        }
+
+        [Fact]
         public void StaticMethodReturningValueTypeWillBeTrustedToNeverReturnNull()
         {
             CanItBeTrustedToNeverBeNull(x => Root.StaticMethodReturningValueType()).ShouldBe(true);
@@ -184,6 +190,11 @@ namespace HybridDb.Tests
             CanItBeTrustedToNeverBeNull(x => x.Property.NonNullableThingy).ShouldBe(false);
         }
 
+        [Fact]
+        public void CanNullCheckACastExpression()
+        {
+            InvokeWithNullCheck(() => (ValueType?)value.NonNullableThingy2);
+        }
 
         static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
         {
