@@ -36,6 +36,9 @@ namespace HybridDb
             if (node.NodeType == ExpressionType.Convert)
                 return Visit(node.Operand);
 
+            if (node.NodeType == ExpressionType.TypeAs)
+                return Visit(node.Operand);
+
             return base.VisitUnary(node);
         }
 

@@ -49,7 +49,6 @@ namespace HybridDb.Commands
             //    //                     string.Join(", ", from column in blahs.Keys select "@" + column.Name + uniqueParameterIdentifier));
             //}
 
-
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
 
             return new PreparedDatabaseCommand

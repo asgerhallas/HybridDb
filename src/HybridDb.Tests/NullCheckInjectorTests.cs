@@ -196,6 +196,13 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(() => (ValueType?)value.NonNullableThingy2);
         }
 
+        [Fact]
+        public void CanNullCheckATypeAsExpression()
+        {
+            value.Property = new OtherRoot();
+            InvokeWithNullCheck(() => (value.Property as OtherRoot).SpecialThingy).ShouldBe(0);
+        }
+
         static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
         {
             return exp.Compile()();
@@ -242,6 +249,12 @@ namespace HybridDb.Tests
             {
                 return null;
             }
+        }
+
+        class OtherRoot : Root
+        {
+            public int SpecialThingy { get; set; }
+            
         }
 
         public struct ValueType
