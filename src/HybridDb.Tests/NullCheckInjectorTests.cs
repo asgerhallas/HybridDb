@@ -203,6 +203,13 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(() => (value.Property as OtherRoot).SpecialThingy).ShouldBe(0);
         }
 
+        [Fact]
+        public void CanNullCheckATypeAsExpressionWhenNotCorrectType()
+        {
+            value.Property = new UnrelatedOtherRoot();
+            InvokeWithNullCheck(() => (value.Property as OtherRoot).SpecialThingy).ShouldBe(null);
+        }
+
         static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
         {
             return exp.Compile()();
@@ -251,10 +258,14 @@ namespace HybridDb.Tests
             }
         }
 
+        class UnrelatedOtherRoot : Root
+        {
+            
+        }
+
         class OtherRoot : Root
         {
             public int SpecialThingy { get; set; }
-            
         }
 
         public struct ValueType

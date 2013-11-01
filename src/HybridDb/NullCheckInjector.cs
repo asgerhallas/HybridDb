@@ -33,10 +33,21 @@ namespace HybridDb
 
         protected override Expression VisitUnary(UnaryExpression node)
         {
-            if (node.NodeType == ExpressionType.Convert)
-                return Visit(node.Operand);
-
             if (node.NodeType == ExpressionType.TypeAs)
+            {
+                var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
+
+                CanBeTrustedToNeverReturnNull = false;
+
+                return Expression.Block(
+                    Visit(node.Operand),
+                    assignCurrentValue,
+                    Expression.IfThen(
+                        Expression.Equal(currentValue, Expression.Constant(null)),
+                        Expression.Return(returnTarget, Expression.Constant(null))));
+            }
+
+            if (node.NodeType == ExpressionType.Convert)
                 return Visit(node.Operand);
 
             return base.VisitUnary(node);
