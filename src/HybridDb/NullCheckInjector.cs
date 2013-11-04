@@ -53,6 +53,11 @@ namespace HybridDb
             return base.VisitUnary(node);
         }
 
+        protected override Expression VisitTypeBinary(TypeBinaryExpression node)
+        {
+            return Expression.TypeIs(Visit(node.Expression), node.TypeOperand);
+        }
+
         protected override Expression VisitConstant(ConstantExpression node)
         {
             if (node.Value == null)

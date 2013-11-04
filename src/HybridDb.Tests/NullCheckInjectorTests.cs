@@ -210,6 +210,26 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(() => (value.Property as OtherRoot).SpecialThingy).ShouldBe(null);
         }
 
+        [Fact]
+        public void CanNullCheckATypeIsExpression()
+        {
+            value.Property = new OtherRoot();
+            InvokeWithNullCheck(() => value.Property is OtherRoot).ShouldBe(true);
+        }
+
+        [Fact]
+        public void CanNullCheckATypeIsExpressionWhenNotOfType()
+        {
+            value.Property = new OtherRoot();
+            InvokeWithNullCheck(() => value.Property is UnrelatedOtherRoot).ShouldBe(false);
+        }
+
+        [Fact]
+        public void CanNullCheckATypeIsExpressionWhenExpressionIsNull()
+        {
+            InvokeWithNullCheck(() => value.Property is UnrelatedOtherRoot).ShouldBe(false);
+        }
+
         static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
         {
             return exp.Compile()();
