@@ -191,6 +191,12 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void TypeAsOperatorCannotBetrustedToNotReturnNull()
+        {
+            CanItBeTrustedToNeverBeNull(x => x as OtherRoot).ShouldBe(false);
+        }
+
+        [Fact]
         public void CanNullCheckACastExpression()
         {
             InvokeWithNullCheck(() => (ValueType?)value.NonNullableThingy2);

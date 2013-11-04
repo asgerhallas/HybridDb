@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -7,45 +6,21 @@ namespace HybridDb
 {
     public class NullCheckInjector : ExpressionVisitor
     {
-        readonly ParameterExpression currentValue;
-        readonly LabelTarget returnTarget;
-
-        public NullCheckInjector()
-        {
-            currentValue = Expression.Variable(typeof(object));
-            returnTarget = Expression.Label(typeof(object));
-        }
-
         public bool CanBeTrustedToNeverReturnNull { get; private set; }
 
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
             CanBeTrustedToNeverReturnNull = true;
 
-            // Change the return type of the lambda to the new body's return type
-            var nullCheckedBody = Expression.Block(
-                new[] { currentValue },
-                Visit(node.Body),
-                Expression.Label(returnTarget, currentValue));
-
-            return Expression.Lambda(nullCheckedBody, node.Parameters);
+            return Expression.Lambda(
+                Expression.Convert(Visit(node.Body), typeof(object)), 
+                node.Parameters);
         }
 
         protected override Expression VisitUnary(UnaryExpression node)
         {
             if (node.NodeType == ExpressionType.TypeAs)
-            {
-                var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
-
                 CanBeTrustedToNeverReturnNull = false;
-
-                return Expression.Block(
-                    Visit(node.Operand),
-                    assignCurrentValue,
-                    Expression.IfThen(
-                        Expression.Equal(currentValue, Expression.Constant(null)),
-                        Expression.Return(returnTarget, Expression.Constant(null))));
-            }
 
             if (node.NodeType == ExpressionType.Convert)
                 return Visit(node.Operand);
@@ -53,20 +28,12 @@ namespace HybridDb
             return base.VisitUnary(node);
         }
 
-        protected override Expression VisitTypeBinary(TypeBinaryExpression node)
-        {
-            return Expression.TypeIs(Visit(node.Expression), node.TypeOperand);
-        }
-
         protected override Expression VisitConstant(ConstantExpression node)
         {
             if (node.Value == null)
-            {
                 CanBeTrustedToNeverReturnNull = false;
-                return Expression.Return(returnTarget, Expression.Convert(node, typeof(object)));
-            }
 
-            return Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
+            return node;
         }
 
         protected override Expression VisitMethodCall(MethodCallExpression node)
@@ -77,49 +44,41 @@ namespace HybridDb
             if (receiver == null && node.Method.IsDefined(typeof(ExtensionAttribute)))
                 receiver = node.Arguments[0];
 
-            var nullCheckedBlock = receiver != null ? Visit(receiver): node;
+            var nullCheckedReceiver = receiver != null ? Visit(receiver): node;
 
-            var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof(object)));
-
-            if (!node.Method.ReturnType.CanBeNull())
+            if (!CanBeNull(nullCheckedReceiver) && !node.Type.CanBeNull())
             {
-                return Expression.Block(nullCheckedBlock, assignCurrentValue);
+                return node;
             }
 
             CanBeTrustedToNeverReturnNull = false;
-
-            return Expression.Block(
-                nullCheckedBlock,
-                assignCurrentValue,
-                Expression.IfThen(
-                    Expression.Equal(currentValue, Expression.Constant(null)),
-                    Expression.Return(returnTarget, Expression.Constant(null))));
+            return Expression.Condition(
+                Expression.ReferenceNotEqual(nullCheckedReceiver, Expression.Constant(null)),
+                Expression.Convert(node, typeof(object)),
+                Expression.Convert(Expression.Constant(null), typeof(object)));
         }
 
         protected override Expression VisitMember(MemberExpression node)
         {
-            var nullCheckedBlock = Visit(node.Expression);
+            var nullCheckedReceiver = Visit(node.Expression);
 
-            Type type;
-            if (node.Member is PropertyInfo) type = ((PropertyInfo)node.Member).PropertyType;
-            else if (node.Member is FieldInfo) type = ((FieldInfo) node.Member).FieldType;
-            else throw new ArgumentOutOfRangeException("Member access of type " + node.Member.GetType() + " is not supported.");
-
-            var assignCurrentValue = Expression.Assign(currentValue, Expression.Convert(node, typeof (object)));
-
-            if (!type.CanBeNull())
+            if (!CanBeNull(nullCheckedReceiver) && !node.Type.CanBeNull())
             {
-                return Expression.Block(nullCheckedBlock, assignCurrentValue);
+                return node;
             }
 
             CanBeTrustedToNeverReturnNull = false;
+            return Expression.Condition(
+                Expression.ReferenceNotEqual(nullCheckedReceiver, Expression.Constant(null)), 
+                Expression.Convert(node, typeof (object)), 
+                Expression.Convert(Expression.Constant(null), typeof(object)));
+        }
 
-            return Expression.Block(
-                nullCheckedBlock,
-                assignCurrentValue,
-                Expression.IfThen(
-                    Expression.Equal(currentValue, Expression.Constant(null)),
-                    Expression.Return(returnTarget, Expression.Constant(null))));
+        bool CanBeNull(Expression expression)
+        {
+            // We do not allow parameters to be null
+            return expression.NodeType != ExpressionType.Parameter && 
+                   expression.Type.CanBeNull();
         }
     }
 }
