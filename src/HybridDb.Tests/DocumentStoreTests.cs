@@ -303,6 +303,22 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryAndReturnValueProjections()
+        {
+            store.Document<Entity>().Project(x => x.Field).MigrateSchema();
+
+            var id = Guid.NewGuid();
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+
+            QueryStats stats;
+            var rows = store.Query<string>(table.Table, out stats, select: "Field").ToList();
+
+            Assert.Equal("Asger", rows.Single());
+        }
+
+        [Fact]
         public void CanQueryDynamicTable()
         {
             store.Document<Entity>().Project(x => x.Field).Project(x => x.StringProp).MigrateSchema();

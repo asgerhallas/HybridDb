@@ -83,8 +83,6 @@ namespace HybridDb.Linq
             }
         }
 
-
-
         public string GetQueryText(IQueryable query)
         {
             return query.Translate().Where;

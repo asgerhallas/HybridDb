@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -9,7 +10,9 @@ namespace HybridDb.Linq.Parsers
         public Translation Translate(Expression expression)
         {
             var queryVisitor = new QueryParser();
-            var parameters = new Dictionary<string, object>();
+            
+            // parameters are indexed by value to ease reusing params by value
+            var parameters = new Dictionary<object, string>();
 
             queryVisitor.Visit(expression);
 
@@ -32,7 +35,7 @@ namespace HybridDb.Linq.Parsers
                 OrderBy = orderBySql.ToString(),
                 Skip = queryVisitor.Skip,
                 Take = queryVisitor.Take,
-                Parameters = parameters,
+                Parameters = parameters.ToDictionary(x => x.Value, x => x.Key),
                 ExecutionMethod = queryVisitor.Execution
             };
         }

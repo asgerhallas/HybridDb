@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using HybridDb.Linq.Ast;
@@ -10,9 +11,9 @@ namespace HybridDb.Linq.Parsers
     public class SqlExpressionTranslator : SqlExpressionVisitor
     {
         readonly StringBuilder sql;
-        readonly Dictionary<string, object> parameters;
+        readonly Dictionary<object, string> parameters;
 
-        public SqlExpressionTranslator(StringBuilder sql, Dictionary<string, object> parameters)
+        public SqlExpressionTranslator(StringBuilder sql, Dictionary<object, string> parameters)
         {
             this.sql = sql;
             this.parameters = parameters;
@@ -144,8 +145,12 @@ namespace HybridDb.Linq.Parsers
                 return string.Format("({0})", listOfValues.Count == 0 ? "NULL" : string.Join(", ", listOfValues.Select(FormatConstant)));
             }
 
-            var key = "@Value" + parameters.Count;
-            parameters.Add(key, value);
+            string key;
+            if (parameters.TryGetValue(value, out key))
+                return key;
+
+            key = "@Value" + parameters.Count;
+            parameters.Add(value, key);
             return key;
         }
     }

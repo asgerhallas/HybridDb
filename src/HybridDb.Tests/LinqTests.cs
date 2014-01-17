@@ -516,18 +516,16 @@ namespace HybridDb.Tests
         public void CanQueryWhereWithInEmptyArray()
         {
             var translation = session.Query<Entity>().Where(x => x.Id.In(new Guid[0])).Translate();
-            translation.Where.ShouldBe("(@Value0 <> @Value1)");
+            translation.Where.ShouldBe("(@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
-            translation.Parameters.ShouldContainKeyAndValue("@Value1", 1);
         }
 
         [Fact]
         public void CanQueryWhereWithNotInEmptyArray()
         {
             var translation = session.Query<Entity>().Where(x => !x.Id.In(new Guid[0])).Translate();
-            translation.Where.ShouldBe(" NOT (@Value0 <> @Value1)");
+            translation.Where.ShouldBe(" NOT (@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
-            translation.Parameters.ShouldContainKeyAndValue("@Value1", 1);
         }
 
         [Fact]
@@ -542,6 +540,21 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value1", guid2);
         }
 
+        [Fact]
+        public void CanQueryWhereWithTrueBoolConstant()
+        {
+            var translation = session.Query<Entity>().Where(x => true).Translate();
+            translation.Where.ShouldBe("(@Value0 = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
+        [Fact]
+        public void CanQueryWhereWithFalseBoolConstant()
+        {
+            var translation = session.Query<Entity>().Where(x => false).Translate();
+            translation.Where.ShouldBe("(@Value0 <> @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
 
         public class Entity
         {

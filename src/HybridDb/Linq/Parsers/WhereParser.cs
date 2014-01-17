@@ -117,9 +117,7 @@ namespace HybridDb.Linq.Parsers
                     }
                     else
                     {
-                        // A fake false
-                        var constant1 = new SqlConstantExpression(1);
-                        ast.Push(new SqlBinaryExpression(SqlNodeType.NotEqual, constant1, constant1));
+                        ast.Push(new SqlConstantExpression(false));
                     }
                     break;
                 default:

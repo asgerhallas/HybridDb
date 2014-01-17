@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using HybridDb.Linq.Ast;
 
 namespace HybridDb.Linq.Parsers
@@ -16,6 +17,20 @@ namespace HybridDb.Linq.Parsers
             }
 
             return expression;
+        }
+
+        protected override SqlExpression Visit(SqlConstantExpression expression)
+        {
+            if (expression.Value is bool)
+            {
+                var nodeType = ((bool) expression.Value) ? SqlNodeType.Equal : SqlNodeType.NotEqual;
+
+                return new SqlBinaryExpression(nodeType, 
+                    new SqlConstantExpression(1),
+                    new SqlConstantExpression(1));
+            }
+
+            return base.Visit(expression);
         }
 
         protected override SqlExpression Visit(SqlColumnExpression expression)

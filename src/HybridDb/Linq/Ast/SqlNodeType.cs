@@ -17,6 +17,7 @@
         Is,
         IsNot,
         Constant,
+        ConstantBooleanConditionExpression,
         Column,
         LessThan,
         LessThanOrEqual,
@@ -26,6 +27,6 @@
         BitwiseOr,
         Project,
         Ordering,
-        OrderBy
+        OrderBy,
     }
 }
