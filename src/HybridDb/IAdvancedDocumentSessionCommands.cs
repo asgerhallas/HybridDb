@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using HybridDb.Commands;
 
 namespace HybridDb
@@ -12,5 +13,6 @@ namespace HybridDb
         void Evict(object entity);
         Guid? GetEtagFor(object entity);
         void SaveChangesLastWriterWins();
+        IEnumerable<object> ManagedEntities { get; }
     }
 }
