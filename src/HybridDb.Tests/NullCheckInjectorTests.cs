@@ -9,137 +9,136 @@ namespace HybridDb.Tests
 {
     public class NullCheckInjectorTests
     {
-        readonly Root value;
-
-        public NullCheckInjectorTests()
-        {
-            value = new Root();
-        }
-
         [Fact]
         public void AccessThroughNullPropertyToProperty()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.Property));
-            InvokeWithNullCheck(() => value.Property.Property).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Property.Property));
+            InvokeWithNullCheck(x => x.Property.Property).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThroughNullPropertyToField()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.Field));
-            InvokeWithNullCheck(() => value.Property.Field).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Property.Field));
+            InvokeWithNullCheck(x => x.Property.Field).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThroughNullPropertyToMethod()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.Method()));
-            InvokeWithNullCheck(() => value.Property.Method()).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Property.Method()));
+            InvokeWithNullCheck(x => x.Property.Method()).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThroughNullMethodToProperty()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Method().Property));
-            InvokeWithNullCheck(() => value.Method().Property).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Method().Property));
+            InvokeWithNullCheck(x => x.Method().Property).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThroughNullMethodToField()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Method().Field));
-            InvokeWithNullCheck(() => value.Method().Field).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Method().Field));
+            InvokeWithNullCheck(x => x.Method().Field).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThroughNullMethodToMethod()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Method().Method()));
-            InvokeWithNullCheck(() => value.Method().Method()).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Method().Method()));
+            InvokeWithNullCheck(x => x.Method().Method()).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThroughNullIndexerToProperty()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Properties[0].Property));
-            InvokeWithNullCheck(() => value.Properties[0].Property).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Properties[0].Property));
+            InvokeWithNullCheck(x => x.Properties[0].Property).ShouldBe(null);
         }
 
         [Fact]
         public void AccessToValueTypeThroughNullableTypeReturnsNull()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.NonNullableThingy));
-            InvokeWithNullCheck(() => value.Property.NonNullableThingy).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Property.NonNullableThingy));
+            InvokeWithNullCheck(x => x.Property.NonNullableThingy).ShouldBe(null);
         }
 
         [Fact]
         public void AccessToValueTypeCanReturnNullIfSpecified()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.NonNullableThingy));
-            InvokeWithNullCheck(() => value.Property.NonNullableThingy).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Property.NonNullableThingy));
+            InvokeWithNullCheck(x => x.Property.NonNullableThingy).ShouldBe(null);
         }
 
         [Fact]
         public void DirectAccessToValueTypeReturnsValue()
         {
-            InvokeWithNullCheck(() => value.NonNullableThingy).ShouldBe(0);
+            InvokeWithNullCheck(x => x.NonNullableThingy).ShouldBe(0);
         }
 
         [Fact]
         public void AccessThroughValueTypeCanReturnNull()
         {
-            InvokeWithNullCheck(() => value.Property.NonNullableThingy2.Property).ShouldBe(null);
+            InvokeWithNullCheck(x => x.Property.NonNullableThingy2.Property).ShouldBe(null);
+        }
+
+        [Fact]
+        public void MethodCallThroughValueTypeCanReturnNull()
+        {
+            InvokeWithNullCheck(x => x.NonNullableThingy2.Textualize()).ShouldBe("hej");
         }
 
         [Fact]
         public void AccessWhereLastMemberIsNullReturnsNull()
         {
-            value.Property = new Root { Field = new Root { Property = new Root() } };
+            Func<Root> setup = () => new Root {Property = new Root {Field = new Root {Property = new Root()}}};
 
-            Should.NotThrow(() => InvokeWithoutNullCheck(() => value.Property.Field.Property.Property));
-            InvokeWithNullCheck(() => value.Property.Field.Property.Property).ShouldBe(null);
+            Should.NotThrow(() => InvokeWithoutNullCheck(x => x.Property.Field.Property.Property, setup));
+            InvokeWithNullCheck(x => x.Property.Field.Property.Property, setup).ShouldBe(null);
         }
 
         [Fact]
         public void DeepAccessWhereNextToLastMemberIsNull()
         {
-            value.Property = new Root { Field = new Root { Property = new Root() } };
+            Func<Root> setup = () => new Root { Property = new Root { Field = new Root { Property = new Root() } } };
 
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => value.Property.Field.Property.Property.Property));
-            InvokeWithNullCheck(() => value.Property.Field.Property.Property.Property).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => x.Property.Field.Property.Property.Property, setup));
+            InvokeWithNullCheck(x => x.Property.Field.Property.Property.Property, setup).ShouldBe(null);
         }
 
         [Fact]
         public void AccessToExtensionMethodReturningValueType()
         {
-            Should.Throw<ArgumentNullException>(() => InvokeWithoutNullCheck(() => value.Properties.Count()));
-            InvokeWithNullCheck(() => value.Properties.Count()).ShouldBe(null);
+            Should.Throw<ArgumentNullException>(() => InvokeWithoutNullCheck(x => x.Properties.Count()));
+            InvokeWithNullCheck(x => x.Properties.Count()).ShouldBe(null);
         }
 
         [Fact]
         public void AccessThrougStaticMethodReturningNullableType()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => Root.StaticMethod().Property));
-            InvokeWithNullCheck(() => Root.StaticMethod().Property).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => Root.StaticMethod().Property));
+            InvokeWithNullCheck(x => Root.StaticMethod().Property).ShouldBe(null);
         }
 
         [Fact]
         public void CanHandleConstant()
         {
-            InvokeWithNullCheck(() => 10).ShouldBe(10);
+            InvokeWithNullCheck(x => 10).ShouldBe(10);
         }
 
         [Fact]
         public void CanHandleNullConstant()
         {
-            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(() => ((string)null).Length));
-            InvokeWithNullCheck(() => ((string)null).Length).ShouldBe(null);
+            Should.Throw<NullReferenceException>(() => InvokeWithoutNullCheck(x => ((string)null).Length));
+            InvokeWithNullCheck(x => ((string)null).Length).ShouldBe(null);
         }
 
         [Fact]
         public void CanReturnNullConstantAsNullable()
         {
-            InvokeWithNullCheck<DateTime?>(() => null).ShouldBe(null);
+            InvokeWithNullCheck<DateTime?>(x => null).ShouldBe(null);
         }
 
         [Fact]
@@ -169,6 +168,7 @@ namespace HybridDb.Tests
         [Fact]
         public void ClosedVariablesWillNotBeTrustedToNeverReturnNull()
         {
+            var value = "test";
             CanItBeTrustedToNeverBeNull(x => value).ShouldBe(false);
         }
 
@@ -199,52 +199,50 @@ namespace HybridDb.Tests
         [Fact]
         public void CanNullCheckACastExpression()
         {
-            InvokeWithNullCheck(() => (ValueType?)value.NonNullableThingy2);
+            InvokeWithNullCheck(x => (ValueType?)x.NonNullableThingy2);
         }
 
         [Fact]
         public void CanNullCheckATypeAsExpression()
         {
-            value.Property = new OtherRoot();
-            InvokeWithNullCheck(() => (value.Property as OtherRoot).SpecialThingy).ShouldBe(0);
+            InvokeWithNullCheck(x => (x.Property as OtherRoot).SpecialThingy, () => new Root {Property = new OtherRoot()}).ShouldBe(0);
         }
 
         [Fact]
         public void CanNullCheckATypeAsExpressionWhenNotCorrectType()
         {
-            value.Property = new UnrelatedOtherRoot();
-            InvokeWithNullCheck(() => (value.Property as OtherRoot).SpecialThingy).ShouldBe(null);
+            InvokeWithNullCheck(x => (x.Property as OtherRoot).SpecialThingy, () => new Root {Property = new UnrelatedOtherRoot()}).ShouldBe(null);
         }
 
         [Fact]
         public void CanNullCheckATypeIsExpression()
         {
-            value.Property = new OtherRoot();
-            InvokeWithNullCheck(() => value.Property is OtherRoot).ShouldBe(true);
+            InvokeWithNullCheck(x => x.Property is OtherRoot, () => new Root { Property = new OtherRoot() }).ShouldBe(true);
         }
 
         [Fact]
         public void CanNullCheckATypeIsExpressionWhenNotOfType()
         {
-            value.Property = new OtherRoot();
-            InvokeWithNullCheck(() => value.Property is UnrelatedOtherRoot).ShouldBe(false);
+            InvokeWithNullCheck(x => x.Property is UnrelatedOtherRoot, () => new Root { Property = new OtherRoot() }).ShouldBe(false);
         }
 
         [Fact]
         public void CanNullCheckATypeIsExpressionWhenExpressionIsNull()
         {
-            InvokeWithNullCheck(() => value.Property is UnrelatedOtherRoot).ShouldBe(false);
+            InvokeWithNullCheck(x => x.Property is UnrelatedOtherRoot).ShouldBe(false);
         }
 
-        static object InvokeWithoutNullCheck(Expression<Func<object>> exp)
+        static object InvokeWithoutNullCheck<T>(Expression<Func<Root, T>> exp, Func<Root> setup = null)
         {
-            return exp.Compile()();
+            setup = setup ?? (() => new Root());
+            return exp.Compile()(setup());
         }
 
-        static object InvokeWithNullCheck<T>(Expression<Func<T>> exp)
+        static object InvokeWithNullCheck<T>(Expression<Func<Root, T>> exp, Func<Root> setup = null)
         {
+            setup = setup ?? (() => new Root());
             var nullChecked = new NullCheckInjector().Visit(exp);
-            return ((Expression<Func<object>>) nullChecked).Compile()();
+            return ((Expression<Func<Root, object>>) nullChecked).Compile()(setup());
         }
 
         static bool CanItBeTrustedToNeverBeNull<T>(Expression<Func<Root, T>> exp)
@@ -297,6 +295,11 @@ namespace HybridDb.Tests
         public struct ValueType
         {
             public Root Property { get; set; }
+
+            public string Textualize()
+            {
+                return "hej";
+            }
         }
     }
 }

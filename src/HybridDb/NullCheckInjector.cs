@@ -46,12 +46,16 @@ namespace HybridDb
 
             var nullCheckedReceiver = receiver != null ? Visit(receiver): node;
 
-            if (!CanBeNull(nullCheckedReceiver) && !node.Type.CanBeNull())
+            if (node.Type.CanBeNull())
+            {
+                CanBeTrustedToNeverReturnNull = false;
+            }
+
+            if (!CanBeNull(nullCheckedReceiver))
             {
                 return node;
             }
 
-            CanBeTrustedToNeverReturnNull = false;
             return Expression.Condition(
                 Expression.ReferenceNotEqual(nullCheckedReceiver, Expression.Constant(null)),
                 Expression.Convert(node, typeof(object)),
@@ -62,12 +66,16 @@ namespace HybridDb
         {
             var nullCheckedReceiver = Visit(node.Expression);
 
-            if (!CanBeNull(nullCheckedReceiver) && !node.Type.CanBeNull())
+            if (node.Type.CanBeNull())
+            {
+                CanBeTrustedToNeverReturnNull = false;
+            }
+
+            if (!CanBeNull(nullCheckedReceiver)/* && !node.Type.CanBeNull()*/)
             {
                 return node;
             }
 
-            CanBeTrustedToNeverReturnNull = false;
             return Expression.Condition(
                 Expression.ReferenceNotEqual(nullCheckedReceiver, Expression.Constant(null)), 
                 Expression.Convert(node, typeof (object)), 
