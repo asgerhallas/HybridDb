@@ -25,6 +25,11 @@ namespace HybridDb
             get { return this; }
         }
 
+        public IEnumerable<object> ManagedEntities
+        {
+            get { return entities.Select(x => x.Value.Entity); }
+        }
+
         public T Load<T>(Guid key) where T : class
         {
             ManagedEntity managedEntity;
