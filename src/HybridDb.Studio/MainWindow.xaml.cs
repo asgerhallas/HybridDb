@@ -13,14 +13,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace HybridDb.Studio.Views
+namespace HybridDb.Studio
 {
     /// <summary>
-    /// Interaction logic for DocumentView.xaml
+    /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class DocumentView : UserControl
+    public partial class MainWindow : Window
     {
-        public DocumentView()
+        public MainWindow()
         {
             InitializeComponent();
         }
