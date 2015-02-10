@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using HybridDb.Studio.Views;
+using Microsoft.Win32;
 
 namespace HybridDb.Studio.ViewModels
 {
@@ -7,15 +9,42 @@ namespace HybridDb.Studio.ViewModels
     {
         private readonly IViewLocator viewLocator;
         private IView contentView;
+        private string statusBarText;
 
         public MainViewModel(IViewLocator viewLocator)
         {
             this.viewLocator = viewLocator;
-            StatusText = "Does it work?";
+            StatusBarText = "Does it work?";
             Open<DocumentView>();
+
+            OpenFile = RelayCommand.Create(ExecuteOpenFile);
         }
 
-        public string StatusText { get; set; }
+        private void ExecuteOpenFile()
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Assemblies (*.dll;*.exe)|*.dll;*.exe|All files (*.*)|*.*"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                StatusBarText = openFileDialog.FileName;
+            }
+        }
+
+        public IRelayCommand OpenFile { get; set; }
+
+        public string StatusBarText
+        {
+            get { return statusBarText; }
+            set
+            {
+                if (value == statusBarText) return;
+                statusBarText = value;
+                OnPropertyChanged();
+            }
+        }
 
         public IView ContentView
         {

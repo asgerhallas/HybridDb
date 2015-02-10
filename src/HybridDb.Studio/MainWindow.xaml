@@ -1,6 +1,11 @@
 ﻿<Window x:Class="HybridDb.Studio.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:viewModels="clr-namespace:HybridDb.Studio.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
         Title="HybridDb Studio" Height="600" Width="800">
     <Grid>
         <Grid.RowDefinitions>
@@ -10,7 +15,7 @@
         </Grid.RowDefinitions>
         <Menu IsMainMenu="True">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open..."></MenuItem>
+                <MenuItem Header="_Open..." Command="{Binding OpenFile}"></MenuItem>
                 <MenuItem Header="Open _recent">
                     <MenuItem Header="C:\workspace\Energy10\bin\Energy10.dll"></MenuItem>
                     <MenuItem Header="C:\workspace\EnergyProjects\bin\EnergyProjects.Web.dll"></MenuItem>
@@ -35,7 +40,7 @@
         </Grid>
         
         <StatusBar Grid.Row="2" Background="DodgerBlue" Foreground="White">
-            <TextBlock Text="{Binding StatusText}"></TextBlock>
+            <TextBlock Text="{Binding StatusBarText}"></TextBlock>
         </StatusBar>
     </Grid>
 </Window>
