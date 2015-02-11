@@ -64,15 +64,34 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="IRelayCommand.cs" />
+    <Compile Include="IApplication.cs" />
+    <Compile Include="Infrastructure\ApplicationSettingsAdapter.cs" />
+    <Compile Include="Infrastructure\EventAggregator.cs" />
+    <Compile Include="Infrastructure\IEventAggregator.cs" />
+    <Compile Include="Infrastructure\IHandle.cs" />
+    <Compile Include="Infrastructure\ISettings.cs" />
+    <Compile Include="Infrastructure\ViewModels\IRelayCommand.cs" />
+    <Compile Include="Infrastructure\Views\IView.cs" />
+    <Compile Include="Infrastructure\Views\View.cs" />
+    <Compile Include="Messages\FileOpened.cs" />
+    <Compile Include="Messages\RecentFilesUpdated.cs" />
     <Compile Include="Properties\Annotations.cs" />
+    <Compile Include="Settings.cs" />
+    <Compile Include="ViewModels\ListViewModel.cs" />
     <Compile Include="ViewModels\DocumentViewModel.cs" />
+    <Compile Include="Infrastructure\Views\IViewModelFactory.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
-    <Compile Include="ViewModels\ViewModel.cs" />
+    <Compile Include="Infrastructure\ViewModels\ViewModel.cs" />
+    <Compile Include="Views\DataTemplateDictionary.cs" />
     <Compile Include="Views\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Page Include="MainWindow.xaml">
+    <Compile Include="Views\TabContentSelector.cs" />
+    <Page Include="Views\ListView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -80,8 +99,11 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="RelayCommand.cs" />
-    <Compile Include="MainWindow.xaml.cs">
+    <Compile Include="Infrastructure\ViewModels\RelayCommand.cs" />
+    <Compile Include="Views\ListView.xaml.cs">
+      <DependentUpon>ListView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>

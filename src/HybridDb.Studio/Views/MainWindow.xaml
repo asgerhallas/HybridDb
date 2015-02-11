@@ -1,0 +1,110 @@
+﻿<Window x:Class="HybridDb.Studio.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:viewModels="clr-namespace:HybridDb.Studio.ViewModels"
+        xmlns:views="clr-namespace:HybridDb.Studio.Views"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
+        Title="HybridDb Studio" Height="600" Width="800" x:Name="Self"
+        Icon="../hybriddb.ico">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Menu IsMainMenu="True" x:Name="MainMenu">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open..." Command="{Binding OpenFile}" />
+                <MenuItem Header="Open _recent" ItemsSource="{Binding RecentlyOpened}" IsEnabled="False">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Items.Count, RelativeSource={RelativeSource Self}}" Value="0">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Command" Value="{Binding DataContext.OpenRecent, ElementName=Self}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Exit" Command="{Binding ExitApplication}" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="Get help online" />
+                <MenuItem Header="About HybridDb Studio" />
+            </MenuItem>
+        </Menu>
+        
+        <Grid Grid.Row="1" Background="{Binding Background, ElementName=MainMenu}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" MinWidth="200"  />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
+            <TreeView>
+                <TreeViewItem Header="Collections" IsExpanded="True">
+                    <TreeViewItem Header="Cases"></TreeViewItem>
+                    <TreeViewItem Header="Users"></TreeViewItem>
+                    <TreeViewItem Header="Companies"></TreeViewItem>
+                </TreeViewItem>
+            </TreeView>
+            
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
+
+            <TabControl Grid.Column="2" ItemsSource="{Binding Tabs}" Margin="0,0,5,0">
+                <TabControl.Style>
+                    <Style TargetType="TabControl">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Items.Count, RelativeSource={RelativeSource Self}}" Value="0">
+                                <Setter Property="Visibility" Value="Hidden" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TabControl.Style>
+                <TabControl.ContentTemplateSelector>
+                    <views:TabContentSelector>
+                        <views:TabContentSelector.DataTemplates>
+                            <views:DataTemplateDictionary>
+                                <DataTemplate x:Key="DocumentViewModel">
+                                    <views:DocumentView />
+                                </DataTemplate>
+                                <DataTemplate x:Key="ListViewModel">
+                                    <views:ListView />
+                                </DataTemplate>
+                            </views:DataTemplateDictionary>
+                        </views:TabContentSelector.DataTemplates>
+                    </views:TabContentSelector>
+                </TabControl.ContentTemplateSelector>
+                <TabControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" MinWidth="50">
+                            <TextBlock Text="{Binding Title}" />
+                            <Button Cursor="Hand" HorizontalAlignment="Right" HorizontalContentAlignment="Right">
+                                <Button.Template>
+                                    <ControlTemplate>
+                                        <TextBlock Text="x" Margin="5,0,0,0" FontWeight="Bold" />
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+            </TabControl>
+            
+        </Grid>
+        
+        <StatusBar Grid.Row="2" Background="DodgerBlue" Foreground="White">
+            <TextBlock Text="{Binding StatusBarText}"></TextBlock>
+        </StatusBar>
+    </Grid>
+</Window>

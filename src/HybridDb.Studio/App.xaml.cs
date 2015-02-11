@@ -2,14 +2,17 @@
 using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using HybridDb.Studio.ViewModels;
+using HybridDb.Studio.Infrastructure;
+using HybridDb.Studio.Infrastructure.ViewModels;
+using HybridDb.Studio.Infrastructure.Views;
+using HybridDb.Studio.Views;
 
 namespace HybridDb.Studio
 {
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
-    public partial class App : Application
+    public partial class App : Application, IApplication
     {
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -23,14 +26,13 @@ namespace HybridDb.Studio
                     Types.FromThisAssembly()
                         .BasedOn<ViewModel>()
                         .WithServiceSelf())
-                .Register(Component.For<IViewLocator>().AsFactory());
+                .Register(Component.For<IViewModelFactory>().AsFactory())
+                .Register(Component.For<IApplication>().Instance(this))
+                .Register(Component.For<ISettings>().ImplementedBy<ApplicationSettingsAdapter>().LifestyleSingleton())
+                .Register(Component.For<IEventAggregator>().ImplementedBy<EventAggregator>().LifestyleSingleton());
 
             var mainWindow = container.Resolve<MainWindow>();
             mainWindow.Show();
         }
-    }
-
-    public interface IView
-    {
     }
 }

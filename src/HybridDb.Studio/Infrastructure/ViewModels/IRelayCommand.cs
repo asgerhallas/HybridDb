@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace HybridDb.Studio
+namespace HybridDb.Studio.Infrastructure.ViewModels
 {
     public interface IRelayCommand : ICommand
     {

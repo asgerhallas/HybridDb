@@ -1,13 +1,14 @@
 ﻿using HybridDb.Studio.Infrastructure.Views;
+using HybridDb.Studio.ViewModels;
 
 namespace HybridDb.Studio.Views
 {
     /// <summary>
-    /// Interaction logic for DocumentView.xaml
+    /// Interaction logic for ListView.xaml
     /// </summary>
-    public partial class DocumentView : View
+    public partial class ListView : View
     {
-        public DocumentView()
+        public ListView()
         {
             InitializeComponent();
         }

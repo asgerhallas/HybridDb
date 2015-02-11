@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HybridDb.Studio
+namespace HybridDb.Studio.Infrastructure.ViewModels
 {
     public static class RelayCommand
     {
@@ -18,12 +18,12 @@ namespace HybridDb.Studio
                 o => AssertNoParameterUsage(o, canExecute));
         }
 
-        public static IRelayCommand CreateWithParameter<TParam>(Action<TParam> execute)
+        public static IRelayCommand Create<TParam>(Action<TParam> execute)
         {
             return new RelayCommandWithParameter<TParam>(execute, o => true);
         }
 
-        public static IRelayCommand CreateWithParameter<TParam>(Action<TParam> execute, Predicate<TParam> canExecute)
+        public static IRelayCommand Create<TParam>(Action<TParam> execute, Predicate<TParam> canExecute)
         {
             return new RelayCommandWithParameter<TParam>(execute, canExecute);
         }

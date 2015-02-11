@@ -1,7 +1,9 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
+using HybridDb.Studio.Infrastructure.Views;
 using HybridDb.Studio.ViewModels;
 
-namespace HybridDb.Studio
+namespace HybridDb.Studio.Views
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -13,6 +15,13 @@ namespace HybridDb.Studio
             InitializeComponent();
 
             DataContext = viewModel;
+
+            Closing += (sender, args) => Dispose();
+        }
+
+        public void Dispose()
+        {
+            ((IDisposable)DataContext).Dispose();
         }
     }
 }

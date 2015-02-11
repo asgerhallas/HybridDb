@@ -1,39 +1,49 @@
-﻿using System;
-using System.IO;
+﻿using System.Collections.ObjectModel;
+using Castle.Core.Internal;
+using HybridDb.Studio.Infrastructure;
+using HybridDb.Studio.Infrastructure.ViewModels;
+using HybridDb.Studio.Infrastructure.Views;
+using HybridDb.Studio.Messages;
 using HybridDb.Studio.Views;
 using Microsoft.Win32;
 
 namespace HybridDb.Studio.ViewModels
 {
-    public class MainViewModel : ViewModel
+    public class MainViewModel : ViewModel, IHandle<RecentFilesUpdated>
     {
-        private readonly IViewLocator viewLocator;
-        private IView contentView;
+        private readonly IViewModelFactory viewModelFactory;
+        private readonly IApplication application;
+        private readonly ISettings settings;
+        private readonly IEventAggregator bus;
         private string statusBarText;
 
-        public MainViewModel(IViewLocator viewLocator)
+        public MainViewModel(IViewModelFactory viewModelFactory, IApplication application, ISettings settings, IEventAggregator bus)
         {
-            this.viewLocator = viewLocator;
+            this.viewModelFactory = viewModelFactory;
+            this.application = application;
+            this.settings = settings;
+            this.bus = bus;
+            Tabs = new ObservableCollection<ViewModel>();
+
+            bus.Subscribe(this);
+
             StatusBarText = "Does it work?";
-            Open<DocumentView>();
 
-            OpenFile = RelayCommand.Create(ExecuteOpenFile);
+            OpenFile = RelayCommand.Create(HandleOpenFile);
+            OpenRecent = RelayCommand.Create<string>(HandleOpenRecent);
+            ExitApplication = RelayCommand.Create(HandleExitApplication);
+
+            RecentlyOpened = new ObservableCollection<string>(settings.RecentFiles);
+
+            Open<ListViewModel>();
+            Open<DocumentViewModel>();
         }
 
-        private void ExecuteOpenFile()
-        {
-            var openFileDialog = new OpenFileDialog
-            {
-                Filter = "Assemblies (*.dll;*.exe)|*.dll;*.exe|All files (*.*)|*.*"
-            };
+        public IRelayCommand OpenFile { get; private set; }
+        public IRelayCommand OpenRecent { get; private set; }
+        public IRelayCommand ExitApplication { get; private set; }
 
-            if (openFileDialog.ShowDialog() == true)
-            {
-                StatusBarText = openFileDialog.FileName;
-            }
-        }
-
-        public IRelayCommand OpenFile { get; set; }
+        public ObservableCollection<string> RecentlyOpened { get; private set; }
 
         public string StatusBarText
         {
@@ -46,25 +56,44 @@ namespace HybridDb.Studio.ViewModels
             }
         }
 
-        public IView ContentView
+        public ObservableCollection<ViewModel> Tabs { get; private set; }
+
+        public void Open<TViewModel>() where TViewModel : ViewModel
         {
-            get { return contentView; }
-            set
+            Tabs.Add(viewModelFactory.Create<TViewModel>());
+        }
+
+        private void HandleOpenRecent(string filepath)
+        {
+            StatusBarText = "Åbn seneste " + filepath;
+        }
+
+        private void HandleOpenFile()
+        {
+            var openFileDialog = new OpenFileDialog
             {
-                if (Equals(value, contentView)) return;
-                contentView = value;
-                OnPropertyChanged();
+                Filter = "Assemblies (*.dll;*.exe)|*.dll;*.exe|All files (*.*)|*.*"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                StatusBarText = openFileDialog.FileName;
+                bus.Publish(new FileOpened
+                {
+                    Filepath = openFileDialog.FileName
+                });
             }
         }
 
-        public void Open<TView>() where TView : IView
+        private void HandleExitApplication()
         {
-            ContentView = viewLocator.Create<TView>();
+            application.Shutdown();
         }
-    }
 
-    public interface IViewLocator
-    {
-        T Create<T>() where T : IView;
+        public void Handle(RecentFilesUpdated message)
+        {
+            RecentlyOpened.Clear();
+            settings.RecentFiles.ForEach(RecentlyOpened.Add);
+        }
     }
 }

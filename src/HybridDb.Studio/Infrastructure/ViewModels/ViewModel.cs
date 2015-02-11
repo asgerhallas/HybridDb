@@ -1,10 +1,11 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using HybridDb.Studio.Annotations;
+using HybridDb.Studio.Properties;
 
-namespace HybridDb.Studio.ViewModels
+namespace HybridDb.Studio.Infrastructure.ViewModels
 {
-    public abstract class ViewModel : INotifyPropertyChanged
+    public abstract class ViewModel : INotifyPropertyChanged, IDisposable
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -13,6 +14,10 @@ namespace HybridDb.Studio.ViewModels
         {
             var handler = PropertyChanged;
             if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public virtual void Dispose()
+        {
         }
     }
 }
