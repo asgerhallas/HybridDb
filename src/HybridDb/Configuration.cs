@@ -8,6 +8,11 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
+    public interface IConfigurator
+    {
+        
+    }
+
     public class Configuration
     {
         public Configuration(IDocumentStore store)
@@ -15,7 +20,6 @@ namespace HybridDb
             Store = store;
             
             Tables = new ConcurrentDictionary<string, Table>();
-            IndexTables = new ConcurrentDictionary<Type, IndexTable>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Serializer = new DefaultBsonSerializer();
@@ -35,7 +39,6 @@ namespace HybridDb
         public ISerializer Serializer { get; private set; }
 
         public ConcurrentDictionary<string, Table> Tables { get; private set; }
-        public ConcurrentDictionary<Type, IndexTable> IndexTables { get; private set; }
         public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
 
         public static string GetColumnNameByConventionFor(Expression projector)
@@ -53,12 +56,27 @@ namespace HybridDb
         public DocumentDesign<TEntity> Document<TEntity>(string tablename)
         {
             tablename = tablename ?? GetTableNameByConventionFor<TEntity>();
-            var table = new DocumentTable(tablename);
-            var design = new DocumentDesign<TEntity>(this, table);
+
+            var baseDesign = DocumentDesigns
+                .Where(x => x.Key.IsAssignableFrom(typeof (TEntity)))
+                .Select(x => x.Value)
+                .SingleOrDefault();
             
-            Tables.TryAdd(tablename, design.Table);
-            DocumentDesigns.TryAdd(design.Type, design);
-            return design;
+            if (baseDesign != null)
+            {
+                var design = new DocumentDesign<TEntity>(this, baseDesign);
+                DocumentDesigns.TryAdd(design.Type, design);
+                return design;
+            }
+            else
+            {
+                var table = new DocumentTable(tablename);
+                Tables.TryAdd(tablename, table);
+
+                var design = new DocumentDesign<TEntity>(this, table);
+                DocumentDesigns.TryAdd(design.Type, design);
+                return design;
+            }
         }
 
         public DocumentDesign<T> GetDesignFor<T>()
@@ -93,29 +111,6 @@ namespace HybridDb
         {
             Table table;
             return Tables.TryGetValue(tablename, out table) ? table as IndexTable : null;
-        }
-
-        public IndexTable TryGetIndexTableByType(Type type)
-        {
-            IndexTable table;
-            return IndexTables.TryGetValue(type, out table) ? table : null;
-        }
-
-        public IndexTable TryGetBestMatchingIndexTableFor<TDocument>() where TDocument : class
-        {
-            var designs = DocumentDesigns
-                .Where(x => x.Key.IsA<TDocument>())
-                .Select(x => x.Value)
-                .ToList();
-
-            var @groups = from design in designs
-                          from indexTable in design.Indexes.Keys
-                          group indexTable by indexTable
-                              into @group
-                              where @group.Count() == designs.Count
-                              select @group.First();
-
-            return @groups.FirstOrDefault();
         }
 
         public void UseSerializer(ISerializer serializer)

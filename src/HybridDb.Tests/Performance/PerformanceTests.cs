@@ -132,7 +132,7 @@ namespace HybridDb.Tests.Performance
             {
                 using (var store = DocumentStore.ForTestingWithTempTables())
                 {
-                    store.Document<Entity>().Project(x => x.SomeData).Project(x => x.SomeNumber);
+                    store.Document<Entity>().With(x => x.SomeData).With(x => x.SomeNumber);
                     store.MigrateSchemaToMatchConfiguration();
 
                     var commands = new List<DatabaseCommand>();

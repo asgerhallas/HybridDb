@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
+using HybridDb.Schema;
 
 namespace HybridDb.Linq.Parsers
 {
@@ -94,8 +96,17 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Column":
-                    var constant = (ConstantExpression)expression.Arguments[1];
-                    ast.Push(new SqlColumnExpression(expression.Method.GetGenericArguments()[0], (string) constant.Value));
+                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+                    if (column == null || column.ColumnName != "")
+                    {
+                        throw new NotSupportedException(string.Format("{0} method must be called on the lambda parameter.", expression));
+                    }
+
+                    var constant = (SqlConstantExpression)ast.Pop();
+                    var columnType = expression.Method.GetGenericArguments()[0];
+                    var columnName = (string)constant.Value;
+
+                    ast.Push(new SqlColumnExpression(columnType, columnName));
                     break;
                 default:
                     ast.Pop();

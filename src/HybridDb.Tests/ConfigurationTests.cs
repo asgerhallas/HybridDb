@@ -56,100 +56,18 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanGetBestMatchingIndex()
-        {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<Index>();
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<Entity>();
-            indexTable.Name.ShouldBe("Index");
-        }
-
-        [Fact]
-        public void CanGetBestMatchingIndexWhenMultipleTypesSameIndex()
+        public void CanOverrideProjectionsForSubtype()
         {
             var configuration = new Configuration(null);
 
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
+            configuration.Document<AbstractEntity>(null)
+                .With("Number", x => 1);
 
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<MoreDerivedEntity1>();
-            indexTable.Name.ShouldBe("Index");
-        }
+            configuration.Document<DerivedEntity>(null)
+                .With("Number", x => 2);
 
-        [Fact]
-        public void CanGetBestMatchingIndexByBaseType()
-        {
-            var configuration = new Configuration(null);
-
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
-
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<DerivedEntity>();
-            indexTable.Name.ShouldBe("Index");
-        }
-
-        [Fact]
-        public void DoesNotFindIndexWhenOneDerivedTypeDoesNotHaveIndex()
-        {
-            var configuration = new Configuration(null);
-
-            configuration.Document<DerivedEntity>(null);
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
-
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<AbstractEntity>();
-            indexTable.ShouldBe(null);
-        }
-
-        [Fact]
-        public void DoesNotFindIndexWhenOneDerivedTypeHasOtherIndex()
-        {
-            var configuration = new Configuration(null);
-
-            configuration.Document<DerivedEntity>(null).Index<OtherIndex>();
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
-
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<AbstractEntity>();
-            indexTable.ShouldBe(null);
-        }
-
-        [Fact]
-        public void IndexTypeCanContainId()
-        {
-            var configuration = new Configuration(null);
-            Should.NotThrow(() => configuration.Document<MoreDerivedEntity2>(null).Index<IndexWithId>());
-        }
-
-        [Fact]
-        public void DoesNotCreateDefaultProjectionForIndexPropertyThatDoesNotMatchAnyDocumentProperty()
-        {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<BadMatchIndex>();
-
-            var indexTable = configuration.IndexTables[typeof(BadMatchIndex)];
-            configuration.GetDesignFor<Entity>().Indexes[indexTable].ContainsKey("BadMatch").ShouldBe(false);
-        }
-
-        [Fact]
-        public void DoesNotCreateDefaultProjectionForIndexPropertyOfWrongType()
-        {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<WrongTypeIndex>();
-
-            var indexTable = configuration.IndexTables[typeof(WrongTypeIndex)];
-            configuration.GetDesignFor<Entity>().Indexes[indexTable].ContainsKey("String").ShouldBe(false);
-        }
-
-        [Fact]
-        public void CanOverrideProjectionsForIndexProperties()
-        {
-            var configuration = new Configuration(null);
-            configuration.Document<OtherEntity>(null).Index<Index>().With(x => x.Number, x => x.String.Length);
-
-            var indexTable = configuration.IndexTables[typeof (Index)];
-            var projection = configuration.GetDesignFor<OtherEntity>().Indexes[indexTable]["Number"];
-            projection(new OtherEntity { String = "Asger" }).ShouldBe(5);
+            var projection = configuration.GetDesignFor<DerivedEntity>().Projections["Number"];
+            projection(new DerivedEntity()).ShouldBe(2);
         }
 
         public class Entity

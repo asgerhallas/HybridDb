@@ -13,7 +13,7 @@ namespace HybridDb.Tests
 {
     public class DocumentMigratorTests
     {
-        [Fact]
+        [Fact(Skip = "feature tbd")]
         public void CanManipulateDocumentOnRead()
         {
             var serializer = new DefaultBsonSerializer();
@@ -40,7 +40,7 @@ namespace HybridDb.Tests
             ((int)projections["Version"]).ShouldBe(2);
         }
 
-        [Fact]
+        [Fact(Skip = "feature tbd")]
         public void FailsOnReadIfCurrentDocumentIsWrongVersion()
         {
             var migration = new Migration.Migration();

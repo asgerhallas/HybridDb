@@ -17,9 +17,9 @@ namespace HybridDb.Tests
             connectionString = "data source=.;Integrated Security=True";
             store = DocumentStore.ForTestingWithTempTables(connectionString);
             store.Document<Entity>()
-                 .Project(x => x.Property)
-                 .Project(x => x.StringProp)
-                 .Project(x => x.TheChild.NestedProperty);
+                 .With(x => x.Property)
+                 .With(x => x.StringProp)
+                 .With(x => x.TheChild.NestedProperty);
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
             store.MigrateSchemaToMatchConfiguration();
 

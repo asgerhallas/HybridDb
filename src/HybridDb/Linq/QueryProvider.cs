@@ -9,12 +9,14 @@ namespace HybridDb.Linq
 {
     public class QueryProvider<TSourceElement> : IHybridQueryProvider where TSourceElement : class
     {
+        readonly IDocumentStore store;
         readonly DocumentSession session;
         readonly QueryStats lastQueryStats;
 
         public QueryProvider(DocumentSession session)
         {
             this.session = session;
+            store = session.Advanced.DocumentStore;
             lastQueryStats = new QueryStats();
         }
 
@@ -27,7 +29,9 @@ namespace HybridDb.Linq
         {
             var elementType = expression.Type.GetEnumeratedType();
             if (elementType == null)
+            {
                 throw new ArgumentException("Query is not based on IEnumerable");
+            }
 
             try
             {
@@ -39,47 +43,87 @@ namespace HybridDb.Linq
             }
         }
 
-        public IEnumerable<TProjection> ExecuteQuery<TProjection>(Translation translation)
+        public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression)
         {
-            var store = session.Advanced.DocumentStore;
-            var design = store.Configuration.TryGetDesignFor<TSourceElement>();
+            return ExecuteQuery<TProjection>(expression).Results;
+        }
 
-            if (typeof (TSourceElement) == typeof (TProjection) && design != null)
+        T IQueryProvider.Execute<T>(Expression expression)
+        {
+            var result = ExecuteQuery<T>(expression);
+
+            switch (result.Translation.ExecutionMethod)
+            {
+                case Translation.ExecutionSemantics.Single:
+                    if (lastQueryStats.TotalResults > 1)
+                        throw new InvalidOperationException("Query returned more than one element");
+
+                    if (lastQueryStats.TotalResults < 1)
+                        throw new InvalidOperationException("Query returned no elements");
+
+                    return result.Results.Single();
+                case Translation.ExecutionSemantics.SingleOrDefault:
+                    if (lastQueryStats.TotalResults > 1)
+                        throw new InvalidOperationException("Query returned more than one element");
+
+                    if (lastQueryStats.TotalResults < 1)
+                        return default(T);
+
+                    return result.Results.Single();
+                case Translation.ExecutionSemantics.First:
+                    if (lastQueryStats.TotalResults < 1)
+                        throw new InvalidOperationException("Query returned no elements");
+
+                    return result.Results.First();
+                case Translation.ExecutionSemantics.FirstOrDefault:
+                    if (lastQueryStats.TotalResults < 1)
+                        return default(T);
+
+                    return result.Results.First();
+                default:
+                    throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
+            }
+        }
+
+        TranslationAndResult<TProjection> ExecuteQuery<TProjection>(Expression expression)
+        {
+            var design = store.Configuration.TryGetDesignFor<TSourceElement>();
+            var translation = expression.Translate();
+
+            if (typeof (TSourceElement) == typeof (TProjection))
             {
                 QueryStats storeStats;
-                var results = store.Query(design.Table,
-                                          out storeStats,
-                                          translation.Select,
-                                          translation.Where,
-                                          translation.Skip,
-                                          translation.Take,
-                                          translation.OrderBy,
-                                          translation.Parameters)
+                var results = store.Query(
+                    design.Table, out storeStats,
+                    translation.Select,
+                    translation.Where,
+                    translation.Skip,
+                    translation.Take,
+                    translation.OrderBy,
+                    translation.Parameters)
                     .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
                     .Where(result => result != null)
                     .Cast<TProjection>();
   
                 storeStats.CopyTo(lastQueryStats);
-                return results;
+                return new TranslationAndResult<TProjection>(translation, results);
             }
             else
             {
-                var table = design != null
-                                ? (Table) design.Table
-                                : store.Configuration.TryGetIndexTableByType(typeof (TSourceElement));
+                var table = (Table) design.Table;
 
                 QueryStats storeStats;
-                var results = store.Query<TProjection>(table,
-                                             out storeStats,
-                                             translation.Select,
-                                             translation.Where,
-                                             translation.Skip,
-                                             translation.Take,
-                                             translation.OrderBy,
-                                             translation.Parameters);
+                var results = store.Query<TProjection>(
+                    table, out storeStats,
+                    translation.Select,
+                    translation.Where,
+                    translation.Skip,
+                    translation.Take,
+                    translation.OrderBy,
+                    translation.Parameters);
 
                 storeStats.CopyTo(lastQueryStats);
-                return results;
+                return new TranslationAndResult<TProjection>(translation, results);
             }
         }
 
@@ -93,48 +137,21 @@ namespace HybridDb.Linq
             stats = lastQueryStats;
         }
 
-        T IQueryProvider.Execute<T>(Expression expression)
-        {
-            var translation = expression.Translate();
-
-            var result = ExecuteQuery<T>(translation);
-
-            switch (translation.ExecutionMethod)
-            {
-                case Translation.ExecutionSemantics.Single:
-                    if (lastQueryStats.TotalResults > 1)
-                        throw new InvalidOperationException("Query returned more than one element");
-
-                    if (lastQueryStats.TotalResults < 1)
-                        throw new InvalidOperationException("Query returned no elements");
-
-                    return result.Single();
-                case Translation.ExecutionSemantics.SingleOrDefault:
-                    if (lastQueryStats.TotalResults > 1)
-                        throw new InvalidOperationException("Query returned more than one element");
-
-                    if (lastQueryStats.TotalResults < 1)
-                        return default(T);
-
-                    return result.Single();
-                case Translation.ExecutionSemantics.First:
-                    if (lastQueryStats.TotalResults < 1)
-                        throw new InvalidOperationException("Query returned no elements");
-
-                    return result.First();
-                case Translation.ExecutionSemantics.FirstOrDefault:
-                    if (lastQueryStats.TotalResults < 1)
-                        return default(T);
-
-                    return result.First();
-                default:
-                    throw new ArgumentOutOfRangeException("Does not support execution method " + translation.ExecutionMethod);
-            }
-        }
-
         public object Execute(Expression expression)
         {
             throw new NotSupportedException();
+        }
+
+        class TranslationAndResult<T>
+        {
+            public TranslationAndResult(Translation translation, IEnumerable<T> results)
+            {
+                Translation = translation;
+                Results = results;
+            }
+
+            public Translation Translation { get; private set; }
+            public IEnumerable<T> Results { get; private set; }
         }
     }
 }
