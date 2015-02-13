@@ -18,7 +18,7 @@ namespace HybridDb
 
     public class Configuration
     {
-        public Configuration()
+        internal Configuration()
         {
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
@@ -32,6 +32,14 @@ namespace HybridDb
             metadata.Register(new Column("DocumentVersion", new SqlColumn(DbType.Int32)));
 
             Tables.TryAdd(metadata.Name, metadata);
+        }
+
+        internal static Configuration Create(IHybridDbConfigurator configurator)
+        {
+            var configuration = new Configuration();
+            configurator = configurator ?? new LambdaHybridDbConfigurator(x => { });
+            configurator.Configure(configuration);
+            return configuration;
         }
 
         public ILogger Logger { get; private set; }

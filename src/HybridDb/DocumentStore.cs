@@ -29,14 +29,12 @@ namespace HybridDb
         long numberOfRequests;
         int numberOfManagedConnections;
 
-        DocumentStore(string connectionString, IHybridDbConfigurator configurator, TableMode tableMode, bool testMode)
+        DocumentStore(string connectionString, Configuration configuration, TableMode tableMode, bool testMode)
         {
+            this.connectionString = connectionString;
+            this.configuration = configuration;
             this.tableMode = tableMode;
             this.testMode = testMode;
-            this.connectionString = connectionString;
-
-            configuration = new Configuration();
-            configurator.Configure(configuration);
 
             OnMessage = message => { };
             OnRead = (table, projections) => { };
@@ -44,22 +42,22 @@ namespace HybridDb
 
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
         {
-            return new DocumentStore(connectionString, configurator ?? new LambdaHybridDbConfigurator(x => { }), TableMode.UseRealTables, testMode: false);
+            return new DocumentStore(connectionString, Configuration.Create(configurator), TableMode.UseRealTables, testMode: false);
         }
 
         public static DocumentStore ForTestingWithRealTables(string connectionString = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new LambdaHybridDbConfigurator(x => { }), TableMode.UseRealTables, testMode: true);
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", Configuration.Create(null), TableMode.UseRealTables, testMode: true);
         }
 
         public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new LambdaHybridDbConfigurator(x => { }), TableMode.UseGlobalTempTables, testMode: true);
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", Configuration.Create(null), TableMode.UseGlobalTempTables, testMode: true);
         }
 
         public static DocumentStore ForTestingWithTempTables(string connectionString = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new LambdaHybridDbConfigurator(x => { }), TableMode.UseTempTables, testMode: true);
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", Configuration.Create(null), TableMode.UseTempTables, testMode: true);
         }
 
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
