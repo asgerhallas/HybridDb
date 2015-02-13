@@ -8,17 +8,18 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
-    public interface IConfigurator
+    class Configurator : HybridDbConfigurator
     {
-        
+        protected override void Configure()
+        {
+            Document<string>().With(x => x.Length);
+        }
     }
 
     public class Configuration
     {
-        public Configuration(IDocumentStore store)
+        public Configuration()
         {
-            Store = store;
-            
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
 
@@ -33,8 +34,6 @@ namespace HybridDb
             Tables.TryAdd(metadata.Name, metadata);
         }
 
-        public IDocumentStore Store { get; set; }
-        
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
@@ -53,7 +52,7 @@ namespace HybridDb
             return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
         }
 
-        public DocumentDesign<TEntity> Document<TEntity>(string tablename)
+        public DocumentDesign<TEntity> Document<TEntity>(string tablename = null)
         {
             tablename = tablename ?? GetTableNameByConventionFor<TEntity>();
 

@@ -53,11 +53,6 @@ namespace HybridDb.Schema
             get { return decendentsAndSelf; }
         }
 
-        public void MigrateSchema()
-        {
-            Configuration.Store.Migrate(migrator => migrator.MigrateTo(Table));
-        }
-
         public Guid GetId(object entity)
         {
             return (Guid) Projections[Table.IdColumn](entity);

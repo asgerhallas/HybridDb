@@ -22,24 +22,45 @@ namespace HybridDb
         readonly Configuration configuration;
         readonly string connectionString;
         readonly TableMode tableMode;
+        readonly bool testMode;
 
         SqlConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
         long numberOfRequests;
         int numberOfManagedConnections;
 
-        DocumentStore(string connectionString, TableMode tableMode)
+        DocumentStore(string connectionString, IHybridDbConfigurator configurator, TableMode tableMode, bool testMode)
         {
             this.tableMode = tableMode;
+            this.testMode = testMode;
             this.connectionString = connectionString;
 
-            configuration = new Configuration(this);
+            configuration = new Configuration();
+            configurator.Configure(configuration);
 
             OnMessage = message => { };
             OnRead = (table, projections) => { };
         }
 
-        public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
+        public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
+        {
+            return new DocumentStore(connectionString, configurator ?? new LambdaHybridDbConfigurator(x => { }), TableMode.UseRealTables, testMode: false);
+        }
+
+        public static DocumentStore ForTestingWithRealTables(string connectionString = null)
+        {
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new LambdaHybridDbConfigurator(x => { }), TableMode.UseRealTables, testMode: true);
+        }
+
+        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
+        {
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new LambdaHybridDbConfigurator(x => { }), TableMode.UseGlobalTempTables, testMode: true);
+        }
+
+        public static DocumentStore ForTestingWithTempTables(string connectionString = null)
+        {
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new LambdaHybridDbConfigurator(x => { }), TableMode.UseTempTables, testMode: true);
+        }
 
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
 
@@ -54,7 +75,7 @@ namespace HybridDb
 
         public bool IsInTestMode
         {
-            get { return tableMode != TableMode.UseRealTables; }
+            get { return testMode; }
         }
 
         /// <summary>
@@ -68,6 +89,11 @@ namespace HybridDb
 
         public DocumentDesign<TEntity> Document<TEntity>(string tablename = null)
         {
+            if (!IsInTestMode)
+            {
+                throw new InvalidOperationException("To configure the store directly, it must be run in test mode.");
+            }
+
             return configuration.Document<TEntity>(tablename);
         }
 
@@ -110,16 +136,6 @@ namespace HybridDb
             OnRead += hybridDbExtension.OnRead;
         }
 
-
-        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
-        {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", TableMode.UseGlobalTempTables);
-        }
-
-        public static DocumentStore ForTestingWithTempTables(string connectionString = null)
-        {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", TableMode.UseTempTables);
-        }
 
         public IDocumentSession OpenSession()
         {
@@ -539,6 +555,7 @@ namespace HybridDb
         }
 
         public class MissingProjectionValueException : Exception {}
+
     }
 
     public enum TableMode

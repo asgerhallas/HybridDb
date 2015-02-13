@@ -13,7 +13,7 @@ namespace HybridDb.Studio.ViewModels
 {
     public class ShellViewModel : Conductor<DocumentViewModel>.Collection.OneActive
     {
-        private DocumentStore store;
+        private IDocumentStore store;
         private readonly Func<Document, DocumentViewModel> documentViewModelFactory;
         readonly ISettings settings;
         readonly IWindowManager windowManager;
@@ -28,14 +28,14 @@ namespace HybridDb.Studio.ViewModels
             this.documentViewModelFactory = documentViewModelFactory;
             this.settings = settings;
             this.windowManager = windowManager;
-            store = new DocumentStore(settings.ConnectionString);
+            store = DocumentStore.Create(settings.ConnectionString);
         }
 
         public void OpenSettings()
         {
             windowManager.ShowDialog(settings);
             store.Dispose();
-            store = new DocumentStore(settings.ConnectionString);
+            store = DocumentStore.Create(settings.ConnectionString);
         }
 
         public string DocumentId

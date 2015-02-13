@@ -58,7 +58,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanOverrideProjectionsForSubtype()
         {
-            var configuration = new Configuration(null);
+            var configuration = new Configuration();
 
             configuration.Document<AbstractEntity>(null)
                 .With("Number", x => 1);

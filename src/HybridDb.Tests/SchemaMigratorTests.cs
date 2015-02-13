@@ -32,7 +32,7 @@ END", uniqueDbName));
             }
 
             storeWithTempTables = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            storeWithRealTables = new DocumentStore("data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName);
+            storeWithRealTables = DocumentStore.ForTestingWithRealTables("data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName);
         }
 
         [Fact]
