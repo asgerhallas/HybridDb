@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Linq;
 using Castle.Core.Internal;
 using HybridDb.Studio.Infrastructure;
 using HybridDb.Studio.Infrastructure.ViewModels;
@@ -35,13 +36,22 @@ namespace HybridDb.Studio.ViewModels
 
             RecentlyOpened = new ObservableCollection<string>(settings.RecentFiles);
 
-            Open<ListViewModel>();
-            Open<DocumentViewModel>();
+            CloseTab = RelayCommand.Create<ViewModel>(HandleCloseTab);
+            CloseAllTabs = RelayCommand.Create(HandleCloseAllTabs);
+            CloseAllTabsButThis = RelayCommand.Create<ViewModel>(HandleCloseAllTabsButThis);
+
+            OpenTab<ListViewModel>();
+            OpenTab<DocumentViewModel>();
         }
 
         public IRelayCommand OpenFile { get; private set; }
         public IRelayCommand OpenRecent { get; private set; }
         public IRelayCommand ExitApplication { get; private set; }
+
+        public IRelayCommand CloseTab { get; private set; }
+        public IRelayCommand CloseAllTabs { get; private set; }
+        public IRelayCommand CloseAllTabsButThis { get; private set; }
+
 
         public ObservableCollection<string> RecentlyOpened { get; private set; }
 
@@ -58,9 +68,15 @@ namespace HybridDb.Studio.ViewModels
 
         public ObservableCollection<ViewModel> Tabs { get; private set; }
 
-        public void Open<TViewModel>() where TViewModel : ViewModel
+        public void OpenTab<TViewModel>() where TViewModel : ViewModel
         {
             Tabs.Add(viewModelFactory.Create<TViewModel>());
+        }
+
+        public void Handle(RecentFilesUpdated message)
+        {
+            RecentlyOpened.Clear();
+            settings.RecentFiles.ForEach(RecentlyOpened.Add);
         }
 
         private void HandleOpenRecent(string filepath)
@@ -90,10 +106,25 @@ namespace HybridDb.Studio.ViewModels
             application.Shutdown();
         }
 
-        public void Handle(RecentFilesUpdated message)
+        private void HandleCloseTab(ViewModel viewModel)
         {
-            RecentlyOpened.Clear();
-            settings.RecentFiles.ForEach(RecentlyOpened.Add);
+            Tabs.Remove(viewModel);
+        }
+
+        private void HandleCloseAllTabsButThis(ViewModel viewModel)
+        {
+            foreach (var tab in Tabs.Where(x => x != viewModel).ToList())
+            {
+                Tabs.Remove(tab);
+            }
+        }
+
+        private void HandleCloseAllTabs()
+        {
+            foreach (var tab in Tabs.ToList())
+            {
+                Tabs.Remove(tab);
+            }
         }
     }
 }

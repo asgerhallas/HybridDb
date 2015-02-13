@@ -64,6 +64,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="CommandBehaviors\MouseDoubleClick.cs" />
     <Compile Include="IApplication.cs" />
     <Compile Include="Infrastructure\ApplicationSettingsAdapter.cs" />
     <Compile Include="Infrastructure\EventAggregator.cs" />

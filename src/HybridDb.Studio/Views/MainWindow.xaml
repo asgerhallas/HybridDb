@@ -5,6 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:viewModels="clr-namespace:HybridDb.Studio.ViewModels"
         xmlns:views="clr-namespace:HybridDb.Studio.Views"
+        xmlns:commandBehaviors="clr-namespace:HybridDb.Studio.CommandBehaviors"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
         Title="HybridDb Studio" Height="600" Width="800" x:Name="Self"
@@ -53,7 +54,10 @@
             
             <TreeView>
                 <TreeViewItem Header="Collections" IsExpanded="True">
-                    <TreeViewItem Header="Cases"></TreeViewItem>
+
+                    <!--commandBehaviors:MouseDoubleClick.Command="{Binding OpenTab}"
+                                  commandBehaviors:MouseDoubleClick.CommandParameter="{T}"-->
+                    <TreeViewItem Header="Cases"/>
                     <TreeViewItem Header="Users"></TreeViewItem>
                     <TreeViewItem Header="Companies"></TreeViewItem>
                 </TreeViewItem>
@@ -71,6 +75,13 @@
                         </Style.Triggers>
                     </Style>
                 </TabControl.Style>
+                <TabControl.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Close" Command="{Binding CloseTab}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Close All But This" Command="{Binding CloseAllTabsButThis}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Close All" Command="{Binding CloseAllTabs}" />
+                    </ContextMenu>
+                </TabControl.ContextMenu>
                 <TabControl.ContentTemplateSelector>
                     <views:TabContentSelector>
                         <views:TabContentSelector.DataTemplates>
