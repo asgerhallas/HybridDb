@@ -69,6 +69,7 @@
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
+    <Compile Include="HybridDbTests.cs" />
     <Compile Include="Migrations\AddBuildingCountToCase.cs" />
     <Compile Include="Migrations\RemoveDeletedBuildings.cs" />
     <Compile Include="Migrations\RenameCol.cs" />

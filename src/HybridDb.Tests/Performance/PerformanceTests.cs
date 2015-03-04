@@ -130,32 +130,33 @@ namespace HybridDb.Tests.Performance
         {
             public SystemModifierFixture()
             {
-                using (var store = DocumentStore.ForTestingWithTempTables())
+                using (var store = DocumentStore.ForTestingWithTempTables(
+                    configurator: new LambdaHybridDbConfigurator(c =>
+                        c.Document<Entity>()
+                            .With(x => x.SomeData)
+                            .With(x => x.SomeNumber))))
                 {
-                    store.Document<Entity>().With(x => x.SomeData).With(x => x.SomeNumber);
-                    store.MigrateSchemaToMatchConfiguration();
-
                     var commands = new List<DatabaseCommand>();
-                    for (int i = 0; i < 10; i++)
+                    for (var i = 0; i < 10; i++)
                     {
                         commands.Add(new InsertCommand(
-                                         store.Configuration.GetDesignFor<Entity>().Table,
-                                         Guid.NewGuid(),
-                                         new { SomeNumber = i, SomeData = "ABC" }));
+                            store.Configuration.GetDesignFor<Entity>().Table,
+                            Guid.NewGuid(),
+                            new {SomeNumber = i, SomeData = "ABC"}));
                     }
 
                     store.Execute(commands.ToArray());
 
                     decimal time = 0;
-                    for (int i = 0; i < 10; i++)
+                    for (var i = 0; i < 10; i++)
                     {
                         time += Time(() => store.RawQuery<object>("select * from #Entities").ToList(), 1m);
                     }
-                    
+
                     // The below constant is chosen to get as close 1.0 on my machine as possible.
                     // This must not be changed without changing the test timings accordingly.
                     // if you are writing new tests on another machine 
-                    SystemModifier = time / 1.6m;
+                    SystemModifier = time/1.6m;
                 }
             }
 

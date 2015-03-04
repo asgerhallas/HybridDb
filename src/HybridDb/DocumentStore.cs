@@ -14,6 +14,7 @@ using HybridDb.Logging;
 using HybridDb.Migration;
 using HybridDb.Schema;
 using System.ComponentModel.Composition;
+using System.Threading.Tasks;
 
 namespace HybridDb
 {
@@ -42,22 +43,31 @@ namespace HybridDb
 
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
         {
-            return new DocumentStore(connectionString, Configuration.Create(configurator), TableMode.UseRealTables, testMode: false);
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString, configurator.Configure(), TableMode.UseRealTables, testMode: false);
+            new Migrator().Migrate(store);
+            return store;
         }
 
         public static DocumentStore ForTestingWithRealTables(string connectionString = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", Configuration.Create(null), TableMode.UseRealTables, testMode: true);
+            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new Configuration(), TableMode.UseRealTables, testMode: true);
         }
 
-        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
+        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", Configuration.Create(null), TableMode.UseGlobalTempTables, testMode: true);
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseGlobalTempTables, testMode: true);
+            new Migrator().Migrate(store).Wait();
+            return store;
         }
 
-        public static DocumentStore ForTestingWithTempTables(string connectionString = null)
+        public static DocumentStore ForTestingWithTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", Configuration.Create(null), TableMode.UseTempTables, testMode: true);
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseTempTables, testMode: true);
+            new Migrator().Migrate(store).Wait();
+            return store;
         }
 
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
@@ -102,17 +112,6 @@ namespace HybridDb
                 migration(migrator);
                 migrator.Commit();
             }
-        }
-
-        public void MigrateSchemaToMatchConfiguration(bool safe = true)
-        {
-            Migrate(migrator =>
-            {
-                foreach (var table in Configuration.Tables.Values)
-                {
-                    migrator.MigrateTo(table, safe);
-                }
-            });
         }
 
         public void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate)

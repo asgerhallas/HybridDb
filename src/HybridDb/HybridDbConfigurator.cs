@@ -4,19 +4,26 @@ namespace HybridDb
 {
     public abstract class HybridDbConfigurator : IHybridDbConfigurator
     {
-        Configuration config;
+        protected readonly Configuration configuration;
 
-        protected abstract void Configure();
-
-        public void Configure(Configuration configuration)
+        protected HybridDbConfigurator()
         {
-            config = configuration;
-            Configure();
+            configuration = new Configuration();
+        }
+        
+        public Configuration Configure()
+        {
+            return configuration;
         }
 
         protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
-            return config.Document<TEntity>(tablename);
+            return configuration.Document<TEntity>(tablename);
+        }
+
+        protected void UseSerializer(ISerializer serializer)
+        {
+            configuration.UseSerializer(serializer);
         }
     }
 }

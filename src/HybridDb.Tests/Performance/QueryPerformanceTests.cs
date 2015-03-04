@@ -70,18 +70,20 @@ namespace HybridDb.Tests.Performance
             public Fixture()
             {
                 const string connectionString = "data source=.;Integrated Security=True";
-                store = DocumentStore.ForTestingWithTempTables(connectionString);
-                store.Document<Entity>()
-                    .With(x => x.SomeData)
-                    .With(x => x.SomeNumber);
-                store.MigrateSchemaToMatchConfiguration();
+
+                store = DocumentStore.ForTestingWithTempTables(connectionString,
+                    new LambdaHybridDbConfigurator(c =>
+                        c.Document<Entity>()
+                            .With(x => x.SomeData)
+                            .With(x => x.SomeNumber)));
 
                 var commands = new List<DatabaseCommand>();
                 for (int i = 0; i < 10000; i++)
                 {
-                    commands.Add(new InsertCommand(store.Configuration.GetDesignFor<Entity>().Table,
-                                                   Guid.NewGuid(),
-                                                   new { SomeNumber = i, SomeData = "ABC" }));
+                    commands.Add(new InsertCommand(
+                        store.Configuration.GetDesignFor<Entity>().Table,
+                        Guid.NewGuid(),
+                        new {SomeNumber = i, SomeData = "ABC"}));
                 }
 
                 store.Execute(commands.ToArray());

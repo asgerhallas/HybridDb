@@ -6,34 +6,24 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class LinqIntegrationTests
+    public class LinqIntegrationTests : HybridDbTests
     {
-        readonly string connectionString;
-        readonly DocumentStore store;
         readonly IDocumentSession session;
 
         public LinqIntegrationTests()
         {
-            connectionString = "data source=.;Integrated Security=True";
-            store = DocumentStore.ForTestingWithTempTables(connectionString);
-            store.Document<Entity>()
-                 .With(x => x.Property)
-                 .With(x => x.StringProp)
-                 .With(x => x.TheChild.NestedProperty);
+            Document<Entity>()
+                .With(x => x.Property)
+                .With(x => x.StringProp)
+                .With(x => x.TheChild.NestedProperty);
+            
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
-            store.MigrateSchemaToMatchConfiguration();
 
-            session = store.OpenSession();
+            session = Using(store.OpenSession());
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger" });
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 2, StringProp = "Lars", TheChild = new Entity.Child { NestedProperty = 3.1 } });
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 3, StringProp = null });
             session.SaveChanges();
-        }
-
-        public void Dispose()
-        {
-            session.Dispose();
-            store.Dispose();
         }
 
         [Fact]

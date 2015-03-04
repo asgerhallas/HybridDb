@@ -14,7 +14,6 @@ namespace HybridDb
         Guid LastWrittenEtag { get; }
         bool IsInTestMode { get; }
         void Migrate(Action<ISchemaMigrator> migration);
-        void MigrateSchemaToMatchConfiguration(bool safe = true);
         void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate);
         void RegisterExtension(IHybridDbExtension hybridDbExtension);
         IDocumentSession OpenSession();

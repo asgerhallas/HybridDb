@@ -1,9 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
+﻿using System.Threading.Tasks;
 
 namespace HybridDb
 {
+    public class Migrator
+    {
+        public Task Migrate(IDocumentStore store)
+        {
+            store.Migrate(migrator =>
+            {
+                foreach (var table in store.Configuration.Tables.Values)
+                {
+                    migrator.MigrateTo(table, true);
+                }
+            });
+            return Task.FromResult(1);
+        }
+    }
+
     //public interface IMigration
     //{
     //    //void InitializeDatabase();

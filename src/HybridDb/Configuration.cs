@@ -9,7 +9,7 @@ namespace HybridDb
 {
     class Configurator : HybridDbConfigurator
     {
-        protected override void Configure()
+        public Configurator()
         {
             Document<string>().With(x => x.Length);
         }
@@ -31,14 +31,6 @@ namespace HybridDb
             metadata.Register(new Column("DocumentVersion", typeof(int), new SqlColumn(DbType.Int32)));
 
             Tables.TryAdd(metadata.Name, metadata);
-        }
-
-        internal static Configuration Create(IHybridDbConfigurator configurator)
-        {
-            var configuration = new Configuration();
-            configurator = configurator ?? new LambdaHybridDbConfigurator(x => { });
-            configurator.Configure(configuration);
-            return configuration;
         }
 
         public ILogger Logger { get; private set; }

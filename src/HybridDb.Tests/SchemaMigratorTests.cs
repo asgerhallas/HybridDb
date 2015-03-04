@@ -181,7 +181,7 @@ END", uniqueDbName));
         public void MigrationsAreRolledBackOnExceptions()
         {
             storeWithTempTables.Document<Entity>();
-            storeWithTempTables.MigrateSchemaToMatchConfiguration();
+            //storeWithTempTables.MigrateSchemaToMatchConfiguration();
 
             try
             {
@@ -200,7 +200,7 @@ END", uniqueDbName));
         public void CanCreateColumnWithDefaultValue()
         {
             storeWithTempTables.Document<Entity>();
-            storeWithTempTables.MigrateSchemaToMatchConfiguration();
+            //storeWithTempTables.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
             storeWithTempTables.Insert(new Table("Entities"), id, new { });
