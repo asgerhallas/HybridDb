@@ -14,9 +14,14 @@ namespace HybridDb
             Configure();
         }
 
-        protected DocumentDesign<TEntity> Document<TEntity>(string tablename = null)
+        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
             return config.Document<TEntity>(tablename);
+        }
+
+        protected IndexDesigner<TIndex, TEntity> Document<TEntity, TIndex>()
+        {
+            return config.Index<TIndex, TEntity>();
         }
     }
 }

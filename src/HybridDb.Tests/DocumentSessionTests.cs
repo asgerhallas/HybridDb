@@ -18,7 +18,7 @@ namespace HybridDb.Tests
 
         public DocumentSessionTests()
         {
-            store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True;");
+            store = DocumentStore.ForTestingWithTempTables();
             //store = DocumentStore.ForTestingWithRealTables("data source=.;Integrated Security=True;Initial Catalog=Test");
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
         }
@@ -729,7 +729,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void LoadingDerivedEntityBySiblingTypeReturnsNull()
+        public void LoadingDerivedEntityBySiblingTypeThrows()
         {
             store.Document<AbstractEntity>();
             store.Document<MoreDerivedEntity1>();
@@ -778,8 +778,10 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").ToList();
+                var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities.Count().ShouldBe(2);
+                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
+                entities[1].ShouldBeTypeOf<MoreDerivedEntity2>();
             }
         }
 
@@ -800,6 +802,25 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<MoreDerivedEntity2>().Where(x => x.Property == "Asger").ToList();
                 entities.Count.ShouldBe(1);
+                entities[0].ShouldBeTypeOf<MoreDerivedEntity2>();
+            }
+        }
+
+        [Fact]
+        public void AutoRegistersSubTypesWhenStoredFirstTime()
+        {
+            store.Document<AbstractEntity>().With(x => x.Property);
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
+                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
             }
         }
 
@@ -817,6 +838,33 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<OtherEntity>().Where(x => x.Column<int>("Unknown") == 2).ToList();
                 entities.Count.ShouldBe(1);
+            }
+        }
+
+        [Fact]
+        public void CanQueryIndex()
+        {
+            store.Document<AbstractEntity>();
+            store.Document<MoreDerivedEntity1>();
+
+            store.Index<EntityIndex, AbstractEntity>()
+                .With(x => x.YksiKaksiKolme, x => x.Number);
+
+            store.MigrateSchemaToMatchConfiguration();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger", Number = 2 });
+                session.SaveChanges();
+
+                //var test = from x in session.Query<AbstractEntity>()
+                //           let index = x.Index<EntityIndex>()
+                //           where x.Property == "Asger" && index.YksiKaksiKolme > 1
+                //           select x;
+
+                var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger" && x.Index<EntityIndex>().YksiKaksiKolme > 1);
+                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
             }
         }
 
@@ -869,6 +917,7 @@ namespace HybridDb.Tests
         public class EntityIndex
         {
             public string Property { get; set; }
+            public int? YksiKaksiKolme { get; set; }
         }
 
         public class OtherEntityIndex

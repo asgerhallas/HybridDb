@@ -28,6 +28,11 @@ namespace HybridDb.Linq
             throw new NotSupportedException("Only for building LINQ expressions");
         }
         
+        public static T Index<T>(this object parameter)
+        {
+            throw new NotSupportedException("Only for building LINQ expressions");
+        }
+        
         internal static Translation Translate(this IQueryable query)
         {
             return Translate(query.Expression);

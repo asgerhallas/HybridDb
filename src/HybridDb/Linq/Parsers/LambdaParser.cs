@@ -96,21 +96,39 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Column":
+                {
                     var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
-                        throw new NotSupportedException(string.Format("{0} method must be called on the lambda parameter.", expression));
+                        throw new NotSupportedException(
+                            string.Format("{0} method must be called on the lambda parameter.", expression));
                     }
 
-                    var constant = (SqlConstantExpression)ast.Pop();
+                    var constant = (SqlConstantExpression) ast.Pop();
                     var columnType = expression.Method.GetGenericArguments()[0];
-                    var columnName = (string)constant.Value;
+                    var columnName = (string) constant.Value;
 
                     ast.Push(new SqlColumnExpression(columnType, columnName));
                     break;
+                }
+                case "Index":
+                {
+                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+                    if (column == null || column.ColumnName != "")
+                    {
+                        throw new NotSupportedException(
+                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                    }
+
+                    var columnType = expression.Method.GetGenericArguments()[0];
+                    var columnName = columnType.Name + "_";
+
+                    ast.Push(new SqlColumnExpression(columnType, columnName));
+                    break;
+                }
                 default:
                     ast.Pop();
-                    var name = Configuration.GetColumnNameByConventionFor(expression);
+                    var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
                     break;
             }
@@ -151,7 +169,7 @@ namespace HybridDb.Linq.Parsers
                     break;
                 case SqlNodeType.Column:
                     ast.Pop();
-                    var name = Configuration.GetColumnNameByConventionFor(expression);
+                    var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
                     break;
                 default:

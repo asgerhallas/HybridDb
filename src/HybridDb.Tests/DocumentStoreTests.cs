@@ -819,7 +819,7 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsIfEntityTypeIsUnknown()
         {
-            Should.Throw<TableNotFoundException>(() => store.Configuration.GetDesignFor<int>());
+            Should.Throw<HybridDbException>(() => store.Configuration.GetDesignFor<int>());
         }
 
         [Fact]

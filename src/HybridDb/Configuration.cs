@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Data;
 using System.Linq;
-using System.Linq.Expressions;
 using HybridDb.Logging;
 using HybridDb.Schema;
 
@@ -22,6 +21,7 @@ namespace HybridDb
         {
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
+            Indexes = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
@@ -47,77 +47,81 @@ namespace HybridDb
 
         public ConcurrentDictionary<string, Table> Tables { get; private set; }
         public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
+        public ConcurrentDictionary<Type, DocumentDesign> Indexes { get; private set; }
 
-        public static string GetColumnNameByConventionFor(Expression projector)
+        static string GetTableNameByConventionFor(Type type)
         {
-            var columnNameBuilder = new ColumnNameBuilder();
-            columnNameBuilder.Visit(projector);
-            return columnNameBuilder.ColumnName;
+            return Inflector.Inflector.Pluralize(type.Name);
         }
 
-        public string GetTableNameByConventionFor<TEntity>()
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
-            return Inflector.Inflector.Pluralize(typeof(TEntity).Name);
+            var design = CreateDesignFor(typeof (TEntity));
+            return new DocumentDesigner<TEntity>(design);
         }
 
-        public DocumentDesign<TEntity> Document<TEntity>(string tablename = null)
+        public IndexDesigner<TIndex, TEntity> Index<TIndex, TEntity>()
         {
-            tablename = tablename ?? GetTableNameByConventionFor<TEntity>();
+            var design = GetDesignFor<TEntity>();
+            
+            Indexes.TryAdd(typeof(TIndex), design);
+
+            return new IndexDesigner<TIndex, TEntity>(design);
+        }
+
+        public DocumentDesign CreateDesignFor(Type type, string tablename = null)
+        {
+            tablename = tablename ?? GetTableNameByConventionFor(type);
 
             var baseDesign = DocumentDesigns
-                .Where(x => x.Key.IsAssignableFrom(typeof (TEntity)))
+                .Where(x => x.Key.IsAssignableFrom(type))
                 .Select(x => x.Value)
                 .SingleOrDefault();
-            
-            if (baseDesign != null)
-            {
-                var design = new DocumentDesign<TEntity>(this, baseDesign);
-                DocumentDesigns.TryAdd(design.Type, design);
-                return design;
-            }
-            else
-            {
-                var table = new DocumentTable(tablename);
-                Tables.TryAdd(tablename, table);
 
-                var design = new DocumentDesign<TEntity>(this, table);
-                DocumentDesigns.TryAdd(design.Type, design);
-                return design;
-            }
+            var design = baseDesign != null
+                ? new DocumentDesign(this, baseDesign, type)
+                : new DocumentDesign(this, AddTable(tablename), type);
+
+            DocumentDesigns.TryAdd(design.DocumentType, design);
+            return design;
         }
 
-        public DocumentDesign<T> GetDesignFor<T>()
+        public DocumentDesign GetDesignFor<T>()
         {
-            return (DocumentDesign<T>) GetDesignFor(typeof(T));
+            return GetDesignFor(typeof(T));
         }
 
         public DocumentDesign GetDesignFor(Type type)
         {
             var design = TryGetDesignFor(type);
             if (design != null) return design;
-            throw new TableNotFoundException(type);
+
+            throw new HybridDbException(string.Format(
+                "No table was registered for type {0}. " +
+                "Please run store.Document<{0}>() to register it before use.", 
+                type.Name));
         }
 
-        public DocumentDesign<T> TryGetDesignFor<T>()
+        public DocumentDesign TryGetDesignFor<T>()
         {
-            return (DocumentDesign<T>) TryGetDesignFor(typeof(T));
+            return TryGetDesignFor(typeof(T));
         }
 
         public DocumentDesign TryGetDesignFor(Type type)
         {
-            DocumentDesign table;
-            return DocumentDesigns.TryGetValue(type, out table) ? table : null;
+            DocumentDesign design;
+            return DocumentDesigns.TryGetValue(type, out design) ? design : null;
         }
 
-        public DocumentDesign TryGetDesignFor(string tablename)
+        public DocumentDesign TryGetDesignForIndex(Type type)
         {
-            return DocumentDesigns.Values.SingleOrDefault(x => x.Table.Name == tablename);
+            DocumentDesign design;
+            return Indexes.TryGetValue(type, out design) ? design : null;
         }
 
-        public IndexTable TryGetIndexTableByName(string tablename)
+        public DocumentDesign GetOrCreateDesignFor(Type type)
         {
-            Table table;
-            return Tables.TryGetValue(tablename, out table) ? table as IndexTable : null;
+            return TryGetDesignFor(type) ?? CreateDesignFor(type);
         }
 
         public void UseSerializer(ISerializer serializer)
@@ -129,5 +133,11 @@ namespace HybridDb
         {
             Logger = logger;
         }
+
+        DocumentTable AddTable(string tablename)
+        {
+            return (DocumentTable)Tables.GetOrAdd(tablename, name => new DocumentTable(name));
+        }
+
     }
 }

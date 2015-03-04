@@ -56,16 +56,23 @@ namespace HybridDb
 
         public IQueryable<T> Query<T>() where T : class
         {
-            var design = store.Configuration.TryGetDesignFor<T>();
+            var configuration = store.Configuration;
+            
+            var design = configuration.TryGetDesignFor<T>();
             if (design == null)
             {
-                throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof(T)));
+                throw new InvalidOperationException(string.Format("No design registered for type {0}", typeof(T)));
             }
 
             var discriminators = design.DecendentsAndSelf.Keys.ToArray();
 
-            var query = new Query<T>(new QueryProvider<T>(this));
-            return query.Where(x => x.Column<string>("Discriminator").In(discriminators));
+            var query = new Query<T>(new QueryProvider<T>(this, design))
+                .Where(x => x.Column<string>("Discriminator").In(discriminators));
+
+            //if (design.DocumentType != typeof (T))
+            //    query = query.AsProjection<T>();
+
+            return query;
         }
 
         public void Defer(DatabaseCommand command)
@@ -94,7 +101,7 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
             var id = design.GetId(entity);
             if (entities.ContainsKey(id))
                 return;
@@ -143,7 +150,7 @@ namespace HybridDb
             {
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
-                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value(managedEntity.Entity));
+                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
                 switch (managedEntity.State)
@@ -209,7 +216,7 @@ namespace HybridDb
             DocumentDesign concreteDesign;
             if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
             {
-                throw new InvalidOperationException(string.Format("Document with id {0} exists, but is not assignable to the given type {1}.", id, design.Type.Name));
+                throw new InvalidOperationException(string.Format("Document with id {0} exists, but is not assignable to the given type {1}.", id, design.DocumentType.Name));
             }
 
             ManagedEntity managedEntity;
@@ -221,7 +228,7 @@ namespace HybridDb
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize(document, concreteDesign.Type);
+            var entity = store.Configuration.Serializer.Deserialize(document, concreteDesign.DocumentType);
 
             managedEntity = new ManagedEntity
             {

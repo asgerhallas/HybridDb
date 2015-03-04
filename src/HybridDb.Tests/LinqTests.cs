@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HybridDb.Linq;
+using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -573,7 +574,7 @@ namespace HybridDb.Tests
         {
             var store = DocumentStore.ForTestingWithTempTables();
             var session = new DocumentSession(store);
-            return new Query<T>(new QueryProvider<T>(session));
+            return new Query<T>(new QueryProvider<T>(session, null));
         }
 
         public class Entity

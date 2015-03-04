@@ -11,11 +11,13 @@ namespace HybridDb.Linq
     {
         readonly IDocumentStore store;
         readonly DocumentSession session;
+        readonly DocumentDesign design;
         readonly QueryStats lastQueryStats;
 
-        public QueryProvider(DocumentSession session)
+        public QueryProvider(DocumentSession session, DocumentDesign design)
         {
             this.session = session;
+            this.design = design;
             store = session.Advanced.DocumentStore;
             lastQueryStats = new QueryStats();
         }
@@ -87,10 +89,9 @@ namespace HybridDb.Linq
 
         TranslationAndResult<TProjection> ExecuteQuery<TProjection>(Expression expression)
         {
-            var design = store.Configuration.TryGetDesignFor<TSourceElement>();
             var translation = expression.Translate();
 
-            if (typeof (TSourceElement) == typeof (TProjection))
+            if (design.DocumentType == typeof (TProjection))
             {
                 QueryStats storeStats;
                 var results = store.Query(
