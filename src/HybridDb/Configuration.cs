@@ -52,15 +52,16 @@ namespace HybridDb
             return Inflector.Inflector.Pluralize(type.Name);
         }
 
-        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null)
         {
-            var design = CreateDesignFor(typeof (TEntity));
+            var design = CreateDesignFor(typeof (TEntity), tablename, discriminator);
             return new DocumentDesigner<TEntity>(design);
         }
 
-        public DocumentDesign CreateDesignFor(Type type, string tablename = null)
+        public DocumentDesign CreateDesignFor(Type type, string tablename = null, string discriminator = null)
         {
             tablename = tablename ?? GetTableNameByConventionFor(type);
+            discriminator = discriminator ?? type.Name;
 
             var child = DocumentDesigns
                 .Where(x => type.IsAssignableFrom(x.Key))
@@ -79,8 +80,8 @@ namespace HybridDb
                 .SingleOrDefault();
 
             var design = parent != null
-                ? new DocumentDesign(this, parent, type)
-                : new DocumentDesign(this, AddTable(tablename), type);
+                ? new DocumentDesign(this, parent, type, discriminator)
+                : new DocumentDesign(this, AddTable(tablename), type, discriminator);
 
             DocumentDesigns.TryAdd(design.DocumentType, design);
             return design;

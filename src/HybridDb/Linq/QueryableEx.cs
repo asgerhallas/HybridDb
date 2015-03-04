@@ -20,7 +20,7 @@ namespace HybridDb.Linq
 
         public static bool In<T>(this T property, params T[] list)
         {
-            throw new NotSupportedException("Only for building LINQ expressions");
+            return list.Contains(property);
         }
         
         public static T Column<T>(this object parameter, string name)

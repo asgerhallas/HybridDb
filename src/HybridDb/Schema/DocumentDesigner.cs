@@ -48,7 +48,7 @@ namespace HybridDb.Schema
 
             var newProjection = Projection.From<TMember>(compiledProjector);
 
-            if (design.Parent != null && !newProjection.ReturnType.IsCastableTo(column.Type))
+            if (!newProjection.ReturnType.IsCastableTo(column.Type))
             {
                 throw new InvalidOperationException(string.Format(
                     "Can not override projection for {0} of type {1} with a projection that returns {2} (on {3}).",

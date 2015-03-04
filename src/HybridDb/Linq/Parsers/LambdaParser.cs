@@ -168,8 +168,9 @@ namespace HybridDb.Linq.Parsers
                     ast.Push(new SqlConstantExpression(expression.Member.GetValue(constant.Value)));
                     break;
                 case SqlNodeType.ColumnPrefix:
+                    //TODO: clean up this mess. 
                     var prefix = (SqlColumnPrefixExpression)ast.Pop();
-                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), string.Format("{0}_{1}", prefix.Prefix, expression.Member.Name)));
+                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), expression.Member.Name));
                     break;
                 case SqlNodeType.Column:
                     ast.Pop();

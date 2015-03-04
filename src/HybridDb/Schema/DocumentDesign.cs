@@ -8,12 +8,11 @@ namespace HybridDb.Schema
     {
         readonly Dictionary<string, DocumentDesign> decendentsAndSelf;
 
-        public DocumentDesign(Configuration configuration, DocumentTable table, Type documentType)
+        public DocumentDesign(Configuration configuration, DocumentTable table, Type documentType, string discriminator)
         {
-            Configuration = configuration;
             DocumentType = documentType;
             Table = table;
-            Discriminator = documentType.Name;
+            Discriminator = discriminator;
             
             decendentsAndSelf = new Dictionary<string, DocumentDesign>
             {
@@ -28,8 +27,8 @@ namespace HybridDb.Schema
             };
         }
 
-        public DocumentDesign(Configuration configuration, DocumentDesign parent, Type documentType)
-            : this(configuration, parent.Table, documentType)
+        public DocumentDesign(Configuration configuration, DocumentDesign parent, Type documentType, string discriminator)
+            : this(configuration, parent.Table, documentType, discriminator)
         {
             Parent = parent;
             Projections = parent.Projections.ToDictionary();
@@ -38,7 +37,6 @@ namespace HybridDb.Schema
             Parent.AddChild(this);
         }
 
-        public Configuration Configuration { get; private set; }
         public DocumentDesign Parent { get; private set; }
         public Type DocumentType { get; private set; }
         public DocumentTable Table { get; private set; }
@@ -63,6 +61,9 @@ namespace HybridDb.Schema
             {
                 Parent.AddChild(design);
             }
+
+            if (decendentsAndSelf.ContainsKey(design.Discriminator))
+                throw new InvalidOperationException(string.Format("Discriminator '{0}' is already in use.", design.Discriminator));
 
             decendentsAndSelf.Add(design.Discriminator, design);
         }

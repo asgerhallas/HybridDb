@@ -104,14 +104,14 @@ namespace HybridDb.Tests
         }
         
         [Fact]
-        public void FailsIfExtensionIsSameName()
+        public void LastProjectionOfSameNameWins()
         {
-            Should.Throw<InvalidOperationException>(() =>
-                configuration.Document<OtherEntity>()
-                    .With(x => x.String)
-                    .Extend<Index>(e =>
-                        e.With(x => x.String, x => x.String.Replace("a", "b"))))
-                .Message.ShouldBe("Projection String is defined twice on HybridDb.Tests.ConfigurationTests+OtherEntity.");
+            configuration.Document<OtherEntity>()
+                .With(x => x.String)
+                .Extend<Index>(e =>
+                    e.With(x => x.String, x => x.String.Replace("a", "b")));
+
+            ProjectionsFor<OtherEntity>()["String"].Projector(new OtherEntity { String = "asger" }).ShouldBe("bsger");
         }
         
         [Fact]
@@ -156,6 +156,15 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void FailsWhenOverridingProjectionOnSelfWithNonCompatibleType()
+        {
+            Should.Throw<InvalidOperationException>(() =>
+                configuration.Document<OtherEntity>()
+                    .With("String", x => 1)
+                    .With("String", x => "string"));
+        }
+
+        [Fact]
         public void CanOverrideProjectionWithCompatibleType()
         {
             configuration.Document<AbstractEntity>().With(x => x.LongNumber);
@@ -191,13 +200,33 @@ namespace HybridDb.Tests
             sqlColumn.Nullable.ShouldBe(false);
         }
 
-    
         [Fact]
         public void FailsWhenRegisteringSubtypeBeforeBase()
         {
             configuration.Document<MoreDerivedEntity1>();
             Should.Throw<InvalidOperationException>(() => configuration.Document<AbstractEntity>())
                 .Message.ShouldBe("Document HybridDb.Tests.ConfigurationTests+AbstractEntity must be configured before its subtype HybridDb.Tests.ConfigurationTests+MoreDerivedEntity1.");
+        }
+        
+        [Fact]
+        public void SetDiscriminator()
+        {
+            configuration.Document<AbstractEntity>(discriminator: "abe");
+            configuration.Document<MoreDerivedEntity1>(discriminator: "gris");
+            configuration.Document<MoreDerivedEntity2>();
+
+            configuration.GetDesignFor<AbstractEntity>().Discriminator.ShouldBe("abe");
+            configuration.GetDesignFor<MoreDerivedEntity1>().Discriminator.ShouldBe("gris");
+            configuration.GetDesignFor<MoreDerivedEntity2>().Discriminator.ShouldBe("MoreDerivedEntity2");
+        }
+
+        [Fact]
+        public void FailOnDuplicateDiscriminators()
+        {
+            configuration.Document<AbstractEntity>(discriminator: "abe");
+            Should.Throw<InvalidOperationException>(() => 
+                configuration.Document<MoreDerivedEntity1>(discriminator: "abe"))
+                .Message.ShouldBe("Discriminator 'abe' is already in use.");
         }
 
         public class Entity

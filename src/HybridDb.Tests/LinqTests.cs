@@ -575,7 +575,7 @@ namespace HybridDb.Tests
         {
             var translation = Query<Entity>().Where(x => x.Index<ExtIndex>().StringProp == "asger").Translate();
 
-            translation.Where.ShouldBe("(ExtIndex_StringProp = @Value0)");
+            translation.Where.ShouldBe("(StringProp = @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", "asger");
         }
 
