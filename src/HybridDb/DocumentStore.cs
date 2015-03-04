@@ -95,16 +95,6 @@ namespace HybridDb
             return configuration.Document<TEntity>(tablename);
         }
 
-        public IndexDesigner<TIndex, TEntity> Index<TIndex, TEntity>()
-        {
-            if (!IsInTestMode)
-            {
-                throw new InvalidOperationException("To configure the store directly, it must be run in test mode.");
-            }
-
-            return configuration.Index<TIndex, TEntity>();
-        }
-
         public void Migrate(Action<ISchemaMigrator> migration)
         {
             using (var migrator = new SchemaMigrator(this))

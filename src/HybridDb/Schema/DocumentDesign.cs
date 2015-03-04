@@ -80,7 +80,13 @@ namespace HybridDb.Schema
         {
             return new Projection(typeof(TReturnType), projection);
         }
-            
+
+        //public static Projection From<TEntity, TReturnType>(Func<TEntity, TReturnType> projection)
+        //{
+        //    return new Projection(typeof(TEntity), typeof(TReturnType), projection);
+        //}
+
+        //public Type DeclaringType { get; private set; }
         public Type ReturnType { get; private set; }
         public Func<object, object> Projector { get; private set; }
     }

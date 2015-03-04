@@ -92,16 +92,26 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void ProjectionDirectlyFromEntityWithOtherClassAsIndex()
+        public void ProjectionDirectlyFromEntityWithOtherClassAsExtension()
         {
             configuration.Document<OtherEntity>()
-                .With(x => x.String);
-
-            configuration.Index<Index, OtherEntity>()
-                .With(x => x.String, x => x.String.Replace("a", "b"));
+                .With(x => x.String)
+                .Extend<Index>(e => 
+                    e.With(x => x.Number, x => x.String.Length));
 
             ProjectionsFor<OtherEntity>()["String"].Projector(new OtherEntity { String = "Asger" }).ShouldBe("Asger");
-            ProjectionsFor<OtherEntity>()["Index_String"].Projector(new OtherEntity { String = "asger" }).ShouldBe("bsger");
+            ProjectionsFor<OtherEntity>()["Number"].Projector(new OtherEntity { String = "Asger" }).ShouldBe(5);
+        }
+        
+        [Fact]
+        public void FailsIfExtensionIsSameName()
+        {
+            Should.Throw<InvalidOperationException>(() =>
+                configuration.Document<OtherEntity>()
+                    .With(x => x.String)
+                    .Extend<Index>(e =>
+                        e.With(x => x.String, x => x.String.Replace("a", "b"))))
+                .Message.ShouldBe("Projection String is defined twice on HybridDb.Tests.ConfigurationTests+OtherEntity.");
         }
         
         [Fact]
@@ -130,8 +140,19 @@ namespace HybridDb.Tests
         public void FailsWhenTryingToOverrideProjectionWithNonCompatibleType()
         {
             configuration.Document<AbstractEntity>().With(x => x.Number);
+
             Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity1>().With("Number", x => "OtherTypeThanBase"))
-                .Message.ShouldBe("Can not override projection for column Number of type System.Int32 (on HybridDb.Tests.ConfigurationTests.AbstractEntity) with type System.String (on HybridDb.Tests.ConfigurationTests.MoreDerivedEntity1).");
+                .Message.ShouldBe("Can not override projection for Number of type System.Int32 with a projection that returns System.String (on HybridDb.Tests.ConfigurationTests+MoreDerivedEntity1).");
+        }
+
+        [Fact]
+        public void FailsWhenOverridingProjectionOnSiblingWithNonCompatibleType()
+        {
+            configuration.Document<AbstractEntity>();
+            configuration.Document<MoreDerivedEntity1>().With("Number", x => 1);
+
+            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity2>().With("Number", x => "OtherTypeThanBase"))
+                .Message.ShouldBe("Can not override projection for Number of type System.Int32 with a projection that returns System.String (on HybridDb.Tests.ConfigurationTests+MoreDerivedEntity2).");
         }
 
         [Fact]
@@ -170,24 +191,13 @@ namespace HybridDb.Tests
             sqlColumn.Nullable.ShouldBe(false);
         }
 
-        [Fact]
-        public void FailsWhenOverridingProjectionOnSiblingWithNonCompatibleType()
-        {
-            configuration.Document<AbstractEntity>();
-            configuration.Document<MoreDerivedEntity1>().With("Number", x => "asger");
-
-            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity2>().With("Number", x => 1))
-                .Message.ShouldBe("Can not override projection for column Number of type System.String (on HybridDb.Tests.ConfigurationTests.MoreDerivedEntity1) with type System.Int32 (on HybridDb.Tests.ConfigurationTests.MoreDerivedEntity2).");
-        }
-
+    
         [Fact]
         public void FailsWhenRegisteringSubtypeBeforeBase()
         {
             configuration.Document<MoreDerivedEntity1>();
-            configuration.Document<AbstractEntity>();
-
-            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity2>().With("Number", x => 1))
-                .Message.ShouldBe("Can not override projection for column Number of type System.String (on HybridDb.Tests.ConfigurationTests.MoreDerivedEntity1) with type System.Int32 (on HybridDb.Tests.ConfigurationTests.MoreDerivedEntity2).");
+            Should.Throw<InvalidOperationException>(() => configuration.Document<AbstractEntity>())
+                .Message.ShouldBe("Document HybridDb.Tests.ConfigurationTests+AbstractEntity must be configured before its subtype HybridDb.Tests.ConfigurationTests+MoreDerivedEntity1.");
         }
 
         public class Entity

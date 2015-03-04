@@ -83,7 +83,7 @@ END", uniqueDbName));
         {
             storeWithTempTables.Migrate(
                 migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
-                                    .AddColumn("Entities", new Column("Property", new SqlColumn(DbType.Int32, defaultValue: 10))));
+                                    .AddColumn("Entities", new Column("Property", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 10))));
 
             var propertyColumn = GetTempColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
@@ -95,7 +95,7 @@ END", uniqueDbName));
         {
             storeWithTempTables.Migrate(
                 migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
-                                    .AddColumn("Entities", new Column("Property", new SqlColumn(DbType.DateTimeOffset, defaultValue: DateTimeOffset.Now))));
+                                    .AddColumn("Entities", new Column("Property", typeof(DateTimeOffset), new SqlColumn(DbType.DateTimeOffset, defaultValue: DateTimeOffset.Now))));
 
             var propertyColumn = GetTempColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
@@ -205,7 +205,8 @@ END", uniqueDbName));
             var id = Guid.NewGuid();
             storeWithTempTables.Insert(new Table("Entities"), id, new { });
 
-            storeWithTempTables.Migrate(migrator => migrator.AddColumn("Entities", new Column("hest", new SqlColumn(DbType.Int32, defaultValue: 1))));
+            storeWithTempTables.Migrate(migrator => migrator
+                .AddColumn("Entities", new Column("hest", typeof(string), new SqlColumn(DbType.Int32, defaultValue: 1))));
 
             var first = storeWithTempTables.RawQuery<int?>("SELECT hest FROM #Entities").First();
             first.ShouldBe(1);

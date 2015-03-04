@@ -14,7 +14,7 @@ namespace HybridDb.Schema
 
         public IndexDesigner<TIndex, TEntity> With<TMember>(Expression<Func<TIndex, TMember>> namer, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
-            var name = string.Format("{0}_{1}", typeof(TIndex).Name, ColumnNameBuilder.GetColumnNameByConventionFor(namer));
+            var name = ColumnNameBuilder.GetColumnNameByConventionFor(namer);
             designer.With(name, projector, makeNullSafe);
             return this;
         }

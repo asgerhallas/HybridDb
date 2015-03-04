@@ -21,15 +21,14 @@ namespace HybridDb
         {
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
-            Indexes = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
 
             var metadata = new Table("HybridDb");
-            metadata.Register(new Column("Table", new SqlColumn(DbType.AnsiStringFixedLength, 255)));
-            metadata.Register(new Column("SchemaVersion", new SqlColumn(DbType.Int32)));
-            metadata.Register(new Column("DocumentVersion", new SqlColumn(DbType.Int32)));
+            metadata.Register(new Column("Table", typeof(string), new SqlColumn(DbType.AnsiStringFixedLength, 255)));
+            metadata.Register(new Column("SchemaVersion", typeof(int), new SqlColumn(DbType.Int32)));
+            metadata.Register(new Column("DocumentVersion", typeof(int), new SqlColumn(DbType.Int32)));
 
             Tables.TryAdd(metadata.Name, metadata);
         }
@@ -47,7 +46,6 @@ namespace HybridDb
 
         public ConcurrentDictionary<string, Table> Tables { get; private set; }
         public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
-        public ConcurrentDictionary<Type, DocumentDesign> Indexes { get; private set; }
 
         static string GetTableNameByConventionFor(Type type)
         {
@@ -60,26 +58,28 @@ namespace HybridDb
             return new DocumentDesigner<TEntity>(design);
         }
 
-        public IndexDesigner<TIndex, TEntity> Index<TIndex, TEntity>()
-        {
-            var design = GetDesignFor<TEntity>();
-            
-            Indexes.TryAdd(typeof(TIndex), design);
-
-            return new IndexDesigner<TIndex, TEntity>(design);
-        }
-
         public DocumentDesign CreateDesignFor(Type type, string tablename = null)
         {
             tablename = tablename ?? GetTableNameByConventionFor(type);
 
-            var baseDesign = DocumentDesigns
+            var child = DocumentDesigns
+                .Where(x => type.IsAssignableFrom(x.Key))
+                .Select(x => x.Value)
+                .SingleOrDefault();
+
+            if (child != null)
+            {
+                throw new InvalidOperationException(string.Format(
+                    "Document {0} must be configured before its subtype {1}.", type, child.DocumentType));
+            }
+
+            var parent = DocumentDesigns
                 .Where(x => x.Key.IsAssignableFrom(type))
                 .Select(x => x.Value)
                 .SingleOrDefault();
 
-            var design = baseDesign != null
-                ? new DocumentDesign(this, baseDesign, type)
+            var design = parent != null
+                ? new DocumentDesign(this, parent, type)
                 : new DocumentDesign(this, AddTable(tablename), type);
 
             DocumentDesigns.TryAdd(design.DocumentType, design);
@@ -111,12 +111,6 @@ namespace HybridDb
         {
             DocumentDesign design;
             return DocumentDesigns.TryGetValue(type, out design) ? design : null;
-        }
-
-        public DocumentDesign TryGetDesignForIndex(Type type)
-        {
-            DocumentDesign design;
-            return Indexes.TryGetValue(type, out design) ? design : null;
         }
 
         public DocumentDesign GetOrCreateDesignFor(Type type)

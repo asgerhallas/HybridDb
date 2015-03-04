@@ -570,6 +570,15 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }
 
+        [Fact]
+        public void CanQueryOnIndexes()
+        {
+            var translation = Query<Entity>().Where(x => x.Index<ExtIndex>().StringProp == "asger").Translate();
+
+            translation.Where.ShouldBe("(ExtIndex_StringProp = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "asger");
+        }
+
         Query<T> Query<T>() where T : class
         {
             var store = DocumentStore.ForTestingWithTempTables();
@@ -610,6 +619,11 @@ namespace HybridDb.Tests
             public string StringProp { get; set; }
             public double TheChildNestedProperty { get; set; }
             public int ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 { get; set; }
+        }
+
+        public class ExtIndex
+        {
+            public string StringProp { get; set; }
         }
     }
 }

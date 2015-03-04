@@ -13,16 +13,16 @@ namespace HybridDb.Schema
             columns = new Dictionary<string, Column>();
             Name = name;
 
-            IdColumn = new SystemColumn("Id", new SqlColumn(DbType.Guid, isPrimaryKey: true));
+            IdColumn = new SystemColumn("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true));
             Register(IdColumn);
 
-            EtagColumn = new SystemColumn("Etag", new SqlColumn(DbType.Guid));
+            EtagColumn = new SystemColumn("Etag", typeof(Guid), new SqlColumn(DbType.Guid));
             Register(EtagColumn);
 
-            CreatedAtColumn = new SystemColumn("CreatedAt", new SqlColumn(DbType.DateTimeOffset));
+            CreatedAtColumn = new SystemColumn("CreatedAt", typeof(DateTimeOffset), new SqlColumn(DbType.DateTimeOffset));
             Register(CreatedAtColumn);
 
-            ModifiedAtColumn = new SystemColumn("ModifiedAt", new SqlColumn(DbType.DateTimeOffset));
+            ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset), new SqlColumn(DbType.DateTimeOffset));
             Register(ModifiedAtColumn);
         }
 

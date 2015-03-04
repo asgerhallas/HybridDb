@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -14,8 +13,6 @@ namespace HybridDb.Schema
             this.design = design;
         }
 
-        //public DocumentDesign(Configuration configuration, DocumentTable table) : base(configuration, table, typeof (TEntity)) {}
-
         public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
             var name = ColumnNameBuilder.GetColumnNameByConventionFor(projector);
@@ -27,7 +24,7 @@ namespace HybridDb.Schema
             var column = design.Table[name];
             if (column == null)
             {
-                column = new Column(name, new SqlColumn(typeof(TMember)));
+                column = new Column(name, typeof(TMember));
                 design.Table.Register(column);
             }
 
@@ -51,6 +48,13 @@ namespace HybridDb.Schema
 
             var newProjection = Projection.From<TMember>(compiledProjector);
 
+            if (design.Parent != null && !newProjection.ReturnType.IsCastableTo(column.Type))
+            {
+                throw new InvalidOperationException(string.Format(
+                    "Can not override projection for {0} of type {1} with a projection that returns {2} (on {3}).",
+                    name, column.Type, newProjection.ReturnType, typeof(TEntity)));
+            }
+
             Projection existingProjection;
             if (!design.Projections.TryGetValue(name, out existingProjection))
             {
@@ -63,12 +67,15 @@ namespace HybridDb.Schema
             }
             else
             {
-                if (!newProjection.ReturnType.IsCastableTo(existingProjection.ReturnType))
-                    throw new InvalidOperationException("Projection must be of same type.");
-
                 design.Projections[name] = newProjection;
             }
 
+            return this;
+        }
+
+        public DocumentDesigner<TEntity> Extend<TIndex>(Action<IndexDesigner<TIndex, TEntity>> extender)
+        {
+            extender(new IndexDesigner<TIndex, TEntity>(design));
             return this;
         }
 

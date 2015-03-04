@@ -844,11 +844,9 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryIndex()
         {
-            store.Document<AbstractEntity>();
-            store.Document<MoreDerivedEntity1>();
-
-            store.Index<EntityIndex, AbstractEntity>()
-                .With(x => x.YksiKaksiKolme, x => x.Number);
+            store.Document<AbstractEntity>()
+                .Extend<EntityIndex>(e => e.With(x => x.YksiKaksiKolme, x => x.Number))
+                .With(x => x.Property);
 
             store.MigrateSchemaToMatchConfiguration();
 

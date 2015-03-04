@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Web;
 using HybridDb.Linq.Ast;
 using HybridDb.Schema;
 
@@ -120,10 +121,9 @@ namespace HybridDb.Linq.Parsers
                             string.Format("{0} method must be called on the lambda parameter.", expression));
                     }
 
-                    var columnType = expression.Method.GetGenericArguments()[0];
-                    var columnName = columnType.Name + "_";
+                    var type = expression.Method.GetGenericArguments()[0];
 
-                    ast.Push(new SqlColumnExpression(columnType, columnName));
+                    ast.Push(new SqlColumnPrefixExpression(type.Name));
                     break;
                 }
                 default:
@@ -166,6 +166,10 @@ namespace HybridDb.Linq.Parsers
                         throw new NullReferenceException();
 
                     ast.Push(new SqlConstantExpression(expression.Member.GetValue(constant.Value)));
+                    break;
+                case SqlNodeType.ColumnPrefix:
+                    var prefix = (SqlColumnPrefixExpression)ast.Pop();
+                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), string.Format("{0}_{1}", prefix.Prefix, expression.Member.Name)));
                     break;
                 case SqlNodeType.Column:
                     ast.Pop();

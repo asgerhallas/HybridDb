@@ -72,6 +72,7 @@
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="IMigration.cs" />
     <Compile Include="LinqEx.cs" />
+    <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
     <Compile Include="Migration\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />

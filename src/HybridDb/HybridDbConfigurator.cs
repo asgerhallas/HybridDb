@@ -18,10 +18,5 @@ namespace HybridDb
         {
             return config.Document<TEntity>(tablename);
         }
-
-        protected IndexDesigner<TIndex, TEntity> Document<TEntity, TIndex>()
-        {
-            return config.Index<TIndex, TEntity>();
-        }
     }
 }
