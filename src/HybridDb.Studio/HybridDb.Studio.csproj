@@ -65,6 +65,10 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="CommandBehaviors\MouseDoubleClick.cs" />
+    <Compile Include="Models\Store.cs" />
+    <Compile Include="Models\Stores.cs" />
+    <Compile Include="Models\Table.cs" />
+    <Compile Include="MotherOfAll.cs" />
     <Compile Include="IApplication.cs" />
     <Compile Include="Infrastructure\ApplicationSettingsAdapter.cs" />
     <Compile Include="Infrastructure\EventAggregator.cs" />
@@ -141,11 +145,15 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Models\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Resource Include="hybriddb.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HybridDb\HybridDb.csproj">
+      <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
+      <Name>HybridDb</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

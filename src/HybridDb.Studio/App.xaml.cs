@@ -28,6 +28,7 @@ namespace HybridDb.Studio
                         .WithServiceSelf())
                 .Register(Component.For<IViewModelFactory>().AsFactory())
                 .Register(Component.For<IApplication>().Instance(this))
+                .Register(Component.For<MotherOfAll>())
                 .Register(Component.For<ISettings>().ImplementedBy<ApplicationSettingsAdapter>().LifestyleSingleton())
                 .Register(Component.For<IEventAggregator>().ImplementedBy<EventAggregator>().LifestyleSingleton());
 

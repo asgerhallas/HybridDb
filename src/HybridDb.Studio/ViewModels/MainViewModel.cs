@@ -5,7 +5,7 @@ using HybridDb.Studio.Infrastructure;
 using HybridDb.Studio.Infrastructure.ViewModels;
 using HybridDb.Studio.Infrastructure.Views;
 using HybridDb.Studio.Messages;
-using HybridDb.Studio.Views;
+using HybridDb.Studio.Models;
 using Microsoft.Win32;
 
 namespace HybridDb.Studio.ViewModels
@@ -16,15 +16,18 @@ namespace HybridDb.Studio.ViewModels
         private readonly IApplication application;
         private readonly ISettings settings;
         private readonly IEventAggregator bus;
+        private readonly MotherOfAll mother;
         private string statusBarText;
 
-        public MainViewModel(IViewModelFactory viewModelFactory, IApplication application, ISettings settings, IEventAggregator bus)
+        public MainViewModel(IViewModelFactory viewModelFactory, IApplication application, ISettings settings, IEventAggregator bus, MotherOfAll mother)
         {
             this.viewModelFactory = viewModelFactory;
             this.application = application;
             this.settings = settings;
             this.bus = bus;
+            this.mother = mother;
             Tabs = new ObservableCollection<ViewModel>();
+            Stores = new Stores();
 
             bus.Subscribe(this);
 
@@ -43,6 +46,8 @@ namespace HybridDb.Studio.ViewModels
             OpenTab<ListViewModel>();
             OpenTab<DocumentViewModel>();
         }
+
+        public Stores Stores { get; private set; }
 
         public IRelayCommand OpenFile { get; private set; }
         public IRelayCommand OpenRecent { get; private set; }
@@ -88,12 +93,20 @@ namespace HybridDb.Studio.ViewModels
         {
             var openFileDialog = new OpenFileDialog
             {
-                Filter = "Assemblies (*.dll;*.exe)|*.dll;*.exe|All files (*.*)|*.*"
+                Filter = "Assemblies (*.dll;*.exe)|*.dll;*.exe|All files (*.*)|*.*",
+                Multiselect = false
             };
 
             if (openFileDialog.ShowDialog() == true)
             {
                 StatusBarText = openFileDialog.FileName;
+
+                var configurator = mother.GetConfiguratorFromAssembly(openFileDialog.FileName);
+                var store = Stores.NewStore("bogus", configurator);
+
+                QueryStats stats;
+                var companies = store.DocumentStore.Query(store.DocumentStore.Configuration.Tables["Companies"], out stats);
+
                 bus.Publish(new FileOpened
                 {
                     Filepath = openFileDialog.FileName
