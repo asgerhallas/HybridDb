@@ -91,7 +91,7 @@ namespace HybridDb.Linq
         {
             var translation = expression.Translate();
 
-            if (design.DocumentType == typeof (TProjection))
+            if (typeof (TProjection).IsAssignableFrom(design.DocumentType))
             {
                 QueryStats storeStats;
                 var results = store.Query(

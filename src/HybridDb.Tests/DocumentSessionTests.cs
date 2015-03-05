@@ -642,6 +642,29 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanLoadByInterface()
+        {
+            Document<AbstractEntity>();
+            Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity1 = session.Load<ISomeInterface>(id);
+                entity1.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity1.Property.ShouldBe("Asger");
+
+                var entity2 = session.Load<IOtherInterface>(id);
+                entity2.ShouldBeTypeOf<MoreDerivedEntity1>();
+            }
+        }
+
+        [Fact]
         public void CanLoadDerivedEntityByBasetype()
         {
             Document<AbstractEntity>();
@@ -707,6 +730,31 @@ namespace HybridDb.Tests
             {
                 var entity = session.Load<AbstractEntity>(id);
                 entity.ShouldBe(null);
+            }
+        }
+
+        [Fact]
+        public void CanQueryByInterface()
+        {
+            Document<AbstractEntity>().With(x => x.Property);
+            Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity2 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entities = session.Query<ISomeInterface>().OrderBy(x => x.Column<string>("Discriminator")).ToList();
+                entities.Count().ShouldBe(2);
+                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
+                entities[1].ShouldBeTypeOf<MoreDerivedEntity2>();
+
+                var entities2 = session.Query<IOtherInterface>().OrderBy(x => x.Column<string>("Discriminator")).ToList();
+                entities2.Count().ShouldBe(1);
+                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
             }
         }
 
@@ -808,7 +856,7 @@ namespace HybridDb.Tests
             }
         }
 
-        public class Entity
+        public class Entity : ISomeInterface
         {
             public Entity()
             {
@@ -837,7 +885,7 @@ namespace HybridDb.Tests
             public int Number { get; set; }
         }
 
-        public abstract class AbstractEntity
+        public abstract class AbstractEntity : ISomeInterface
         {
             public Guid Id { get; set; }
             public string Property { get; set; }
@@ -845,7 +893,7 @@ namespace HybridDb.Tests
         }
 
         public class DerivedEntity : AbstractEntity { }
-        public class MoreDerivedEntity1 : DerivedEntity { }
+        public class MoreDerivedEntity1 : DerivedEntity, IOtherInterface { }
         public class MoreDerivedEntity2 : DerivedEntity { }
 
         public class EntityProjection
@@ -868,6 +916,15 @@ namespace HybridDb.Tests
         public class BadMatchIndex
         {
             public long BadMatch { get; set; }
+        }
+
+        public interface ISomeInterface
+        {
+            string Property { get; }
+        }
+
+        public interface IOtherInterface
+        {
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Registration;
 using System.Data.SqlClient;
@@ -13,8 +14,6 @@ using HybridDb.Commands;
 using HybridDb.Logging;
 using HybridDb.Migration;
 using HybridDb.Schema;
-using System.ComponentModel.Composition;
-using System.Threading.Tasks;
 
 namespace HybridDb
 {

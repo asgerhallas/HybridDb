@@ -101,7 +101,9 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
+            var configuration = store.Configuration;
+            var type = entity.GetType();
+            var design = configuration.TryGetDesignFor(type) ?? configuration.CreateDesignFor(type);
             var id = design.GetId(entity);
             if (entities.ContainsKey(id))
                 return;

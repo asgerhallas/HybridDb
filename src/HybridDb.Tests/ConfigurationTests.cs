@@ -229,6 +229,20 @@ namespace HybridDb.Tests
                 .Message.ShouldBe("Discriminator 'abe' is already in use.");
         }
 
+        [Fact]
+        public void AssignsClosestParentToDocumentDesign()
+        {
+            configuration.Document<AbstractEntity>();
+            configuration.Document<DerivedEntity>();
+            configuration.Document<MoreDerivedEntity1>();
+            configuration.Document<MoreDerivedEntity2>();
+
+            configuration.GetDesignFor<AbstractEntity>().Parent.ShouldBe(null);
+            configuration.GetDesignFor<DerivedEntity>().Parent.ShouldBe(configuration.GetDesignFor<AbstractEntity>());
+            configuration.GetDesignFor<MoreDerivedEntity1>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
+            configuration.GetDesignFor<MoreDerivedEntity2>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
+        }
+
         public class Entity
         {
             public string String { get; set; }

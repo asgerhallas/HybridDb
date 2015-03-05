@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using HybridDb.Logging;
@@ -7,20 +8,13 @@ using HybridDb.Schema;
 
 namespace HybridDb
 {
-    class Configurator : HybridDbConfigurator
-    {
-        public Configurator()
-        {
-            Document<string>().With(x => x.Length);
-        }
-    }
-
     public class Configuration
     {
         internal Configuration()
         {
             Tables = new ConcurrentDictionary<string, Table>();
-            DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
+            DocumentDesigns = new List<DocumentDesign>();
+            DocumentDesignsCache = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
@@ -37,7 +31,8 @@ namespace HybridDb
         public ISerializer Serializer { get; private set; }
 
         public ConcurrentDictionary<string, Table> Tables { get; private set; }
-        public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
+        public List<DocumentDesign> DocumentDesigns { get; private set; }
+        public ConcurrentDictionary<Type, DocumentDesign> DocumentDesignsCache { get; private set; }
 
         static string GetTableNameByConventionFor(Type type)
         {
@@ -55,27 +50,20 @@ namespace HybridDb
             tablename = tablename ?? GetTableNameByConventionFor(type);
             discriminator = discriminator ?? type.Name;
 
-            var child = DocumentDesigns
-                .Where(x => type.IsAssignableFrom(x.Key))
-                .Select(x => x.Value)
-                .SingleOrDefault();
-
+            var child = TryGetDesignFor(type);
             if (child != null)
             {
                 throw new InvalidOperationException(string.Format(
                     "Document {0} must be configured before its subtype {1}.", type, child.DocumentType));
             }
 
-            var parent = DocumentDesigns
-                .Where(x => x.Key.IsAssignableFrom(type))
-                .Select(x => x.Value)
-                .SingleOrDefault();
+            var parent = DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
 
             var design = parent != null
                 ? new DocumentDesign(this, parent, type, discriminator)
                 : new DocumentDesign(this, AddTable(tablename), type, discriminator);
 
-            DocumentDesigns.TryAdd(design.DocumentType, design);
+            DocumentDesigns.Add(design);
             return design;
         }
 
@@ -103,12 +91,18 @@ namespace HybridDb
         public DocumentDesign TryGetDesignFor(Type type)
         {
             DocumentDesign design;
-            return DocumentDesigns.TryGetValue(type, out design) ? design : null;
-        }
+            if (DocumentDesignsCache.TryGetValue(type, out design))
+                return design;
 
-        public DocumentDesign GetOrCreateDesignFor(Type type)
-        {
-            return TryGetDesignFor(type) ?? CreateDesignFor(type);
+            var match = DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType));
+            
+            // must never associate a type to null in the cache, the design might be added later
+            if (match != null)
+            {
+                DocumentDesignsCache.TryAdd(type, match);
+            }
+
+            return match;
         }
 
         public void UseSerializer(ISerializer serializer)
