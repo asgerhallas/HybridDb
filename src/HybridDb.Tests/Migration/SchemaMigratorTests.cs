@@ -8,7 +8,7 @@ using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.Tests
+namespace HybridDb.Tests.Migration
 {
     public class SchemaMigratorTests : IDisposable
     {
@@ -32,14 +32,7 @@ END", uniqueDbName));
             }
 
             storeWithTempTables = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
-            storeWithRealTables = new DocumentStore("data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName);
-        }
-
-        [Fact]
-        public void CanCreateTable()
-        {
-            storeWithTempTables.Migrate(migrator => migrator.AddTable("Entities", "Id UniqueIdentifier"));
-            TempTableExists("Entities").ShouldBe(true);
+            storeWithRealTables = DocumentStore.ForTestingWithRealTables("data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName);
         }
 
         [Fact]
@@ -83,7 +76,7 @@ END", uniqueDbName));
         {
             storeWithTempTables.Migrate(
                 migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
-                                    .AddColumn("Entities", new Column("Property", new SqlColumn(DbType.Int32, defaultValue: 10))));
+                                    .AddColumn("Entities", new Column("Property", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 10))));
 
             var propertyColumn = GetTempColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
@@ -95,7 +88,7 @@ END", uniqueDbName));
         {
             storeWithTempTables.Migrate(
                 migrator => migrator.AddTable("Entities", "Id UniqueIdentifier")
-                                    .AddColumn("Entities", new Column("Property", new SqlColumn(DbType.DateTimeOffset, defaultValue: DateTimeOffset.Now))));
+                                    .AddColumn("Entities", new Column("Property", typeof(DateTimeOffset), new SqlColumn(DbType.DateTimeOffset, defaultValue: DateTimeOffset.Now))));
 
             var propertyColumn = GetTempColumn("Entities", "Property");
             propertyColumn.ShouldNotBe(null);
@@ -181,7 +174,7 @@ END", uniqueDbName));
         public void MigrationsAreRolledBackOnExceptions()
         {
             storeWithTempTables.Document<Entity>();
-            storeWithTempTables.MigrateSchemaToMatchConfiguration();
+            //storeWithTempTables.MigrateSchemaToMatchConfiguration();
 
             try
             {
@@ -200,12 +193,13 @@ END", uniqueDbName));
         public void CanCreateColumnWithDefaultValue()
         {
             storeWithTempTables.Document<Entity>();
-            storeWithTempTables.MigrateSchemaToMatchConfiguration();
+            //storeWithTempTables.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
             storeWithTempTables.Insert(new Table("Entities"), id, new { });
 
-            storeWithTempTables.Migrate(migrator => migrator.AddColumn("Entities", new Column("hest", new SqlColumn(DbType.Int32, defaultValue: 1))));
+            storeWithTempTables.Migrate(migrator => migrator
+                .AddColumn("Entities", new Column("hest", typeof(string), new SqlColumn(DbType.Int32, defaultValue: 1))));
 
             var first = storeWithTempTables.RawQuery<int?>("SELECT hest FROM #Entities").First();
             first.ShouldBe(1);

@@ -26,7 +26,7 @@ namespace HybridDb
             {
                 ContractResolver = new DefaultContractResolver(false),
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                TypeNameHandling = TypeNameHandling.All,
+                TypeNameHandling = TypeNameHandling.Auto,
                 PreserveReferencesHandling = PreserveReferencesHandling.All,
                 ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
                 Converters =

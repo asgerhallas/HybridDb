@@ -11,10 +11,10 @@ namespace HybridDb.Migration
 {
     public class SchemaMigrator : ISchemaMigrator
     {
-        readonly IDocumentStore store;
+        readonly DocumentStore store;
         readonly TransactionScope tx;
 
-        public SchemaMigrator(IDocumentStore store)
+        public SchemaMigrator(DocumentStore store)
         {
             this.store = store;
             tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable});
@@ -24,7 +24,7 @@ namespace HybridDb.Migration
         {
             var timer = Stopwatch.StartNew();
 
-            if (!store.IsInTestMode)
+            if (store.TableMode == TableMode.UseRealTables)
             {
                 var existingTables = store.RawQuery<dynamic>("select * from information_schema.tables where table_catalog = '" + table.Name + "'", null);
                 if (existingTables.Any())
@@ -87,7 +87,7 @@ namespace HybridDb.Migration
 
         public ISchemaMigrator RenameTable(string oldTablename, string newTablename)
         {
-            if (store.IsInTestMode)
+            if (store.TableMode != TableMode.UseRealTables)
                 throw new NotSupportedException("It is not possible to rename temp tables, so RenameTable is not supported when store is in test mode.");
 
             return Execute(
@@ -111,7 +111,7 @@ namespace HybridDb.Migration
 
         public ISchemaMigrator RenameColumn(string tablename, string oldColumnname, string newColumnname)
         {
-            if (store.IsInTestMode)
+            if (store.TableMode != TableMode.UseRealTables)
                 throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameColumn is not supported when store is in test mode.");
 
             return Execute(
@@ -160,10 +160,10 @@ namespace HybridDb.Migration
 
         string GetTableExistsSql(string tablename)
         {
-            return string.Format(store.IsInTestMode
-                                     ? "OBJECT_ID('tempdb..{0}') is not null"
-                                     : "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')",
-                                 store.FormatTableName(tablename));
+            return string.Format(store.TableMode == TableMode.UseRealTables
+                ? "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')"
+                : "OBJECT_ID('tempdb..{0}') is not null",
+                store.FormatTableName(tablename));
         }
     }
 }

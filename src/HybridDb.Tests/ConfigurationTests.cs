@@ -1,155 +1,246 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
-using Xunit;
+using HybridDb.Schema;
 using Shouldly;
+using Xunit;
 
 namespace HybridDb.Tests
 {
     public class ConfigurationTests
     {
+        private readonly Configuration configuration;
+
+        public ConfigurationTests()
+        {
+            configuration = new Configuration();
+        }
+
+        public Dictionary<string, Projection> ProjectionsFor<T>()
+        {
+            return configuration.GetDesignFor<T>().Projections;
+        }
+
+        public DocumentTable TableFor<T>()
+        {
+            return configuration.GetDesignFor<T>().Table;
+        }
+
         [Fact]
         public void CanGetColumnNameFromSimpleProjection()
         {
-            var name = Configuration.GetColumnNameByConventionFor((Expression<Func<Entity, object>>) (x => x.String));
-            name.ShouldBe("String");
+            configuration.Document<Entity>().With(x => x.String);
+            ProjectionsFor<Entity>().ShouldContainKey("String");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithMethod()
         {
-            var name = Configuration.GetColumnNameByConventionFor((Expression<Func<Entity, object>>)(x => x.String.ToUpper()));
-            name.ShouldBe("StringToUpper");
+            configuration.Document<Entity>().With(x => x.String.ToUpper());
+            ProjectionsFor<Entity>().ShouldContainKey("StringToUpper");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithMethodAndArgument()
         {
-            var name = Configuration.GetColumnNameByConventionFor((Expression<Func<Entity, object>>)(x => x.String.ToUpper(CultureInfo.InvariantCulture)));
-            name.ShouldBe("StringToUpperCultureInfoInvariantCulture");
+            configuration.Document<Entity>().With(x => x.String.ToUpper(CultureInfo.InvariantCulture));
+            ProjectionsFor<Entity>().ShouldContainKey("StringToUpperCultureInfoInvariantCulture");
         }
 
-        [Fact]
+        [Fact(Skip = "until we support multikey indices")]
         public void CanGetColumnNameFromProjectionWithLambda()
         {
-            var name = Configuration.GetColumnNameByConventionFor((Expression<Func<Entity, object>>)(x => x.Strings.Where(y => y == "Asger")));
-            name.ShouldBe("StringsWhereEqualAsger");
+            configuration.Document<Entity>().With(x => x.Strings.Where(y => y == "Asger"));
+            ProjectionsFor<Entity>().ShouldContainKey("StringsWhereEqualAsger");
         }
 
-        [Fact]
+        [Fact(Skip = "until we support multikey indices")]
         public void CanGetColumnNameFromProjectionWithComplexLambda()
         {
-            var name = Configuration.GetColumnNameByConventionFor((Expression<Func<Entity, object>>)(x => x.Strings.Where(y => y.PadLeft(2).Length > 10)));
-            name.ShouldBe("StringsWherePadLeft2LengthGreaterThan10");
+            configuration.Document<Entity>().With(x => x.Strings.Where(y => y.PadLeft(2).Length > 10));
+            ProjectionsFor<Entity>().ShouldContainKey("StringsWherePadLeft2LengthGreaterThan10");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithEnumFlags()
         {
-            var name = Configuration.GetColumnNameByConventionFor((Expression<Func<Entity, object>>)(x => 
-                x.String.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any()));
-            
-            name.ShouldBe("StringGetTypeGetPropertiesInstanceStaticAny");
+            configuration.Document<Entity>().With(x => x.String.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any());
+            ProjectionsFor<Entity>().ShouldContainKey("StringGetTypeGetPropertiesInstanceStaticAny");
         }
 
         [Fact]
-        public void CanGetBestMatchingIndex()
+        public void CanOverrideProjectionsForSubtype()
         {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<Index>();
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<Entity>();
-            indexTable.Name.ShouldBe("Index");
+            configuration.Document<AbstractEntity>()
+                .With("Number", x => 1);
+
+            configuration.Document<DerivedEntity>()
+                .With("Number", x => 2);
+
+            ProjectionsFor<DerivedEntity>()["Number"].Projector(new DerivedEntity()).ShouldBe(2);
         }
 
         [Fact]
-        public void CanGetBestMatchingIndexWhenMultipleTypesSameIndex()
+        public void ProjectionDirectlyFromEntity()
         {
-            var configuration = new Configuration(null);
+            configuration.Document<Entity>().With(x => x.String);
 
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
-
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<MoreDerivedEntity1>();
-            indexTable.Name.ShouldBe("Index");
+            ProjectionsFor<Entity>()["String"].Projector(new Entity { String = "Asger" }).ShouldBe("Asger");
         }
 
         [Fact]
-        public void CanGetBestMatchingIndexByBaseType()
+        public void ProjectionDirectlyFromEntityWithOtherClassAsExtension()
         {
-            var configuration = new Configuration(null);
+            configuration.Document<OtherEntity>()
+                .With(x => x.String)
+                .Extend<Index>(e => 
+                    e.With(x => x.Number, x => x.String.Length));
 
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
+            ProjectionsFor<OtherEntity>()["String"].Projector(new OtherEntity { String = "Asger" }).ShouldBe("Asger");
+            ProjectionsFor<OtherEntity>()["Number"].Projector(new OtherEntity { String = "Asger" }).ShouldBe(5);
+        }
+        
+        [Fact]
+        public void LastProjectionOfSameNameWins()
+        {
+            configuration.Document<OtherEntity>()
+                .With(x => x.String)
+                .Extend<Index>(e =>
+                    e.With(x => x.String, x => x.String.Replace("a", "b")));
 
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<DerivedEntity>();
-            indexTable.Name.ShouldBe("Index");
+            ProjectionsFor<OtherEntity>()["String"].Projector(new OtherEntity { String = "asger" }).ShouldBe("bsger");
+        }
+        
+        [Fact]
+        public void AddsNonNullableColumnForNonNullableProjection()
+        {
+            configuration.Document<AbstractEntity>().With(x => x.Number);
+
+            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
+            sqlColumn.Type.ShouldBe(DbType.Int32);
+            sqlColumn.Nullable.ShouldBe(false);
         }
 
         [Fact]
-        public void DoesNotFindIndexWhenOneDerivedTypeDoesNotHaveIndex()
+        public void AddNullableColumnForProjectionOnSubtypes()
         {
-            var configuration = new Configuration(null);
+            configuration.Document<AbstractEntity>();
+            configuration.Document<MoreDerivedEntity1>().With(x => x.Number);
+            configuration.Document<MoreDerivedEntity2>();
 
-            configuration.Document<DerivedEntity>(null);
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
-
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<AbstractEntity>();
-            indexTable.ShouldBe(null);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
+            sqlColumn.Type.ShouldBe(DbType.Int32);
+            sqlColumn.Nullable.ShouldBe(true);
         }
 
         [Fact]
-        public void DoesNotFindIndexWhenOneDerivedTypeHasOtherIndex()
+        public void FailsWhenTryingToOverrideProjectionWithNonCompatibleType()
         {
-            var configuration = new Configuration(null);
+            configuration.Document<AbstractEntity>().With(x => x.Number);
 
-            configuration.Document<DerivedEntity>(null).Index<OtherIndex>();
-            configuration.Document<MoreDerivedEntity1>(null).Index<Index>();
-            configuration.Document<MoreDerivedEntity2>(null).Index<Index>();
-
-            var indexTable = configuration.TryGetBestMatchingIndexTableFor<AbstractEntity>();
-            indexTable.ShouldBe(null);
+            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity1>().With("Number", x => "OtherTypeThanBase"))
+                .Message.ShouldBe("Can not override projection for Number of type System.Int32 with a projection that returns System.String (on HybridDb.Tests.ConfigurationTests+MoreDerivedEntity1).");
         }
 
         [Fact]
-        public void IndexTypeCanContainId()
+        public void FailsWhenOverridingProjectionOnSiblingWithNonCompatibleType()
         {
-            var configuration = new Configuration(null);
-            Should.NotThrow(() => configuration.Document<MoreDerivedEntity2>(null).Index<IndexWithId>());
+            configuration.Document<AbstractEntity>();
+            configuration.Document<MoreDerivedEntity1>().With("Number", x => 1);
+
+            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity2>().With("Number", x => "OtherTypeThanBase"))
+                .Message.ShouldBe("Can not override projection for Number of type System.Int32 with a projection that returns System.String (on HybridDb.Tests.ConfigurationTests+MoreDerivedEntity2).");
         }
 
         [Fact]
-        public void DoesNotCreateDefaultProjectionForIndexPropertyThatDoesNotMatchAnyDocumentProperty()
+        public void FailsWhenOverridingProjectionOnSelfWithNonCompatibleType()
         {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<BadMatchIndex>();
-
-            var indexTable = configuration.IndexTables[typeof(BadMatchIndex)];
-            configuration.GetDesignFor<Entity>().Indexes[indexTable].ContainsKey("BadMatch").ShouldBe(false);
+            Should.Throw<InvalidOperationException>(() =>
+                configuration.Document<OtherEntity>()
+                    .With("String", x => 1)
+                    .With("String", x => "string"));
         }
 
         [Fact]
-        public void DoesNotCreateDefaultProjectionForIndexPropertyOfWrongType()
+        public void CanOverrideProjectionWithCompatibleType()
         {
-            var configuration = new Configuration(null);
-            configuration.Document<Entity>(null).Index<WrongTypeIndex>();
+            configuration.Document<AbstractEntity>().With(x => x.LongNumber);
+            configuration.Document<MoreDerivedEntity1>().With("LongNumber", x => x.Number);
 
-            var indexTable = configuration.IndexTables[typeof(WrongTypeIndex)];
-            configuration.GetDesignFor<Entity>().Indexes[indexTable].ContainsKey("String").ShouldBe(false);
+            var sqlColumn = TableFor<AbstractEntity>()["LongNumber"].SqlColumn;
+            sqlColumn.Type.ShouldBe(DbType.Int64);
+            sqlColumn.Nullable.ShouldBe(false);
+
+            ProjectionsFor<AbstractEntity>()["LongNumber"].Projector(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 }).ShouldBe(1);
+            ProjectionsFor<MoreDerivedEntity1>()["LongNumber"].Projector(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 }).ShouldBe(2);
         }
 
         [Fact]
-        public void CanOverrideProjectionsForIndexProperties()
+        public void CanOverrideProjectionWithNullability()
         {
-            var configuration = new Configuration(null);
-            configuration.Document<OtherEntity>(null).Index<Index>().With(x => x.Number, x => x.String.Length);
+            configuration.Document<AbstractEntity>().With(x => x.Number);
+            configuration.Document<MoreDerivedEntity1>().With("Number", x => (int?)null);
 
-            var indexTable = configuration.IndexTables[typeof (Index)];
-            var projection = configuration.GetDesignFor<OtherEntity>().Indexes[indexTable]["Number"];
-            projection(new OtherEntity { String = "Asger" }).ShouldBe(5);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
+            sqlColumn.Type.ShouldBe(DbType.Int32);
+            sqlColumn.Nullable.ShouldBe(true);
+        }
+
+        [Fact]
+        public void CanOverrideProjectionWithoutChangingNullability()
+        {
+            configuration.Document<AbstractEntity>().With(x => x.Number);
+            configuration.Document<MoreDerivedEntity1>().With(x => x.Number);
+
+            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
+            sqlColumn.Type.ShouldBe(DbType.Int32);
+            sqlColumn.Nullable.ShouldBe(false);
+        }
+
+        [Fact]
+        public void FailsWhenRegisteringSubtypeBeforeBase()
+        {
+            configuration.Document<MoreDerivedEntity1>();
+            Should.Throw<InvalidOperationException>(() => configuration.Document<AbstractEntity>())
+                .Message.ShouldBe("Document HybridDb.Tests.ConfigurationTests+AbstractEntity must be configured before its subtype HybridDb.Tests.ConfigurationTests+MoreDerivedEntity1.");
+        }
+        
+        [Fact]
+        public void SetDiscriminator()
+        {
+            configuration.Document<AbstractEntity>(discriminator: "abe");
+            configuration.Document<MoreDerivedEntity1>(discriminator: "gris");
+            configuration.Document<MoreDerivedEntity2>();
+
+            configuration.GetDesignFor<AbstractEntity>().Discriminator.ShouldBe("abe");
+            configuration.GetDesignFor<MoreDerivedEntity1>().Discriminator.ShouldBe("gris");
+            configuration.GetDesignFor<MoreDerivedEntity2>().Discriminator.ShouldBe("MoreDerivedEntity2");
+        }
+
+        [Fact]
+        public void FailOnDuplicateDiscriminators()
+        {
+            configuration.Document<AbstractEntity>(discriminator: "abe");
+            Should.Throw<InvalidOperationException>(() => 
+                configuration.Document<MoreDerivedEntity1>(discriminator: "abe"))
+                .Message.ShouldBe("Discriminator 'abe' is already in use.");
+        }
+
+        [Fact]
+        public void AssignsClosestParentToDocumentDesign()
+        {
+            configuration.Document<AbstractEntity>();
+            configuration.Document<DerivedEntity>();
+            configuration.Document<MoreDerivedEntity1>();
+            configuration.Document<MoreDerivedEntity2>();
+
+            configuration.GetDesignFor<AbstractEntity>().Parent.ShouldBe(null);
+            configuration.GetDesignFor<DerivedEntity>().Parent.ShouldBe(configuration.GetDesignFor<AbstractEntity>());
+            configuration.GetDesignFor<MoreDerivedEntity1>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
+            configuration.GetDesignFor<MoreDerivedEntity2>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
         }
 
         public class Entity
@@ -169,6 +260,7 @@ namespace HybridDb.Tests
             public Guid Id { get; set; }
             public string Property { get; set; }
             public int Number { get; set; }
+            public long LongNumber { get; set; }
         }
 
         public class DerivedEntity : AbstractEntity { }
@@ -194,12 +286,18 @@ namespace HybridDb.Tests
             public int Number { get; set; }
         }
 
-        public class WrongTypeIndex
+        public class WrongMemberTypeIndex
         {
-            public int String { get; set; }
+            public int String;
         }
 
-        public class BadMatchIndex
+        public class WrongPropertyTypeIndex
+        {
+            public int String { get; set; }
+            public int? Number { get; set; }
+        }
+
+        public class BadNameMatchIndex
         {
             public int BadMatch { get; set; }
         }

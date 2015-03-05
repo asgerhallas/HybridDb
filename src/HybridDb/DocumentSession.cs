@@ -36,34 +36,43 @@ namespace HybridDb
             if (entities.TryGetValue(key, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? managedEntity.Entity as T
-                           : null;
+                    ? managedEntity.Entity as T
+                    : null;
             }
 
-            DocumentDesign design = store.Configuration.TryGetDesignFor<T>();
-            if (design != null)
+            var design = store.Configuration.TryGetDesignFor<T>();
+
+            if (design == null)
             {
-                var row = store.Get(design.Table, key);
-                return (T) (row != null ? ConvertToEntityAndPutUnderManagement(design, row) : null);
+                throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof (T)));
             }
-            else
-            {
-                var index = store.Configuration.TryGetBestMatchingIndexTableFor<T>();
-                if (index == null)
-                    throw new InvalidOperationException(string.Format("No document type or index supporting {0} was found.", typeof(T)));
+            
+            var row = store.Get(design.Table, key);
+            
+            if (row == null) return null;
 
-                var row = store.Get(index, key);
-                if (row == null) return null;
-
-                design = store.Configuration.TryGetDesignFor((string)row[index.TableReferenceColumn]);
-
-                return (T)ConvertToEntityAndPutUnderManagement(design, row);
-            }
+            return (T)ConvertToEntityAndPutUnderManagement(design, row);
         }
 
         public IQueryable<T> Query<T>() where T : class
         {
-            return new Query<T>(new QueryProvider<T>(this));
+            var configuration = store.Configuration;
+            
+            var design = configuration.TryGetDesignFor<T>();
+            if (design == null)
+            {
+                throw new InvalidOperationException(string.Format("No design registered for type {0}", typeof(T)));
+            }
+
+            var discriminators = design.DecendentsAndSelf.Keys.ToArray();
+
+            var query = new Query<T>(new QueryProvider<T>(this, design))
+                .Where(x => x.Column<string>("Discriminator").In(discriminators));
+
+            //if (design.DocumentType != typeof (T))
+            //    query = query.AsProjection<T>();
+
+            return query;
         }
 
         public void Defer(DatabaseCommand command)
@@ -74,14 +83,14 @@ namespace HybridDb
         public void Evict(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid) design.Projections[design.Table.IdColumn](entity);
+            var id = design.GetId(entity);
             entities.Remove(id);
         }
 
         public Guid? GetEtagFor(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid)design.Projections[design.Table.IdColumn](entity);
+            var id = design.GetId(entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -92,8 +101,10 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid)design.Projections[design.Table.IdColumn](entity);
+            var configuration = store.Configuration;
+            var type = entity.GetType();
+            var design = configuration.TryGetDesignFor(type) ?? configuration.CreateDesignFor(type);
+            var id = design.GetId(entity);
             if (entities.ContainsKey(id))
                 return;
 
@@ -108,7 +119,7 @@ namespace HybridDb
         public void Delete(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = (Guid)design.Projections[design.Table.IdColumn](entity);
+            var id = design.GetId(entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -141,33 +152,22 @@ namespace HybridDb
             {
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
-                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value(managedEntity.Entity));
+                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
                         commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, projections)));
-                        commands.AddRange(design.Indexes.Select(index =>
-                        {
-                            var indexProjections = index.Value.ToDictionary(x => x.Key, x => x.Value(managedEntity.Entity));
-                            return Tuple.Create(managedEntity, document, (DatabaseCommand) new InsertCommand(index.Key, id, indexProjections));
-                        }));
                         break;
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))
                         {
                             commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand) new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins)));
-                            commands.AddRange(design.Indexes.Select(index =>
-                            {
-                                var indexProjections = index.Value.ToDictionary(x => x.Key, x => x.Value(managedEntity.Entity));
-                                return Tuple.Create(managedEntity, document, (DatabaseCommand)new UpdateCommand(index.Key, id, managedEntity.Etag, indexProjections, lastWriteWins));
-                            }));
                         }
                         break;
                     case EntityState.Deleted:
                         commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new DeleteCommand(design.Table, id, managedEntity.Etag, lastWriteWins)));
-                        commands.AddRange(design.Indexes.Select(index => Tuple.Create(managedEntity, document, (DatabaseCommand)new DeleteCommand(index.Key, id, managedEntity.Etag, lastWriteWins))));
                         break;
                 }
             }
@@ -212,7 +212,14 @@ namespace HybridDb
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign design, IDictionary<string, object> row)
         {
             var table = design.Table;
-            var id = (Guid) row[table.IdColumn];
+            var id = (Guid)row[table.IdColumn];
+            var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
+
+            DocumentDesign concreteDesign;
+            if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+            {
+                throw new InvalidOperationException(string.Format("Document with id {0} exists, but is not assignable to the given type {1}.", id, design.DocumentType.Name));
+            }
 
             ManagedEntity managedEntity;
             if (entities.TryGetValue(id, out managedEntity))
@@ -223,7 +230,7 @@ namespace HybridDb
             }
 
             var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize(document, design.Type);
+            var entity = store.Configuration.Serializer.Deserialize(document, concreteDesign.DocumentType);
 
             managedEntity = new ManagedEntity
             {

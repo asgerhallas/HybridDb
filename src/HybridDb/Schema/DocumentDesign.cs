@@ -1,188 +1,94 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Linq;
+using System.Security.Cryptography;
 
 namespace HybridDb.Schema
 {
     public class DocumentDesign
     {
-        public DocumentDesign(Configuration configuration, DocumentTable table, Type type)
+        readonly Dictionary<string, DocumentDesign> decendentsAndSelf;
+
+        public DocumentDesign(Configuration configuration, DocumentTable table, Type documentType, string discriminator)
         {
-            Configuration = configuration;
+            DocumentType = documentType;
             Table = table;
-            Type = type;
-            Projections = new Dictionary<string, Func<object, object>>
+            Discriminator = discriminator;
+            
+            decendentsAndSelf = new Dictionary<string, DocumentDesign>
             {
-                {Table.IdColumn, document => ((dynamic) document).Id},
-                {Table.DocumentColumn, document => configuration.Serializer.Serialize(document)}
+                { Discriminator, this }
             };
-            Indexes = new Dictionary<IndexTable, Dictionary<string, Func<object, object>>>();
+            
+            Projections = new Dictionary<string, Projection>
+            {
+                {Table.IdColumn, Projection.From<Guid>(document => ((dynamic) document).Id)},
+                {Table.DiscriminatorColumn, Projection.From<string>(document => Discriminator)},
+                {Table.DocumentColumn, Projection.From<byte[]>(document => configuration.Serializer.Serialize(document))}
+            };
         }
 
-        public Type Type { get; private set; }
+        public DocumentDesign(Configuration configuration, DocumentDesign parent, Type documentType, string discriminator)
+            : this(configuration, parent.Table, documentType, discriminator)
+        {
+            Parent = parent;
+            Projections = parent.Projections.ToDictionary();
+            Projections[Table.DiscriminatorColumn] = Projection.From<string>(document => Discriminator);
+        
+            Parent.AddChild(this);
+        }
+
+        public DocumentDesign Parent { get; private set; }
+        public Type DocumentType { get; private set; }
         public DocumentTable Table { get; private set; }
-        public Dictionary<IndexTable, Dictionary<string, Func<object, object>>> Indexes { get; private set; }
-        public Dictionary<string, Func<object, object>> Projections { get; private set; }
-        public Configuration Configuration { get; private set; }
+        public string Discriminator { get; private set; }
 
-        public void MigrateSchema()
+        public Dictionary<string, Projection> Projections { get; private set; }
+
+        public IReadOnlyDictionary<string, DocumentDesign> DecendentsAndSelf
         {
-            Configuration.Store.Migrate(migrator => migrator.MigrateTo(Table));
+            get { return decendentsAndSelf; }
         }
 
-        protected Func<object, object> Compile<TEntity, TMember>(string name, Expression<Func<TEntity, TMember>> projector)
+        public Guid GetId(object entity)
         {
-            var compiled = projector.Compile();
-            return entity =>
+            return (Guid) Projections[Table.IdColumn].Projector(entity);
+        }
+
+
+        void AddChild(DocumentDesign design)
+        {
+            if (Parent != null)
             {
-                try
-                {
-                    return (object) compiled((TEntity) entity);
-                }
-                catch (Exception ex)
-                {
-                    throw new TargetInvocationException(
-                        string.Format("The projector for column {0} threw an exception.\nThe projector code is {1}.", name, projector), ex);
-                }
-            };
+                Parent.AddChild(design);
+            }
+
+            if (decendentsAndSelf.ContainsKey(design.Discriminator))
+                throw new InvalidOperationException(string.Format("Discriminator '{0}' is already in use.", design.Discriminator));
+
+            decendentsAndSelf.Add(design.Discriminator, design);
         }
     }
 
-    public class DocumentDesign<TEntity> : DocumentDesign
+    public class Projection
     {
-        public DocumentDesign(Configuration configuration, DocumentTable table) : base(configuration, table, typeof (TEntity)) {}
-
-        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        Projection(Type returnType, Func<object, object> projector)
         {
-            var name = Configuration.GetColumnNameByConventionFor(projector);
-            return Project(name, projector, makeNullSafe);
+            ReturnType = returnType;
+            Projector = projector;
         }
 
-        public DocumentDesign<TEntity> Project<TMember>(string name, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        public static Projection From<TReturnType>(Func<object, object> projection)
         {
-            if (makeNullSafe)
-            {
-                var nullCheckInjector = new NullCheckInjector();
-                var nullCheckedProjector = (Expression<Func<TEntity, object>>) nullCheckInjector.Visit(projector);
-
-                var column = new Column(name, new SqlColumn(typeof (TMember)))
-                {
-                    SqlColumn =
-                    {
-                        Nullable = !nullCheckInjector.CanBeTrustedToNeverReturnNull
-                    }
-                };
-
-                Table.Register(column);
-                Projections.Add(column, Compile(name, nullCheckedProjector));
-            }
-            else
-            {
-                var column = new Column(name, new SqlColumn(typeof (TMember)));
-                Table.Register(column);
-                Projections.Add(column, Compile(name, projector));
-            }
-
-            return this;
+            return new Projection(typeof(TReturnType), projection);
         }
 
-        public DocumentDesign<TEntity> Project<TMember>(Expression<Func<TEntity, IEnumerable<TMember>>> projector, bool makeNullSafe = true)
-        {
-            return this;
-        }
+        //public static Projection From<TEntity, TReturnType>(Func<TEntity, TReturnType> projection)
+        //{
+        //    return new Projection(typeof(TEntity), typeof(TReturnType), projection);
+        //}
 
-        public IndexDesigner<TIndex> Index<TIndex>(string name = null)
-        {
-            name = name ?? typeof (TIndex).Name;
-
-            var table = Configuration.TryGetIndexTableByName(name);
-            if (table == null)
-            {
-                table = new IndexTable(name);
-
-                foreach (var property in typeof (TIndex).GetProperties())
-                {
-                    var column = new Column(property.Name, new SqlColumn(property.PropertyType));
-
-                    if (!table.Columns.Contains(column))
-                        table.Register(column);
-                }
-            }
-
-            var projections = new Dictionary<string, Func<object, object>>
-            {
-                {table.IdColumn, x => ((dynamic) x).Id},
-                {table.TableReferenceColumn, x => Table.Name}
-            };
-
-            AddDefaultProjections<TIndex>(table, projections);
-
-            Indexes.Add(table, projections);
-            Configuration.Tables.TryAdd(table.Name, table);
-            Configuration.IndexTables.TryAdd(typeof (TIndex), table);
-
-            return new IndexDesigner<TIndex>(this, table);
-        }
-
-        void AddDefaultProjections<TIndex>(IndexTable table, Dictionary<string, Func<object, object>> projections)
-        {
-            foreach (var column in table.Columns)
-            {
-                if (projections.ContainsKey(column.Name))
-                    continue;
-
-                var projectedProperty = Type.GetProperty(column.Name);
-                if (projectedProperty == null)
-                    continue;
-
-                var indexProperty = typeof (TIndex).GetProperty(column.Name, projectedProperty.PropertyType);
-                if (indexProperty == null)
-                    continue;
-
-                var parameter = Expression.Parameter(typeof (object));
-
-                var projector =
-                    Expression.Lambda<Func<object, object>>(
-                        Expression.Convert(
-                            Expression.Property(
-                                Expression.Convert(parameter, Type),
-                                Type.GetProperty(column.Name)),
-                            typeof (object)),
-                        parameter);
-
-                projections.Add(column.Name, Compile(column.Name, projector));
-            }
-        }
-
-        public class IndexDesigner<TIndex>
-        {
-            readonly DocumentDesign<TEntity> design;
-            readonly IndexTable table;
-
-            public IndexDesigner(DocumentDesign<TEntity> design, IndexTable table)
-            {
-                this.design = design;
-                this.table = table;
-            }
-
-            public IndexDesigner<TIndex> With<TMember>(Expression<Func<TIndex, TMember>> property, Expression<Func<TEntity, TMember>> projector)
-            {
-                var nullCheckInjector = new NullCheckInjector();
-                var nullCheckedProjector = (Expression<Func<TEntity, object>>)nullCheckInjector.Visit(projector);
-
-                var columnName = ((MemberExpression)property.Body).Member.Name;
-                design.Indexes[table].Add(table[columnName], design.Compile(columnName, nullCheckedProjector));
-
-                return this;
-            }
-
-            public IndexDesigner<T> Index<T>(string name = null)
-            {
-                return design.Index<T>(name);
-            }
-        }
+        //public Type DeclaringType { get; private set; }
+        public Type ReturnType { get; private set; }
+        public Func<object, object> Projector { get; private set; }
     }
 }

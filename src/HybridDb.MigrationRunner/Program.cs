@@ -16,7 +16,7 @@ namespace HybridDb.MigrationRunner
             if (args.Contains("--run"))
             {
                 var connectionString = ConfigurationManager.ConnectionStrings["HybridDBConnectionString"].ConnectionString;
-                var store = new DocumentStore(connectionString);
+                var store = (DocumentStore)DocumentStore.Create(connectionString, new LambdaHybridDbConfigurator(x => { }));
 
                 var runner = new Runner(store);
 

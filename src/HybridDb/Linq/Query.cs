@@ -52,7 +52,7 @@ namespace HybridDb.Linq
 
         public IEnumerator<T> GetEnumerator()
         {
-            return provider.ExecuteQuery<T>(expression.Translate()).GetEnumerator();
+            return provider.ExecuteEnumerable<T>(expression).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

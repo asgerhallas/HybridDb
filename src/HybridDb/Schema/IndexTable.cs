@@ -7,7 +7,7 @@ namespace HybridDb.Schema
     {
         public IndexTable(string name) : base(name)
         {
-            TableReferenceColumn = new SystemColumn("TableReference", new SqlColumn(DbType.String, 255));
+            TableReferenceColumn = new SystemColumn("TableReference", typeof(string), new SqlColumn(DbType.String, 255));
             Register(TableReferenceColumn);
         }
 

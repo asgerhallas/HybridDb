@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Registration;
 using System.Data.SqlClient;
@@ -13,7 +14,6 @@ using HybridDb.Commands;
 using HybridDb.Logging;
 using HybridDb.Migration;
 using HybridDb.Schema;
-using System.ComponentModel.Composition;
 
 namespace HybridDb
 {
@@ -22,24 +22,55 @@ namespace HybridDb
         readonly Configuration configuration;
         readonly string connectionString;
         readonly TableMode tableMode;
+        readonly bool testMode;
 
         SqlConnection ambientConnectionForTesting;
         Guid lastWrittenEtag;
         long numberOfRequests;
         int numberOfManagedConnections;
 
-        DocumentStore(string connectionString, TableMode tableMode)
+        DocumentStore(string connectionString, Configuration configuration, TableMode tableMode, bool testMode)
         {
-            this.tableMode = tableMode;
             this.connectionString = connectionString;
-
-            configuration = new Configuration(this);
+            this.configuration = configuration;
+            this.tableMode = tableMode;
+            this.testMode = testMode;
 
             OnMessage = message => { };
             OnRead = (table, projections) => { };
         }
 
-        public DocumentStore(string connectionString) : this(connectionString, TableMode.UseRealTables) {}
+        public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
+        {
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString, configurator.Configure(), TableMode.UseRealTables, testMode: false);
+            new DocumentStoreMigrator().Migrate(store);
+            return store;
+        }
+
+        public static DocumentStore ForTestingWithRealTables(string connectionString = null, IHybridDbConfigurator configurator = null)
+        {
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseRealTables, testMode: true);
+            new DocumentStoreMigrator().Migrate(store).Wait();
+            return store;
+        }
+
+        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
+        {
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseGlobalTempTables, testMode: true);
+            new DocumentStoreMigrator().Migrate(store).Wait();
+            return store;
+        }
+
+        public static DocumentStore ForTestingWithTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
+        {
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseTempTables, testMode: true);
+            new DocumentStoreMigrator().Migrate(store).Wait();
+            return store;
+        }
 
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
 
@@ -54,7 +85,7 @@ namespace HybridDb
 
         public bool IsInTestMode
         {
-            get { return tableMode != TableMode.UseRealTables; }
+            get { return testMode; }
         }
 
         /// <summary>
@@ -66,8 +97,13 @@ namespace HybridDb
             get { return configuration; }
         }
 
-        public DocumentDesign<TEntity> Document<TEntity>(string tablename = null)
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
+            if (!IsInTestMode)
+            {
+                throw new InvalidOperationException("To configure the store directly, it must be run in test mode.");
+            }
+
             return configuration.Document<TEntity>(tablename);
         }
 
@@ -78,17 +114,6 @@ namespace HybridDb
                 migration(migrator);
                 migrator.Commit();
             }
-        }
-
-        public void MigrateSchemaToMatchConfiguration(bool safe = true)
-        {
-            Migrate(migrator =>
-            {
-                foreach (var table in Configuration.Tables.Values)
-                {
-                    migrator.MigrateTo(table, safe);
-                }
-            });
         }
 
         public void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate)
@@ -110,16 +135,6 @@ namespace HybridDb
             OnRead += hybridDbExtension.OnRead;
         }
 
-
-        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null)
-        {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", TableMode.UseGlobalTempTables);
-        }
-
-        public static DocumentStore ForTestingWithTempTables(string connectionString = null)
-        {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", TableMode.UseTempTables);
-        }
 
         public IDocumentSession OpenSession()
         {
@@ -539,6 +554,7 @@ namespace HybridDb
         }
 
         public class MissingProjectionValueException : Exception {}
+
     }
 
     public enum TableMode

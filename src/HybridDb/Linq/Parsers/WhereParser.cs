@@ -110,7 +110,8 @@ namespace HybridDb.Linq.Parsers
                     break;
                 case "In":
                     var column = ast.Pop();
-                    var set = (SqlConstantExpression)ast.Pop();
+                    var sqlExpression = ast.Pop();
+                    var set = (SqlConstantExpression)sqlExpression;
                     if (((IEnumerable) set.Value).Cast<object>().Any())
                     {
                         ast.Push(new SqlBinaryExpression(SqlNodeType.In, column, set));

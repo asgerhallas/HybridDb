@@ -12,7 +12,7 @@ namespace HybridDb.Tests.Bugs
         public void NullableGuidGetsNullableColumnType()
         {
             var store = DocumentStore.ForTestingWithTempTables();
-            store.Document<Entity>().Project(x => x.SomeNullableGuid);
+            store.Document<Entity>().With(x => x.SomeNullableGuid);
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeNullableGuid"];
             column.SqlColumn.Nullable.ShouldBe(true);
         }
@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Bugs
         public void Fails()
         {
             var store = DocumentStore.ForTestingWithTempTables();
-            store.Document<Entity>().Project(x => x.SomeEnumerable.Count());
+            store.Document<Entity>().With(x => x.SomeEnumerable.Count());
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerableCount"];
             column.SqlColumn.Nullable.ShouldBe(true);
         }

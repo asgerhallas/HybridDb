@@ -11,7 +11,7 @@ namespace HybridDb.MigrationRunner
 {
     internal class Runner
     {
-        readonly IDocumentStore store;
+        readonly DocumentStore store;
         readonly ILogger filelog;
         readonly List<WriteThroughLogger.Entry> recentLogs;
         readonly WriteThroughLogger logger;
@@ -20,7 +20,7 @@ namespace HybridDb.MigrationRunner
         [Import(typeof(Migration.Migration), AllowRecomposition = true, AllowDefault = true)]
         public Migration.Migration Migration { get; set; }
 
-        public Runner(IDocumentStore store)
+        public Runner(DocumentStore store)
         {
             this.store = store;
 

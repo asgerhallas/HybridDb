@@ -12,7 +12,14 @@ namespace HybridDb
             ColumnName = "";
         }
 
-        public string ColumnName { get; private set; }
+        string ColumnName { get; set; }
+
+        public static string GetColumnNameByConventionFor(Expression projector)
+        {
+            var columnNameBuilder = new ColumnNameBuilder();
+            columnNameBuilder.Visit(projector);
+            return columnNameBuilder.ColumnName;
+        }
 
         protected override Expression VisitBinary(BinaryExpression node)
         {

@@ -1,8 +1,10 @@
-﻿namespace HybridDb.Schema
+﻿using System;
+
+namespace HybridDb.Schema
 {
     public class SystemColumn : Column
     {
-        public SystemColumn(string columnName, SqlColumn sqlColumn) : base(columnName, sqlColumn)
+        public SystemColumn(string columnName, Type type, SqlColumn sqlColumn) : base(columnName, type, sqlColumn)
         {
             Name = columnName;
             SqlColumn = sqlColumn;

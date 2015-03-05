@@ -94,12 +94,38 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Column":
-                    var constant = (ConstantExpression)expression.Arguments[1];
-                    ast.Push(new SqlColumnExpression(expression.Method.GetGenericArguments()[0], (string) constant.Value));
+                {
+                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+                    if (column == null || column.ColumnName != "")
+                    {
+                        throw new NotSupportedException(
+                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                    }
+
+                    var constant = (SqlConstantExpression) ast.Pop();
+                    var columnType = expression.Method.GetGenericArguments()[0];
+                    var columnName = (string) constant.Value;
+
+                    ast.Push(new SqlColumnExpression(columnType, columnName));
                     break;
+                }
+                case "Index":
+                {
+                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+                    if (column == null || column.ColumnName != "")
+                    {
+                        throw new NotSupportedException(
+                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                    }
+
+                    var type = expression.Method.GetGenericArguments()[0];
+
+                    ast.Push(new SqlColumnPrefixExpression(type.Name));
+                    break;
+                }
                 default:
                     ast.Pop();
-                    var name = Configuration.GetColumnNameByConventionFor(expression);
+                    var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
                     break;
             }
@@ -138,9 +164,14 @@ namespace HybridDb.Linq.Parsers
 
                     ast.Push(new SqlConstantExpression(expression.Member.GetValue(constant.Value)));
                     break;
+                case SqlNodeType.ColumnPrefix:
+                    //TODO: clean up this mess. 
+                    var prefix = (SqlColumnPrefixExpression)ast.Pop();
+                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), expression.Member.Name));
+                    break;
                 case SqlNodeType.Column:
                     ast.Pop();
-                    var name = Configuration.GetColumnNameByConventionFor(expression);
+                    var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
                     break;
                 default:

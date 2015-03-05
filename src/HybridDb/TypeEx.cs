@@ -63,15 +63,6 @@ namespace HybridDb
             return !type.IsValueType || type.IsNullable();
         }
 
-        public static MethodInfo GetGenericMethod(this Type type, string name, Type[] parameterTypes)
-        {
-            var methods = type.GetMethods();
-            return (from method in methods.Where(m => m.Name == name) 
-                    let methodParameterTypes = method.GetParameters().Select(p => p.ParameterType).ToArray() 
-                    where methodParameterTypes.SequenceEqual(parameterTypes, new SimpleTypeComparer()) 
-                    select method).FirstOrDefault();
-        }
-
         public static Type GetTypeOrDefault(this object self)
         {
             if (self == null)
@@ -80,19 +71,40 @@ namespace HybridDb
             return self.GetType();
         }
 
-        class SimpleTypeComparer : IEqualityComparer<Type>
+        static readonly Dictionary<Type, List<Type>> dict = new Dictionary<Type, List<Type>>
         {
-            public bool Equals(Type x, Type y)
+            { typeof(decimal), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(char) } },
+            { typeof(double), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(char), typeof(float) } },
+            { typeof(float), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(char), typeof(float) } },
+            { typeof(ulong), new List<Type> { typeof(byte), typeof(ushort), typeof(uint), typeof(char) } },
+            { typeof(long), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(char) } },
+            { typeof(uint), new List<Type> { typeof(byte), typeof(ushort), typeof(char) } },
+            { typeof(int), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(char) } },
+            { typeof(ushort), new List<Type> { typeof(byte), typeof(char) } },
+            { typeof(short), new List<Type> { typeof(byte) } }
+        };
+
+        public static bool IsCastableTo(this Type from, Type to)
+        {
+            if (to.IsAssignableFrom(from))
             {
-                return x.Assembly == y.Assembly &&
-                       x.Namespace == y.Namespace &&
-                       x.Name == y.Name;
+                return true;
             }
 
-            public int GetHashCode(Type obj)
+            if (dict.ContainsKey(to) && dict[to].Contains(from))
             {
-                throw new NotImplementedException();
+                return true;
             }
+
+            var castable = from
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Any(
+                    m => m.ReturnType == to &&
+                         (m.Name == "op_Implicit" ||
+                          m.Name == "op_Explicit")
+                );
+
+            return castable;
         }
     }
 }
