@@ -24,12 +24,12 @@ namespace HybridDb.Migration
         {
             var timer = Stopwatch.StartNew();
 
-            if (store.TableMode == TableMode.UseRealTables)
-            {
-                var existingTables = store.RawQuery<dynamic>("select * from information_schema.tables where table_catalog = '" + table.Name + "'", null);
-                if (existingTables.Any())
-                    throw new InvalidOperationException("You cannot initialize a database that is not empty.");
-            }
+            //if (store.TableMode == TableMode.UseRealTables)
+            //{
+            //    var existingTables = store.RawQuery<dynamic>("select * from information_schema.tables where table_catalog = '" + table.Name + "'", null);
+            //    if (existingTables.Any())
+            //        throw new InvalidOperationException("You cannot initialize a database that is not empty.");
+            //}
 
             AddTableAndColumnsAndAssociatedTables(table);
 
@@ -65,57 +65,51 @@ namespace HybridDb.Migration
 
         public ISchemaMigrator AddTable(string tablename, params string[] columns)
         {
-            var escaptedColumns =
-                from column in columns
-                let split = column.Split(' ')
-                let name = split.First()
-                let type = string.Join(" ", split.Skip(1))
-                select store.Escape(name) + " " + type;
-
-            return Execute(
-                string.Format("if not ({0}) begin create table {1} ({2}); end",
-                              GetTableExistsSql(tablename),
-                              store.FormatTableNameAndEscape(tablename),
-                              string.Join(", ", escaptedColumns)));
+            return this;
         }
 
         public ISchemaMigrator RemoveTable(string tablename)
         {
-            return Execute(
-                string.Format("drop table {0};", store.FormatTableNameAndEscape(tablename)));
+            return this;
+            //return Execute(
+            //    string.Format("drop table {0};", store.FormatTableNameAndEscape(tablename)));
         }
 
         public ISchemaMigrator RenameTable(string oldTablename, string newTablename)
         {
-            if (store.TableMode != TableMode.UseRealTables)
-                throw new NotSupportedException("It is not possible to rename temp tables, so RenameTable is not supported when store is in test mode.");
+            return this;
+            //if (store.TableMode != TableMode.UseRealTables)
+            //    throw new NotSupportedException("It is not possible to rename temp tables, so RenameTable is not supported when store is in test mode.");
 
-            return Execute(
-                string.Format("sp_rename {0}, {1};", store.FormatTableNameAndEscape(oldTablename), store.FormatTableNameAndEscape(newTablename)));
+            //return Execute(
+            //    string.Format("sp_rename {0}, {1};", store.FormatTableNameAndEscape(oldTablename), store.FormatTableNameAndEscape(newTablename)));
         }
 
         public ISchemaMigrator AddColumn(string tablename, string columnname, SqlBuilder columntype)
         {
-            var sql = new SqlBuilder();
-            sql.Append("alter table {0} add {1}", store.FormatTableNameAndEscape(tablename), store.Escape(columnname));
-            sql.Append(columntype);
+            return this;
+            //var sql = new SqlBuilder();
+            //sql.Append("alter table {0} add {1}", store.FormatTableNameAndEscape(tablename), store.Escape(columnname));
+            //sql.Append(columntype);
 
-            return Execute(sql.ToDynamicSql(), sql.Parameters);
+            //return Execute(sql.ToDynamicSql(), sql.Parameters);
         }
 
         public ISchemaMigrator RemoveColumn(string tablename, string columnname)
         {
-            return Execute(
-                string.Format("alter table {0} drop column {1};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname)));
+            return this;
+            //return Execute(
+            //    string.Format("alter table {0} drop column {1};", store.FormatTableNameAndEscape(tablename), store.Escape(columnname)));
         }
 
         public ISchemaMigrator RenameColumn(string tablename, string oldColumnname, string newColumnname)
         {
-            if (store.TableMode != TableMode.UseRealTables)
-                throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameColumn is not supported when store is in test mode.");
+            return this;
+            //if (store.TableMode != TableMode.UseRealTables)
+            //    throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameColumn is not supported when store is in test mode.");
 
-            return Execute(
-                string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.FormatTableNameAndEscape(tablename), oldColumnname, newColumnname));
+            //return Execute(
+            //    string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.FormatTableNameAndEscape(tablename), oldColumnname, newColumnname));
         }
 
         public ISchemaMigrator Commit()
@@ -126,7 +120,7 @@ namespace HybridDb.Migration
 
         public ISchemaMigrator Execute(string sql, object param = null)
         {
-            store.RawExecute(sql, param);
+            //store.RawExecute(sql, param);
             return this;
         }
 
@@ -158,12 +152,5 @@ namespace HybridDb.Migration
             return sql;
         }
 
-        string GetTableExistsSql(string tablename)
-        {
-            return string.Format(store.TableMode == TableMode.UseRealTables
-                ? "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')"
-                : "OBJECT_ID('tempdb..{0}') is not null",
-                store.FormatTableName(tablename));
-        }
     }
 }

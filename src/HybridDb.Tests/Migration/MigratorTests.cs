@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using HybridDb.Migration.Commands;
 using HybridDb.Schema;
 using Shouldly;
@@ -10,21 +9,21 @@ namespace HybridDb.Tests.Migration
 {
     public class MigratorTests : HybridDbTests
     {
+        readonly FakeDatabase db;
         readonly DocumentStoreMigrator migrator;
 
         public MigratorTests()
         {
+            db = new FakeDatabase();
             migrator = new DocumentStoreMigrator();
         }
 
         [Fact]
         public void FindNewTable()
         {
-            EnsureStoreInitialized();
+            configuration.Document<Entity>();
 
-            store.Configuration.Document<Entity>();
-
-            var command = (CreateTable)migrator.FindSchemaChanges(store).Single();
+            var command = (CreateTable)migrator.FindSchemaChanges(db, configuration).Single();
 
             command.Table.ShouldBe(GetTableFor<Entity>());
         }
@@ -32,13 +31,12 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindNewTablesWhenOthersExists()
         {
-            Document<Entity>();
+            db.CreateTable("Entities");
 
-            EnsureStoreInitialized();
+            configuration.Document<Entity>();
+            configuration.Document<OtherEntity>();
 
-            store.Configuration.Document<OtherEntity>();
-
-            var command = (CreateTable) migrator.FindSchemaChanges(store).Single();
+            var command = (CreateTable) migrator.FindSchemaChanges(db, configuration).Single();
 
             command.Table.ShouldBe(GetTableFor<OtherEntity>());
         }
@@ -46,15 +44,11 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindMultipleNewTables()
         {
-            Document<Entity>();
+            configuration.Document<OtherEntity>();
+            configuration.Document<AbstractEntity>();
+            configuration.Document<MoreDerivedEntity1>();
 
-            EnsureStoreInitialized();
-
-            store.Configuration.Document<OtherEntity>();
-            store.Configuration.Document<AbstractEntity>();
-            store.Configuration.Document<MoreDerivedEntity1>();
-
-            var commands = migrator.FindSchemaChanges(store).Cast<CreateTable>().ToList();
+            var commands = migrator.FindSchemaChanges(db, configuration).Cast<CreateTable>().ToList();
 
             commands.Count.ShouldBe(2);
             commands[0].Table.ShouldBe(GetTableFor<OtherEntity>());
@@ -64,17 +58,9 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindMissingTables()
         {
-            UseRealTables();
+            db.CreateTable("Entities");
 
-            new CreateTable(new DocumentTable("Entity"));
-
-            Document<Entity>();
-
-            EnsureStoreInitialized();
-
-            configuration = new Configuration();
-
-            var command = (RemoveTable)migrator.FindSchemaChanges(store).Single();
+            var command = (RemoveTable)migrator.FindSchemaChanges(db, configuration).Single();
 
             command.Tablename.ShouldBe("Entities");
             command.Unsafe.ShouldBe(true);
@@ -86,10 +72,34 @@ namespace HybridDb.Tests.Migration
             //new Migrator().Run(new AddTable())
         }
 
-
         Table GetTableFor<T>()
         {
             return store.Configuration.GetDesignFor<T>().Table;
+        }
+
+        public class FakeDatabase : IDatabase
+        {
+            readonly Dictionary<string, List<string>> tables;
+
+            public FakeDatabase()
+            {
+                tables = new Dictionary<string, List<string>>();
+            }
+
+            public void CreateTable(string name)
+            {
+                tables.Add(name, new List<string>());
+            }
+
+            public bool TableExists(string name)
+            {
+                return tables.ContainsKey(name);
+            }
+
+            public List<string> GetTables()
+            {
+                return tables.Keys.ToList();
+            }
         }
 
         public class Entity

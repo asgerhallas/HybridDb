@@ -27,7 +27,7 @@ namespace HybridDb.Commands
             values[table.ModifiedAtColumn] = DateTimeOffset.Now;
 
             var sql = string.Format("insert into {0} ({1}) values ({2});",
-                store.FormatTableNameAndEscape(table.Name),
+                store.Database.FormatTableNameAndEscape(table.Name),
                 string.Join(", ", from column in values.Keys select column.Name),
                 string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier));
 

@@ -16,14 +16,14 @@ namespace HybridDb.Migration
         public bool Unsafe { get; protected set; }
         public bool NeedsReprojection { get; protected set; }
 
-        public abstract void Execute(DocumentStore store);
+        public abstract void Execute(Database db);
 
-        protected string GetTableExistsSql(DocumentStore store, string tablename)
+        protected string GetTableExistsSql(Database db, string tablename)
         {
-            return string.Format(store.TableMode == TableMode.UseRealTables
+            return string.Format(db.TableMode == TableMode.UseRealTables
                 ? "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')"
                 : "OBJECT_ID('tempdb..{0}') is not null",
-                store.FormatTableName(tablename));
+                db.FormatTableName(tablename));
         }
 
         protected SqlBuilder GetColumnSqlType(Column column)

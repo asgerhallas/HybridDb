@@ -10,8 +10,6 @@ namespace HybridDb.Tests
     public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
     {
         readonly List<Action> disposables;
-        
-        string uniqueDbName;
         Lazy<DocumentStore> factory;
 
         protected HybridDbTests()
@@ -53,9 +51,9 @@ namespace HybridDb.Tests
             if (factory != null && factory.IsValueCreated)
                 throw new InvalidOperationException("Cannot change table mode when store is already initialized.");
 
-            uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
             factory = new Lazy<DocumentStore>(() =>
             {
+                var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
                 using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
                 {
                     connection.Open();
@@ -82,17 +80,6 @@ namespace HybridDb.Tests
 
                 return realTableStore;
             });
-        }
-
-        protected void EnsureStoreInitialized()
-        {
-            // touch the store to have it initialized
-            var touch = store;
-        }
-
-        protected void ResetStore()
-        {
-            
         }
 
         // ReSharper disable InconsistentNaming

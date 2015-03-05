@@ -13,7 +13,7 @@ namespace HybridDb.Migration.Commands
 
         public string Tablename { get; private set; }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database db)
         {
             //store.RawExecute(
             //    string.Format("if not ({0}) begin create table {1} ({2}); end",

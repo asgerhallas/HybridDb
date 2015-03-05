@@ -25,7 +25,7 @@ namespace HybridDb.Commands
         {
             var sql = new SqlBuilder()
                 .Append("delete from {0} where {1} = @Id{2}",
-                        store.FormatTableNameAndEscape(table.Name),
+                        store.Database.FormatTableNameAndEscape(table.Name),
                         table.IdColumn.Name,
                         uniqueParameterIdentifier)
                 .Append(!lastWriteWins,

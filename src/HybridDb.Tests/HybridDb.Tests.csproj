@@ -71,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
+    <Compile Include="Bugs\NotGeneratingNullableColumnsForMethodReturningValueTypes.cs" />
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
     <Compile Include="Migration\Commands\CreateTableTests.cs" />
