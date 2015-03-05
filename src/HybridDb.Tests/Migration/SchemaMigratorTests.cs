@@ -8,7 +8,7 @@ using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.Tests
+namespace HybridDb.Tests.Migration
 {
     public class SchemaMigratorTests : IDisposable
     {
@@ -33,13 +33,6 @@ END", uniqueDbName));
 
             storeWithTempTables = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
             storeWithRealTables = DocumentStore.ForTestingWithRealTables("data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName);
-        }
-
-        [Fact]
-        public void CanCreateTable()
-        {
-            storeWithTempTables.Migrate(migrator => migrator.AddTable("Entities", "Id UniqueIdentifier"));
-            TempTableExists("Entities").ShouldBe(true);
         }
 
         [Fact]

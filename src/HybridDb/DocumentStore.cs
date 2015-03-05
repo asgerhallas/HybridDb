@@ -44,20 +44,23 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString, configurator.Configure(), TableMode.UseRealTables, testMode: false);
-            new Migrator().Migrate(store);
+            new DocumentStoreMigrator().Migrate(store);
             return store;
         }
 
-        public static DocumentStore ForTestingWithRealTables(string connectionString = null)
+        public static DocumentStore ForTestingWithRealTables(string connectionString = null, IHybridDbConfigurator configurator = null)
         {
-            return new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", new Configuration(), TableMode.UseRealTables, testMode: true);
+            configurator = configurator ?? new NullHybridDbConfigurator();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseRealTables, testMode: true);
+            new DocumentStoreMigrator().Migrate(store).Wait();
+            return store;
         }
 
         public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseGlobalTempTables, testMode: true);
-            new Migrator().Migrate(store).Wait();
+            new DocumentStoreMigrator().Migrate(store).Wait();
             return store;
         }
 
@@ -65,7 +68,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseTempTables, testMode: true);
-            new Migrator().Migrate(store).Wait();
+            new DocumentStoreMigrator().Migrate(store).Wait();
             return store;
         }
 

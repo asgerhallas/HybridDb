@@ -6,10 +6,10 @@ using HybridDb.Schema;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
-using Xunit;
 using Shouldly;
+using Xunit;
 
-namespace HybridDb.Tests
+namespace HybridDb.Tests.Migration
 {
     public class DocumentMigratorTests
     {
@@ -18,7 +18,7 @@ namespace HybridDb.Tests
         {
             var serializer = new DefaultBsonSerializer();
 
-            var migration = new Migration.Migration();
+            var migration = new HybridDb.Migration.Migration();
             migration.MigrateDocument()
                      .FromTable("Entities")
                      .ToVersion(2)
@@ -43,7 +43,7 @@ namespace HybridDb.Tests
         [Fact(Skip = "feature tbd")]
         public void FailsOnReadIfCurrentDocumentIsWrongVersion()
         {
-            var migration = new Migration.Migration();
+            var migration = new HybridDb.Migration.Migration();
             migration.MigrateDocument()
                 .FromTable("Entities")
                 .ToVersion(3)

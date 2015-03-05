@@ -1,8 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using HybridDb.Migration;
+using HybridDb.Migration.Commands;
 
 namespace HybridDb
 {
-    public class Migrator
+    public class DocumentStoreMigrator
     {
         public Task Migrate(IDocumentStore store)
         {
@@ -14,6 +18,33 @@ namespace HybridDb
                 }
             });
             return Task.FromResult(1);
+        }
+
+        public IReadOnlyList<SchemaMigrationCommand> FindSchemaChanges(DocumentStore store)
+        {
+            var commands = new List<SchemaMigrationCommand>();
+
+            foreach (var design in store.Configuration.DocumentDesigns)
+            {
+                if (commands.OfType<CreateTable>().Any(x => x.Table == design.Table) ||
+                    store.TableExists(design.Table.Name))
+                {
+                    continue;
+                }
+
+                commands.Add(new CreateTable(design.Table));
+            }
+
+            var tables = store.RawQuery<string>("select table_name from information_schema.tables").ToList();
+            foreach (var tablename in tables)
+            {
+                if (store.Configuration.Tables.ContainsKey(tablename))
+                    continue;
+
+                commands.Add(new RemoveTable(tablename));
+            }
+
+            return commands;
         }
     }
 

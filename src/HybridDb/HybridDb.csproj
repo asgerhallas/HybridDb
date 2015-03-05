@@ -67,12 +67,15 @@
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
+    <Compile Include="DocumentStoreEx.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="IMigration.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
+    <Compile Include="Migration\Commands\CreateTable.cs" />
+    <Compile Include="Migration\Commands\RemoveTable.cs" />
     <Compile Include="Migration\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />
@@ -110,6 +113,7 @@
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migration\DocumentMigrator.cs" />
     <Compile Include="Migration\Migration.cs" />
+    <Compile Include="Migration\SchemaMigrationCommand.cs" />
     <Compile Include="Migration\SchemaMigrator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />

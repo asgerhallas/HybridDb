@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
 using HybridDb.Linq;
 using HybridDb.Schema;
 using Shouldly;
@@ -579,6 +581,15 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", "asger");
         }
 
+        [Fact]
+        public void CanQueryEnums()
+        {
+            var translation = Query<Entity>().Where(x => x.Enum == Enumse.Second).Translate();
+
+            translation.Where.ShouldBe("(Enum = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "Second");
+        }
+
         Query<T> Query<T>() where T : class
         {
             var store = DocumentStore.ForTestingWithTempTables();
@@ -606,6 +617,7 @@ namespace HybridDb.Tests
             public Child TheChild { get; set; }
             public List<Child> Children { get; set; }
             public object Complex { get; set; }
+            public Enumse Enum { get; set; }
 
             public class Child
             {
@@ -624,6 +636,14 @@ namespace HybridDb.Tests
         public class ExtIndex
         {
             public string StringProp { get; set; }
+        }
+
+        public enum Enumse
+        {
+            None = 0,
+            First = 1,
+            Second = 2,
+            Third = 4
         }
     }
 }

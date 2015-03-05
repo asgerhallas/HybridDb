@@ -856,46 +856,6 @@ namespace HybridDb.Tests
             }
         }
 
-        public class Entity : ISomeInterface
-        {
-            public Entity()
-            {
-                TheChild = new Child();
-                TheSecondChild = new Child();
-                Children = new List<Child>();
-            }
-
-            public Guid Id { get; set; }
-            public string ProjectedProperty { get; set; }
-            public List<Child> Children { get; set; }
-            public string Property { get; set; }
-            public int Number { get; set; }
-            public Child TheChild { get; set; }
-            public Child TheSecondChild { get; set; }
-            
-            public class Child
-            {
-                public string NestedProperty { get; set; }
-            }
-        }
-
-        public class OtherEntity
-        {
-            public Guid Id { get; set; }
-            public int Number { get; set; }
-        }
-
-        public abstract class AbstractEntity : ISomeInterface
-        {
-            public Guid Id { get; set; }
-            public string Property { get; set; }
-            public int Number { get; set; }
-        }
-
-        public class DerivedEntity : AbstractEntity { }
-        public class MoreDerivedEntity1 : DerivedEntity, IOtherInterface { }
-        public class MoreDerivedEntity2 : DerivedEntity { }
-
         public class EntityProjection
         {
             public string ProjectedProperty { get; set; }
@@ -906,25 +866,6 @@ namespace HybridDb.Tests
         {
             public string Property { get; set; }
             public int? YksiKaksiKolme { get; set; }
-        }
-
-        public class OtherEntityIndex
-        {
-            public int Number { get; set; }
-        }
-
-        public class BadMatchIndex
-        {
-            public long BadMatch { get; set; }
-        }
-
-        public interface ISomeInterface
-        {
-            string Property { get; }
-        }
-
-        public interface IOtherInterface
-        {
         }
     }
 }

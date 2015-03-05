@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace HybridDb.Tests
+namespace HybridDb
 {
     public static class DocumentStoreEx
     {
