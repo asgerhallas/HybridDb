@@ -41,7 +41,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
             
             var id = Guid.NewGuid();
-            store.Insert(new DocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
 
             var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
@@ -55,7 +55,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
 
-            store.Insert(new DocumentTable("Entities"),
+            store.Insert(new DynamicDocumentTable("Entities"),
                          Guid.NewGuid(),
                          new Dictionary<string, object> {{"Field", null}});
 
@@ -78,7 +78,7 @@ namespace HybridDb.Tests
             Document<Entity>();
             
             Should.Throw<ArgumentException>(() =>
-                store.Insert(new DocumentTable("Entities"), Guid.NewGuid(), new { Complex = new Entity.ComplexType() }));
+                store.Insert(new DynamicDocumentTable("Entities"), Guid.NewGuid(), new { Complex = new Entity.ComplexType() }));
         }
 
         [Fact(Skip = "Feature on hold")]
@@ -135,7 +135,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger"});
 
-            store.Update(new DocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "StringProp", "Lars" } });
+            store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "StringProp", "Lars" } });
 
             var row = store.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
@@ -206,7 +206,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var row = store.Get(new DocumentTable("Entities"), id);
+            var row = store.Get(new DynamicDocumentTable("Entities"), id);
             row[table.Table.IdColumn].ShouldBe(id);
             row[table.Table.EtagColumn].ShouldBe(etag);
             row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -308,7 +308,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id2, new { Field = "Hans", StringProp = "B", Document = documentAsByteArray });
 
             QueryStats stats;
-            var rows = store.Query(new DocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
+            var rows = store.Query(new DynamicDocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
 
             rows.Count().ShouldBe(1);
             var row = rows.Single();

@@ -46,7 +46,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString, configurator.Configure(), TableMode.UseRealTables, testMode: false);
-            new DocumentStoreMigrator().Migrate(store);
+            new Migrator().Migrate(store);
             return store;
         }
 
@@ -54,7 +54,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseRealTables, testMode: true);
-            new DocumentStoreMigrator().Migrate(store).Wait();
+            new Migrator().Migrate(store).Wait();
             return store;
         }
 
@@ -62,7 +62,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseGlobalTempTables, testMode: true);
-            new DocumentStoreMigrator().Migrate(store).Wait();
+            new Migrator().Migrate(store).Wait();
             return store;
         }
 
@@ -70,7 +70,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseTempTables, testMode: true);
-            new DocumentStoreMigrator().Migrate(store).Wait();
+            new Migrator().Migrate(store).Wait();
             return store;
         }
 

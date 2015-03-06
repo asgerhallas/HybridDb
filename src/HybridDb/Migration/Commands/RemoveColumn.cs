@@ -4,20 +4,20 @@ namespace HybridDb.Migration.Commands
 {
     public class RemoveColumn : SchemaMigrationCommand
     {
-        public RemoveColumn(string tablename, Column column)
+        public RemoveColumn(Table table, string columnname)
         {
-            Unsafe = column.Name == "Document";
+            Unsafe = columnname == "Document";
 
-            Tablename = tablename;
-            Column = column;
+            Table = table;
+            Columnname = columnname;
         }
 
-        public string Tablename { get; private set; }
-        public Column Column { get; private set; }
+        public Table Table { get; private set; }
+        public string Columnname { get; private set; }
 
         public override void Execute(DocumentStore store)
         {
-            store.RawExecute(string.Format("alter table {0} drop column {1};", store.FormatTableNameAndEscape(Tablename), store.Escape(Column.Name)));
+            store.RawExecute(string.Format("alter table {0} drop column {1};", store.FormatTableNameAndEscape(Table.Name), store.Escape(Columnname)));
         }
     }
 }

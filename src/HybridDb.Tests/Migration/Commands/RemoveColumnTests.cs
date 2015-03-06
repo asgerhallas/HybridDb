@@ -14,10 +14,11 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities")).Execute(store);
+            var table = new Table("Entities");
+            new CreateTable(table).Execute(store);
             new AddColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
             
-            new RemoveColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
+            new RemoveColumn(table, "SomeColumn").Execute(store);
 
             store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
@@ -27,7 +28,8 @@ namespace HybridDb.Tests.Migration.Commands
         [InlineData("OtherName", false)]
         public void CommandSafetyDependsOnColumnName(string columnName, bool isUnsafe)
         {
-            new RemoveColumn("Entities", new Column(columnName, typeof(int))).Unsafe.ShouldBe(isUnsafe);
+            var table = new Table("Entities");
+            new RemoveColumn(table, columnName).Unsafe.ShouldBe(isUnsafe);
         }
     }
 }

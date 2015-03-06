@@ -88,7 +88,7 @@ namespace HybridDb
 
         public Dictionary<string, Table> GetSchema()
         {
-            throw new NotImplementedException();
+            return new Dictionary<string, Table>();
         }
     }
 }

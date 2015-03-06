@@ -656,11 +656,11 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity1 = session.Load<ISomeInterface>(id);
-                entity1.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity1.ShouldBeOfType<MoreDerivedEntity1>();
                 entity1.Property.ShouldBe("Asger");
 
                 var entity2 = session.Load<IOtherInterface>(id);
-                entity2.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity2.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -678,7 +678,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Load<AbstractEntity>(id);
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -696,7 +696,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Load<MoreDerivedEntity1>(id);
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -749,12 +749,12 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<ISomeInterface>().OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities.Count().ShouldBe(2);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
-                entities[1].ShouldBeTypeOf<MoreDerivedEntity2>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity1>();
+                entities[1].ShouldBeOfType<MoreDerivedEntity2>();
 
                 var entities2 = session.Query<IOtherInterface>().OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities2.Count().ShouldBe(1);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -774,8 +774,8 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities.Count().ShouldBe(2);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
-                entities[1].ShouldBeTypeOf<MoreDerivedEntity2>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity1>();
+                entities[1].ShouldBeOfType<MoreDerivedEntity2>();
             }
         }
 
@@ -795,7 +795,7 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<MoreDerivedEntity2>().Where(x => x.Property == "Asger").ToList();
                 entities.Count.ShouldBe(1);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity2>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity2>();
             }
         }
 
@@ -812,7 +812,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -852,7 +852,7 @@ namespace HybridDb.Tests
                 //           select x;
 
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger" && x.Index<EntityIndex>().YksiKaksiKolme > 1);
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 

@@ -34,29 +34,34 @@ namespace HybridDb.Config
 
         protected bool Equals(Column other)
         {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(Name, other.Name);
+            return Name == other.Name &&
+                   Type == other.Type &&
+                   Length == other.Length &&
+                   Nullable == other.Nullable &&
+                   IsPrimaryKey == other.IsPrimaryKey &&
+                   Equals(DefaultValue, other.DefaultValue);
         }
 
         public override bool Equals(object obj)
         {
-            return Equals(obj as Column);
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((Column) obj);
         }
 
         public override int GetHashCode()
         {
-            return Name.GetHashCode();
-        }
-
-        public static bool operator ==(Column left, Column right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(Column left, Column right)
-        {
-            return !Equals(left, right);
+            unchecked
+            {
+                var hashCode = (Name != null ? Name.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (Type != null ? Type.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ Length.GetHashCode();
+                hashCode = (hashCode*397) ^ Nullable.GetHashCode();
+                hashCode = (hashCode*397) ^ (DefaultValue != null ? DefaultValue.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ IsPrimaryKey.GetHashCode();
+                return hashCode;
+            }
         }
 
         public static implicit operator string(Column self)

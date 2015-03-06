@@ -12,12 +12,12 @@ namespace HybridDb.Tests.Migration
     public class MigratorTests : HybridDbTests
     {
         readonly FakeSchema schema;
-        readonly DocumentStoreMigrator migrator;
+        readonly SchemaDiffer migrator;
 
         public MigratorTests()
         {
             schema = new FakeSchema();
-            migrator = new DocumentStoreMigrator();
+            migrator = new SchemaDiffer();
         }
 
         [Fact]
@@ -25,7 +25,7 @@ namespace HybridDb.Tests.Migration
         {
             configuration.Document<Entity>();
 
-            var command = (CreateTable)migrator.FindSchemaChanges(schema, configuration).Single();
+            var command = (CreateTable)migrator.CalculateSchemaChanges(schema, configuration).Single();
 
             command.Table.ShouldBe(GetTableFor<Entity>());
         }
@@ -38,7 +38,7 @@ namespace HybridDb.Tests.Migration
             configuration.Document<Entity>();
             configuration.Document<OtherEntity>();
 
-            var command = (CreateTable) migrator.FindSchemaChanges(schema, configuration).Single();
+            var command = (CreateTable) migrator.CalculateSchemaChanges(schema, configuration).Single();
 
             command.Table.ShouldBe(GetTableFor<OtherEntity>());
         }
@@ -50,7 +50,7 @@ namespace HybridDb.Tests.Migration
             configuration.Document<AbstractEntity>();
             configuration.Document<MoreDerivedEntity1>();
 
-            var commands = migrator.FindSchemaChanges(schema, configuration).Cast<CreateTable>().ToList();
+            var commands = migrator.CalculateSchemaChanges(schema, configuration).Cast<CreateTable>().ToList();
 
             commands.Count.ShouldBe(2);
             commands[0].Table.ShouldBe(GetTableFor<OtherEntity>());
@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Migration
         {
             schema.CreateTable(new Table("Entities"));
 
-            var command = (RemoveTable)migrator.FindSchemaChanges(schema, configuration).Single();
+            var command = (RemoveTable)migrator.CalculateSchemaChanges(schema, configuration).Single();
 
             command.Tablename.ShouldBe("Entities");
             command.Unsafe.ShouldBe(true);
@@ -76,7 +76,7 @@ namespace HybridDb.Tests.Migration
             configuration.Document<Entity>()
                 .With(x => x.Number);
 
-            var commands = migrator.FindSchemaChanges(schema, configuration).Cast<AddColumn>().ToList();
+            var commands = migrator.CalculateSchemaChanges(schema, configuration).Cast<AddColumn>().ToList();
 
             commands[0].Tablename.ShouldBe("Entities");
             commands[0].Column.ShouldBe(GetTableFor<Entity>()["Number"]);
@@ -91,16 +91,31 @@ namespace HybridDb.Tests.Migration
 
             configuration.Document<Entity>();
 
-            var commands = migrator.FindSchemaChanges(schema, configuration).Cast<RemoveColumn>().ToList();
+            var commands = migrator.CalculateSchemaChanges(schema, configuration).Cast<RemoveColumn>().ToList();
 
-            commands[0].Tablename.ShouldBe("Entities");
-            commands[0].Column.ShouldBe(GetTableFor<Entity>()["Number"]);
+            commands[0].Table.ShouldBe(GetTableFor<Entity>());
+            commands[0].Columnname.ShouldBe("Number");
         }
 
         [Fact]
         public void FindColumnTypeChange()
         {
-            
+            var table = new DocumentTable("Entities");
+            table.Register(new Column("Number", typeof(int)));
+            schema.CreateTable(table);
+
+            configuration.Document<Entity>()
+                .With("Number", x => x.String);
+
+            var commands = migrator.CalculateSchemaChanges(schema, configuration).ToList();
+
+            commands[0].ShouldBeOfType<AddColumn>()
+                .Tablename.ShouldBe(GetTableFor<Entity>().Name);
+            ((AddColumn)commands[0]).Column.ShouldBe(GetTableFor<Entity>()["Number"]);
+
+            commands[1].ShouldBeOfType<RemoveColumn>()
+                .Table.ShouldBe(GetTableFor<Entity>());
+            ((RemoveColumn)commands[1]).Columnname.ShouldBe("Number");
         }
 
         Table GetTableFor<T>()

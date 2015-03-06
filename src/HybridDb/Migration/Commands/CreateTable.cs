@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using HybridDb.Config;
 
@@ -14,6 +15,11 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(DocumentStore store)
         {
+            if (!Table.Columns.Any())
+            {
+                throw new InvalidOperationException("Cannot create a table with no columns.");
+            }
+
             var columns = Table.Columns.Select(col => string.Format("{0} {1}", col.Name, GetColumnSqlType(col)));
 
             var escapedColumns =

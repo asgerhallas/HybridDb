@@ -6,21 +6,23 @@ using HybridDb.Migration.Commands;
 
 namespace HybridDb.Migration
 {
-    public class DocumentStoreMigrator
+    public class Migrator
     {
-        public Task Migrate(IDocumentStore store)
+        public Task Migrate(DocumentStore store)
         {
-            store.Migrate(migrator =>
+            var commands = new SchemaDiffer().CalculateSchemaChanges(store.Schema, store.Configuration);
+            foreach (var command in commands)
             {
-                foreach (var table in store.Configuration.Tables.Values)
-                {
-                    migrator.MigrateTo(table, true);
-                }
-            });
+                command.Execute(store);
+            }
+
             return Task.FromResult(1);
         }
+    }
 
-        public IReadOnlyList<SchemaMigrationCommand> FindSchemaChanges(ISchema db, Configuration configuration)
+    public class SchemaDiffer
+    {
+        public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(ISchema db, Configuration configuration)
         {
             var commands = new List<SchemaMigrationCommand>();
 
@@ -38,11 +40,19 @@ namespace HybridDb.Migration
 
                 foreach (var column in table.Columns)
                 {
-                    var existingColumn = existingTable.Columns.SingleOrDefault(x => x.Name == column.Name);
+                    var existingColumn = existingTable.Columns.SingleOrDefault(x => x.Equals(column));
                     if (existingColumn == null)
                     {
                         commands.Add(new AddColumn(table.Name, column));
                     }
+                }
+
+                foreach (var column in existingTable.Columns)
+                {
+                    if (table.Columns.Any(x => x.Equals(column)))
+                        continue;
+
+                    commands.Add(new RemoveColumn(table, column));
                 }
             }
 
@@ -57,25 +67,4 @@ namespace HybridDb.Migration
             return commands;
         }
     }
-
-    //public interface IMigration
-    //{
-    //    //void InitializeDatabase();
-
-    //    IMigrator CreateMigrator();
-
-    //    void AddTable<TEntity>();
-    //    void RemoveTable(string tableName);
-    //    void RenameTable(string oldTableName, string newTableName);
-        
-    //    void UpdateProjectionFor<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
-        
-    //    void AddProjection<TEntity, TMember>(Expression<Func<TEntity, TMember>> member);
-    //    void RemoveProjection<TEntity>(string columnName);
-    //    void RenameColumn<TEntity>(string oldColumnName, string newColumnName);
-        
-    //    void Do<T>(string tableName, Action<T, IDictionary<string, object>> action);
-
-    //    //void Execute(string sql);
-    //}
 }
