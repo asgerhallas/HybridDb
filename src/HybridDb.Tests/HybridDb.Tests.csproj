@@ -74,7 +74,9 @@
     <Compile Include="Bugs\NotGeneratingNullableColumnsForMethodReturningValueTypes.cs" />
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
+    <Compile Include="Migration\Commands\AddColumnTests.cs" />
     <Compile Include="Migration\Commands\CreateTableTests.cs" />
+    <Compile Include="Migration\Commands\RemoveColumnTests.cs" />
     <Compile Include="Migration\Commands\RemoveTableTests.cs" />
     <Compile Include="Migration\Commands\RenameTableTests.cs" />
     <Compile Include="Migration\DocumentMigratorTests.cs" />

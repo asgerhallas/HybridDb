@@ -1,4 +1,3 @@
-using System.Linq;
 using HybridDb.Config;
 
 namespace HybridDb.Migration.Commands
