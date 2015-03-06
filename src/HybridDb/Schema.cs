@@ -79,16 +79,69 @@ namespace HybridDb
 //            return isPrimaryKey;
 //        }
 
-//        public class Column2
-//        {
-//            public string Name { get; set; }
-//            public int system_type_id { get; set; }
-//            public int max_length { get; set; }
-//        }
+        class TempColumn
+        {
+            public string Name { get; set; }
+            public int system_type_id { get; set; }
+            public int max_length { get; set; }
+        }
 
         public Dictionary<string, Table> GetSchema()
         {
             return new Dictionary<string, Table>();
+            var schema = new Dictionary<string, Table>();
+            if (tableMode == TableMode.UseRealTables)
+            {
+                var realTables = store.RawQuery<string>("select table_name from information_schema.tables where table_type='BASE TABLE'").ToList();
+                foreach (var tableName in realTables)
+                {
+                    var columns = store.RawQuery<TempColumn>(
+                        string.Format("select * where Object_ID = Object_ID(N'{0}')", tableName));
+                    //schema.Add(tableName, new Table(tableName, columns));
+                }
+            
+                throw new Exception();
+            }
+
+            var tempTables = store.RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '#%'");
+            foreach (var tableName in tempTables)
+            {
+                var formattedTableName = tableName.Remove(tableName.Length - 12, 12).TrimEnd('_');
+
+                var columns = store.RawQuery<TempColumn>(
+                    string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", tableName));
+                
+                schema.Add(tableName, new Table(tableName, columns.Select(Map)));
+
+            }
+            return schema;
+        }
+
+        Column Map(TempColumn column)
+        {
+            return new Column(column.Name, GetType(column.system_type_id));
+        }
+
+        Type GetType(int id)
+        {
+            var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { id });
+            var typeAsString = rawQuery.FirstOrDefault();
+
+
+            //"SELECT schemas.name AS [Schema], " +
+            //"tables.name AS [Table], " +
+            //"columns.name AS [Column], CASE WHEN columns.system_type_id = 34 THEN 'byte[]' WHEN columns.system_type_id = 35 THEN 'string' WHEN columns.system_type_id = 36 THEN 'System.Guid' WHEN columns.system_type_id = 48 THEN 'byte' WHEN columns.system_type_id = 52 THEN 'short' WHEN columns.system_type_id = 56 THEN 'int' WHEN columns.system_type_id = 58 THEN 'System.DateTime' WHEN columns.system_type_id = 59 THEN 'float' WHEN columns.system_type_id = 60 THEN 'decimal' WHEN columns.system_type_id = 61 THEN 'System.DateTime' WHEN columns.system_type_id = 62 THEN 'double' WHEN columns.system_type_id = 98 THEN 'object' WHEN columns.system_type_id = 99 THEN 'string' WHEN columns.system_type_id = 104 THEN 'bool' WHEN columns.system_type_id = 106 THEN 'decimal' WHEN columns.system_type_id = 108 THEN 'decimal' WHEN columns.system_type_id = 122 THEN 'decimal' WHEN columns.system_type_id = 127 THEN 'long' WHEN columns.system_type_id = 165 THEN 'byte[]' WHEN columns.system_type_id = 167 THEN 'string' WHEN columns.system_type_id = 173 THEN 'byte[]' WHEN columns.system_type_id = 175 THEN 'string' WHEN columns.system_type_id = 189 THEN 'long' WHEN columns.system_type_id = 231 THEN 'string' WHEN columns.system_type_id = 239 THEN 'string' WHEN columns.system_type_id = 241 THEN 'string' WHEN columns.system_type_id = 241 THEN 'string' END AS [Type], columns.is_nullable AS [Nullable]FROM sys.tables tables INNER JOIN sys.schemas schemas ON (tables.schema_id = schemas.schema_id ) INNER JOIN sys.columns columns ON (columns.object_id = tables.object_id) WHERE tables.name <> 'sysdiagrams' AND tables.name <> 'dtproperties' ORDER BY [Schema], [Table], [Column], [Type]""
+            
+            switch (typeAsString)
+            {
+                case "int":
+                    return typeof (int);
+                default:
+                    throw new ArgumentOutOfRangeException("id");
+
+            }
+
+            return null;
         }
     }
 }

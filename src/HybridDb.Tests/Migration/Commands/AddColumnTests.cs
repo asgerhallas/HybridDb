@@ -16,11 +16,11 @@ namespace HybridDb.Tests.Migration.Commands
         public void AddsColumn(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities")).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store);
 
-            new AddColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
+            new AddColumn("Entities", new Column("Col2", typeof (int))).Execute(store);
 
-            store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldNotBe(null);
+            store.Schema.GetSchema()["Entities"]["Col2"].ShouldNotBe(null);
         }
 
         [Theory]
@@ -30,11 +30,11 @@ namespace HybridDb.Tests.Migration.Commands
         public void ColumnIsOfCorrectType(Type type)
         {
             Use(TableMode.UseRealTables);
-            new CreateTable(new Table("Entities")).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store);
 
-            new AddColumn("Entities", new Column("SomeColumn", type)).Execute(store);
+            new AddColumn("Entities", new Column("Col2", type)).Execute(store);
 
-            store.Schema.GetSchema()["Entities"]["SomeColumn"].Type.ShouldBe(typeof(int));
+            store.Schema.GetSchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
         }
 
 
@@ -49,6 +49,18 @@ namespace HybridDb.Tests.Migration.Commands
             //new AddColumn("Entities", new Column("SomeColumn", type, isPrimaryKey: true)).Execute(store);
 
             //store.Schema.GetColumn("Entities", "SomeColumn").IsPrimaryKey.ShouldBe(true);
+        }
+
+        [Fact]
+        public void IsSafe()
+        {
+            new AddColumn("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(false);
+        }
+
+        [Fact]
+        public void RequiresReprojection()
+        {
+            new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojection.ShouldBe(true);
         }
     }
 }

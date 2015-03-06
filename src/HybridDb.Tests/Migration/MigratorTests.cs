@@ -94,7 +94,7 @@ namespace HybridDb.Tests.Migration
             var commands = migrator.CalculateSchemaChanges(schema, configuration).Cast<RemoveColumn>().ToList();
 
             commands[0].Table.ShouldBe(GetTableFor<Entity>());
-            commands[0].Columnname.ShouldBe("Number");
+            commands[0].Name.ShouldBe("Number");
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace HybridDb.Tests.Migration
 
             commands[1].ShouldBeOfType<RemoveColumn>()
                 .Table.ShouldBe(GetTableFor<Entity>());
-            ((RemoveColumn)commands[1]).Columnname.ShouldBe("Number");
+            ((RemoveColumn)commands[1]).Name.ShouldBe("Number");
         }
 
         Table GetTableFor<T>()

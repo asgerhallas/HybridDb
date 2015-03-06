@@ -2,6 +2,7 @@ using System.Data;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
+using Xunit;
 using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
@@ -15,7 +16,7 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities")).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store);
 
             store.Schema.GetSchema().ShouldContainKey("Entities");
         }
@@ -27,25 +28,34 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            var table = new Table("Entities");
-            table.Register(new Column("SomeColumn", typeof(int)));
-
-            new CreateTable(table).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store);
 
             store.Schema.GetSchema().ShouldContainKey("Entities");
-            store.Schema.GetSchema()["Entities"]["SomeColumn"].Type.ShouldBe(typeof(int));
+            store.Schema.GetSchema()["Entities"]["Col1"].Type.ShouldBe(typeof(int));
         }
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
         [InlineData(TableMode.UseRealTables)]
-        public void CreatesIdAsPrimaryKeyColumn(TableMode mode)
+        public void CreatesPrimaryKeyColumn(TableMode mode)
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities")).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)) { IsPrimaryKey = true })).Execute(store);
 
-            store.Schema.GetSchema()["Entities"]["Id"].IsPrimaryKey.ShouldBe(true);
+            store.Schema.GetSchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
+        }
+
+        [Fact]
+        public void DoesNotRequireReprojection()
+        {
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).RequiresReprojection.ShouldBe(false);
+        }
+
+        [Fact]
+        public void IsSafe()
+        {
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Unsafe.ShouldBe(false);
         }
     }
 }

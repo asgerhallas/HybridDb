@@ -1,6 +1,7 @@
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
+using Xunit;
 using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
@@ -25,11 +26,17 @@ namespace HybridDb.Tests.Migration.Commands
 
         [Theory]
         [InlineData("Document", true)]
+        [InlineData("Id", true)]
         [InlineData("OtherName", false)]
-        public void CommandSafetyDependsOnColumnName(string columnName, bool isUnsafe)
+        public void IsSafeDependingOnColumnName(string columnName, bool isUnsafe)
         {
-            var table = new Table("Entities");
-            new RemoveColumn(table, columnName).Unsafe.ShouldBe(isUnsafe);
+            new RemoveColumn(new Table("Entities"), columnName).Unsafe.ShouldBe(isUnsafe);
+        }
+
+        [Fact]
+        public void DoesNotRequireReprojection()
+        {
+            new RemoveColumn(new Table("Entities"), "Col").RequiresReprojection.ShouldBe(false);
         }
     }
 }

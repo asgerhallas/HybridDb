@@ -10,11 +10,11 @@ namespace HybridDb.Migration
         protected SchemaMigrationCommand()
         {
             Unsafe = false;
-            NeedsReprojection = false;
+            RequiresReprojection = false;
         }
 
         public bool Unsafe { get; protected set; }
-        public bool NeedsReprojection { get; protected set; }
+        public bool RequiresReprojection { get; protected set; }
 
         public abstract void Execute(DocumentStore store);
 

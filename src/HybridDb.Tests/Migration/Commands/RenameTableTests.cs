@@ -1,6 +1,7 @@
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
+using Xunit;
 using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
@@ -19,6 +20,19 @@ namespace HybridDb.Tests.Migration.Commands
 
             store.Schema.GetSchema().ShouldNotContainKey("Entities");
             store.Schema.GetSchema().ShouldNotContainKey("OtherEntities");
+        }
+
+
+        [Fact]
+        public void DoesNotRequireReprojection()
+        {
+            new RenameTable("Entities", "OtherEntities").RequiresReprojection.ShouldBe(false);
+        }
+
+        [Fact]
+        public void IsSafe()
+        {
+            new RenameTable("Entities", "OtherEntities").Unsafe.ShouldBe(false);
         }
     }
 }

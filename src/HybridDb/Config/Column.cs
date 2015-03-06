@@ -23,7 +23,7 @@ namespace HybridDb.Config
         public int? Length { get; private set; }
         public bool Nullable { get; set; }
         public object DefaultValue { get; private set; }
-        public bool IsPrimaryKey { get; private set; }
+        public bool IsPrimaryKey { get; set; }
 
         public SqlColumn SqlColumn { get; protected set; }
 

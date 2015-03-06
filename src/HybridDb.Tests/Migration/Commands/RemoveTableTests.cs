@@ -22,9 +22,15 @@ namespace HybridDb.Tests.Migration.Commands
         }
 
         [Fact]
-        public void RemovingTableIsUnsafe()
+        public void DoesNotRequireReprojection()
+        {
+            new RemoveTable("Entities").RequiresReprojection.ShouldBe(false);
+        }
+
+        [Fact]
+        public void IsUnsafe()
         {
             new RemoveTable("Entities").Unsafe.ShouldBe(true);
-        }    
+        }
     }
 }
