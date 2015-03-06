@@ -10,7 +10,7 @@ namespace HybridDb.Tests.Migration.Commands
         [Theory]
         [InlineData(TableMode.UseTempTables)]
         [InlineData(TableMode.UseRealTables)]
-        public void AddsColumn(TableMode mode)
+        public void RemovesColumn(TableMode mode)
         {
             Use(mode);
             new CreateTable(new Table("Entities")).Execute(store);
