@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Migration.Commands
             Use(TableMode.UseTempTables);
             new CreateTable(new Table("Entities")).Execute(store);
 
-            Should.Throw<InvalidOperationException>(() => new CreateTable(new Table("Entities")).Execute(store));            
+            Should.Throw<NotSupportedException>(() => new RenameTable("Entities", "OtherEntities").Execute(store));            
             store.Schema.TableExists("Entities").ShouldBe(true);
         }
     }
