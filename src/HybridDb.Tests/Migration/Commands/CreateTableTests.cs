@@ -1,3 +1,4 @@
+using System.Data;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
@@ -33,6 +34,18 @@ namespace HybridDb.Tests.Migration.Commands
             
             store.Schema.TableExists("Entities").ShouldBe(true);
             store.Schema.GetType(store.Schema.GetColumn("Entities", "SomeColumn").system_type_id).ShouldBe("int");
+        }
+
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseRealTables)]
+        public void CreatesIdAsPrimaryKeyColumn(TableMode mode)
+        {
+            Use(mode);
+
+            new CreateTable(new Table("Entities")).Execute(store);
+
+            store.Schema.IsPrimaryKey("Id").ShouldBe(true);
         }
     }
 }
