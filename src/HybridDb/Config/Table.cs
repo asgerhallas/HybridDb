@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace HybridDb.Config
 {
@@ -6,10 +8,18 @@ namespace HybridDb.Config
     {
         readonly Dictionary<string, Column> columns;
 
-        public Table(string name)
+        public Table(string name) : this(name, Enumerable.Empty<Column>()) {}
+
+        public Table(string name, params Column[] columns)  : this(name, columns.ToList()) { }
+
+        public Table(string name, IEnumerable<Column> columns)
         {
-            columns = new Dictionary<string, Column>();
+            if (name.EndsWith("_"))
+                throw new NotSupportedException("A table name can not end with '_'.");
+
             Name = name;
+
+            this.columns = columns.ToDictionary(x => x.Name, x => x);
         }
 
         public Column this[string name]
