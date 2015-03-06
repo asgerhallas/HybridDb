@@ -192,22 +192,22 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        public Guid Insert(Table table, Guid key, object projections)
+        public Guid Insert(DocumentTable table, Guid key, object projections)
         {
             return Execute(new InsertCommand(table, key, projections));
         }
 
-        public Guid Update(Table table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
+        public Guid Update(DocumentTable table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
         {
             return Execute(new UpdateCommand(table, key, etag, projections, lastWriteWins));
         }
 
-        public void Delete(Table table, Guid key, Guid etag, bool lastWriteWins = false)
+        public void Delete(DocumentTable table, Guid key, Guid etag, bool lastWriteWins = false)
         {
             Execute(new DeleteCommand(table, key, etag, lastWriteWins));
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(Table table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<TProjection> Query<TProjection>(DocumentTable table, out QueryStats stats, string select = null, string where = "",
                                                            int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
@@ -293,7 +293,7 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<IDictionary<string, object>> Query(Table table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<IDictionary<string, object>> Query(DocumentTable table, out QueryStats stats, string select = null, string where = "",
                                                               int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             return Query<IDictionary<string, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
@@ -343,7 +343,7 @@ namespace HybridDb
                    select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
         }
 
-        public IDictionary<string, object> Get(Table table, Guid key)
+        public IDictionary<string, object> Get(DocumentTable table, Guid key)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Connect())

@@ -196,7 +196,7 @@ END", uniqueDbName));
             //storeWithTempTables.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
-            storeWithTempTables.Insert(new Table("Entities"), id, new { });
+            storeWithTempTables.Insert(new DocumentTable("Entities"), id, new { });
 
             storeWithTempTables.Migrate(migrator => migrator
                 .AddColumn("Entities", new Column("hest", typeof(string), new SqlColumn(DbType.Int32, defaultValue: 1))));

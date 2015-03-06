@@ -111,7 +111,7 @@ namespace HybridDb.Linq
             }
             else
             {
-                var table = (Table) design.Table;
+                var table = design.Table;
 
                 QueryStats storeStats;
                 var results = store.Query<TProjection>(

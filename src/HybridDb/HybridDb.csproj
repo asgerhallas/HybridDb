@@ -70,7 +70,7 @@
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
-    <Compile Include="DocumentStoreMigrator.cs" />
+    <Compile Include="Migration\DocumentStoreMigrator.cs" />
     <Compile Include="ISchema.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
