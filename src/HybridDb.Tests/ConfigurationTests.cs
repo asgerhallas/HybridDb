@@ -4,7 +4,7 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using Shouldly;
 using Xunit;
 
@@ -12,11 +12,11 @@ namespace HybridDb.Tests
 {
     public class ConfigurationTests
     {
-        private readonly Configuration.Configuration configuration;
+        private readonly Configuration configuration;
 
         public ConfigurationTests()
         {
-            configuration = new Configuration.Configuration();
+            configuration = new Configuration();
         }
 
         public Dictionary<string, Projection> ProjectionsFor<T>()

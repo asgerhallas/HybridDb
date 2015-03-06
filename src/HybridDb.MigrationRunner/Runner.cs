@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Migration;
 using Serilog;
 

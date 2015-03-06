@@ -5,7 +5,7 @@ using System.Data;
 using System.Linq;
 using HybridDb.Logging;
 
-namespace HybridDb.Configuration
+namespace HybridDb.Config
 {
     public class Configuration
     {

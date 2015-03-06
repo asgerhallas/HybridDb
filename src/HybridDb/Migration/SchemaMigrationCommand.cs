@@ -1,7 +1,7 @@
 using System;
 using System.Data;
 using System.Data.SqlClient;
-using HybridDb.Configuration;
+using HybridDb.Config;
 
 namespace HybridDb.Migration
 {

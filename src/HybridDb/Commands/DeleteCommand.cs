@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
-using HybridDb.Configuration;
+using HybridDb.Config;
 
 namespace HybridDb.Commands
 {

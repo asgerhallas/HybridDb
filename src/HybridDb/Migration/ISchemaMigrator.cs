@@ -1,5 +1,5 @@
 using System;
-using HybridDb.Configuration;
+using HybridDb.Config;
 
 namespace HybridDb.Migration
 {

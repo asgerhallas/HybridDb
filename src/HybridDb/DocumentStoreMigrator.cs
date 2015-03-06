@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using HybridDb.Config;
 using HybridDb.Migration;
 using HybridDb.Migration.Commands;
 
@@ -20,14 +21,14 @@ namespace HybridDb
             return Task.FromResult(1);
         }
 
-        public IReadOnlyList<SchemaMigrationCommand> FindSchemaChanges(ISchema db, Configuration.Configuration configuration)
+        public IReadOnlyList<SchemaMigrationCommand> FindSchemaChanges(ISchema schema, Configuration configuration)
         {
             var commands = new List<SchemaMigrationCommand>();
 
             foreach (var design in configuration.DocumentDesigns)
             {
                 if (commands.OfType<CreateTable>().Any(x => x.Table == design.Table) ||
-                    db.TableExists(design.Table.Name))
+                    schema.TableExists(design.Table.Name))
                 {
                     continue;
                 }
@@ -35,7 +36,7 @@ namespace HybridDb
                 commands.Add(new CreateTable(design.Table));
             }
 
-            var tables = db.GetTables();
+            var tables = schema.GetTables();
             foreach (var tablename in tables)
             {
                 if (configuration.Tables.ContainsKey(tablename))

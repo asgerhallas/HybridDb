@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
 using Xunit;
@@ -57,6 +57,17 @@ namespace HybridDb.Tests.Migration
 
         [Fact]
         public void FindMissingTables()
+        {
+            db.CreateTable("Entities");
+
+            var command = (RemoveTable)migrator.FindSchemaChanges(db, configuration).Single();
+
+            command.Tablename.ShouldBe("Entities");
+            command.Unsafe.ShouldBe(true);
+        }
+
+        [Fact]
+        public void FindNewColumn()
         {
             db.CreateTable("Entities");
 

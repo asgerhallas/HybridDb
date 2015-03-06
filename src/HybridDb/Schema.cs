@@ -16,9 +16,12 @@ namespace HybridDb
 
         public bool TableExists(string name)
         {
-            return tableMode == TableMode.UseRealTables
-                ? store.RawQuery<dynamic>(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null
-                : store.RawQuery<dynamic>(string.Format("select OBJECT_ID('tempdb..{0}') as Result", store.FormatTableName(name))).First().Result != null;
+            if (tableMode == TableMode.UseRealTables)
+            {
+                return store.RawQuery<dynamic>(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
+            }
+        
+            return store.RawQuery<dynamic>(string.Format("select OBJECT_ID('tempdb..{0}') as Result", store.FormatTableName(name))).First().Result != null;
         }
 
         public List<string> GetTables()

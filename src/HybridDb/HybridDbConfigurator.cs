@@ -1,18 +1,18 @@
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Logging;
 
 namespace HybridDb
 {
     public abstract class HybridDbConfigurator : IHybridDbConfigurator
     {
-        internal Configuration.Configuration configuration;
+        internal Configuration configuration;
 
         protected HybridDbConfigurator()
         {
-            configuration = new Configuration.Configuration();
+            configuration = new Configuration();
         }
         
-        public Configuration.Configuration Configure()
+        public Configuration Configure()
         {
             return configuration;
         }

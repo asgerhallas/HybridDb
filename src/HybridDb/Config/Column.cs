@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HybridDb.Configuration
+namespace HybridDb.Config
 {
     public class Column
     {

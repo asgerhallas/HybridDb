@@ -4,7 +4,7 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Transactions;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migration

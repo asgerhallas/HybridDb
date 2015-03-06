@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using HybridDb.Configuration;
+using HybridDb.Config;
 
 namespace HybridDb.Studio.Models
 {

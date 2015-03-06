@@ -1,4 +1,4 @@
-﻿namespace HybridDb.Configuration
+﻿namespace HybridDb.Config
 {
     public class CollectionColumn : Column
     {

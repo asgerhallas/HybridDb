@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using HybridDb.Configuration;
+using HybridDb.Config;
 
 namespace HybridDb
 {

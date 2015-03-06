@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using Caliburn.Micro;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Studio.Models;
 using Newtonsoft.Json.Linq;
 

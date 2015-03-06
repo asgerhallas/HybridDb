@@ -11,7 +11,7 @@ using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Logging;
 using HybridDb.Migration;
 
@@ -29,9 +29,10 @@ namespace HybridDb
         Guid lastWrittenEtag;
         long numberOfRequests;
 
-        DocumentStore(string connectionString, Configuration.Configuration configuration, TableMode tableMode, bool testMode)
+        DocumentStore(string connectionString, Configuration configuration, TableMode tableMode, bool testMode)
         {
             this.connectionString = connectionString;
+            this.tableMode = tableMode;
             this.testMode = testMode;
 
             Logger = configuration.Logger;
@@ -80,7 +81,7 @@ namespace HybridDb
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
         public ILogger Logger { get; private set; }
         public ISchema Schema { get; private set; }
-        public Configuration.Configuration Configuration { get; private set; }
+        public Configuration Configuration { get; private set; }
 
         public void Migrate(Action<ISchemaMigrator> migration)
         {
@@ -416,6 +417,8 @@ namespace HybridDb
             var hdbParams = parameters as IEnumerable<Parameter>;
             if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
+
+            Logger.Info(sql);
 
             using (var connection = Connect())
             {

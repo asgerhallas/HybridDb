@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HybridDb.Configuration
+namespace HybridDb.Config
 {
     public class DocumentDesign
     {

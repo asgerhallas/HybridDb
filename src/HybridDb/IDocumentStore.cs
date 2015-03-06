@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HybridDb.Commands;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Migration;
 
 namespace HybridDb
@@ -10,7 +10,7 @@ namespace HybridDb
     {
         Action<Table, IDictionary<string, object>> OnRead { get; set; }
         ISchema Schema { get; }
-        Configuration.Configuration Configuration { get; }
+        Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         void Migrate(Action<ISchemaMigrator> migration);

@@ -1,6 +1,6 @@
 ﻿using System.Data;
 
-namespace HybridDb.Configuration
+namespace HybridDb.Config
 {
     public class IndexTable : Table
     {

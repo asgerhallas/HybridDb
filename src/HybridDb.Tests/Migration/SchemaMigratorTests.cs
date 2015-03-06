@@ -4,7 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
 using Dapper;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using Shouldly;
 using Xunit;
 
