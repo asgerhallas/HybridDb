@@ -74,6 +74,7 @@
     <Compile Include="ISchema.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
+    <Compile Include="Migration\Commands\AddColumn.cs" />
     <Compile Include="Migration\Commands\CreateTable.cs" />
     <Compile Include="Migration\Commands\RemoveTable.cs" />
     <Compile Include="Migration\Commands\RenameTable.cs" />
