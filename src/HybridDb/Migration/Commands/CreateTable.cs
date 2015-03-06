@@ -16,7 +16,7 @@ namespace HybridDb.Migration.Commands
         {
             var columns = Table.Columns.Select(col => string.Format("{0} {1}", col.Name, GetColumnSqlType(col)));
 
-            var escaptedColumns =
+            var escapedColumns =
                 from column in columns
                 let split = column.Split(' ')
                 let name = split.First()
@@ -27,7 +27,7 @@ namespace HybridDb.Migration.Commands
                 string.Format("if not ({0}) begin create table {1} ({2}); end",
                     GetTableExistsSql(store, Table.Name),
                     store.FormatTableNameAndEscape(Table.Name),
-                    string.Join(", ", escaptedColumns)));
+                    string.Join(", ", escapedColumns)));
         }
     }
 }

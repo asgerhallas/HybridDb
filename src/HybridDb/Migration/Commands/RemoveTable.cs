@@ -5,7 +5,6 @@ namespace HybridDb.Migration.Commands
         public RemoveTable(string tablename)
         {
             Unsafe = true;
-
             Tablename = tablename;
         }
 
@@ -13,11 +12,7 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(DocumentStore store)
         {
-            //store.RawExecute(
-            //    string.Format("if not ({0}) begin create table {1} ({2}); end",
-            //        GetTableExistsSql(store, Table.Name),
-            //        store.FormatTableNameAndEscape(Table.Name),
-            //        string.Join(", ", escaptedColumns)));
+            store.RawExecute(string.Format("drop table {0};", store.FormatTableNameAndEscape(Tablename)));
         }
     }
 }
