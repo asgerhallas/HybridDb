@@ -18,7 +18,7 @@ namespace HybridDb.Tests.Migration.Commands
 
             new RemoveTable("Entities").Execute(store);
 
-            store.Schema.TableExists("Entities").ShouldBe(false);
+            store.Schema.GetSchema().ShouldNotContainKey("Entities");
         }
 
         [Fact]

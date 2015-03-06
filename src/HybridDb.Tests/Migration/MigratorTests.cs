@@ -122,9 +122,9 @@ namespace HybridDb.Tests.Migration
                 tables.Add(table);
             }
 
-            public List<Table> GetSchema()
+            public Dictionary<string, Table> GetSchema()
             {
-                return tables;
+                return tables.ToDictionary(x => x.Name, x => x);
             }
         }
 

@@ -28,7 +28,7 @@ namespace HybridDb.Migration
 
             foreach (var table in configuration.DocumentDesigns.Select(x => x.Table).Distinct())
             {
-                var existingTable = existingSchema.SingleOrDefault(x => x.Name == table.Name);
+                var existingTable = existingSchema.Values.SingleOrDefault(x => x.Name == table.Name);
 
                 if (existingTable == null)
                 {
@@ -46,7 +46,7 @@ namespace HybridDb.Migration
                 }
             }
 
-            foreach (var table in existingSchema)
+            foreach (var table in existingSchema.Values)
             {
                 if (configuration.Tables.ContainsKey(table.Name))
                     continue;

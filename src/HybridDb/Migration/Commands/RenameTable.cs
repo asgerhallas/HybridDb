@@ -1,5 +1,3 @@
-using System;
-
 namespace HybridDb.Migration.Commands
 {
     public class RenameTable : SchemaMigrationCommand
@@ -15,9 +13,6 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(DocumentStore store)
         {
-            if (store.TableMode != TableMode.UseRealTables)
-                throw new NotSupportedException("It is not possible to rename temp tables, so RenameTable is not supported when store is in test mode.");
-
             store.RawExecute(string.Format("sp_rename {0}, {1};",
                 store.FormatTableNameAndEscape(OldTableName),
                 store.FormatTableNameAndEscape(NewTableName)));

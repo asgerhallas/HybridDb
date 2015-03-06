@@ -1,7 +1,9 @@
+using System;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
+using Xunit;
 using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
@@ -22,16 +24,31 @@ namespace HybridDb.Tests.Migration.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseRealTables)]
-        public void ColumnIsOfCorrectType(TableMode mode)
+        [InlineData(typeof(int))]
+        [InlineData(typeof(int?))]
+        [InlineData(typeof(string))]
+        public void ColumnIsOfCorrectType(Type type)
         {
-            Use(mode);
+            Use(TableMode.UseRealTables);
             new CreateTable(new Table("Entities")).Execute(store);
 
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store);
+            new AddColumn("Entities", new Column("SomeColumn", type)).Execute(store);
 
             store.Schema.GetSchema()["Entities"]["SomeColumn"].Type.ShouldBe(typeof(int));
+        }
+
+
+        [Fact]
+        public void CanSetColumnAsPrimaryKey(Type type)
+        {
+            throw new NotImplementedException();
+
+            //Use(TableMode.UseRealTables);
+            //new CreateTable(new Table("Entities")).Execute(store);
+
+            //new AddColumn("Entities", new Column("SomeColumn", type, isPrimaryKey: true)).Execute(store);
+
+            //store.Schema.GetColumn("Entities", "SomeColumn").IsPrimaryKey.ShouldBe(true);
         }
     }
 }
