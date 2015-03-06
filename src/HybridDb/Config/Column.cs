@@ -22,6 +22,11 @@ namespace HybridDb.Config
         public Type Type { get; protected set; }
         public SqlColumn SqlColumn { get; protected set; }
 
+        public override string ToString()
+        {
+            return string.Format("{0} ({1})", Name, SqlColumn.Type);
+        }
+
         protected bool Equals(Column other)
         {
             if (ReferenceEquals(null, other)) return false;

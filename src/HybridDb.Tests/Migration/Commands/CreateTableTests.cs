@@ -33,7 +33,7 @@ namespace HybridDb.Tests.Migration.Commands
             new CreateTable(table).Execute(store);
             
             store.Schema.TableExists("Entities").ShouldBe(true);
-            store.Schema.GetType(store.Schema.GetColumn("Entities", "SomeColumn").system_type_id).ShouldBe("int");
+            store.Schema.GetColumn("Entities", "SomeColumn").Type.ShouldBe(typeof(int));
         }
 
         [Theory]
