@@ -8,5 +8,6 @@ namespace HybridDb
         bool TableExists(string name);
         List<string> GetTables();
         Column GetColumn(string tablename, string columnname);
+        bool IsPrimaryKey(string column);
     }
 }

@@ -78,6 +78,7 @@
     <Compile Include="Migration\Commands\CreateTable.cs" />
     <Compile Include="Migration\Commands\RemoveColumn.cs" />
     <Compile Include="Migration\Commands\RemoveTable.cs" />
+    <Compile Include="Migration\Commands\RenameColumn.cs" />
     <Compile Include="Migration\Commands\RenameTable.cs" />
     <Compile Include="Migration\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />

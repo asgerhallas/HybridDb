@@ -36,29 +36,47 @@ namespace HybridDb
 
         public Column GetColumn(string table, string column)
         {
-            Column2 c;
             if (tableMode == TableMode.UseRealTables)
             {
-                c = store.RawQuery<Column2>(
+                var c = store.RawQuery<Column2>(
                     string.Format(
                         "select * from sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column,
                         table)).FirstOrDefault();
-            }
-            else
-            {
-                c = store.RawQuery<Column2>(
-                        string.Format(
-                            "select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..{1}')",
-                            column, store.FormatTableName(table))).FirstOrDefault();
-                
+
+                throw new Exception();
             }
 
-            if (c == null)
-                return null;
+            throw new Exception();
 
-            var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { c.system_type_id });
+            store.RawQuery<Column2>(
+                    string.Format(
+                        "select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..{1}')",
+                        column, store.FormatTableName(table))).FirstOrDefault();
+        }
 
-            return null;
+        public string GetType(int id)
+        {
+            var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new {id});
+            return rawQuery.FirstOrDefault();
+        }
+
+        public bool IsPrimaryKey(string column)
+        {
+            var sql =
+                @"SELECT K.TABLE_NAME,
+                  K.COLUMN_NAME,
+                  K.CONSTRAINT_NAME
+                  FROM tempdb.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C
+                  JOIN tempdb.INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K
+                  ON C.TABLE_NAME = K.TABLE_NAME
+                  AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG
+                  AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA
+                  AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
+                  WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
+                  AND K.COLUMN_NAME = '" + column + "'";
+
+            var isPrimaryKey = store.RawQuery<dynamic>(sql).Any();
+            return isPrimaryKey;
         }
 
         public class Column2
