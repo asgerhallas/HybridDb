@@ -20,35 +20,38 @@ namespace HybridDb.Migration
             return Task.FromResult(1);
         }
 
-        public IReadOnlyList<SchemaMigrationCommand> FindSchemaChanges(ISchema schema, Configuration configuration)
+        public IReadOnlyList<SchemaMigrationCommand> FindSchemaChanges(ISchema db, Configuration configuration)
         {
             var commands = new List<SchemaMigrationCommand>();
 
-            foreach (var design in configuration.DocumentDesigns.Select(x => x.Table).Distinct())
+            var existingSchema = db.GetSchema();
+
+            foreach (var table in configuration.DocumentDesigns.Select(x => x.Table).Distinct())
             {
-                if (!schema.TableExists(design.Name))
+                var existingTable = existingSchema.SingleOrDefault(x => x.Name == table.Name);
+
+                if (existingTable == null)
                 {
-                    commands.Add(new CreateTable(design));
+                    commands.Add(new CreateTable(table));
                     continue;
                 }
 
-                foreach (var column in design.Columns)
+                foreach (var column in table.Columns)
                 {
-                    var existingColumn = schema.GetColumn(design.Name, column.Name);
+                    var existingColumn = existingTable.Columns.SingleOrDefault(x => x.Name == column.Name);
                     if (existingColumn == null)
                     {
-                        commands.Add(new AddColumn(design.Name, column));
+                        commands.Add(new AddColumn(table.Name, column));
                     }
                 }
             }
 
-            var tables = schema.GetTables();
-            foreach (var tablename in tables)
+            foreach (var table in existingSchema)
             {
-                if (configuration.Tables.ContainsKey(tablename))
+                if (configuration.Tables.ContainsKey(table.Name))
                     continue;
 
-                commands.Add(new RemoveTable(tablename));
+                commands.Add(new RemoveTable(table.Name));
             }
 
             return commands;

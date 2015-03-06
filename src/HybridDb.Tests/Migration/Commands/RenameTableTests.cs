@@ -16,8 +16,8 @@ namespace HybridDb.Tests.Migration.Commands
 
             new RenameTable("Entities", "OtherEntities").Execute(store);
 
-            store.Schema.TableExists("Entities").ShouldBe(false);
-            store.Schema.TableExists("OtherEntities").ShouldBe(true);
+            store.Schema.GetSchema().ShouldNotContainKey("Entities");
+            store.Schema.GetSchema().ShouldNotContainKey("OtherEntities");
         }
 
         [Fact]
@@ -27,7 +27,6 @@ namespace HybridDb.Tests.Migration.Commands
             new CreateTable(new Table("Entities")).Execute(store);
 
             Should.Throw<NotSupportedException>(() => new RenameTable("Entities", "OtherEntities").Execute(store));            
-            store.Schema.TableExists("Entities").ShouldBe(true);
         }
     }
 }

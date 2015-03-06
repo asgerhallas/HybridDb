@@ -10,7 +10,7 @@ namespace HybridDb.Tests.Migration.Commands
     public class RenameColumnTests : HybridDbTests
     {
         [Fact]
-        public void AddsColumn()
+        public void RenamesColumn()
         {
             Use(TableMode.UseRealTables);
             new CreateTable(new Table("Entities")).Execute(store);
@@ -18,8 +18,8 @@ namespace HybridDb.Tests.Migration.Commands
             
             new RenameColumn("Entities", "SomeColumn", "SomeNewColumn").Execute(store);
 
-            store.Schema.GetColumn("Entities", "SomeColumn").ShouldBe(null);
-            store.Schema.GetColumn("Entities", "SomeNewColumn").ShouldNotBe(null);
+            store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            store.Schema.GetSchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
         }
 
         [Fact]

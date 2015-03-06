@@ -1,3 +1,4 @@
+using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
@@ -17,7 +18,7 @@ namespace HybridDb.Tests.Migration.Commands
 
             new AddColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
 
-            store.Schema.GetColumn("Entities", "SomeColumn").ShouldNotBe(null);
+            store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldNotBe(null);
         }
 
         [Theory]
@@ -30,7 +31,7 @@ namespace HybridDb.Tests.Migration.Commands
 
             new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store);
 
-            store.Schema.GetColumn("Entities", "SomeColumn").Type.ShouldBe(typeof(int));
+            store.Schema.GetSchema()["Entities"]["SomeColumn"].Type.ShouldBe(typeof(int));
         }
     }
 }
