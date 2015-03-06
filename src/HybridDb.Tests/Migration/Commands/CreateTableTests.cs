@@ -16,8 +16,8 @@ namespace HybridDb.Tests.Migration.Commands
             Use(mode);
 
             new CreateTable(new Table("Entities")).Execute(store);
-            
-            store.Schema.TableExists("Entities").ShouldBe(true);
+
+            store.Schema.GetSchema().ShouldContainKey("Entities");
         }
 
         [Theory]
@@ -31,9 +31,9 @@ namespace HybridDb.Tests.Migration.Commands
             table.Register(new Column("SomeColumn", typeof(int)));
 
             new CreateTable(table).Execute(store);
-            
-            store.Schema.TableExists("Entities").ShouldBe(true);
-            store.Schema.GetColumn("Entities", "SomeColumn").Type.ShouldBe(typeof(int));
+
+            store.Schema.GetSchema().ShouldContainKey("Entities");
+            store.Schema.GetSchema()["Entities"]["SomeColumn"].Type.ShouldBe(typeof(int));
         }
 
         [Theory]
@@ -45,7 +45,7 @@ namespace HybridDb.Tests.Migration.Commands
 
             new CreateTable(new Table("Entities")).Execute(store);
 
-            store.Schema.IsPrimaryKey("Id").ShouldBe(true);
+            store.Schema.GetSchema()["Entities"]["Id"].IsPrimaryKey.ShouldBe(true);
         }
     }
 }

@@ -110,41 +110,21 @@ namespace HybridDb.Tests.Migration
 
         public class FakeSchema : ISchema
         {
-            readonly Dictionary<string, Table> tables;
+            readonly List<Table> tables;
 
             public FakeSchema()
             {
-                tables = new Dictionary<string, Table>();
+                tables = new List<Table>();
             }
 
             public void CreateTable(Table table)
             {
-                tables.Add(table.Name, table);
+                tables.Add(table);
             }
 
-            public bool TableExists(string name)
+            public Dictionary<string, Table> GetSchema()
             {
-                return tables.ContainsKey(name);
-            }
-
-            public List<string> GetTables()
-            {
-                return tables.Keys.ToList();
-            }
-
-            public Column GetColumn(string tablename, string columnname)
-            {
-                return tables[tablename].Columns.SingleOrDefault(x => x.Name == columnname);
-            }
-
-            public string GetType(int id)
-            {
-                return null;
-            }
-
-            public bool IsPrimaryKey(string column)
-            {
-                throw new System.NotImplementedException();
+                return tables.ToDictionary(x => x.Name, x => x);
             }
         }
 

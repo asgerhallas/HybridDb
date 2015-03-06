@@ -13,12 +13,13 @@ namespace HybridDb.Tests.Migration.Commands
         public void RemovesColumn(TableMode mode)
         {
             Use(mode);
+
             new CreateTable(new Table("Entities")).Execute(store);
             new AddColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
             
             new RemoveColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
 
-            store.Schema.GetColumn("Entities", "SomeColumn").ShouldBe(null);
+            store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
         [Theory]

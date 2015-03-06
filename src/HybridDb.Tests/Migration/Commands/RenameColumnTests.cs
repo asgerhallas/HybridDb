@@ -20,8 +20,8 @@ namespace HybridDb.Tests.Migration.Commands
             
             new RenameColumn("Entities", "SomeColumn", "SomeNewColumn").Execute(store);
 
-            store.Schema.GetColumn("Entities", "SomeColumn").ShouldBe(null);
-            store.Schema.GetColumn("Entities", "SomeNewColumn").ShouldNotBe(null);
+            store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            store.Schema.GetSchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
         }
 
         [Theory]
