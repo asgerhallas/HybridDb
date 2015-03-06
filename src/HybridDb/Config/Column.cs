@@ -12,17 +12,15 @@ namespace HybridDb.Config
         }
 
         public Column(string name, Type type)
-        {
-            Name = name;
-            Type = type;
-            SqlColumn = type != null ? new SqlColumn(type) : new SqlColumn();
-        }
+            : this(name, type, type != null ? new SqlColumn(type) : new SqlColumn())
+        {}
 
         public string Name { get; protected set; }
         public Type Type { get; protected set; }
-        public int? Length { get; private set; }
+        
+        public int? Length { get; set; }
         public bool Nullable { get; set; }
-        public object DefaultValue { get; private set; }
+        public object DefaultValue { get; set; }
         public bool IsPrimaryKey { get; set; }
 
         public SqlColumn SqlColumn { get; protected set; }
