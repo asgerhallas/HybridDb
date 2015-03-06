@@ -27,9 +27,22 @@ namespace HybridDb
 
             foreach (var design in configuration.DocumentDesigns)
             {
-                if (commands.OfType<CreateTable>().Any(x => x.Table == design.Table) ||
-                    schema.TableExists(design.Table.Name))
+                if (commands.OfType<CreateTable>().Any(x => x.Table == design.Table))
                 {
+                    continue;
+                }
+
+                if (schema.TableExists(design.Table.Name))
+                {
+                    foreach (var column in design.Table.Columns)
+                    {
+                        var existingColumn = schema.GetColumn(design.Table.Name, column.Name);
+                        if (existingColumn == null)
+                        {
+                            commands.Add(new AddColumn(design.Table.Name, column));
+                        }
+                    }
+
                     continue;
                 }
 
