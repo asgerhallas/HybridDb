@@ -73,11 +73,10 @@ namespace HybridDb.Tests.Migration
 
             configuration.Document<Entity>();
 
-            //var command = migrator.FindSchemaChanges(db, configuration).Cast<AddColumn>().ToList();
+            var commands = migrator.FindSchemaChanges(db, configuration).Cast<AddColumn>().ToList();
 
-
-            //command.Tablename.ShouldBe("Entities");
-            //command.Unsafe.ShouldBe(true);
+            commands[0].Tablename.ShouldBe("Entities");
+            commands[0].Column.ShouldBe(GetTableFor<Entity>().IdColumn);
         }
 
         [Fact]

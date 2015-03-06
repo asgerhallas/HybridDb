@@ -1,5 +1,5 @@
 using System;
-using HybridDb.Configuration;
+using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
 using Xunit;
