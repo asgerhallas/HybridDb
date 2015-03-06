@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using HybridDb.Config;
 
 namespace HybridDb
@@ -60,25 +61,6 @@ namespace HybridDb
 //            return rawQuery.FirstOrDefault();
 //        }
 
-//        public bool IsPrimaryKey(string column)
-//        {
-//            var sql =
-//                @"SELECT K.TABLE_NAME,
-//                  K.COLUMN_NAME,
-//                  K.CONSTRAINT_NAME
-//                  FROM tempdb.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C
-//                  JOIN tempdb.INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K
-//                  ON C.TABLE_NAME = K.TABLE_NAME
-//                  AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG
-//                  AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA
-//                  AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
-//                  WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
-//                  AND K.COLUMN_NAME = '" + column + "'";
-
-//            var isPrimaryKey = store.RawQuery<dynamic>(sql).Any();
-//            return isPrimaryKey;
-//        }
-
         class TempColumn
         {
             public string Name { get; set; }
@@ -118,29 +100,42 @@ namespace HybridDb
 
         Column Map(TempColumn column)
         {
-            return new Column(column.Name, GetType(column.system_type_id));
+            return new Column(column.Name, GetType(column.system_type_id))
+            {
+                IsPrimaryKey = IsPrimaryKey(column.Name),
+                Length = column.max_length,
+                //Nullable = 
+                //DefaultValue = 
+            };
         }
 
         Type GetType(int id)
         {
+            //https://msdn.microsoft.com/en-us/library/cc716729.aspx
             var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { id });
-            var typeAsString = rawQuery.FirstOrDefault();
+            var shortName = rawQuery.FirstOrDefault();
 
-
-            //"SELECT schemas.name AS [Schema], " +
-            //"tables.name AS [Table], " +
-            //"columns.name AS [Column], CASE WHEN columns.system_type_id = 34 THEN 'byte[]' WHEN columns.system_type_id = 35 THEN 'string' WHEN columns.system_type_id = 36 THEN 'System.Guid' WHEN columns.system_type_id = 48 THEN 'byte' WHEN columns.system_type_id = 52 THEN 'short' WHEN columns.system_type_id = 56 THEN 'int' WHEN columns.system_type_id = 58 THEN 'System.DateTime' WHEN columns.system_type_id = 59 THEN 'float' WHEN columns.system_type_id = 60 THEN 'decimal' WHEN columns.system_type_id = 61 THEN 'System.DateTime' WHEN columns.system_type_id = 62 THEN 'double' WHEN columns.system_type_id = 98 THEN 'object' WHEN columns.system_type_id = 99 THEN 'string' WHEN columns.system_type_id = 104 THEN 'bool' WHEN columns.system_type_id = 106 THEN 'decimal' WHEN columns.system_type_id = 108 THEN 'decimal' WHEN columns.system_type_id = 122 THEN 'decimal' WHEN columns.system_type_id = 127 THEN 'long' WHEN columns.system_type_id = 165 THEN 'byte[]' WHEN columns.system_type_id = 167 THEN 'string' WHEN columns.system_type_id = 173 THEN 'byte[]' WHEN columns.system_type_id = 175 THEN 'string' WHEN columns.system_type_id = 189 THEN 'long' WHEN columns.system_type_id = 231 THEN 'string' WHEN columns.system_type_id = 239 THEN 'string' WHEN columns.system_type_id = 241 THEN 'string' WHEN columns.system_type_id = 241 THEN 'string' END AS [Type], columns.is_nullable AS [Nullable]FROM sys.tables tables INNER JOIN sys.schemas schemas ON (tables.schema_id = schemas.schema_id ) INNER JOIN sys.columns columns ON (columns.object_id = tables.object_id) WHERE tables.name <> 'sysdiagrams' AND tables.name <> 'dtproperties' ORDER BY [Schema], [Table], [Column], [Type]""
-            
-            switch (typeAsString)
-            {
-                case "int":
-                    return typeof (int);
-                default:
-                    throw new ArgumentOutOfRangeException("id");
-
-            }
 
             return null;
+        }
+
+        bool IsPrimaryKey(string column)
+        {
+            var sql =
+                @"SELECT K.TABLE_NAME,
+                  K.COLUMN_NAME,
+                  K.CONSTRAINT_NAME
+                  FROM tempdb.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C
+                  JOIN tempdb.INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K
+                  ON C.TABLE_NAME = K.TABLE_NAME
+                  AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG
+                  AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA
+                  AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
+                  WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
+                  AND K.COLUMN_NAME = '" + column + "'";
+
+            var isPrimaryKey = store.RawQuery<dynamic>(sql).Any();
+            return isPrimaryKey;
         }
     }
 }
