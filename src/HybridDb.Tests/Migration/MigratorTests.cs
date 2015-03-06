@@ -123,6 +123,11 @@ namespace HybridDb.Tests.Migration
             {
                 return null;
             }
+
+            public bool IsPrimaryKey(string column)
+            {
+                throw new System.NotImplementedException();
+            }
         }
 
         public class Entity
