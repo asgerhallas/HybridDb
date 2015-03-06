@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace HybridDb.Schema
+﻿namespace HybridDb.Configuration
 {
     public class CollectionColumn : Column
     {

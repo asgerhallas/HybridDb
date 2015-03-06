@@ -4,20 +4,20 @@ namespace HybridDb
 {
     public interface IHybridDbConfigurator
     {
-        Configuration Configure();
+        Configuration.Configuration Configure();
     }
 
     public class NullHybridDbConfigurator : IHybridDbConfigurator
     {
-        public Configuration Configure()
+        public Configuration.Configuration Configure()
         {
-            return new Configuration();
+            return new Configuration.Configuration();
         }
     }
 
     public class LambdaHybridDbConfigurator : HybridDbConfigurator
     {
-        public LambdaHybridDbConfigurator(Action<Configuration> configurator)
+        public LambdaHybridDbConfigurator(Action<Configuration.Configuration> configurator)
         {
             configurator(configuration);
         }

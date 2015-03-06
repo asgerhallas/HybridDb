@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Commands;
+using HybridDb.Configuration;
 using HybridDb.Linq;
-using HybridDb.Schema;
 
 namespace HybridDb
 {

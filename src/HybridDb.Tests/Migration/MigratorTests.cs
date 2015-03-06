@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using HybridDb.Configuration;
 using HybridDb.Migration.Commands;
-using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -9,12 +9,12 @@ namespace HybridDb.Tests.Migration
 {
     public class MigratorTests : HybridDbTests
     {
-        readonly FakeDatabase db;
+        readonly FakeSchema db;
         readonly DocumentStoreMigrator migrator;
 
         public MigratorTests()
         {
-            db = new FakeDatabase();
+            db = new FakeSchema();
             migrator = new DocumentStoreMigrator();
         }
 
@@ -77,11 +77,11 @@ namespace HybridDb.Tests.Migration
             return store.Configuration.GetDesignFor<T>().Table;
         }
 
-        public class FakeDatabase : IDatabase
+        public class FakeSchema : ISchema
         {
             readonly Dictionary<string, List<string>> tables;
 
-            public FakeDatabase()
+            public FakeSchema()
             {
                 tables = new Dictionary<string, List<string>>();
             }
@@ -99,6 +99,16 @@ namespace HybridDb.Tests.Migration
             public List<string> GetTables()
             {
                 return tables.Keys.ToList();
+            }
+
+            public Schema.Column GetColumn(string tablename, string columnname)
+            {
+                return null;
+            }
+
+            public string GetType(int id)
+            {
+                return null;
             }
         }
 

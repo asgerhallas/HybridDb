@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using HybridDb.Commands;
+using HybridDb.Configuration;
 using HybridDb.Migration;
-using HybridDb.Schema;
 
 namespace HybridDb
 {
     public interface IDocumentStore : IDisposable
     {
         Action<Table, IDictionary<string, object>> OnRead { get; set; }
-        Database Database { get; }
-        Configuration Configuration { get; }
+        ISchema Schema { get; }
+        Configuration.Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         void Migrate(Action<ISchemaMigrator> migration);

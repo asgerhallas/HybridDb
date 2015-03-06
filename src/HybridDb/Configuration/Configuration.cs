@@ -4,9 +4,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using HybridDb.Logging;
-using HybridDb.Schema;
 
-namespace HybridDb
+namespace HybridDb.Configuration
 {
     public class Configuration
     {

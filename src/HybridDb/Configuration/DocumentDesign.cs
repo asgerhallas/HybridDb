@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public class DocumentDesign
     {

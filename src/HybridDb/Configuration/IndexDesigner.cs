@@ -1,7 +1,7 @@
 using System;
 using System.Linq.Expressions;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public class IndexDesigner<TIndex, TEntity>
     {

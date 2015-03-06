@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public class DocumentTable : Table
     {

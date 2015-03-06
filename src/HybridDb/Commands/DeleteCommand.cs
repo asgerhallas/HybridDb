@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
-using HybridDb.Schema;
+using HybridDb.Configuration;
 
 namespace HybridDb.Commands
 {
@@ -25,7 +25,7 @@ namespace HybridDb.Commands
         {
             var sql = new SqlBuilder()
                 .Append("delete from {0} where {1} = @Id{2}",
-                        store.Database.FormatTableNameAndEscape(table.Name),
+                        store.FormatTableNameAndEscape(table.Name),
                         table.IdColumn.Name,
                         uniqueParameterIdentifier)
                 .Append(!lastWriteWins,

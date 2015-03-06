@@ -1,6 +1,6 @@
 using System.Data;
+using HybridDb.Configuration;
 using HybridDb.Migration.Commands;
-using HybridDb.Schema;
 using Shouldly;
 using Xunit.Extensions;
 
@@ -15,9 +15,9 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities")).Execute(store.Database);
+            new CreateTable(new Table("Entities")).Execute(store);
             
-            store.Database.TableExists("Entities").ShouldBe(true);
+            store.Schema.TableExists("Entities").ShouldBe(true);
         }
 
         [Theory]
@@ -30,10 +30,10 @@ namespace HybridDb.Tests.Migration.Commands
             var table = new Table("Entities");
             table.Register(new Column("SomeColumn", typeof(int)));
 
-            new CreateTable(table).Execute(store.Database);
+            new CreateTable(table).Execute(store);
             
-            store.Database.TableExists("Entities").ShouldBe(true);
-            store.Database.GetType(store.Database.GetColumn("Entities", "SomeColumn").system_type_id).ShouldBe("int");
+            store.Schema.TableExists("Entities").ShouldBe(true);
+            store.Schema.GetType(store.Schema.GetColumn("Entities", "SomeColumn").system_type_id).ShouldBe("int");
         }
     }
 }

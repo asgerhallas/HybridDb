@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public interface IProjectionTable
     {

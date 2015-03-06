@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using HybridDb.Schema;
+using HybridDb.Configuration;
 
 namespace HybridDb.Commands
 {
@@ -27,7 +27,7 @@ namespace HybridDb.Commands
             values[table.ModifiedAtColumn] = DateTimeOffset.Now;
 
             var sql = string.Format("insert into {0} ({1}) values ({2});",
-                store.Database.FormatTableNameAndEscape(table.Name),
+                store.FormatTableNameAndEscape(table.Name),
                 string.Join(", ", from column in values.Keys select column.Name),
                 string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier));
 

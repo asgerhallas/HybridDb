@@ -1,7 +1,6 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public class IndexTable : Table
     {

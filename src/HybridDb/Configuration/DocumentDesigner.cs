@@ -2,7 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public class DocumentDesigner<TEntity>
     {

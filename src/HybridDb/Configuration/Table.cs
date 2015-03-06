@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 
-namespace HybridDb.Schema
+namespace HybridDb.Configuration
 {
     public class Table
     {

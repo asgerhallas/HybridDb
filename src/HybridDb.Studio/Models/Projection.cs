@@ -1,5 +1,3 @@
-using HybridDb.Schema;
-
 namespace HybridDb.Studio.Models
 {
     public class Projection

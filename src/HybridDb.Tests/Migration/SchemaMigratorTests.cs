@@ -4,7 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
 using Dapper;
-using HybridDb.Schema;
+using HybridDb.Configuration;
 using Shouldly;
 using Xunit;
 
@@ -142,7 +142,7 @@ END", uniqueDbName));
                   WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
                   AND K.COLUMN_NAME = 'Id'";
 
-            var isPrimaryKey = storeWithTempTables.Database.RawQuery<dynamic>(sql).Any();
+            var isPrimaryKey = storeWithTempTables.RawQuery<dynamic>(sql).Any();
             isPrimaryKey.ShouldBe(true);
 
             var etagColumn = GetTempColumn("Entities", "Etag");
@@ -201,7 +201,7 @@ END", uniqueDbName));
             storeWithTempTables.Migrate(migrator => migrator
                 .AddColumn("Entities", new Column("hest", typeof(string), new SqlColumn(DbType.Int32, defaultValue: 1))));
 
-            var first = storeWithTempTables.Database.RawQuery<int?>("SELECT hest FROM #Entities").First();
+            var first = storeWithTempTables.RawQuery<int?>("SELECT hest FROM #Entities").First();
             first.ShouldBe(1);
         }
 
@@ -215,12 +215,12 @@ END", uniqueDbName));
             return true;
         }
 
-        Database.Column GetTempColumn(string table, string column)
+        Schema.Column GetTempColumn(string table, string column)
         {
             return null;
         }
 
-        Database.Column GetRealColumn(string table, string column)
+        Schema.Column GetRealColumn(string table, string column)
         {
             return null;
         }
