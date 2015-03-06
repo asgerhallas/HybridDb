@@ -9,8 +9,10 @@ namespace HybridDb.Tests.Migration.Commands
 {
     public class RenameColumnTests : HybridDbTests
     {
-        [Fact]
-        public void AddsColumn()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseRealTables)]
+        public void RenamesColumn(TableMode mode)
         {
             Use(TableMode.UseRealTables);
             new CreateTable(new Table("Entities")).Execute(store);
@@ -20,14 +22,6 @@ namespace HybridDb.Tests.Migration.Commands
 
             store.Schema.GetColumn("Entities", "SomeColumn").ShouldBe(null);
             store.Schema.GetColumn("Entities", "SomeNewColumn").ShouldNotBe(null);
-        }
-
-        [Fact]
-        public void ThrowsWhenNotRealTables()
-        {
-            Use(TableMode.UseTempTables);
-
-            Should.Throw<NotSupportedException>(() => new RenameColumn("Entities", "SomeColumn", "SomeNewColumn").Execute(store));
         }
 
         [Theory]

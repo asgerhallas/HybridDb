@@ -1,5 +1,3 @@
-using System;
-
 namespace HybridDb.Migration.Commands
 {
     public class RenameColumn : SchemaMigrationCommand
@@ -19,9 +17,6 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(DocumentStore store)
         {
-            if (store.TableMode != TableMode.UseRealTables)
-                throw new NotSupportedException("It is not possible to rename columns on temp tables, therefore RenameColumn is not supported when store is in test mode.");
-
             store.RawExecute(
                 string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.FormatTableNameAndEscape(Tablename), OldColumnName, NewColumnName));
         }
