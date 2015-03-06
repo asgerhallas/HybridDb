@@ -30,7 +30,7 @@ namespace HybridDb.Tests.Migration.Commands
 
             new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store);
 
-            store.Schema.GetType(store.Schema.GetColumn("Entities", "SomeColumn").system_type_id).ShouldBe("int");
+            store.Schema.GetColumn("Entities", "SomeColumn").Type.ShouldBe(typeof(int));
         }
     }
 }

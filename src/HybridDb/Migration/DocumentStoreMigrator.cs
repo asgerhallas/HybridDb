@@ -2,10 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Migration;
 using HybridDb.Migration.Commands;
 
-namespace HybridDb
+namespace HybridDb.Migration
 {
     public class DocumentStoreMigrator
     {
@@ -25,28 +24,22 @@ namespace HybridDb
         {
             var commands = new List<SchemaMigrationCommand>();
 
-            foreach (var design in configuration.DocumentDesigns)
+            foreach (var design in configuration.DocumentDesigns.Select(x => x.Table).Distinct())
             {
-                if (commands.OfType<CreateTable>().Any(x => x.Table == design.Table))
+                if (!schema.TableExists(design.Name))
                 {
+                    commands.Add(new CreateTable(design));
                     continue;
                 }
 
-                if (schema.TableExists(design.Table.Name))
+                foreach (var column in design.Columns)
                 {
-                    foreach (var column in design.Table.Columns)
+                    var existingColumn = schema.GetColumn(design.Name, column.Name);
+                    if (existingColumn == null)
                     {
-                        var existingColumn = schema.GetColumn(design.Table.Name, column.Name);
-                        if (existingColumn == null)
-                        {
-                            commands.Add(new AddColumn(design.Table.Name, column));
-                        }
+                        commands.Add(new AddColumn(design.Name, column));
                     }
-
-                    continue;
                 }
-
-                commands.Add(new CreateTable(design.Table));
             }
 
             var tables = schema.GetTables();

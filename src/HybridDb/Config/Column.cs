@@ -20,6 +20,11 @@ namespace HybridDb.Config
 
         public string Name { get; protected set; }
         public Type Type { get; protected set; }
+        public int? Length { get; private set; }
+        public bool Nullable { get; set; }
+        public object DefaultValue { get; private set; }
+        public bool IsPrimaryKey { get; private set; }
+
         public SqlColumn SqlColumn { get; protected set; }
 
         public override string ToString()

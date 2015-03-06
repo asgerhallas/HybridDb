@@ -36,28 +36,29 @@ namespace HybridDb
 
         public Column GetColumn(string table, string column)
         {
+            Column2 c;
             if (tableMode == TableMode.UseRealTables)
             {
-                var c = store.RawQuery<Column2>(
+                c = store.RawQuery<Column2>(
                     string.Format(
                         "select * from sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column,
                         table)).FirstOrDefault();
-
-                throw new Exception();
+            }
+            else
+            {
+                c = store.RawQuery<Column2>(
+                        string.Format(
+                            "select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..{1}')",
+                            column, store.FormatTableName(table))).FirstOrDefault();
+                
             }
 
-            throw new Exception();
+            if (c == null)
+                return null;
 
-            store.RawQuery<Column2>(
-                    string.Format(
-                        "select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..{1}')",
-                        column, store.FormatTableName(table))).FirstOrDefault();
-        }
+            var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { c.system_type_id });
 
-        public string GetType(int id)
-        {
-            var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { id });
-            return rawQuery.FirstOrDefault();
+            return null;
         }
 
         public class Column2

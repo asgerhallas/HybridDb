@@ -8,9 +8,9 @@ namespace HybridDb.Commands
     {
         readonly Guid key;
         readonly object projections;
-        readonly Table table;
+        readonly DocumentTable table;
 
-        public InsertCommand(Table table, Guid key, object projections)
+        public InsertCommand(DocumentTable table, Guid key, object projections)
         {
             this.table = table;
             this.key = key;
