@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
@@ -9,12 +10,12 @@ namespace HybridDb.Tests.Migration
 {
     public class MigratorTests : HybridDbTests
     {
-        readonly FakeSchema db;
+        readonly FakeSchema schema;
         readonly DocumentStoreMigrator migrator;
 
         public MigratorTests()
         {
-            db = new FakeSchema();
+            schema = new FakeSchema();
             migrator = new DocumentStoreMigrator();
         }
 
@@ -23,7 +24,7 @@ namespace HybridDb.Tests.Migration
         {
             configuration.Document<Entity>();
 
-            var command = (CreateTable)migrator.FindSchemaChanges(db, configuration).Single();
+            var command = (CreateTable)migrator.FindSchemaChanges(schema, configuration).Single();
 
             command.Table.ShouldBe(GetTableFor<Entity>());
         }
@@ -31,12 +32,12 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindNewTablesWhenOthersExists()
         {
-            db.CreateTable("Entities");
+            schema.CreateTable(new DocumentTable("Entities"));
 
             configuration.Document<Entity>();
             configuration.Document<OtherEntity>();
 
-            var command = (CreateTable) migrator.FindSchemaChanges(db, configuration).Single();
+            var command = (CreateTable) migrator.FindSchemaChanges(schema, configuration).Single();
 
             command.Table.ShouldBe(GetTableFor<OtherEntity>());
         }
@@ -48,7 +49,7 @@ namespace HybridDb.Tests.Migration
             configuration.Document<AbstractEntity>();
             configuration.Document<MoreDerivedEntity1>();
 
-            var commands = migrator.FindSchemaChanges(db, configuration).Cast<CreateTable>().ToList();
+            var commands = migrator.FindSchemaChanges(schema, configuration).Cast<CreateTable>().ToList();
 
             commands.Count.ShouldBe(2);
             commands[0].Table.ShouldBe(GetTableFor<OtherEntity>());
@@ -58,9 +59,9 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindMissingTables()
         {
-            db.CreateTable("Entities");
+            schema.CreateTable(new Table("Entities"));
 
-            var command = (RemoveTable)migrator.FindSchemaChanges(db, configuration).Single();
+            var command = (RemoveTable)migrator.FindSchemaChanges(schema, configuration).Single();
 
             command.Tablename.ShouldBe("Entities");
             command.Unsafe.ShouldBe(true);
@@ -69,14 +70,15 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindNewColumn()
         {
-            db.CreateTable("Entities");
+            schema.CreateTable(new DocumentTable("Entities"));
 
-            configuration.Document<Entity>();
+            configuration.Document<Entity>()
+                .With(x => x.Number);
 
-            var commands = migrator.FindSchemaChanges(db, configuration).Cast<AddColumn>().ToList();
+            var commands = migrator.FindSchemaChanges(schema, configuration).Cast<AddColumn>().ToList();
 
             commands[0].Tablename.ShouldBe("Entities");
-            commands[0].Column.ShouldBe(GetTableFor<Entity>().IdColumn);
+            commands[0].Column.ShouldBe(GetTableFor<Entity>()["Number"]);
         }
 
         [Fact]
@@ -92,16 +94,16 @@ namespace HybridDb.Tests.Migration
 
         public class FakeSchema : ISchema
         {
-            readonly Dictionary<string, List<string>> tables;
+            readonly Dictionary<string, Table> tables;
 
             public FakeSchema()
             {
-                tables = new Dictionary<string, List<string>>();
+                tables = new Dictionary<string, Table>();
             }
 
-            public void CreateTable(string name)
+            public void CreateTable(Table table)
             {
-                tables.Add(name, new List<string>());
+                tables.Add(table.Name, table);
             }
 
             public bool TableExists(string name)
@@ -114,9 +116,9 @@ namespace HybridDb.Tests.Migration
                 return tables.Keys.ToList();
             }
 
-            public Schema.Column GetColumn(string tablename, string columnname)
+            public Column GetColumn(string tablename, string columnname)
             {
-                return null;
+                return tables[tablename].Columns.SingleOrDefault(x => x.Name == columnname);
             }
 
             public string GetType(int id)

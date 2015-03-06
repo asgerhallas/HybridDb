@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using HybridDb.Config;
 
 namespace HybridDb
 {
@@ -6,7 +7,7 @@ namespace HybridDb
     {
         bool TableExists(string name);
         List<string> GetTables();
-        Schema.Column GetColumn(string tablename, string columnname);
+        Column GetColumn(string tablename, string columnname);
         string GetType(int id);
     }
 }
