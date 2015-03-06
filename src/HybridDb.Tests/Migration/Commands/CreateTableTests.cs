@@ -1,4 +1,3 @@
-using System.Data;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
