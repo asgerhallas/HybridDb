@@ -14,12 +14,12 @@ namespace HybridDb.Tests.Migration.Commands
         public void RenamesTable(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities")).Execute(store);
+            new CreateTable(new Table("Entities", new Column("col1", typeof(int)))).Execute(store);
 
             new RenameTable("Entities", "OtherEntities").Execute(store);
 
             store.Schema.GetSchema().ShouldNotContainKey("Entities");
-            store.Schema.GetSchema().ShouldNotContainKey("OtherEntities");
+            store.Schema.GetSchema().ShouldContainKey("OtherEntities");
         }
 
 

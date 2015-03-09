@@ -7,8 +7,9 @@ namespace HybridDb.Config
         public Column(string name, Type type, SqlColumn sqlColumn)
         {
             Name = name;
-            Type = type;
+            Type = type.IsNullable() ? System.Nullable.GetUnderlyingType(type) : type;
             SqlColumn = sqlColumn;
+            Nullable = type.IsNullable();
         }
 
         public Column(string name, Type type)

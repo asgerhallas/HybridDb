@@ -31,7 +31,7 @@ namespace HybridDb.Tests.Migration.Commands
             new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store);
 
             store.Schema.GetSchema().ShouldContainKey("Entities");
-            store.Schema.GetSchema()["Entities"]["Col1"].Type.ShouldBe(typeof(int));
+            store.Schema.GetSchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
         }
 
         [Theory]

@@ -86,6 +86,23 @@ namespace HybridDb.Tests
         [Theory]
         [InlineData(TableMode.UseTempTables)]
         [InlineData(TableMode.UseRealTables)]
+        public void ColumnsHasPrimaryKeyInfo(TableMode mode)
+        {
+            Use(mode);
+
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, isPrimaryKey: true))).Execute(store);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, isPrimaryKey: false))).Execute(store);
+
+            var schema = store.Schema.GetSchema();
+
+            schema["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
+            schema["Entities1"]["SomeString"].IsPrimaryKey.ShouldBe(false);
+        }
+
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasDefaultValue(TableMode mode)
         {
             Use(mode);

@@ -14,7 +14,7 @@ namespace HybridDb.Tests.Migration.Commands
         public void RemovesTable(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities")).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store);
 
             new RemoveTable("Entities").Execute(store);
 
