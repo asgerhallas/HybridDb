@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HybridDb.Migration
 {
@@ -15,9 +16,21 @@ namespace HybridDb.Migration
 
         public Task Migrate(DocumentStore store)
         {
-            var commands = new SchemaDiffer().CalculateSchemaChanges(store.Schema, store.Configuration);
+            var migrations = provider.GetMigrations();
+
+            foreach (var migration in migrations)
+            {
+                foreach (var command in migration.Migrate())
+                {
+                    command.Execute(store);
+                }
+            }
+
+            var commands = differ.CalculateSchemaChanges(store.Schema, store.Configuration);
             foreach (var command in commands)
             {
+                if (command.Unsafe)
+
                 command.Execute(store);
             }
 
