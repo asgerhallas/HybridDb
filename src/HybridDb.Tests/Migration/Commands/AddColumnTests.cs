@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
