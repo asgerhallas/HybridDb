@@ -13,9 +13,18 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(DocumentStore store)
         {
-            store.RawExecute(string.Format("sp_rename {0}, {1};",
-                store.FormatTableNameAndEscape(OldTableName),
-                store.FormatTableNameAndEscape(NewTableName)));
+            if (store.TableMode == TableMode.UseTempTables)
+            {
+                store.RawExecute(string.Format("select * into {1} from {0}; drop table {0};",
+                    store.FormatTableNameAndEscape(OldTableName),
+                    store.FormatTableNameAndEscape(NewTableName)));
+            }
+            else
+            {
+                store.RawExecute(string.Format("sp_rename {0}, {1};",
+                    store.FormatTableNameAndEscape(OldTableName),
+                    store.FormatTableNameAndEscape(NewTableName)));
+            }
         }
     }
 }

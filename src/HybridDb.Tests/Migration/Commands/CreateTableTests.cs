@@ -41,7 +41,8 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)) { IsPrimaryKey = true })).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string), new SqlColumn(DbType.String, isPrimaryKey: true)))).Execute(store);
+            //new CreateTable(new Table("Entities", new Column("Col1", typeof(string)) { IsPrimaryKey = true })).Execute(store);
 
             store.Schema.GetSchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }

@@ -19,8 +19,11 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(DocumentStore store)
         {
-            store.RawExecute(
-                string.Format("sp_rename '{0}.{1}', '{2}', 'COLUMN'", store.FormatTableNameAndEscape(Table.Name), OldColumnName, NewColumnName));
+            store.RawExecute(string.Format("{0}sp_rename '{1}.{2}', '{3}', 'COLUMN'",
+                store.TableMode == TableMode.UseTempTables ? "tempdb.." : "",
+                store.FormatTableNameAndEscape(Table.Name),
+                OldColumnName,
+                NewColumnName));         
         }
     }
 }

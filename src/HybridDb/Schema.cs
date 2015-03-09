@@ -18,52 +18,62 @@ namespace HybridDb
 
         public Dictionary<string, Table> GetSchema()
         {
+            return tableMode == TableMode.UseRealTables 
+                ? GetRealTableSchema() 
+                : GetTempTablesSchema();
+        }
+
+        Dictionary<string, Table> GetTempTablesSchema()
+        {
             var schema = new Dictionary<string, Table>();
-            if (tableMode == TableMode.UseRealTables)
-            {
-                var realTables = store.RawQuery<string>("select table_name from information_schema.tables where table_type='BASE TABLE'").ToList();
-                foreach (var tableName in realTables)
-                {
-                    Func<string, string> getDefaultValue =
-                        columnName => store.RawQuery<string>(
-                            string.Format("select column_default from information_schema.columns where table_name='{0}' and column_name='{1}'", tableName, columnName)).SingleOrDefault();
-                     
-                    var columns = store.RawQuery<QueryColumn>(string.Format("select * from sys.columns where Object_ID = Object_ID(N'{0}')", tableName));
-                    schema.Add(tableName, new Table(tableName, columns.Select(x => Map(x, getDefaultValue))));
-                }            
-            }
 
             var tempTables = store.RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '#%'");
             foreach (var tableName in tempTables)
             {
                 var formattedTableName = tableName.Remove(tableName.Length - 12, 12).TrimEnd('_');
 
-                Func<string, string> getDefaultValue =
-                    columnName => store.RawQuery<string>(
-                        string.Format("select column_default from tempdb.information_schema.columns where table_name='{0}' and column_name='{1}'", tableName, columnName)).SingleOrDefault();
-
                 var columns = store.RawQuery<QueryColumn>(
                     string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
 
-                schema.Add(formattedTableName.TrimStart('#'), new Table(tableName, columns.Select(x => Map(x, getDefaultValue))));
-
+                schema.Add(
+                    formattedTableName.TrimStart('#'),
+                    new Table(tableName, columns.Select(column => Map(tableName, column, isTempTable: true))));
             }
             return schema;
         }
 
-        Column Map(QueryColumn column, Func<string, string> getDefaultValue)
+        Dictionary<string, Table> GetRealTableSchema()
         {
-            var defaultValue = getDefaultValue(column.Name);
-            var columnType = GetType(column.system_type_id);
+            var schema = new Dictionary<string, Table>();
+            var realTables = store.RawQuery<string>("select table_name from information_schema.tables where table_type='BASE TABLE'").ToList();
+            foreach (var tableName in realTables)
+            {
+                var columns = store.RawQuery<QueryColumn>(string.Format("select * from sys.columns where Object_ID = Object_ID(N'{0}')", tableName));
+                schema.Add(tableName, new Table(tableName, columns.Select(column => Map(tableName, column, isTempTable: false))));
+            }
+            return schema;
+        }
 
+        Column Map(string tableName, QueryColumn column, bool isTempTable)
+        {
+            var columnType = GetType(column.system_type_id);
             return new Column(column.Name, columnType)
             {
-                IsPrimaryKey = IsPrimaryKey(column.Name),
+                IsPrimaryKey = IsPrimaryKey(column.Name, isTempTable),
                 Length = column.max_length,
                 Nullable = column.is_nullable,
-                DefaultValue = SqlTypeMap.GetDefaultValue(columnType, defaultValue)
+                DefaultValue = SqlTypeMap.GetDefaultValue(columnType, GetDefaultValue(tableName, column, isTempTable))
 
             };
+        }
+
+        string GetDefaultValue(string tableName, QueryColumn column, bool isTempTable)
+        {
+            return store.RawQuery<string>(
+                string.Format("select column_default from {0}information_schema.columns where table_name='{1}' and column_name='{2}'",
+                    isTempTable ? "tempdb." : "",
+                    tableName,
+                    column.Name)).SingleOrDefault();
         }
 
         Type GetType(int id)
@@ -82,20 +92,21 @@ namespace HybridDb
             return firstMatchingType.NetType;
         }
 
-        bool IsPrimaryKey(string column)
+        bool IsPrimaryKey(string column, bool isTempTable)
         {
+            var dbPrefix = isTempTable ? "tempdb." : "";
             var sql =
-                @"SELECT K.TABLE_NAME,
-                  K.COLUMN_NAME,
-                  K.CONSTRAINT_NAME
-                  FROM tempdb.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C
-                  JOIN tempdb.INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K
-                  ON C.TABLE_NAME = K.TABLE_NAME
-                  AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG
-                  AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA
-                  AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
-                  WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY'
-                  AND K.COLUMN_NAME = '" + column + "'";
+                   "SELECT K.TABLE_NAME, "+
+                  "K.COLUMN_NAME, "+
+                  "K.CONSTRAINT_NAME " +
+                  string.Format("FROM {0}INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C ", dbPrefix) +
+                  string.Format("JOIN {0}INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K ", dbPrefix)+
+                  "ON C.TABLE_NAME = K.TABLE_NAME "+
+                  "AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG "+
+                  "AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA "+
+                  "AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME "+
+                  "WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY' "+
+                  "AND K.COLUMN_NAME = '" + column + "'";
 
             var isPrimaryKey = store.RawQuery<dynamic>(sql).Any();
             return isPrimaryKey;
