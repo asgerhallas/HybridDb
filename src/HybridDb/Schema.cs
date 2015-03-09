@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using HybridDb.Config;
 
 namespace HybridDb
@@ -17,72 +16,21 @@ namespace HybridDb
             this.tableMode = tableMode;
         }
 
-//        public bool TableExists(string name)
-//        {
-//            if (tableMode == TableMode.UseRealTables)
-//            {
-//                return store.RawQuery<dynamic>(string.Format("select OBJECT_ID('{0}') as Result", name)).First().Result != null;
-//            }
-        
-//            return store.RawQuery<dynamic>(string.Format("select OBJECT_ID('tempdb..{0}') as Result", store.FormatTableName(name))).First().Result != null;
-//        }
-
-//        public List<string> GetTables()
-//        {
-//            return tableMode == TableMode.UseRealTables
-//                ? store.RawQuery<string>("select table_name from information_schema.tables where table_type='BASE TABLE'").ToList()
-//                : store.RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '#%'")
-//                    .ToList();
-//        }
-
-//        public Column GetColumn(string table, string column)
-//        {
-//            if (tableMode == TableMode.UseRealTables)
-//            {
-//                var c = store.RawQuery<Column2>(
-//                    string.Format(
-//                        "select * from sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'{1}')", column,
-//                        table)).FirstOrDefault();
-
-//                throw new Exception();
-//            }
-
-//            throw new Exception();
-
-//            store.RawQuery<Column2>(
-//                    string.Format(
-//                        "select * from tempdb.sys.columns where Name = N'{0}' and Object_ID = Object_ID(N'tempdb..{1}')",
-//                        column, store.FormatTableName(table))).FirstOrDefault();
-//        }
-
-//        public string GetType(int id)
-//        {
-//            var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new {id});
-//            return rawQuery.FirstOrDefault();
-//        }
-
-        class TempColumn
-        {
-            public string Name { get; set; }
-            public int system_type_id { get; set; }
-            public int max_length { get; set; }
-        }
-
         public Dictionary<string, Table> GetSchema()
         {
-            return new Dictionary<string, Table>();
             var schema = new Dictionary<string, Table>();
             if (tableMode == TableMode.UseRealTables)
             {
                 var realTables = store.RawQuery<string>("select table_name from information_schema.tables where table_type='BASE TABLE'").ToList();
                 foreach (var tableName in realTables)
                 {
-                    var columns = store.RawQuery<TempColumn>(
-                        string.Format("select * where Object_ID = Object_ID(N'{0}')", tableName));
-                    //schema.Add(tableName, new Table(tableName, columns));
-                }
-            
-                throw new Exception();
+                    Func<string, string> getDefaultValue =
+                        columnName => store.RawQuery<string>(
+                            string.Format("select column_default from information_schema.columns where table_name='{0}' and column_name='{1}'", tableName, columnName)).SingleOrDefault();
+                     
+                    var columns = store.RawQuery<QueryColumn>(string.Format("select * from sys.columns where Object_ID = Object_ID(N'{0}')", tableName));
+                    schema.Add(tableName, new Table(tableName, columns.Select(x => Map(x, getDefaultValue))));
+                }            
             }
 
             var tempTables = store.RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '#%'");
@@ -90,23 +38,31 @@ namespace HybridDb
             {
                 var formattedTableName = tableName.Remove(tableName.Length - 12, 12).TrimEnd('_');
 
-                var columns = store.RawQuery<TempColumn>(
-                    string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", tableName));
-                
-                schema.Add(tableName, new Table(tableName, columns.Select(Map)));
+                Func<string, string> getDefaultValue =
+                    columnName => store.RawQuery<string>(
+                        string.Format("select column_default from tempdb.information_schema.columns where table_name='{0}' and column_name='{1}'", tableName, columnName)).SingleOrDefault();
+
+                var columns = store.RawQuery<QueryColumn>(
+                    string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
+
+                schema.Add(formattedTableName.TrimStart('#'), new Table(tableName, columns.Select(x => Map(x, getDefaultValue))));
 
             }
             return schema;
         }
 
-        Column Map(TempColumn column)
+        Column Map(QueryColumn column, Func<string, string> getDefaultValue)
         {
-            return new Column(column.Name, GetType(column.system_type_id))
+            var defaultValue = getDefaultValue(column.Name);
+            var columnType = GetType(column.system_type_id);
+
+            return new Column(column.Name, columnType)
             {
                 IsPrimaryKey = IsPrimaryKey(column.Name),
                 Length = column.max_length,
-                //Nullable = 
-                //DefaultValue = 
+                Nullable = column.is_nullable,
+                DefaultValue = SqlTypeMap.GetDefaultValue(columnType, defaultValue)
+
             };
         }
 
@@ -114,10 +70,16 @@ namespace HybridDb
         {
             //https://msdn.microsoft.com/en-us/library/cc716729.aspx
             var rawQuery = store.RawQuery<string>("select name from sys.types where system_type_id = @id", new { id });
+            
             var shortName = rawQuery.FirstOrDefault();
+            if (shortName == null)
+                throw new ArgumentOutOfRangeException(string.Format("Found no matching sys.type for typeId '{0}'.", id));
 
-
-            return null;
+            var firstMatchingType = SqlTypeMap.ForSqlType(shortName).FirstOrDefault();
+            if (firstMatchingType == null) 
+                throw new ArgumentOutOfRangeException(string.Format("Found no matching .NET type for typeName type '{0}'.", shortName));
+           
+            return firstMatchingType.NetType;
         }
 
         bool IsPrimaryKey(string column)
@@ -137,6 +99,14 @@ namespace HybridDb
 
             var isPrimaryKey = store.RawQuery<dynamic>(sql).Any();
             return isPrimaryKey;
+        }
+
+        class QueryColumn
+        {
+            public string Name { get; set; }
+            public int system_type_id { get; set; }
+            public int max_length { get; set; }
+            public bool is_nullable { get; set; }
         }
     }
 }
