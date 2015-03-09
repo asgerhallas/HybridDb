@@ -130,7 +130,8 @@ namespace HybridDb.Tests.Performance
         {
             public SystemModifierFixture()
             {
-                using (var store = DocumentStore.ForTestingWithTempTables(
+                using (var store = DocumentStore.ForTesting(
+                    TableMode.UseTempTables,
                     configurator: new LambdaHybridDbConfigurator(c =>
                         c.Document<Entity>()
                             .With(x => x.SomeData)

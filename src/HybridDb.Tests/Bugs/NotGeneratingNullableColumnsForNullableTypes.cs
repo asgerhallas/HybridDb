@@ -9,8 +9,9 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void NullableGuidGetsNullableColumnType()
         {
-            var store = DocumentStore.ForTestingWithTempTables(configurator:
-                new LambdaHybridDbConfigurator(config => config.Document<Entity>().With(x => x.SomeNullableGuid)));
+            var store = DocumentStore.ForTesting(
+                TableMode.UseTempTables,
+                configurator: new LambdaHybridDbConfigurator(config => config.Document<Entity>().With(x => x.SomeNullableGuid)));
 
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeNullableGuid"];
             column.SqlColumn.Nullable.ShouldBe(true);

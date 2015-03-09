@@ -1,26 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 
 namespace HybridDb.Migration
 {
-    public class Migrator
-    {
-        public Task Migrate(DocumentStore store)
-        {
-            var commands = new SchemaDiffer().CalculateSchemaChanges(store.Schema, store.Configuration);
-            foreach (var command in commands)
-            {
-                command.Execute(store);
-            }
-
-            return Task.FromResult(1);
-        }
-    }
-
-    public class SchemaDiffer
+    public class SchemaDiffer : ISchemaDiffer
     {
         public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(ISchema db, Configuration configuration)
         {

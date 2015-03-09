@@ -777,13 +777,14 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUseGlobalTempTables()
         {
-            using (var globalStore1 = DocumentStore.ForTestingWithGlobalTempTables(
+            using (var globalStore1 = DocumentStore.ForTesting(
+                TableMode.UseGlobalTempTables,
                 configurator: new LambdaHybridDbConfigurator(x => x.Document<Case>())))
             {
                 var id = Guid.NewGuid();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTestingWithGlobalTempTables())
+                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables))
                 {
                     globalStore2.Configuration.Document<Case>();
                     var result = globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);

@@ -18,7 +18,7 @@ namespace HybridDb.MigrationRunner
                 var connectionString = ConfigurationManager.ConnectionStrings["HybridDBConnectionString"].ConnectionString;
                 var store = (DocumentStore)DocumentStore.Create(connectionString, new LambdaHybridDbConfigurator(x => { }));
 
-                var runner = new Runner(store);
+                var runner = new Runner();
 
                 var registration = new RegistrationBuilder();
                 registration.ForTypesDerivedFrom<Migration.Migration>().Export<Migration.Migration>();
@@ -30,7 +30,7 @@ namespace HybridDb.MigrationRunner
                 while (true)
                 {
                     catalog.Refresh();
-                    runner.Run();
+                    //runner.Run();
                     Thread.Sleep(1000);
                 }
             }

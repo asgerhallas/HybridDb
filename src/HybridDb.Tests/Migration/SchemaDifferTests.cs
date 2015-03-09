@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migration;
@@ -9,12 +10,49 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    public class MigratorTests : HybridDbTests
+    public class MigrationRunnerTests : HybridDbTests
+    {
+        [Fact]
+        public void RunsProvidedSchemaMigrations()
+        {
+            var runner = new MigrationRunner(
+                new StaticMigrationProvider(new _001_Something()),
+                new FakeSchemaDiffer());
+
+            runner.Migrate(store);
+
+            var tables = store.Schema.GetSchema();
+            tables.ShouldContainKey("Testing");
+            tables["Testing"]["Id"].ShouldNotBe(null);
+            tables["Testing"]["Noget"].ShouldNotBe(null);
+        }
+
+        public class _001_Something : HybridDb.Migration.Migration
+        {
+            public _001_Something() : base(1) { }
+
+            public override IEnumerable<MigrationCommand> Migrate()
+            {
+                yield return new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true))));
+                yield return new AddColumn("Testing", new Column("Noget", typeof(int)));
+            }
+        }
+
+        public class FakeSchemaDiffer : ISchemaDiffer
+        {
+            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(ISchema db, Configuration configuration)
+            {
+                return new List<SchemaMigrationCommand>();
+            }
+        }
+    }
+
+    public class SchemaDifferTests : HybridDbTests
     {
         readonly FakeSchema schema;
         readonly SchemaDiffer migrator;
 
-        public MigratorTests()
+        public SchemaDifferTests()
         {
             schema = new FakeSchema();
             migrator = new SchemaDiffer();

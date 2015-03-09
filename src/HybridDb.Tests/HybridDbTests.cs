@@ -43,7 +43,7 @@ namespace HybridDb.Tests
             if (factory != null && factory.IsValueCreated)
                 throw new InvalidOperationException("Cannot change table mode when store is already initialized.");
 
-            factory = new Lazy<DocumentStore>(() => Using(DocumentStore.ForTestingWithTempTables(configurator: this)));
+            factory = new Lazy<DocumentStore>(() => Using(DocumentStore.ForTesting(TableMode.UseTempTables, configurator: this)));
         }
 
         protected void UseRealTables()
@@ -65,7 +65,7 @@ namespace HybridDb.Tests
                         END", uniqueDbName));
                 }
 
-                var realTableStore = Using(DocumentStore.ForTestingWithRealTables("data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName, this));
+                var realTableStore = Using(DocumentStore.ForTesting(TableMode.UseRealTables, "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName, this));
 
                 disposables.Add(() =>
                 {

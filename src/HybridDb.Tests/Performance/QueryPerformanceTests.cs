@@ -71,7 +71,9 @@ namespace HybridDb.Tests.Performance
             {
                 const string connectionString = "data source=.;Integrated Security=True";
 
-                store = DocumentStore.ForTestingWithTempTables(connectionString,
+                store = DocumentStore.ForTesting(
+                    TableMode.UseTempTables,
+                    connectionString,
                     new LambdaHybridDbConfigurator(c =>
                         c.Document<Entity>()
                             .With(x => x.SomeData)

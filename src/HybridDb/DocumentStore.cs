@@ -45,32 +45,18 @@ namespace HybridDb
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
-            var store = new DocumentStore(connectionString, configurator.Configure(), TableMode.UseRealTables, testMode: false);
-            new Migrator().Migrate(store);
+            var configuration = configurator.Configure();
+            var store = new DocumentStore(connectionString, configuration, TableMode.UseRealTables, testMode: false);
+            new MigrationRunner(configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
             return store;
         }
 
-        public static DocumentStore ForTestingWithRealTables(string connectionString = null, IHybridDbConfigurator configurator = null)
+        public static DocumentStore ForTesting(TableMode mode, string connectionString = null, IHybridDbConfigurator configurator = null)
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
-            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseRealTables, testMode: true);
-            new Migrator().Migrate(store).Wait();
-            return store;
-        }
-
-        public static DocumentStore ForTestingWithGlobalTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
-        {
-            configurator = configurator ?? new NullHybridDbConfigurator();
-            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseGlobalTempTables, testMode: true);
-            new Migrator().Migrate(store).Wait();
-            return store;
-        }
-
-        public static DocumentStore ForTestingWithTempTables(string connectionString = null, IHybridDbConfigurator configurator = null)
-        {
-            configurator = configurator ?? new NullHybridDbConfigurator();
-            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configurator.Configure(), TableMode.UseTempTables, testMode: true);
-            new Migrator().Migrate(store).Wait();
+            var configuration = configurator.Configure();
+            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configuration, mode, testMode: true);
+            new MigrationRunner(configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
             return store;
         }
 

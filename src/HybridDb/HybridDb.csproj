@@ -71,6 +71,11 @@
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
+    <Compile Include="Migration\IMigrationProvider.cs" />
+    <Compile Include="Migration\ISchemaDiffer.cs" />
+    <Compile Include="Migration\Migration.cs" />
+    <Compile Include="Migration\StaticMigrationProvider.cs" />
+    <Compile Include="Migration\MigrationRunner.cs" />
     <Compile Include="Migration\SchemaDiffer.cs" />
     <Compile Include="ISchema.cs" />
     <Compile Include="LinqEx.cs" />
@@ -117,7 +122,6 @@
     <Compile Include="ManagedConnection.cs" />
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migration\DocumentMigrator.cs" />
-    <Compile Include="Migration\Migration.cs" />
     <Compile Include="Migration\SchemaMigrationCommand.cs" />
     <Compile Include="Migration\SchemaMigrator.cs" />
     <Compile Include="QueryStats.cs" />

@@ -81,7 +81,7 @@
     <Compile Include="Migration\Commands\RenameTableTests.cs" />
     <Compile Include="Migration\DocumentMigratorTests.cs" />
     <Compile Include="HybridDbTests.cs" />
-    <Compile Include="Migration\MigratorTests.cs" />
+    <Compile Include="Migration\SchemaDifferTests.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />
@@ -102,10 +102,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj">
-      <Project>{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}</Project>
-      <Name>HybridDb.MigrationRunner</Name>
-    </ProjectReference>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj">
       <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
       <Name>HybridDb</Name>

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using HybridDb.Logging;
+using HybridDb.Migration;
 
 namespace HybridDb.Config
 {
@@ -15,8 +16,9 @@ namespace HybridDb.Config
             DocumentDesigns = new List<DocumentDesign>();
             DocumentDesignsCache = new ConcurrentDictionary<Type, DocumentDesign>();
 
-            Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
+            Serializer = new DefaultBsonSerializer();
+            MigrationProvider = new StaticMigrationProvider();
 
             var metadata = new Table("HybridDb");
             metadata.Register(new Column("Table", typeof(string), new SqlColumn(DbType.AnsiStringFixedLength, 255)));
@@ -28,6 +30,7 @@ namespace HybridDb.Config
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
+        public IMigrationProvider MigrationProvider { get; private set; }
 
         public ConcurrentDictionary<string, Table> Tables { get; private set; }
         public List<DocumentDesign> DocumentDesigns { get; private set; }
@@ -114,10 +117,14 @@ namespace HybridDb.Config
             Logger = logger;
         }
 
+        public void UseMigrations(IMigrationProvider provider)
+        {
+            MigrationProvider = provider;
+        }
+
         DocumentTable AddTable(string tablename)
         {
             return (DocumentTable)Tables.GetOrAdd(tablename, name => new DocumentTable(name));
         }
-
     }
 }
