@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            var table = new Table("Entities");
+            var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
             new CreateTable(table).Execute(store);
             new AddColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
             
@@ -34,7 +34,7 @@ namespace HybridDb.Tests.Migration.Commands
         }
 
         [Fact]
-        public void DoesNotRequireReprojection()
+        public void DoesNotRequireReProjection()
         {
             new RemoveColumn(new Table("Entities"), "Col").RequiresReprojection.ShouldBe(false);
         }
