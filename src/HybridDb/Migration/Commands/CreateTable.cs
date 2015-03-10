@@ -29,6 +29,7 @@ namespace HybridDb.Migration.Commands
             foreach (var column in Table.Columns)
             {
                 var sqlBuilder = new SqlBuilder()
+                    .Append(i > 0, ",")
                     .Append(database.Escape(column.Name))
                     .Append(GetColumnSqlType(column, i.ToString()));
 
