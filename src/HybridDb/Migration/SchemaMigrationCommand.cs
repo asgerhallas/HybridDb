@@ -26,16 +26,16 @@ namespace HybridDb.Migration
 
         protected SqlBuilder GetColumnSqlType(Column column, string defaultValuePostfix = "")
         {
-            if (column.SqlColumn.Type == null)
+            if (column.Type == null)
                 throw new ArgumentException(string.Format("Column {0} must have a type", column.Name));
 
             var sql = new SqlBuilder();
 
-            sql.Append(new SqlParameter { DbType = (DbType)column.SqlColumn.Type }.SqlDbType.ToString());
-            sql.Append(column.SqlColumn.Length != null, "(" + (column.SqlColumn.Length == Int32.MaxValue ? "MAX" : column.SqlColumn.Length.ToString()) + ")");
-            sql.Append(column.SqlColumn.Nullable, "NULL").Or("NOT NULL");
-            sql.Append(column.SqlColumn.DefaultValue != null, "DEFAULT quotename(" + column.SqlColumn.DefaultValue + ", '''')");
-            sql.Append(column.SqlColumn.IsPrimaryKey, " PRIMARY KEY");
+            sql.Append(new SqlParameter { DbType = SqlTypeMap.GetDbType(column.Type) }.SqlDbType.ToString());
+            sql.Append(column.Length != null, "(" + (column.Length == Int32.MaxValue ? "MAX" : column.Length.ToString()) + ")");
+            sql.Append(column.Nullable, "NULL").Or("NOT NULL");
+            sql.Append(column.DefaultValue != null, "DEFAULT quotename(" + column.DefaultValue + ", '''')");       
+            sql.Append(column.IsPrimaryKey, " PRIMARY KEY");
 
             return sql;
         }

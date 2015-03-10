@@ -40,11 +40,11 @@ namespace HybridDb.Commands
                 .ToString();
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
-            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, table.IdColumn.SqlColumn.Type, null);
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, SqlTypeMap.GetDbType(table.IdColumn.Type), null);
 
             if (!lastWriteWins)
             {
-                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, table.EtagColumn.SqlColumn.Type, null);
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, SqlTypeMap.GetDbType(table.EtagColumn.Type), null);
             }
 
             return new PreparedDatabaseCommand

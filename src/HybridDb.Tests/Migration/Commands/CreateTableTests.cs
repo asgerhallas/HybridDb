@@ -42,7 +42,7 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string), new SqlColumn(DbType.String, isPrimaryKey: true)))).Execute(database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string), isPrimaryKey: true))).Execute(database);
 
             database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }
@@ -61,11 +61,11 @@ namespace HybridDb.Tests.Migration.Commands
             Use(mode);
 
             new CreateTable(new Table("Entities1",
-                new Column("SomeNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: null)),
-                new Column("SomeOtherNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: 42)),
-                new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "peter")),
-                new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 666)),
-                new Column("SomeDateTime", typeof(DateTime), new SqlColumn(DbType.DateTime2, defaultValue: new DateTime(1999, 12, 24))))).Execute(database);
+                new Column("SomeNullableInt", typeof(int), nullable: true, defaultValue: null),
+                new Column("SomeOtherNullableInt", typeof(int),  nullable: true, defaultValue: 42),
+                new Column("SomeString", typeof(string),  defaultValue: "peter"),
+                new Column("SomeInt", typeof(int),  defaultValue: 666),
+                new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24)))).Execute(database);
 
             var schema = database.QuerySchema();
 

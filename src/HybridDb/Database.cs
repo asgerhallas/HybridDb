@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
@@ -79,7 +80,7 @@ namespace HybridDb
                 connection.Connection.Execute(sql, parameters);
                 connection.Complete();
             }
-        }
+        }      
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
         {
@@ -191,14 +192,9 @@ namespace HybridDb
         Column Map(string tableName, QueryColumn column, bool isTempTable)
         {
             var columnType = GetType(column.system_type_id);
-            return new Column(column.Name, columnType)
-            {
-                IsPrimaryKey = IsPrimaryKey(column.Name, isTempTable),
-                Length = column.max_length,
-                Nullable = column.is_nullable,
-                DefaultValue = SqlTypeMap.GetDefaultValue(columnType, GetDefaultValue(tableName, column, isTempTable))
-
-            };
+            return new Column(column.Name, columnType, length: column.max_length, nullable: column.is_nullable,
+                defaultValue: SqlTypeMap.GetDefaultValue(columnType, GetDefaultValue(tableName, column, isTempTable)),
+                isPrimaryKey: IsPrimaryKey(column.Name, isTempTable));
         }
 
         string GetDefaultValue(string tableName, QueryColumn column, bool isTempTable)

@@ -6,7 +6,8 @@ namespace HybridDb.Config
     {
         public IndexTable(string name) : base(name)
         {
-            TableReferenceColumn = new SystemColumn("TableReference", typeof(string), new SqlColumn(DbType.String, 255));
+            //TODO: previously new SqlColumn(DbType.String, 255)...how to use fixed length?
+            TableReferenceColumn = new SystemColumn("TableReference", typeof(string));
             Register(TableReferenceColumn);
         }
 

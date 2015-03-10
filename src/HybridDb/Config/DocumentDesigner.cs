@@ -36,7 +36,7 @@ namespace HybridDb.Config
 
                 if (!nullCheckInjector.CanBeTrustedToNeverReturnNull)
                 {
-                    column.SqlColumn.Nullable = true;
+                    column.Nullable = true;
                 }
 
                 compiledProjector = Compile(name, nullCheckedProjector);
@@ -60,7 +60,7 @@ namespace HybridDb.Config
             {
                 if (design.Parent != null)
                 {
-                    column.SqlColumn.Nullable = true;
+                    column.Nullable = true;
                 }
 
                 design.Projections.Add(column, newProjection);
