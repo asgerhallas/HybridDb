@@ -6,7 +6,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
 {
-    public class RenameTableTests : HybridDbDatabaseTests
+    public class RenameTableTests : HybridDbTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]

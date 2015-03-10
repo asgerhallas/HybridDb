@@ -8,7 +8,7 @@ using Shouldly;
 
 namespace HybridDb.Tests
 {
-    public abstract class HybridDbDatabaseTests : HybridDbConfigurator, IDisposable
+    public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
     {
         readonly ConsoleLogger logger;
         readonly List<Action> disposables;
@@ -16,7 +16,7 @@ namespace HybridDb.Tests
         protected string connectionString;
         protected Database database;
 
-        protected HybridDbDatabaseTests()
+        protected HybridDbTests()
         {
             logger = new ConsoleLogger(LogLevel.Debug, new LoggingColors());
             disposables = new List<Action>();

@@ -9,13 +9,14 @@ namespace HybridDb.Config
         readonly Dictionary<string, Column> columns;
 
         public Table(string name) : this(name, Enumerable.Empty<Column>()) {}
-
         public Table(string name, params Column[] columns)  : this(name, columns.ToList()) { }
 
         public Table(string name, IEnumerable<Column> columns)
         {
             if (name.EndsWith("_"))
+            {
                 throw new NotSupportedException("A table name can not end with '_'.");
+            }
 
             Name = name;
 
@@ -49,6 +50,11 @@ namespace HybridDb.Config
         public void Register(Column column)
         {
             columns.Add(column.Name, column);
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }

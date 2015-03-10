@@ -10,29 +10,25 @@ namespace HybridDb.Config
 {
     public class Configuration
     {
+        readonly ConcurrentDictionary<Type, DocumentDesign> documentDesignsCache;
+
         internal Configuration()
         {
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new List<DocumentDesign>();
-            DocumentDesignsCache = new ConcurrentDictionary<Type, DocumentDesign>();
+            documentDesignsCache = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
             Serializer = new DefaultBsonSerializer();
             MigrationProvider = new StaticMigrationProvider();
-
-            var metadata = new Table("HybridDb");
-            metadata.Register(new Column("SchemaVersion", typeof(int), new SqlColumn(DbType.Int32)));
-
-            Tables.TryAdd(metadata.Name, metadata);
         }
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
         public IMigrationProvider MigrationProvider { get; private set; }
 
-        public ConcurrentDictionary<string, Table> Tables { get; private set; }
-        public List<DocumentDesign> DocumentDesigns { get; private set; }
-        public ConcurrentDictionary<Type, DocumentDesign> DocumentDesignsCache { get; private set; }
+        internal ConcurrentDictionary<string, Table> Tables { get; private set; }
+        internal List<DocumentDesign> DocumentDesigns { get; private set; }
 
         static string GetTableNameByConventionFor(Type type)
         {
@@ -91,7 +87,7 @@ namespace HybridDb.Config
         public DocumentDesign TryGetDesignFor(Type type)
         {
             DocumentDesign design;
-            if (DocumentDesignsCache.TryGetValue(type, out design))
+            if (documentDesignsCache.TryGetValue(type, out design))
                 return design;
 
             var match = DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType));
@@ -99,7 +95,7 @@ namespace HybridDb.Config
             // must never associate a type to null in the cache, the design might be added later
             if (match != null)
             {
-                DocumentDesignsCache.TryAdd(type, match);
+                documentDesignsCache.TryAdd(type, match);
             }
 
             return match;

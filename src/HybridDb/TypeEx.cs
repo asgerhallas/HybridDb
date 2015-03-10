@@ -55,7 +55,7 @@ namespace HybridDb
 
         public static bool IsNullable(this Type type)
         {
-            return Nullable.GetUnderlyingType(type) != null;
+            return type != null && Nullable.GetUnderlyingType(type) != null;
         }
 
         public static bool CanBeNull(this Type type)

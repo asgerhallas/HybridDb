@@ -11,7 +11,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    public class MigrationRunnerTests : HybridDbDatabaseTests
+    public class MigrationRunnerTests : HybridDbTests
     {
         readonly ConsoleLogger logger;
 

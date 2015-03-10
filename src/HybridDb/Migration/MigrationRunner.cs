@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Config;
 using HybridDb.Logging;
+using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migration
 {
@@ -22,6 +24,9 @@ namespace HybridDb.Migration
 
         public Task Migrate(Database database, Configuration configuration)
         {
+            var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int), new SqlColumn(DbType.Int32)));
+            configuration.Tables.TryAdd(metadata.Name, metadata);
+
             using (var tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
             {
                 // abstract out so version is store independent

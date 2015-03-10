@@ -8,7 +8,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    public class SchemaDifferTests : HybridDbDatabaseTests
+    public class SchemaDifferTests : HybridDbTests
     {
         readonly List<Table> schema;
         readonly SchemaDiffer migrator;
@@ -52,8 +52,8 @@ namespace HybridDb.Tests.Migration
             var commands = migrator.CalculateSchemaChanges(schema, configuration).Cast<CreateTable>().ToList();
 
             commands.Count.ShouldBe(2);
-            commands[0].Table.ShouldBe(GetTableFor<OtherEntity>());
-            commands[1].Table.ShouldBe(GetTableFor<AbstractEntity>());
+            commands.ShouldContain(x => x.Table == GetTableFor<OtherEntity>());
+            commands.ShouldContain(x => x.Table == GetTableFor<AbstractEntity>());
         }
 
         [Fact]

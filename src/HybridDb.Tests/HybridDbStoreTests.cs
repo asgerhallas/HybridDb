@@ -2,7 +2,7 @@ using System;
 
 namespace HybridDb.Tests
 {
-    public abstract class HybridDbStoreTests : HybridDbDatabaseTests
+    public abstract class HybridDbStoreTests : HybridDbTests
     {
         readonly Lazy<DocumentStore> factory;
 

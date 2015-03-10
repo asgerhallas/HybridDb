@@ -6,7 +6,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests
 {
-    public class SchemaTests : HybridDbDatabaseTests
+    public class SchemaTests : HybridDbTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]

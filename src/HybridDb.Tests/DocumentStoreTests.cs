@@ -843,16 +843,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CreatesStandardMetadataTable()
-        {
-            throw new Exception();
-            //store.TableExists("HybridDb").ShouldBe(true);
-            //store.GetColumn("HybridDb", "Table");
-            //store.GetColumn("HybridDb", "SchemaVersion");
-            //store.GetColumn("HybridDb", "DocumentVersion");
-        }
-
-        [Fact]
         public void UtilityColsAreRemovedFromQueryResults()
         {
             Document<Entity>();
