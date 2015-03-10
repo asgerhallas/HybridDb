@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
@@ -74,8 +76,8 @@ namespace HybridDb.Tests.Migration.Commands
         public void CanAddColumnWithDefaultValue(TableMode mode)
         {
             Use(mode);
-
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
+
             new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: null))).Execute(database);
             new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: 42))).Execute(database);
             new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "peter"))).Execute(database);
@@ -89,6 +91,30 @@ namespace HybridDb.Tests.Migration.Commands
             schema["Entities1"]["SomeString"].DefaultValue.ShouldBe("peter");
             schema["Entities1"]["SomeInt"].DefaultValue.ShouldBe(666);
             schema["Entities1"]["SomeDateTime"].DefaultValue.ShouldBe(new DateTime(1999, 12, 24));
+        }
+
+        [Fact]
+        public void ShouldNotAllowSqlInjection()
+        {
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "'; DROP TABLE #Entities1; SELECT '"))).Execute(database);
+
+            database.QuerySchema().ShouldContainKey("Entities1");
+        }
+
+        [Fact]
+        public void FactMethodName()
+        {
+            var defaultValueThatOriginatesFromAnEvilSource = "'; DROP TABLE #Entities; SELECT '";
+            defaultValueThatOriginatesFromAnEvilSource = "'42'";
+
+            var quoteIdentifier = new SqlCommandBuilder().QuoteIdentifier(defaultValueThatOriginatesFromAnEvilSource);
+
+            database.RawExecute(string.Format("create table #Entities (somecolumn int default {0})", quoteIdentifier));
+
+            var querySchema = database.QuerySchema();
+
+            //database.RawExecute("create table #Entities (somecolumn int default @var)", new{ var = defaultValueThatOriginatesFromAnEvilSource });
         }
 
         [Fact]
