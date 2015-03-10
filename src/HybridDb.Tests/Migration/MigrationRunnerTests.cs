@@ -11,8 +11,8 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    //tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable});
-    public class MigrationRunnerTests : HybridDbTests
+    
+    public class MigrationRunnerTests : HybridDbStoreTests
     {
         readonly ConsoleLogger logger;
 
@@ -28,7 +28,7 @@ namespace HybridDb.Tests.Migration
 
             runner.Migrate(store);
 
-            store.Schema.GetSchema().ShouldBeEmpty();
+            database.QuerySchema().ShouldBeEmpty();
         }
 
         [Fact]
@@ -44,7 +44,7 @@ namespace HybridDb.Tests.Migration
 
             runner.Migrate(store);
 
-            var tables = store.Schema.GetSchema();
+            var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
             tables["Testing"]["Id"].ShouldNotBe(null);
             tables["Testing"]["Noget"].ShouldNotBe(null);
@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Migration
 
             runner.Migrate(store);
 
-            var tables = store.Schema.GetSchema();
+            var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
             tables["Testing"]["Id"].ShouldNotBe(null);
             tables["Testing"]["Noget"].ShouldNotBe(null);
@@ -87,7 +87,7 @@ namespace HybridDb.Tests.Migration
             var command = new CountingCommand();
 
             var runner = new MigrationRunner(
-                logger, 
+                logger,
                 new StaticMigrationProvider(
                     new InlineMigration(1, command)),
                 new FakeSchemaDiffer());
@@ -101,18 +101,22 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void RollsBackOnExceptions()
         {
-            var command = new CountingCommand();
+            try
+            {
+                var runner = new MigrationRunner(
+                    logger,
+                    new StaticMigrationProvider(),
+                    new FakeSchemaDiffer(
+                        new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
+                        new ThrowingCommand()));
+                runner.Migrate(store);
 
-            var runner = new MigrationRunner(
-                logger,
-                new StaticMigrationProvider(
-                    new InlineMigration(1, command)),
-                new FakeSchemaDiffer());
+            }
+            catch (Exception)
+            {
+            }
 
-            runner.Migrate(store);
-            runner.Migrate(store);
-
-            command.NumberOfTimesCalled.ShouldBe(1);
+            database.QuerySchema().ShouldNotContainKey("Testing");
         }
 
 
@@ -146,16 +150,19 @@ namespace HybridDb.Tests.Migration
             }
         }
 
-        public class UnsafeThrowingCommand : SchemaMigrationCommand
+        public class ThrowingCommand : SchemaMigrationCommand
+        {
+            public override void Execute(Database database)
+            {
+                throw new InvalidOperationException();
+            }
+        }
+
+        public class UnsafeThrowingCommand : ThrowingCommand
         {
             public UnsafeThrowingCommand()
             {
                 Unsafe = true;
-            }
-
-            public override void Execute(DocumentStore store)
-            {
-                throw new InvalidOperationException();
             }
         }
 
@@ -163,7 +170,7 @@ namespace HybridDb.Tests.Migration
         {
             public int NumberOfTimesCalled { get; private set; }
 
-            public override void Execute(DocumentStore store)
+            public override void Execute(Database database)
             {
                 NumberOfTimesCalled++;
             }

@@ -69,9 +69,6 @@ namespace HybridDb
             var query = new Query<T>(new QueryProvider<T>(this, design))
                 .Where(x => x.Column<string>("Discriminator").In(discriminators));
 
-            //if (design.DocumentType != typeof (T))
-            //    query = query.AsProjection<T>();
-
             return query;
         }
 

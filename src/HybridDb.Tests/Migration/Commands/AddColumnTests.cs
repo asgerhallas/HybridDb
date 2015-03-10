@@ -8,7 +8,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
 {
-    public class AddColumnTests : HybridDbTests
+    public class AddColumnTests : HybridDbStoreTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
@@ -16,11 +16,11 @@ namespace HybridDb.Tests.Migration.Commands
         public void AddsColumn(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(database);
 
-            new AddColumn("Entities", new Column("Col2", typeof (int))).Execute(store);
+            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(database);
 
-            store.Schema.GetSchema()["Entities"]["Col2"].ShouldNotBe(null);
+            database.QuerySchema()["Entities"]["Col2"].ShouldNotBe(null);
         }
 
         [Theory]
@@ -33,12 +33,12 @@ namespace HybridDb.Tests.Migration.Commands
         public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
             Use(TableMode.UseRealTables);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(database);
 
-            new AddColumn("Entities", new Column("Col2", type)).Execute(store);
+            new AddColumn("Entities", new Column("Col2", type)).Execute(database);
 
-            store.Schema.GetSchema()["Entities"]["Col2"].Type.ShouldBe(type);
-            store.Schema.GetSchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
+            database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(type);
+            database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
         }
 
         [Theory]
@@ -47,12 +47,12 @@ namespace HybridDb.Tests.Migration.Commands
         public void SetsColumnAsNullableAndUsesUnderlyingTypeWhenNullable(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(database);
 
-            new AddColumn("Entities", new Column("Col2", typeof(int?))).Execute(store);
+            new AddColumn("Entities", new Column("Col2", typeof(int?))).Execute(database);
 
-            store.Schema.GetSchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
-            store.Schema.GetSchema()["Entities"]["Col2"].Nullable.ShouldBe(true);
+            database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
+            database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(true);
         }
 
         [Theory]
@@ -62,27 +62,27 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, isPrimaryKey: true))).Execute(store);
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, isPrimaryKey: true))).Execute(database);
 
-            store.Schema.GetSchema()["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
+            database.QuerySchema()["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
         }
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        //[InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.UseRealTables)]
         public void CanAddColumnWithDefaultValue(TableMode mode)
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store);
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: null))).Execute(store);
-            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: 42))).Execute(store);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "peter"))).Execute(store);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 666))).Execute(store);
-            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime), new SqlColumn(DbType.DateTime2, defaultValue: new DateTime(1999, 12, 24)))).Execute(store);
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: null))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: 42))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "peter"))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 666))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime), new SqlColumn(DbType.DateTime2, defaultValue: new DateTime(1999, 12, 24)))).Execute(database);
 
-            var schema = store.Schema.GetSchema();
+            var schema = database.QuerySchema();
 
             schema["Entities1"]["SomeNullableInt"].DefaultValue.ShouldBe(null);
             schema["Entities1"]["SomeOtherNullableInt"].DefaultValue.ShouldBe(42);

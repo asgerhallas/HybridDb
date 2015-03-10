@@ -18,7 +18,7 @@ namespace HybridDb.Migration
 
     public abstract class MigrationCommand
     {
-        public abstract void Execute(DocumentStore store);
+        public abstract void Execute(Database database);
     }
 
     public abstract class DocumentMigrationCommand<T> : MigrationCommand
@@ -35,7 +35,7 @@ namespace HybridDb.Migration
             this.change = change;
         }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
             
         }
@@ -43,7 +43,7 @@ namespace HybridDb.Migration
 
     public class Reproject<T> : DocumentMigrationCommand<T>
     {
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
             
         }

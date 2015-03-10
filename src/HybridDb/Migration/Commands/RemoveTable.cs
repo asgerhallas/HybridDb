@@ -10,9 +10,9 @@ namespace HybridDb.Migration.Commands
 
         public string Tablename { get; private set; }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
-            store.RawExecute(string.Format("drop table {0};", store.FormatTableNameAndEscape(Tablename)));
+            database.RawExecute(string.Format("drop table {0};", database.FormatTableNameAndEscape(Tablename)));
         }
     }
 }

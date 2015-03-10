@@ -11,19 +11,19 @@ namespace HybridDb.Migration.Commands
         public string OldTableName { get; private set; }
         public string NewTableName { get; private set; }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
-            if (store.TableMode == TableMode.UseTempTables)
+            if (database.TableMode == TableMode.UseTempTables)
             {
-                store.RawExecute(string.Format("select * into {1} from {0}; drop table {0};",
-                    store.FormatTableNameAndEscape(OldTableName),
-                    store.FormatTableNameAndEscape(NewTableName)));
+                database.RawExecute(string.Format("select * into {1} from {0}; drop table {0};",
+                    database.FormatTableNameAndEscape(OldTableName),
+                    database.FormatTableNameAndEscape(NewTableName)));
             }
             else
             {
-                store.RawExecute(string.Format("sp_rename {0}, {1};",
-                    store.FormatTableNameAndEscape(OldTableName),
-                    store.FormatTableNameAndEscape(NewTableName)));
+                database.RawExecute(string.Format("sp_rename {0}, {1};",
+                    database.FormatTableNameAndEscape(OldTableName),
+                    database.FormatTableNameAndEscape(NewTableName)));
             }
         }
     }

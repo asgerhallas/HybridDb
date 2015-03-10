@@ -10,7 +10,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentStoreTests : HybridDbTests
+    public class DocumentStoreTests : HybridDbStoreTests
     {
         readonly byte[] documentAsByteArray;
 
@@ -28,7 +28,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
 
-            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -43,7 +43,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -59,7 +59,7 @@ namespace HybridDb.Tests
                          Guid.NewGuid(),
                          new Dictionary<string, object> {{"Field", null}});
 
-            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
         }
 
@@ -99,10 +99,10 @@ namespace HybridDb.Tests
                     }
                 });
 
-            var mainrow = store.RawQuery<dynamic>("select * from #Entities").Single();
+            var mainrow = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid)mainrow.Id).ShouldBe(id);
 
-            var utilrows = store.RawQuery<dynamic>("select * from #Entities_Children").ToList();
+            var utilrows = database.RawQuery<dynamic>("select * from #Entities_Children").ToList();
             utilrows.Count.ShouldBe(2);
             
             var utilrow = utilrows.First();
@@ -121,7 +121,7 @@ namespace HybridDb.Tests
 
             store.Update(table.Table, id, etag, new {Field = "Lars"});
 
-            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
         }
@@ -137,7 +137,7 @@ namespace HybridDb.Tests
 
             store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "StringProp", "Lars" } });
 
-            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe(null);
             ((string) row.StringProp).ShouldBe("Lars");
@@ -327,7 +327,7 @@ namespace HybridDb.Tests
 
             store.Delete(table.Table, id, etag);
 
-            store.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -377,7 +377,7 @@ namespace HybridDb.Tests
             var etag = store.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }),
                                      new InsertCommand(table.Table, id2, new { Field = "B" }));
 
-            var rows = store.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
+            var rows = database.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
             rows.Count.ShouldBe(2);
             rows[0].ShouldBe(etag);
             rows[1].ShouldBe(etag);
@@ -401,7 +401,7 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            store.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -771,7 +771,7 @@ namespace HybridDb.Tests
                 // No tx complete here
             }
 
-            store.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -793,7 +793,7 @@ namespace HybridDb.Tests
                 }
             }
 
-            var tables = store.RawQuery<string>(string.Format("select OBJECT_ID('##Cases') as Result"));
+            var tables = database.RawQuery<string>(string.Format("select OBJECT_ID('##Cases') as Result"));
             tables.First().ShouldBe(null);
         }
 

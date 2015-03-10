@@ -15,9 +15,9 @@ namespace HybridDb.Migration.Commands
         public Table Table { get; private set; }
         public string Name { get; private set; }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
-            store.RawExecute(string.Format("alter table {0} drop column {1};", store.FormatTableNameAndEscape(Table.Name), store.Escape(Name)));
+            database.RawExecute(string.Format("alter table {0} drop column {1};", database.FormatTableNameAndEscape(Table.Name), database.Escape(Name)));
         }
     }
 }
