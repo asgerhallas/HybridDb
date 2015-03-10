@@ -36,10 +36,10 @@ namespace HybridDb.Migration.Commands
                 sql.Append(sqlBuilder);
                 i++;
             }
-            
+
             sql.Append("); end;");
 
-            database.RawExecute(sql.ToDynamicSql(), sql.Parameters);
+            database.RawExecute(sql.ToString());
         }
     }
 }

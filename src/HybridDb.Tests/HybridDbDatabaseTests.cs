@@ -45,7 +45,7 @@ namespace HybridDb.Tests
         protected void UseTempTables()
         {
             connectionString = "data source=.;Integrated Security=True";
-            database = new Database(logger, connectionString, TableMode.UseTempTables, testMode: true);
+            database = Using(new Database(logger, connectionString, TableMode.UseTempTables, testMode: true));
         }
 
         protected void UseRealTables()

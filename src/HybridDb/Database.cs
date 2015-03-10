@@ -72,6 +72,8 @@ namespace HybridDb
             if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
+            logger.Info(sql);
+
             using (var connection = Connect())
             {
                 connection.Connection.Execute(sql, parameters);

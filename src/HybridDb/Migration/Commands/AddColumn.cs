@@ -21,7 +21,7 @@ namespace HybridDb.Migration.Commands
             sql.Append("alter table {0} add {1}", database.FormatTableNameAndEscape(Tablename), database.Escape(Column.Name));
             sql.Append(GetColumnSqlType(Column));
             
-            database.RawExecute(sql.ToDynamicSql(), sql.Parameters);
+            database.RawExecute(sql.ToString());
         }
     }
 }
