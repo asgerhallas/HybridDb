@@ -24,13 +24,13 @@ namespace HybridDb.Tests.Migration.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables, typeof(int))]
-        [InlineData(TableMode.UseRealTables, typeof(int))]
-        [InlineData(TableMode.UseTempTables, typeof(double))]
-        [InlineData(TableMode.UseRealTables, typeof(double))]
-        [InlineData(TableMode.UseTempTables, typeof(string))]
-        [InlineData(TableMode.UseRealTables, typeof(string))]
-        public void ColumnIsOfCorrectType(TableMode mode, Type type)
+        [InlineData(TableMode.UseTempTables, typeof(int), false)]
+        [InlineData(TableMode.UseRealTables, typeof(int), false)]
+        [InlineData(TableMode.UseTempTables, typeof(double), false)]
+        [InlineData(TableMode.UseRealTables, typeof(double), false)]
+        [InlineData(TableMode.UseTempTables, typeof(string), true)]
+        [InlineData(TableMode.UseRealTables, typeof(string), true)]
+        public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
             Use(TableMode.UseRealTables);
             new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store);
@@ -38,7 +38,7 @@ namespace HybridDb.Tests.Migration.Commands
             new AddColumn("Entities", new Column("Col2", type)).Execute(store);
 
             store.Schema.GetSchema()["Entities"]["Col2"].Type.ShouldBe(type);
-            store.Schema.GetSchema()["Entities"]["Col2"].Nullable.ShouldBe(false);
+            store.Schema.GetSchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
         }
 
         [Theory]
