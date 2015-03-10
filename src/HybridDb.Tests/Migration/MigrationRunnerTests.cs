@@ -25,8 +25,9 @@ namespace HybridDb.Tests.Migration
         {
             var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new SchemaDiffer());
 
-            runner.Migrate(database, configuration); // configuration contains metadata table automatically
+            runner.Migrate(database, configuration);
 
+            configuration.Tables.ShouldContainKey("HybridDb");
             database.RawQuery<int>("select top 1 SchemaVersion from #HybridDb").Single().ShouldBe(0);
         }
 
@@ -107,14 +108,35 @@ namespace HybridDb.Tests.Migration
 
             var runner = new MigrationRunner(
                 logger,
-                new StaticMigrationProvider(
-                    new InlineMigration(1, command)),
+                new StaticMigrationProvider(new InlineMigration(1, command)),
                 new FakeSchemaDiffer());
 
             runner.Migrate(database, configuration);
             runner.Migrate(database, configuration);
 
             command.NumberOfTimesCalled.ShouldBe(1);
+        }
+
+        [Fact]
+        public void NextRunContinuesAtNextVersion()
+        {
+            CreateMetadataTable();
+
+            var command = new CountingCommand();
+
+            new MigrationRunner(logger,
+                new StaticMigrationProvider(
+                    new InlineMigration(1, command)),
+                new FakeSchemaDiffer()).Migrate(database, configuration);
+
+            Should.NotThrow(() =>
+                new MigrationRunner(logger,
+                    new StaticMigrationProvider(
+                        new InlineMigration(1, new ThrowingCommand()),
+                        new InlineMigration(2, command)),
+                    new FakeSchemaDiffer()).Migrate(database, configuration));
+
+            command.NumberOfTimesCalled.ShouldBe(2);
         }
 
         [Fact]
