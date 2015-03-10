@@ -47,7 +47,7 @@ namespace HybridDb
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
             var store = new DocumentStore(connectionString, configuration, TableMode.UseRealTables, testMode: false);
-            new MigrationRunner(configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
+            new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
             return store;
         }
 
@@ -56,7 +56,7 @@ namespace HybridDb
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
             var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configuration, mode, testMode: true);
-            new MigrationRunner(configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
+            new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
             return store;
         }
 
@@ -68,15 +68,6 @@ namespace HybridDb
         public ILogger Logger { get; private set; }
         public ISchema Schema { get; private set; }
         public Configuration Configuration { get; private set; }
-
-        public void Migrate(Action<ISchemaMigrator> migration)
-        {
-            using (var migrator = new SchemaMigrator(this))
-            {
-                migration(migrator);
-                migrator.Commit();
-            }
-        }
 
         public void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate)
         {

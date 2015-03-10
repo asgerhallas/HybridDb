@@ -21,9 +21,7 @@ namespace HybridDb.Config
             MigrationProvider = new StaticMigrationProvider();
 
             var metadata = new Table("HybridDb");
-            metadata.Register(new Column("Table", typeof(string), new SqlColumn(DbType.AnsiStringFixedLength, 255)));
             metadata.Register(new Column("SchemaVersion", typeof(int), new SqlColumn(DbType.Int32)));
-            metadata.Register(new Column("DocumentVersion", typeof(int), new SqlColumn(DbType.Int32)));
 
             Tables.TryAdd(metadata.Name, metadata);
         }

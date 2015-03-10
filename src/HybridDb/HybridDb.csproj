@@ -124,7 +124,6 @@
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migration\DocumentMigrator.cs" />
     <Compile Include="Migration\SchemaMigrationCommand.cs" />
-    <Compile Include="Migration\SchemaMigrator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />

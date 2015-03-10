@@ -13,7 +13,6 @@ namespace HybridDb
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
-        void Migrate(Action<ISchemaMigrator> migration);
         void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate);
         void RegisterExtension(IHybridDbExtension hybridDbExtension);
         IDocumentSession OpenSession();

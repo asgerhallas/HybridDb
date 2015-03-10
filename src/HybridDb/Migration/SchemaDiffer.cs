@@ -7,15 +7,13 @@ namespace HybridDb.Migration
 {
     public class SchemaDiffer : ISchemaDiffer
     {
-        public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(ISchema db, Configuration configuration)
+        public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyList<Table> schema, Configuration configuration)
         {
             var commands = new List<SchemaMigrationCommand>();
 
-            var existingSchema = db.GetSchema();
-
-            foreach (var table in configuration.DocumentDesigns.Select(x => x.Table).Distinct())
+            foreach (var table in configuration.Tables.Values)
             {
-                var existingTable = existingSchema.Values.SingleOrDefault(x => x.Name == table.Name);
+                var existingTable = schema.SingleOrDefault(x => x.Name == table.Name);
 
                 if (existingTable == null)
                 {
@@ -41,7 +39,7 @@ namespace HybridDb.Migration
                 }
             }
 
-            foreach (var table in existingSchema.Values)
+            foreach (var table in schema)
             {
                 if (configuration.Tables.ContainsKey(table.Name))
                     continue;

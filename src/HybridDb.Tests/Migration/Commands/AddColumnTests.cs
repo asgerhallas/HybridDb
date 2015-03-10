@@ -38,6 +38,7 @@ namespace HybridDb.Tests.Migration.Commands
             new AddColumn("Entities", new Column("Col2", type)).Execute(store);
 
             store.Schema.GetSchema()["Entities"]["Col2"].Type.ShouldBe(type);
+            store.Schema.GetSchema()["Entities"]["Col2"].Nullable.ShouldBe(false);
         }
 
         [Theory]

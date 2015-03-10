@@ -21,7 +21,9 @@ namespace HybridDb.Tests
             var schema = store.Schema.GetSchema();
 
             schema["Entities1"].ShouldNotBe(null);
+            schema["Entities1"].Name.ShouldBe("Entities1");
             schema["Entities2"].ShouldNotBe(null);
+            schema["Entities2"].Name.ShouldBe("Entities2");
         }
 
         [Theory]

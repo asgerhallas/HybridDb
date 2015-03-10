@@ -45,7 +45,8 @@ namespace HybridDb
                 var columns = store.RawQuery<QueryColumn>(
                     string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
 
-                schema.Add(formattedTableName.TrimStart('#'), new Table(tableName, columns.Select(x => Map(x, getDefaultValue))));
+                formattedTableName = formattedTableName.TrimStart('#');
+                schema.Add(formattedTableName, new Table(formattedTableName, columns.Select(x => Map(x, getDefaultValue))));
 
             }
             return schema;

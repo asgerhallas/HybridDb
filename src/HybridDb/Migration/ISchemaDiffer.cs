@@ -5,6 +5,6 @@ namespace HybridDb.Migration
 {
     public interface ISchemaDiffer
     {
-        IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(ISchema db, Configuration configuration);
+        IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyList<Table> schema, Configuration configuration);
     }
 }

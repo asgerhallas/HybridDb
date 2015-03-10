@@ -81,6 +81,7 @@
     <Compile Include="Migration\Commands\RenameTableTests.cs" />
     <Compile Include="Migration\DocumentMigratorTests.cs" />
     <Compile Include="HybridDbTests.cs" />
+    <Compile Include="Migration\MigrationRunnerTests.cs" />
     <Compile Include="Migration\SchemaDifferTests.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
@@ -89,7 +90,6 @@
     <Compile Include="LinqTests.cs" />
     <Compile Include="Performance\BinaryComparisonPerformance.cs" />
     <Compile Include="Performance\PerformanceTests.cs" />
-    <Compile Include="Migration\SchemaMigratorTests.cs" />
     <Compile Include="Performance\Entity.cs" />
     <Compile Include="Performance\QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

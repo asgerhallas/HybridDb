@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migration;
@@ -10,110 +8,14 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    public class MigrationRunnerTests : HybridDbTests
-    {
-        [Fact]
-        public void DoesNothingGivenNoMigrations()
-        {
-            var runner = new MigrationRunner(new StaticMigrationProvider(), new FakeSchemaDiffer());
-
-            runner.Migrate(store);
-
-            store.Schema.GetSchema().ShouldBeEmpty();
-        }
-
-        [Fact]
-        public void RunsProvidedSchemaMigrations()
-        {
-            var runner = new MigrationRunner(
-                new StaticMigrationProvider(new _001_Something()),
-                new FakeSchemaDiffer());
-
-            runner.Migrate(store);
-
-            var tables = store.Schema.GetSchema();
-            tables.ShouldContainKey("Testing");
-            tables["Testing"]["Id"].ShouldNotBe(null);
-            tables["Testing"]["Noget"].ShouldNotBe(null);
-        }
-
-        [Fact]
-        public void RunsDiffedSchemaMigrations()
-        {
-            var runner = new MigrationRunner(
-                new StaticMigrationProvider(),
-                new FakeSchemaDiffer(
-                    new CreateTable(new Table("Testing",
-                        new Column("Id", typeof (Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
-                    new AddColumn("Testing", new Column("Noget", typeof (int)))));
-
-            runner.Migrate(store);
-
-            var tables = store.Schema.GetSchema();
-            tables.ShouldContainKey("Testing");
-            tables["Testing"]["Id"].ShouldNotBe(null);
-            tables["Testing"]["Noget"].ShouldNotBe(null);
-        }
-
-        [Fact]
-        public void DoesNotRunUnsafeSchemaMigrations()
-        {
-            var runner = new MigrationRunner(
-                new StaticMigrationProvider(),
-                new FakeSchemaDiffer(
-                    new ThrowingCommand(@unsafe: true)));
-
-            Should.NotThrow(() => runner.Migrate(store));
-        }
-        
-        public class _001_Something : HybridDb.Migration.Migration
-        {
-            public _001_Something() : base(1) { }
-
-            public override IEnumerable<MigrationCommand> Migrate()
-            {
-                yield return new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true))));
-                yield return new AddColumn("Testing", new Column("Noget", typeof(int)));
-            }
-        }
-
-        public class FakeSchemaDiffer : ISchemaDiffer
-        {
-            private readonly SchemaMigrationCommand[] commands;
-
-            public FakeSchemaDiffer(params SchemaMigrationCommand[] commands)
-            {
-                this.commands = commands;
-            }
-
-            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(ISchema db, Configuration configuration)
-            {
-                return commands.ToList();
-            }
-        }
-
-        public class ThrowingCommand : SchemaMigrationCommand
-        {
-            public ThrowingCommand(bool @unsafe)
-            {
-                Unsafe = @unsafe;
-            }
-
-            public override void Execute(DocumentStore store)
-            {
-                throw new InvalidOperationException();
-            }
-        }
-    }
-
     public class SchemaDifferTests : HybridDbTests
     {
-        readonly FakeSchema schema;
+        readonly List<Table> schema;
         readonly SchemaDiffer migrator;
 
         public SchemaDifferTests()
         {
-            schema = new FakeSchema();
+            schema = new List<Table>();
             migrator = new SchemaDiffer();
         }
 
@@ -130,7 +32,7 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindNewTablesWhenOthersExists()
         {
-            schema.CreateTable(new DocumentTable("Entities"));
+            schema.Add(new DocumentTable("Entities"));
 
             configuration.Document<Entity>();
             configuration.Document<OtherEntity>();
@@ -157,7 +59,7 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindMissingTables()
         {
-            schema.CreateTable(new Table("Entities"));
+            schema.Add(new Table("Entities"));
 
             var command = (RemoveTable)migrator.CalculateSchemaChanges(schema, configuration).Single();
 
@@ -168,7 +70,7 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void FindNewColumn()
         {
-            schema.CreateTable(new DocumentTable("Entities"));
+            schema.Add(new DocumentTable("Entities"));
 
             configuration.Document<Entity>()
                 .With(x => x.Number);
@@ -184,7 +86,7 @@ namespace HybridDb.Tests.Migration
         {
             var table = new DocumentTable("Entities");
             table.Register(new Column("Number", typeof(int)));
-            schema.CreateTable(table);
+            schema.Add(table);
 
             configuration.Document<Entity>();
 
@@ -199,7 +101,7 @@ namespace HybridDb.Tests.Migration
         {
             var table = new DocumentTable("Entities");
             table.Register(new Column("Number", typeof(int)));
-            schema.CreateTable(table);
+            schema.Add(table);
 
             configuration.Document<Entity>()
                 .With("Number", x => x.String);
