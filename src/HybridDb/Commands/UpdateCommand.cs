@@ -30,7 +30,7 @@ namespace HybridDb.Commands
 
             var sql = new SqlBuilder()
                 .Append("update {0} set {1} where {2}=@Id{3}",
-                        store.FormatTableNameAndEscape(table.Name),
+                        store.Database.FormatTableNameAndEscape(table.Name),
                         string.Join(", ", from column in values.Keys select column.Name + "=@" + column.Name + uniqueParameterIdentifier),
                         table.IdColumn.Name,
                         uniqueParameterIdentifier)

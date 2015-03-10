@@ -3,21 +3,25 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Transactions;
 using Dapper;
+using HybridDb.Logging;
 using Shouldly;
 
 namespace HybridDb.Tests
 {
-    public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
+    public abstract class HybridDbDatabaseTests : HybridDbConfigurator, IDisposable
     {
+        readonly ConsoleLogger logger;
         readonly List<Action> disposables;
-        Lazy<DocumentStore> factory;
+        
+        protected string connectionString;
+        protected Database database;
 
-        protected HybridDbTests()
+        protected HybridDbDatabaseTests()
         {
+            logger = new ConsoleLogger(LogLevel.Debug, new LoggingColors());
             disposables = new List<Action>();
 
             UseTempTables();
-            UseSerializer(new DefaultJsonSerializer());
         }
 
         protected void Use(TableMode mode)
@@ -36,58 +40,45 @@ namespace HybridDb.Tests
                 default:
                     throw new ArgumentOutOfRangeException("mode");
             }
+
+
         }
 
-        protected void UseTempTables()
+        protected virtual void UseTempTables()
         {
-            if (factory != null && factory.IsValueCreated)
-                throw new InvalidOperationException("Cannot change table mode when store is already initialized.");
-
-            factory = new Lazy<DocumentStore>(() => Using(DocumentStore.ForTesting(TableMode.UseTempTables, configurator: this)));
+            connectionString = "data source=.;Integrated Security=True";
+            database = new Database(logger, connectionString, TableMode.UseTempTables, testMode: true);
         }
 
-        protected void UseRealTables()
+        protected virtual void UseRealTables()
         {
-            if (factory != null && factory.IsValueCreated)
-                throw new InvalidOperationException("Cannot change table mode when store is already initialized.");
-
-            factory = new Lazy<DocumentStore>(() =>
+            var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
+            using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
             {
-                var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
-                using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
-                {
-                    connection.Open();
+                connection.Open();
 
-                    connection.Execute(String.Format(@"
+                connection.Execute(String.Format(@"
                         IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
                         BEGIN
                             CREATE DATABASE {0}
                         END", uniqueDbName));
-                }
+            }
 
-                var realTableStore = Using(DocumentStore.ForTesting(TableMode.UseRealTables, "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName, this));
+            connectionString = "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName;
 
-                disposables.Add(() =>
+            disposables.Add(() =>
+            {
+                SqlConnection.ClearAllPools();
+
+                using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=Master"))
                 {
-                    SqlConnection.ClearAllPools();
-
-                    using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=Master"))
-                    {
-                        connection.Open();
-                        connection.Execute(String.Format("DROP DATABASE {0}", uniqueDbName));
-                    }
-                });
-
-                return realTableStore;
+                    connection.Open();
+                    connection.Execute(String.Format("DROP DATABASE {0}", uniqueDbName));
+                }
             });
-        }
 
-        // ReSharper disable InconsistentNaming
-        protected DocumentStore store
-        {
-            get { return factory.Value; }
+            database = new Database(logger, connectionString, TableMode.UseRealTables, testMode: true);
         }
-        // ReSharper restore InconsistentNaming
 
         protected T Using<T>(T disposable) where T : IDisposable
         {
@@ -104,6 +95,7 @@ namespace HybridDb.Tests
 
             Transaction.Current.ShouldBe(null);
         }
+
 
         public interface ISomeInterface
         {
@@ -153,5 +145,6 @@ namespace HybridDb.Tests
         public class DerivedEntity : AbstractEntity { }
         public class MoreDerivedEntity1 : DerivedEntity, IOtherInterface { }
         public class MoreDerivedEntity2 : DerivedEntity { }
+
     }
 }

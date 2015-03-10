@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Migration;
 
 namespace HybridDb
 {
     public interface IDocumentStore : IDisposable
     {
         Action<Table, IDictionary<string, object>> OnRead { get; set; }
-        ISchema Schema { get; }
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }

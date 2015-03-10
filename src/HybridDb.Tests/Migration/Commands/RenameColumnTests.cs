@@ -7,7 +7,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
 {
-    public class RenameColumnTests : HybridDbTests
+    public class RenameColumnTests : HybridDbStoreTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
@@ -17,14 +17,14 @@ namespace HybridDb.Tests.Migration.Commands
             Use(mode);
 
             var table = new Table("Entities", new Column("Col1", typeof(int)));
-            
-            new CreateTable(table).Execute(store);
-            new AddColumn("Entities", new Column("SomeColumn", typeof (int))).Execute(store);
-            
-            new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(store);
 
-            store.Schema.GetSchema()["Entities"]["SomeColumn"].ShouldBe(null);
-            store.Schema.GetSchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
+            new CreateTable(table).Execute(database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(database);
+
+            new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(database);
+
+            database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            database.QuerySchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
         }
 
         [Theory]

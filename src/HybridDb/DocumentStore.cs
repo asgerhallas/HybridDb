@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Registration;
-using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -19,34 +17,23 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
-        readonly string connectionString;
-        readonly TableMode tableMode;
-        readonly bool testMode;
-
-        int numberOfManagedConnections;
-        SqlConnection ambientConnectionForTesting; 
-        
         Guid lastWrittenEtag;
         long numberOfRequests;
 
-        DocumentStore(string connectionString, Configuration configuration, TableMode tableMode, bool testMode)
+        DocumentStore(Database database, Configuration configuration)
         {
-            this.connectionString = connectionString;
-            this.tableMode = tableMode;
-            this.testMode = testMode;
-
             Logger = configuration.Logger;
-            Schema = new Schema(this, tableMode);
+            Database = database;
             Configuration = configuration;
             OnRead = (table, projections) => { };
-            OnMessage = message => { };
         }
 
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
-            var store = new DocumentStore(connectionString, configuration, TableMode.UseRealTables, testMode: false);
+            var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
+            var store = new DocumentStore(database, configuration);
             new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
             return store;
         }
@@ -55,7 +42,13 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
-            var store = new DocumentStore(connectionString ?? "data source=.;Integrated Security=True", configuration, mode, testMode: true);
+            var database = new Database(configuration.Logger, connectionString ?? "data source=.;Integrated Security=True", mode, testMode: true);
+            return ForTesting(database, configuration);
+        }
+
+        public static DocumentStore ForTesting(Database database, Configuration configuration)
+        {
+            var store = new DocumentStore(database, configuration);
             new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
             return store;
         }
@@ -64,9 +57,8 @@ namespace HybridDb
         IEnumerable<IHybridDbExtension> AddIns { get; set; }
         public Action<Table, IDictionary<string, object>> OnRead { get; set; }
 
-        public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
+        public Database Database { get; private set; }
         public ILogger Logger { get; private set; }
-        public ISchema Schema { get; private set; }
         public Configuration Configuration { get; private set; }
 
         public void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate)
@@ -88,7 +80,6 @@ namespace HybridDb
             OnRead += hybridDbExtension.OnRead;
         }
 
-
         public IDocumentSession OpenSession()
         {
             return new DocumentSession(this);
@@ -100,7 +91,7 @@ namespace HybridDb
                 throw new ArgumentException("No commands were passed");
 
             var timer = Stopwatch.StartNew();
-            using (var connectionManager = Connect())
+            using (var connectionManager = Database.Connect())
             {
                 var i = 0;
                 var etag = Guid.NewGuid();
@@ -195,12 +186,12 @@ namespace HybridDb
                 select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
 
             var timer = Stopwatch.StartNew();
-            using (var connection = Connect())
+            using (var connection = Database.Connect())
             {
                 var sql = new SqlBuilder();
 
                 sql.Append("select count(*) as TotalResults")
-                   .Append("from {0}", FormatTableNameAndEscape(table.Name))
+                   .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
                    .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                    .Append(";");
 
@@ -210,7 +201,7 @@ namespace HybridDb
                 {
                     sql.Append(@"with temp as (select *")
                        .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
-                       .Append("from {0}", FormatTableNameAndEscape(table.Name))
+                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                        .Append(")")
                        .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
@@ -222,7 +213,7 @@ namespace HybridDb
                 {
                     sql.Append(@"with temp as (select *")
                        .Append(", 0 as RowNumber")
-                       .Append("from {0}", FormatTableNameAndEscape(table.Name))
+                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                        .Append(")")
                        .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
@@ -323,10 +314,10 @@ namespace HybridDb
         public IDictionary<string, object> Get(DocumentTable table, Guid key)
         {
             var timer = Stopwatch.StartNew();
-            using (var connection = Connect())
+            using (var connection = Database.Connect())
             {
                 var sql = string.Format("select * from {0} where {1} = @Id",
-                    FormatTableNameAndEscape(table.Name),
+                    Database.FormatTableNameAndEscape(table.Name),
                     table.IdColumn.Name);
 
                 var row = ((IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault());
@@ -346,63 +337,6 @@ namespace HybridDb
             }
         }
 
-        public string FormatTableNameAndEscape(string tablename)
-        {
-            return Escape(FormatTableName(tablename));
-        }
-
-        public string Escape(string identifier)
-        {
-            return string.Format("[{0}]", identifier);
-        }
-
-        public string FormatTableName(string tablename)
-        {
-            return GetTablePrefix() + tablename;
-        }
-
-        public string GetTablePrefix()
-        {
-            switch (tableMode)
-            {
-                case TableMode.UseRealTables:
-                    return "";
-                case TableMode.UseTempTables:
-                    return "#";
-                case TableMode.UseGlobalTempTables:
-                    return "##";
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        public void RawExecute(string sql, object parameters = null)
-        {
-            var hdbParams = parameters as IEnumerable<Parameter>;
-            if (hdbParams != null)
-                parameters = new FastDynamicParameters(hdbParams);
-
-            using (var connection = Connect())
-            {
-                connection.Connection.Execute(sql, parameters);
-                connection.Complete();
-            }
-        }
-
-        public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
-        {
-            var hdbParams = parameters as IEnumerable<Parameter>;
-            if (hdbParams != null)
-                parameters = new FastDynamicParameters(hdbParams);
-
-            Logger.Info(sql);
-
-            using (var connection = Connect())
-            {
-                return connection.Connection.Query<T>(sql, parameters);
-            }
-        }
-
         public long NumberOfRequests
         {
             get { return numberOfRequests; }
@@ -413,73 +347,9 @@ namespace HybridDb
             get { return lastWrittenEtag; }
         }
 
-        public TableMode TableMode
-        {
-            get { return tableMode; }
-        }
-
-        ManagedConnection Connect()
-        {
-            Action complete = () => { };
-            Action dispose = () => { numberOfManagedConnections--; };
-
-            try
-            {
-                if (Transaction.Current == null)
-                {
-                    var tx = new TransactionScope();
-                    complete += tx.Complete;
-                    dispose += tx.Dispose;
-                }
-
-                SqlConnection connection;
-                if (testMode)
-                {
-                    // We don't care about thread safety in test mode
-                    if (ambientConnectionForTesting == null)
-                    {
-                        ambientConnectionForTesting = new SqlConnection(connectionString);
-                        ambientConnectionForTesting.InfoMessage += (obj, args) => OnMessage(args);
-                        ambientConnectionForTesting.Open();
-
-                    }
-
-                    connection = ambientConnectionForTesting;
-                }
-                else
-                {
-                    connection = new SqlConnection(connectionString);
-                    connection.InfoMessage += (obj, args) => OnMessage(args);
-                    connection.Open();
-
-                    complete = connection.Dispose + complete;
-                    dispose = connection.Dispose + dispose;
-                }
-
-                // Connections that are kept open during multiple operations (for testing mostly)
-                // will not automatically be enlisted in transactions started later, we fix that here.
-                // Calling EnlistTransaction on a connection that is already enlisted is a no-op.
-                connection.EnlistTransaction(Transaction.Current);
-
-                numberOfManagedConnections++;
-
-                return new ManagedConnection(connection, complete, dispose);
-            }
-            catch (Exception)
-            {
-                dispose();
-                throw;
-            }
-        }
-
-
         public void Dispose()
         {
-            if (numberOfManagedConnections > 0)
-                Logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
-
-            if (ambientConnectionForTesting != null)
-                ambientConnectionForTesting.Dispose();
+            Database.Dispose();
         }
     }
 }

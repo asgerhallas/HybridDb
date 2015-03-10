@@ -13,7 +13,7 @@ namespace HybridDb.Migration.Commands
 
         public Table Table { get; private set; }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
             if (!Table.Columns.Any())
             {
@@ -27,12 +27,12 @@ namespace HybridDb.Migration.Commands
                 let split = column.Split(' ')
                 let name = split.First()
                 let type = string.Join(" ", split.Skip(1))
-                select store.Escape(name) + " " + type;
+                select database.Escape(name) + " " + type;
 
-            store.RawExecute(
+            database.RawExecute(
                 string.Format("if not ({0}) begin create table {1} ({2}); end",
-                    GetTableExistsSql(store, Table.Name),
-                    store.FormatTableNameAndEscape(Table.Name),
+                    GetTableExistsSql(database, Table.Name),
+                    database.FormatTableNameAndEscape(Table.Name),
                     string.Join(", ", escapedColumns)));
         }
     }

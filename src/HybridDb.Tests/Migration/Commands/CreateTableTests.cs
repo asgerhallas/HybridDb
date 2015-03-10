@@ -7,7 +7,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migration.Commands
 {
-    public class CreateTableTests : HybridDbTests
+    public class CreateTableTests : HybridDbStoreTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
@@ -16,9 +16,9 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(database);
 
-            store.Schema.GetSchema().ShouldContainKey("Entities");
+            database.QuerySchema().ShouldContainKey("Entities");
         }
 
         [Theory]
@@ -28,10 +28,10 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(database);
 
-            store.Schema.GetSchema().ShouldContainKey("Entities");
-            store.Schema.GetSchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
+            database.QuerySchema().ShouldContainKey("Entities");
+            database.QuerySchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
         }
 
         [Theory]
@@ -41,10 +41,10 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string), new SqlColumn(DbType.String, isPrimaryKey: true)))).Execute(store);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string), new SqlColumn(DbType.String, isPrimaryKey: true)))).Execute(database);
             //new CreateTable(new Table("Entities", new Column("Col1", typeof(string)) { IsPrimaryKey = true })).Execute(store);
 
-            store.Schema.GetSchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
+            database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }
 
         [Fact]

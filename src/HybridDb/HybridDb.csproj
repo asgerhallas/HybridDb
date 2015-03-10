@@ -69,6 +69,7 @@
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Config\DynamicDocumentTable.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
+    <Compile Include="Database.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
@@ -78,7 +79,6 @@
     <Compile Include="Migration\StaticMigrationProvider.cs" />
     <Compile Include="Migration\MigrationRunner.cs" />
     <Compile Include="Migration\SchemaDiffer.cs" />
-    <Compile Include="ISchema.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
     <Compile Include="Migration\Commands\AddColumn.cs" />

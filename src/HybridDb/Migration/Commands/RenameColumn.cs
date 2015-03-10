@@ -17,11 +17,11 @@ namespace HybridDb.Migration.Commands
         public string OldColumnName { get; private set; }
         public string NewColumnName { get; private set; }
 
-        public override void Execute(DocumentStore store)
+        public override void Execute(Database database)
         {
-            store.RawExecute(string.Format("{0}sp_rename '{1}.{2}', '{3}', 'COLUMN'",
-                store.TableMode == TableMode.UseTempTables ? "tempdb.." : "",
-                store.FormatTableNameAndEscape(Table.Name),
+            database.RawExecute(string.Format("{0}sp_rename '{1}.{2}', '{3}', 'COLUMN'",
+                database.TableMode == TableMode.UseTempTables ? "tempdb.." : "",
+                database.FormatTableNameAndEscape(Table.Name),
                 OldColumnName,
                 NewColumnName));         
         }

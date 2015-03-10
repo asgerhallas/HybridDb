@@ -9,7 +9,7 @@ using HybridDb.Linq;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTests : HybridDbTests
+    public class DocumentSessionTests : HybridDbStoreTests
     {
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
@@ -81,7 +81,7 @@ namespace HybridDb.Tests
                 store.NumberOfRequests.ShouldBe(1);
             }
 
-            var entity = store.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
+            var entity = database.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
             Assert.NotNull(entity);
         }
 
@@ -102,7 +102,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);
@@ -122,7 +122,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.Null(entity.TheChildNestedProperty);
         }
 
@@ -153,7 +153,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var retrivedId = store.RawQuery<Guid>("select Id from #Entities").SingleOrDefault();
+            var retrivedId = database.RawQuery<Guid>("select Id from #Entities").SingleOrDefault();
             retrivedId.ShouldBe(id);
         }
 
