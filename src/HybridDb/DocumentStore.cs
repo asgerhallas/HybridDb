@@ -34,7 +34,7 @@ namespace HybridDb
             var configuration = configurator.Configure();
             var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
             var store = new DocumentStore(database, configuration);
-            new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
+            new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(database, configuration);
             return store;
         }
 
@@ -49,7 +49,7 @@ namespace HybridDb
         public static DocumentStore ForTesting(Database database, Configuration configuration)
         {
             var store = new DocumentStore(database, configuration);
-            new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(store);
+            new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer()).Migrate(database, configuration);
             return store;
         }
 

@@ -40,17 +40,15 @@ namespace HybridDb.Tests
                 default:
                     throw new ArgumentOutOfRangeException("mode");
             }
-
-
         }
 
-        protected virtual void UseTempTables()
+        protected void UseTempTables()
         {
             connectionString = "data source=.;Integrated Security=True";
             database = new Database(logger, connectionString, TableMode.UseTempTables, testMode: true);
         }
 
-        protected virtual void UseRealTables()
+        protected void UseRealTables()
         {
             var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
             using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
@@ -66,6 +64,8 @@ namespace HybridDb.Tests
 
             connectionString = "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName;
 
+            database = Using(new Database(logger, connectionString, TableMode.UseRealTables, testMode: true));
+
             disposables.Add(() =>
             {
                 SqlConnection.ClearAllPools();
@@ -76,8 +76,6 @@ namespace HybridDb.Tests
                     connection.Execute(String.Format("DROP DATABASE {0}", uniqueDbName));
                 }
             });
-
-            database = new Database(logger, connectionString, TableMode.UseRealTables, testMode: true);
         }
 
         protected T Using<T>(T disposable) where T : IDisposable
@@ -95,7 +93,6 @@ namespace HybridDb.Tests
 
             Transaction.Current.ShouldBe(null);
         }
-
 
         public interface ISomeInterface
         {

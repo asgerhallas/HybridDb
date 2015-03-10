@@ -11,8 +11,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    
-    public class MigrationRunnerTests : HybridDbStoreTests
+    public class MigrationRunnerTests : HybridDbDatabaseTests
     {
         readonly ConsoleLogger logger;
 
@@ -22,18 +21,32 @@ namespace HybridDb.Tests.Migration
         }
 
         [Fact]
+        public void AutomaticallyCreatesMetadataTableWhenUsingRealSchemaDiffer()
+        {
+            var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new SchemaDiffer());
+
+            runner.Migrate(database, configuration); // configuration contains metadata table automatically
+
+            database.RawQuery<int>("select top 1 SchemaVersion from #HybridDb").Single().ShouldBe(0);
+        }
+
+        [Fact]
         public void DoesNothingGivenNoMigrations()
         {
+            CreateMetadataTable();
+
             var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new FakeSchemaDiffer());
 
-            runner.Migrate(store);
+            runner.Migrate(database, configuration);
 
-            database.QuerySchema().ShouldBeEmpty();
+            database.QuerySchema().Count.ShouldBe(1); // the metadata table and nothing else
         }
 
         [Fact]
         public void RunsProvidedSchemaMigrations()
         {
+            CreateMetadataTable();
+
             var runner = new MigrationRunner(
                 logger, 
                 new StaticMigrationProvider(
@@ -42,7 +55,7 @@ namespace HybridDb.Tests.Migration
                         new AddColumn("Testing", new Column("Noget", typeof (int))))),
                 new FakeSchemaDiffer());
 
-            runner.Migrate(store);
+            runner.Migrate(database, configuration);
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -53,6 +66,8 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void RunsDiffedSchemaMigrations()
         {
+            CreateMetadataTable();
+
             var runner = new MigrationRunner(
                 logger, 
                 new StaticMigrationProvider(),
@@ -60,7 +75,7 @@ namespace HybridDb.Tests.Migration
                     new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
                     new AddColumn("Testing", new Column("Noget", typeof (int)))));
 
-            runner.Migrate(store);
+            runner.Migrate(database, configuration);
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -71,6 +86,8 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void DoesNotRunUnsafeSchemaMigrations()
         {
+            CreateMetadataTable();
+
             var runner = new MigrationRunner(
                 logger, 
                 new StaticMigrationProvider(
@@ -78,12 +95,14 @@ namespace HybridDb.Tests.Migration
                 new FakeSchemaDiffer(
                     new UnsafeThrowingCommand()));
 
-            Should.NotThrow(() => runner.Migrate(store));
+            Should.NotThrow(() => runner.Migrate(database, configuration));
         }
 
         [Fact]
         public void DoesNotRunSchemaMigrationTwice()
         {
+            CreateMetadataTable();
+
             var command = new CountingCommand();
 
             var runner = new MigrationRunner(
@@ -92,8 +111,8 @@ namespace HybridDb.Tests.Migration
                     new InlineMigration(1, command)),
                 new FakeSchemaDiffer());
 
-            runner.Migrate(store);
-            runner.Migrate(store);
+            runner.Migrate(database, configuration);
+            runner.Migrate(database, configuration);
 
             command.NumberOfTimesCalled.ShouldBe(1);
         }
@@ -101,6 +120,8 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void RollsBackOnExceptions()
         {
+            CreateMetadataTable();
+
             try
             {
                 var runner = new MigrationRunner(
@@ -109,8 +130,8 @@ namespace HybridDb.Tests.Migration
                     new FakeSchemaDiffer(
                         new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
                         new ThrowingCommand()));
-                runner.Migrate(store);
 
+                runner.Migrate(database, configuration);
             }
             catch (Exception)
             {
@@ -119,6 +140,10 @@ namespace HybridDb.Tests.Migration
             database.QuerySchema().ShouldNotContainKey("Testing");
         }
 
+        void CreateMetadataTable()
+        {
+            new CreateTable(new Table("HybridDb", new Column("SchemaVersion", typeof(int)))).Execute(database);
+        }
 
         public class InlineMigration : HybridDb.Migration.Migration
         {

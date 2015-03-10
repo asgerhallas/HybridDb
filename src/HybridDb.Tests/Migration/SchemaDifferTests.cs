@@ -8,7 +8,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    public class SchemaDifferTests : HybridDbStoreTests
+    public class SchemaDifferTests : HybridDbDatabaseTests
     {
         readonly List<Table> schema;
         readonly SchemaDiffer migrator;
@@ -119,7 +119,7 @@ namespace HybridDb.Tests.Migration
 
         Table GetTableFor<T>()
         {
-            return store.Configuration.GetDesignFor<T>().Table;
+            return configuration.GetDesignFor<T>().Table;
         }
 
         public class FakeSchema

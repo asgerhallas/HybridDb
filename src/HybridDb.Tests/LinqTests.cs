@@ -211,7 +211,7 @@ namespace HybridDb.Tests
             var queryable = Query<Entity>().Where(x => x.Property == 2).AsProjection<ProjectedEntity>();
             var translation = queryable.Translate();
 
-            queryable.ShouldBeOfType<IQueryable<ProjectedEntity>>();
+            queryable.ShouldBeOfType<Query<ProjectedEntity>>();
             queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("(Property = @Value0)");
@@ -222,7 +222,7 @@ namespace HybridDb.Tests
         public void CanQueryWithOnlyNamedProjection()
         {
             var queryable = Query<Entity>().AsProjection<ProjectedEntity>();
-            queryable.ShouldBeOfType<IQueryable<ProjectedEntity>>();
+            queryable.ShouldBeOfType<Query<ProjectedEntity>>();
             queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
         }
 

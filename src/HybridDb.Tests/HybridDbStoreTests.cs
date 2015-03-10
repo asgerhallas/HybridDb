@@ -13,22 +13,6 @@ namespace HybridDb.Tests
             UseSerializer(new DefaultJsonSerializer());
         }
 
-        protected override void UseTempTables()
-        {
-            if (factory != null && factory.IsValueCreated)
-                throw new InvalidOperationException("Cannot change table mode when store is already initialized.");
-
-            base.UseTempTables();
-        }
-
-        protected override void UseRealTables()
-        {
-            if (factory != null && factory.IsValueCreated)
-                throw new InvalidOperationException("Cannot change table mode when store is already initialized.");
-
-            base.UseRealTables();
-        }
-
         // ReSharper disable InconsistentNaming
         protected DocumentStore store
         {

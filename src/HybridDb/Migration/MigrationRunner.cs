@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
+using HybridDb.Config;
 using HybridDb.Logging;
 
 namespace HybridDb.Migration
@@ -19,16 +20,16 @@ namespace HybridDb.Migration
             this.differ = differ;
         }
 
-        public Task Migrate(DocumentStore store)
+        public Task Migrate(Database database, Configuration configuration)
         {
             using (var tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
             {
                 // abstract out so version is store independent
-                var db = store.Database;
-                var schema = db.QuerySchema().Values.ToList(); // demeter go home!
+                var schema = database.QuerySchema().Values.ToList(); // demeter go home!
+
                 var currentVersion = schema.Any(x => x.Name == "HybridDb")
-                    ? db.RawQuery<int>(string.Format("select top 1 SchemaVersion from {0}",
-                        db.FormatTableName("HybridDb"))).Single()
+                    ? database.RawQuery<int>(string.Format("select top 1 SchemaVersion from {0}",
+                        database.FormatTableName("HybridDb"))).SingleOrDefault()
                     : 0;
 
                 var enumerable = provider.GetMigrations().ToList();
@@ -45,13 +46,13 @@ namespace HybridDb.Migration
                             continue;
                         }
 
-                        command.Execute(db);
+                        command.Execute(database);
                     }
 
                     currentVersion++;
                 }
 
-                var commands = differ.CalculateSchemaChanges(schema, store.Configuration);
+                var commands = differ.CalculateSchemaChanges(schema, configuration);
                 foreach (var command in commands)
                 {
                     if (command.Unsafe)
@@ -60,16 +61,16 @@ namespace HybridDb.Migration
                         continue;
                     }
 
-                    command.Execute(db);
+                    command.Execute(database);
                 }
 
-                db.RawExecute(string.Format(@"
+                database.RawExecute(string.Format(@"
 if not exists (select * from {0}) 
     insert into {0} (SchemaVersion) values (@version); 
 else
     update {0} set SchemaVersion=@version",
-                    db.FormatTableName("HybridDb")),
-                    new {version = currentVersion});
+                database.FormatTableName("HybridDb")),
+                new { version = currentVersion });
 
                 tx.Complete();
             }
