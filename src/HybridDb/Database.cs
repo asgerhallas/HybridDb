@@ -44,7 +44,7 @@ namespace HybridDb
 
         public string Escape(string identifier)
         {
-            return string.Format("[{0}]", identifier);
+            return String.Format("[{0}]", identifier);
         }
 
         public string FormatTableName(string tablename)
@@ -167,7 +167,7 @@ namespace HybridDb
                 var formattedTableName = tableName.Remove(tableName.Length - 12, 12).TrimEnd('_');
 
                 var columns = RawQuery<QueryColumn>(
-                    string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
+                    String.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
 
                 formattedTableName = formattedTableName.TrimStart('#');
                 schema.Add(
@@ -183,7 +183,7 @@ namespace HybridDb
             var realTables = RawQuery<string>("select table_name from information_schema.tables where table_type='BASE TABLE'").ToList();
             foreach (var tableName in realTables)
             {
-                var columns = RawQuery<QueryColumn>(string.Format("select * from sys.columns where Object_ID = Object_ID(N'{0}')", tableName));
+                var columns = RawQuery<QueryColumn>(String.Format("select * from sys.columns where Object_ID = Object_ID(N'{0}')", tableName));
                 schema.Add(tableName, new Table(tableName, columns.Select(column => Map(tableName, column, isTempTable: false))));
             }
             return schema;
@@ -192,15 +192,16 @@ namespace HybridDb
         Column Map(string tableName, QueryColumn column, bool isTempTable)
         {
             var columnType = GetType(column.system_type_id);
-            return new Column(column.Name, columnType, length: column.max_length, nullable: column.is_nullable,
-                defaultValue: SqlTypeMap.GetDefaultValue(columnType, GetDefaultValue(tableName, column, isTempTable)),
-                isPrimaryKey: IsPrimaryKey(column.Name, isTempTable));
+            return new Column(
+                column.Name, columnType, column.max_length, column.is_nullable,
+                GetDefaultValue(columnType, GetDefaultValue(tableName, column, isTempTable)),
+                IsPrimaryKey(column.Name, isTempTable));
         }
 
         string GetDefaultValue(string tableName, QueryColumn column, bool isTempTable)
         {
             return RawQuery<string>(
-                string.Format("select column_default from {0}information_schema.columns where table_name='{1}' and column_name='{2}'",
+                String.Format("select column_default from {0}information_schema.columns where table_name='{1}' and column_name='{2}'",
                     isTempTable ? "tempdb." : "",
                     tableName,
                     column.Name)).SingleOrDefault();
@@ -213,11 +214,11 @@ namespace HybridDb
 
             var shortName = rawQuery.FirstOrDefault();
             if (shortName == null)
-                throw new ArgumentOutOfRangeException(string.Format("Found no matching sys.type for typeId '{0}'.", id));
+                throw new ArgumentOutOfRangeException(String.Format("Found no matching sys.type for typeId '{0}'.", id));
 
             var firstMatchingType = SqlTypeMap.ForSqlType(shortName).FirstOrDefault();
             if (firstMatchingType == null)
-                throw new ArgumentOutOfRangeException(string.Format("Found no matching .NET type for typeName type '{0}'.", shortName));
+                throw new ArgumentOutOfRangeException(String.Format("Found no matching .NET type for typeName type '{0}'.", shortName));
 
             return firstMatchingType.NetType;
         }
@@ -229,8 +230,8 @@ namespace HybridDb
                 "SELECT K.TABLE_NAME, " +
                 "K.COLUMN_NAME, " +
                 "K.CONSTRAINT_NAME " +
-                string.Format("FROM {0}INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C ", dbPrefix) +
-                string.Format("JOIN {0}INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K ", dbPrefix) +
+                String.Format("FROM {0}INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C ", dbPrefix) +
+                String.Format("JOIN {0}INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K ", dbPrefix) +
                 "ON C.TABLE_NAME = K.TABLE_NAME " +
                 "AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG " +
                 "AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA " +
@@ -240,6 +241,55 @@ namespace HybridDb
 
             var isPrimaryKey = RawQuery<dynamic>(sql).Any();
             return isPrimaryKey;
+        }
+
+        public static object GetDefaultValue(Type columnType, string defaultValue2)
+        {
+            if (defaultValue2 == null)
+                return null;
+
+            var defaultValue = defaultValue2.Replace("'", "").Trim('(', ')');
+
+            if (columnType == typeof(string))
+                return defaultValue;
+            if (columnType == typeof(long))
+                return Convert.ToInt64(defaultValue);
+            if (columnType == typeof(byte[]))
+                return GetBytes(defaultValue);
+            if (columnType == typeof(bool))
+                return Convert.ToBoolean(defaultValue);
+            if (columnType == typeof(Enum))
+                return defaultValue;            //OBS: correct?
+            if (columnType == typeof(DateTime))
+                return Convert.ToDateTime(defaultValue);
+            if (columnType == typeof(DateTimeOffset))
+                return new DateTimeOffset(Convert.ToDateTime(defaultValue));
+            if (columnType == typeof(decimal))
+                return Convert.ToDecimal(defaultValue);
+            if (columnType == typeof(int))
+                return Convert.ToInt32(defaultValue);
+            if (columnType == typeof(double))
+                return Convert.ToDouble(defaultValue);
+            if (columnType == typeof(Single))
+                return Convert.ToSingle(defaultValue);
+            if (columnType == typeof(short))
+                return Convert.ToInt16(defaultValue);
+            if (columnType == typeof(TimeSpan))
+                return TimeSpan.Parse(defaultValue);
+            if (columnType == typeof(byte))
+                return Convert.ToByte(defaultValue);
+            if (columnType == typeof(Guid))
+                return Guid.Parse(defaultValue);
+
+            throw new ArgumentException(String.Format("Column type {0} is unknown.", columnType));
+        }
+
+
+        static byte[] GetBytes(string str)
+        {
+            var bytes = new byte[str.Length * sizeof(char)];
+            Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, bytes.Length);
+            return bytes;
         }
 
         public void Dispose()
