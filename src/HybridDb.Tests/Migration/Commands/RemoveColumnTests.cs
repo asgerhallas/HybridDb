@@ -9,13 +9,26 @@ namespace HybridDb.Tests.Migration.Commands
     public class RemoveColumnTests : HybridDbStoreTests
     {
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void RemovesColumn(TableMode mode)
         {
             Use(mode);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
+            new CreateTable(table).Execute(database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(database);
+
+            new RemoveColumn(table, "SomeColumn").Execute(database);
+
+            database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+        }
+
+        [Fact(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
+        public void RemovesTempTableColumn()
+        {
+            Use(TableMode.UseTempTables);
+
+            var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
             new CreateTable(table).Execute(database);
             new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(database);
 
