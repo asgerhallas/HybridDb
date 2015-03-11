@@ -31,7 +31,7 @@ namespace HybridDb.Migration
 
             var sql = new SqlBuilder();
 
-            var sqlColumn = SqlTypeMap.GetDbType(column);
+            var sqlColumn = SqlTypeMap.Convert(column);
             sql.Append(new SqlParameter { DbType = sqlColumn.DbType }.SqlDbType.ToString());
             sql.Append(sqlColumn.Length != null, "(" + (sqlColumn.Length == Int32.MaxValue ? "MAX" : sqlColumn.Length.ToString()) + ")");
             sql.Append(column.Nullable, "NULL").Or("NOT NULL");

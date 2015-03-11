@@ -48,7 +48,7 @@ namespace HybridDb.Config
             return sqlTypeMappings.Where(x => x.SqlType == type);
         }
 
-        public static SqlColumn GetDbType(Column column)
+        public static SqlColumn Convert(Column column)
         {
             if (!ForNetType(column.Type).Any())
                 throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");

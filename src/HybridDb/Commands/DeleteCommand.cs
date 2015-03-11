@@ -35,11 +35,11 @@ namespace HybridDb.Commands
                 .ToString();
 
             var parameters = new Dictionary<string, Parameter>();
-            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, SqlTypeMap.GetDbType(table.IdColumn).DbType, null);
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, SqlTypeMap.Convert(table.IdColumn).DbType, null);
 
             if (!lastWriteWins)
             {
-                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, SqlTypeMap.GetDbType(table.EtagColumn).DbType, null);
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, SqlTypeMap.Convert(table.EtagColumn).DbType, null);
             }
 
             return new PreparedDatabaseCommand
