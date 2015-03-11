@@ -1,25 +1,38 @@
 ﻿using System;
-using System.Linq;
 
 namespace HybridDb.Config
 {
     public class Column
     {
-        public Column(string name, Type type, int? length = null, bool nullable = false, object defaultValue = null, bool isPrimaryKey = false)
+        public Column(string name, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false)
         {
-            if (IsPrimaryKey && nullable)
-                throw new ArgumentException("Column can not be primary key and nullable.");
-
+            Name = name;
             Length = length;
-            DefaultValue = defaultValue;
             IsPrimaryKey = isPrimaryKey;
 
-            Name = name;
-            Nullable = nullable || (type.CanBeNull() && !isPrimaryKey);
-            Type = Nullable && type.IsNullable() ? System.Nullable.GetUnderlyingType(type) : type;
+            Nullable = type.CanBeNull() && !IsPrimaryKey;
+            Type = System.Nullable.GetUnderlyingType(type) ?? type;
 
-            if (!SqlTypeMap.ForNetType(Type).Any())
-                throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
+            if (Type.IsEnum)
+            {
+                Type = typeof(Enum);
+            }
+
+            if (Nullable)
+            {
+                DefaultValue = defaultValue;
+            }
+            else
+            {
+                if (Type.IsA<string>())
+                {
+                    DefaultValue = "";
+                }
+                else
+                {
+                    DefaultValue = defaultValue ?? Activator.CreateInstance(type);
+                }
+            }
         }
 
         public string Name { get; protected set; }

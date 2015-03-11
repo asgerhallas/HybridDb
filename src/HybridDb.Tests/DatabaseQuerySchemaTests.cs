@@ -1,5 +1,4 @@
-﻿using System.Data;
-using HybridDb.Config;
+﻿using HybridDb.Config;
 using HybridDb.Migration.Commands;
 using Shouldly;
 using Xunit.Extensions;
@@ -74,9 +73,9 @@ namespace HybridDb.Tests
             Use(mode);
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), nullable: true)).Execute(database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string),  nullable: true)).Execute(database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  nullable: false)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int))).Execute(database);
 
             var schema = database.QuerySchema();
 
@@ -110,8 +109,8 @@ namespace HybridDb.Tests
             Use(mode);
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int),  nullable: true, defaultValue: null)).Execute(database);
-            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int),  nullable: true, defaultValue: 42)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)).Execute(database);
             new AddColumn("Entities1", new Column("SomeString", typeof(string),  defaultValue: "peter")).Execute(database);
             new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(database);
 

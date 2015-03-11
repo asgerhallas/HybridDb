@@ -68,6 +68,7 @@
     </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Config\DynamicDocumentTable.cs" />
+    <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="HybridDbConfigurator.cs" />

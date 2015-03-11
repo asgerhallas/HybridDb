@@ -44,7 +44,7 @@ namespace HybridDb.Tests.Migration.Commands
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", type, length: length, isPrimaryKey: true))).Execute(database);
+            new CreateTable(new Table("Entities", new Column("Col1", type, length, isPrimaryKey: true))).Execute(database);
 
             database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }
@@ -63,8 +63,8 @@ namespace HybridDb.Tests.Migration.Commands
             Use(mode);
 
             new CreateTable(new Table("Entities1",
-                new Column("SomeNullableInt", typeof(int), nullable: true, defaultValue: null),
-                new Column("SomeOtherNullableInt", typeof(int),  nullable: true, defaultValue: 42),
+                new Column("SomeNullableInt", typeof(int?), defaultValue: null),
+                new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42),
                 new Column("SomeString", typeof(string),  defaultValue: "peter"),
                 new Column("SomeInt", typeof(int),  defaultValue: 666),
                 new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24)))).Execute(database);

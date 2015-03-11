@@ -189,13 +189,17 @@ namespace HybridDb
             return schema;
         }
 
-        Column Map(string tableName, QueryColumn column, bool isTempTable)
+        Column Map(string tableName, QueryColumn sqlcolumn, bool isTempTable)
         {
-            var columnType = GetType(column.system_type_id);
-            return new Column(
-                column.Name, columnType, column.max_length, column.is_nullable,
-                GetDefaultValue(columnType, GetDefaultValue(tableName, column, isTempTable)),
-                IsPrimaryKey(column.Name, isTempTable));
+            var columnType = GetType(sqlcolumn.system_type_id);
+            var column = new Column(
+                sqlcolumn.Name, columnType, sqlcolumn.max_length,
+                GetDefaultValue(columnType, GetDefaultValue(tableName, sqlcolumn, isTempTable)),
+                IsPrimaryKey(sqlcolumn.Name, isTempTable));
+
+            column.Nullable = sqlcolumn.is_nullable;
+
+            return column;
         }
 
         string GetDefaultValue(string tableName, QueryColumn column, bool isTempTable)

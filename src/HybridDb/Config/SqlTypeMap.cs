@@ -50,20 +50,25 @@ namespace HybridDb.Config
 
         public static SqlColumn GetDbType(Column column)
         {
-            return new SqlColumn(ForNetType(column.Type).First().DbType, GetLength(column.Length, column.Type));
+            if (!ForNetType(column.Type).Any())
+                throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
+            
+            return new SqlColumn(ForNetType(column.Type).First().DbType, GetLength(column));
         }
 
-        static int? GetLength(int? length, Type type)
+        static int? GetLength(Column column)
         {
-            if (length != null)
-                return length;
+            if (column.Length != null)
+                return column.Length;
 
-            if (type == typeof (string))
+            if (column.Type == typeof (string))
                 return Int32.MaxValue;
-            if (type == typeof(Enum))
+            
+            if (column.Type == typeof(Enum))
                 return 255;
-            if (type == typeof (byte[]))
-                return 255;
+            
+            if (column.Type == typeof (byte[]))
+                return Int32.MaxValue;
 
             return null;
         }
@@ -81,17 +86,5 @@ namespace HybridDb.Config
             public DbType DbType { get; private set; }
             public string SqlType { get; private set; }
         }
-    }
-
-    public class SqlColumn
-    {
-        public SqlColumn(DbType dbType, int? length)
-        {
-            DbType = dbType;
-            Length = length;
-        }
-
-        public DbType DbType { get; private set; }
-        public int? Length { get; private set; }
     }
 }

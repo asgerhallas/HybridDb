@@ -19,13 +19,13 @@ namespace HybridDb.Config
             ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset));
             Register(ModifiedAtColumn);
 
-            DocumentColumn = new Column("Document", typeof(byte[]), length: Int32.MaxValue, nullable: true);
+            DocumentColumn = new Column("Document", typeof(byte[]), Int32.MaxValue);
             Register(DocumentColumn);
 
-            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 255, nullable: true);  //TODO: should be fixed length?!
+            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 255);
             Register(DiscriminatorColumn);
 
-            VersionColumn = new Column("Version", typeof(int), nullable: true);
+            VersionColumn = new Column("Version", typeof(int));
             Register(VersionColumn);
         }
 
