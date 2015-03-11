@@ -10,6 +10,7 @@ namespace HybridDb.Tests.Migration.Commands
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void RemovesTable(TableMode mode)
         {

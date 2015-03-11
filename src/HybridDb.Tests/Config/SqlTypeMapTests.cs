@@ -80,7 +80,6 @@ namespace HybridDb.Tests.Config
         public void ThrowsIfUnknownType(Type columnType)
         {
             Should.Throw<ArgumentException>(() => SqlTypeMap.Convert(new Column("SomeColumn", columnType)));
-
         }
 
         class SomeClass {}

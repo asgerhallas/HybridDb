@@ -12,6 +12,7 @@ namespace HybridDb.Tests.Migration.Commands
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void CreatesTable(TableMode mode)
         {
@@ -24,6 +25,7 @@ namespace HybridDb.Tests.Migration.Commands
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void CreatesColumns(TableMode mode)
         {
@@ -37,8 +39,10 @@ namespace HybridDb.Tests.Migration.Commands
 
         [Theory]
         [InlineData(TableMode.UseTempTables, typeof(int), null)]
+        [InlineData(TableMode.UseGlobalTempTables, typeof(int), null)]
         [InlineData(TableMode.UseRealTables, typeof(int), null)]
         [InlineData(TableMode.UseTempTables, typeof(string), 255)]
+        [InlineData(TableMode.UseGlobalTempTables, typeof(string), 255)]
         [InlineData(TableMode.UseRealTables, typeof(string), 255)]
         public void CreatesPrimaryKeyColumn(TableMode mode, Type type, int? length)
         {
@@ -58,6 +62,7 @@ namespace HybridDb.Tests.Migration.Commands
         [Theory]
         [InlineData(TableMode.UseTempTables)]
         [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         public void CanCreateColumnWithDefaultValue(TableMode mode)
         {
             Use(mode);
