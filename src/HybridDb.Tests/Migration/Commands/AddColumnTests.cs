@@ -78,17 +78,17 @@ namespace HybridDb.Tests.Migration.Commands
 
             new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)).Execute(database);
             new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)).Execute(database);
-            //new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "peter"))).Execute(database);
-            //new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 666))).Execute(database);
-            //new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime), new SqlColumn(DbType.DateTime2, defaultValue: new DateTime(1999, 12, 24)))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(database);
 
             var schema = database.QuerySchema();
 
             schema["Entities1"]["SomeNullableInt"].DefaultValue.ShouldBe(null);
             schema["Entities1"]["SomeOtherNullableInt"].DefaultValue.ShouldBe(42);
-            //schema["Entities1"]["SomeString"].DefaultValue.ShouldBe("peter");
-            //schema["Entities1"]["SomeInt"].DefaultValue.ShouldBe(666);
-            //schema["Entities1"]["SomeDateTime"].DefaultValue.ShouldBe(new DateTime(1999, 12, 24));
+            schema["Entities1"]["SomeString"].DefaultValue.ShouldBe("peter");
+            schema["Entities1"]["SomeInt"].DefaultValue.ShouldBe(666);
+            schema["Entities1"]["SomeDateTime"].DefaultValue.ShouldBe(new DateTime(1999, 12, 24));
         }
 
         [Fact(Skip = "Not solved yet")]
@@ -98,22 +98,6 @@ namespace HybridDb.Tests.Migration.Commands
             new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(database);
 
             database.QuerySchema().ShouldContainKey("Entities1");
-        }
-
-        [Fact]
-        public void FactMethodName()
-        {
-            var defaultValueThatOriginatesFromAnEvilSource = "'; DROP TABLE #Entities; SELECT '";
-            defaultValueThatOriginatesFromAnEvilSource = "'42'";
-
-            var sqlCommandBuilder = new SqlCommandBuilder();
-            var quoteIdentifier = sqlCommandBuilder.QuoteIdentifier(defaultValueThatOriginatesFromAnEvilSource);
-
-            database.RawExecute(string.Format("create table #Entities (somecolumn int default {0})", quoteIdentifier));
-
-            var querySchema = database.QuerySchema();
-
-            //database.RawExecute("create table #Entities (somecolumn int default @var)", new{ var = defaultValueThatOriginatesFromAnEvilSource });
         }
 
         [Fact]

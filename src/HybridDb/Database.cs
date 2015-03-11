@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
@@ -191,10 +190,10 @@ namespace HybridDb
 
         Column Map(string tableName, QueryColumn sqlcolumn, bool isTempTable)
         {
-            var columnType = GetType(sqlcolumn.system_type_id);
+            var columnType = GetType(sqlcolumn);
             var column = new Column(
                 sqlcolumn.Name, columnType, sqlcolumn.max_length,
-                GetDefaultValue(columnType, GetDefaultValue(tableName, sqlcolumn, isTempTable)),
+                GetDefaultValue(columnType, tableName, sqlcolumn, isTempTable),
                 IsPrimaryKey(sqlcolumn.Name, isTempTable));
 
             column.Nullable = sqlcolumn.is_nullable;
@@ -202,17 +201,9 @@ namespace HybridDb
             return column;
         }
 
-        string GetDefaultValue(string tableName, QueryColumn column, bool isTempTable)
+        Type GetType(QueryColumn column)
         {
-            return RawQuery<string>(
-                String.Format("select column_default from {0}information_schema.columns where table_name='{1}' and column_name='{2}'",
-                    isTempTable ? "tempdb." : "",
-                    tableName,
-                    column.Name)).SingleOrDefault();
-        }
-
-        Type GetType(int id)
-        {
+            var id = column.system_type_id;
             //https://msdn.microsoft.com/en-us/library/cc716729.aspx
             var rawQuery = RawQuery<string>("select name from sys.types where system_type_id = @id", new { id });
 
@@ -224,7 +215,19 @@ namespace HybridDb
             if (firstMatchingType == null)
                 throw new ArgumentOutOfRangeException(String.Format("Found no matching .NET type for typeName type '{0}'.", shortName));
 
-            return firstMatchingType.NetType;
+            return column.is_nullable 
+                ? GetNullableType(firstMatchingType.NetType) 
+                : firstMatchingType.NetType;
+        }
+
+        static Type GetNullableType(Type type)
+        {
+            if (type.IsNullable())
+                return type;
+            
+            return type.IsValueType
+                ? typeof(Nullable<>).MakeGenericType(type) 
+                : type;
         }
 
         bool IsPrimaryKey(string column, bool isTempTable)
@@ -247,53 +250,30 @@ namespace HybridDb
             return isPrimaryKey;
         }
 
-        public static object GetDefaultValue(Type columnType, string defaultValue2)
+        object GetDefaultValue(Type columnType, string tableName, QueryColumn column, bool isTempTable)
         {
-            if (defaultValue2 == null)
+            var defaultValueInDb = RawQuery<string>(
+                String.Format("select column_default from {0}information_schema.columns where table_name='{1}' and column_name='{2}'",
+                    isTempTable ? "tempdb." : "",
+                    tableName,
+                    column.Name)).SingleOrDefault();
+        
+            if (defaultValueInDb == null)
                 return null;
 
-            var defaultValue = defaultValue2.Replace("'", "").Trim('(', ')');
+            var defaultValue = defaultValueInDb.Replace("'", "").Trim('(', ')');
+            columnType = Nullable.GetUnderlyingType(columnType) ?? columnType;
 
-            if (columnType == typeof(string))
+            if (columnType == typeof(string) || columnType == typeof(Enum))
                 return defaultValue;
-            if (columnType == typeof(long))
-                return Convert.ToInt64(defaultValue);
-            if (columnType == typeof(byte[]))
-                return GetBytes(defaultValue);
-            if (columnType == typeof(bool))
-                return Convert.ToBoolean(defaultValue);
-            if (columnType == typeof(Enum))
-                return defaultValue;            //OBS: correct?
-            if (columnType == typeof(DateTime))
-                return Convert.ToDateTime(defaultValue);
+
             if (columnType == typeof(DateTimeOffset))
-                return new DateTimeOffset(Convert.ToDateTime(defaultValue));
-            if (columnType == typeof(decimal))
-                return Convert.ToDecimal(defaultValue);
-            if (columnType == typeof(int))
-                return Convert.ToInt32(defaultValue);
-            if (columnType == typeof(double))
-                return Convert.ToDouble(defaultValue);
-            if (columnType == typeof(Single))
-                return Convert.ToSingle(defaultValue);
-            if (columnType == typeof(short))
-                return Convert.ToInt16(defaultValue);
-            if (columnType == typeof(TimeSpan))
-                return TimeSpan.Parse(defaultValue);
-            if (columnType == typeof(byte))
-                return Convert.ToByte(defaultValue);
+                return DateTimeOffset.Parse(defaultValue);
+
             if (columnType == typeof(Guid))
                 return Guid.Parse(defaultValue);
 
-            throw new ArgumentException(String.Format("Column type {0} is unknown.", columnType));
-        }
-
-
-        static byte[] GetBytes(string str)
-        {
-            var bytes = new byte[str.Length * sizeof(char)];
-            Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, bytes.Length);
-            return bytes;
+            return Convert.ChangeType(defaultValue, columnType);
         }
 
         public void Dispose()
