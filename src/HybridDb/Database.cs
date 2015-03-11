@@ -201,8 +201,6 @@ namespace HybridDb
             return column;
         }
 
-
-
         Type GetType(QueryColumn column)
         {
             var id = column.system_type_id;
@@ -264,10 +262,16 @@ namespace HybridDb
                 return null;
 
             var defaultValue = defaultValueInDb.Replace("'", "").Trim('(', ')');
-
             columnType = Nullable.GetUnderlyingType(columnType) ?? columnType;
+
             if (columnType == typeof(string) || columnType == typeof(Enum))
                 return defaultValue;
+
+            if (columnType == typeof(DateTimeOffset))
+                return DateTimeOffset.Parse(defaultValue);
+
+            if (columnType == typeof(Guid))
+                return Guid.Parse(defaultValue);
 
             return Convert.ChangeType(defaultValue, columnType);
         }

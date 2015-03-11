@@ -6,6 +6,9 @@ namespace HybridDb.Config
     {
         public Column(string name, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false)
         {
+            if(type == typeof(byte[]) && defaultValue != null)
+                throw new ArgumentException("Byte array column can not have default value.");
+
             Name = name;
             Length = length;
             IsPrimaryKey = isPrimaryKey;
