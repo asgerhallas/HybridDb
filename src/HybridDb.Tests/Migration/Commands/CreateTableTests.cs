@@ -36,13 +36,15 @@ namespace HybridDb.Tests.Migration.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseRealTables)]
-        public void CreatesPrimaryKeyColumn(TableMode mode)
+        [InlineData(TableMode.UseTempTables, typeof(int), null)]
+        [InlineData(TableMode.UseRealTables, typeof(int), null)]
+        [InlineData(TableMode.UseTempTables, typeof(string), 255)]
+        [InlineData(TableMode.UseRealTables, typeof(string), 255)]
+        public void CreatesPrimaryKeyColumn(TableMode mode, Type type, int? length)
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string), isPrimaryKey: true))).Execute(database);
+            new CreateTable(new Table("Entities", new Column("Col1", type, length: length, isPrimaryKey: true))).Execute(database);
 
             database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }
