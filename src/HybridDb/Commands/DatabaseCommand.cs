@@ -25,7 +25,8 @@ namespace HybridDb.Commands
             foreach (var projection in projections)
             {
                 var column = projection.Key;
-                AddTo(parameters, "@" + column.Name + i, projection.Value, SqlTypeMap.GetDbType(column.Type), column.Length);
+                var sqlColumn = SqlTypeMap.GetDbType(column);
+                AddTo(parameters, "@" + column.Name + i, projection.Value, sqlColumn.DbType, sqlColumn.Length);
             }
 
             return parameters;

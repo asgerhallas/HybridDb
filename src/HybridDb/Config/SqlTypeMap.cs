@@ -26,12 +26,12 @@ namespace HybridDb.Config
                 new SqlTypeMapping(typeof (double), DbType.Double, "float"),
                 new SqlTypeMapping(typeof (Single), DbType.Single, "real"),
                 new SqlTypeMapping(typeof (short), DbType.Int16, "smallint"),
-                new SqlTypeMapping(typeof (TimeSpan), DbType.Time, "XXX9"),
+                new SqlTypeMapping(typeof (TimeSpan), DbType.Time, "time"),
                 new SqlTypeMapping(typeof (byte), DbType.Byte, "tinyint"),
                 new SqlTypeMapping(typeof (Guid), DbType.Guid, "uniqueidentifier"),
                 new SqlTypeMapping(typeof (string), DbType.Xml, "xml")
             };          
-        }
+        }       
 
         public static IEnumerable<SqlTypeMapping> ForNetType(Type type)
         {
@@ -48,9 +48,24 @@ namespace HybridDb.Config
             return sqlTypeMappings.Where(x => x.SqlType == type);
         }
 
-        public static DbType GetDbType(Type type)
+        public static SqlColumn GetDbType(Column column)
         {
-            return ForNetType(type).First().DbType;
+            return new SqlColumn(ForNetType(column.Type).First().DbType, GetLength(column.Length, column.Type));
+        }
+
+        static int? GetLength(int? length, Type type)
+        {
+            if (length != null)
+                return length;
+
+            if (type == typeof (string))
+                return Int32.MaxValue;
+            if (type == typeof(Enum))
+                return 255;
+            if (type == typeof (byte[]))
+                return 255;
+
+            return null;
         }
 
         public class SqlTypeMapping
@@ -66,5 +81,17 @@ namespace HybridDb.Config
             public DbType DbType { get; private set; }
             public string SqlType { get; private set; }
         }
+    }
+
+    public class SqlColumn
+    {
+        public SqlColumn(DbType dbType, int? length)
+        {
+            DbType = dbType;
+            Length = length;
+        }
+
+        public DbType DbType { get; private set; }
+        public int? Length { get; private set; }
     }
 }
