@@ -35,7 +35,7 @@ namespace HybridDb.Migration
             sql.Append(new SqlParameter { DbType = sqlColumn.DbType }.SqlDbType.ToString());
             sql.Append(sqlColumn.Length != null, "(" + (sqlColumn.Length == Int32.MaxValue ? "MAX" : sqlColumn.Length.ToString()) + ")");
             sql.Append(column.Nullable, "NULL").Or("NOT NULL");
-            sql.Append(column.DefaultValue != null, "DEFAULT quotename(" + column.DefaultValue + ", '''')");
+            sql.Append(column.DefaultValue != null, "DEFAULT '{0}'", column.DefaultValue);
             sql.Append(column.IsPrimaryKey, " PRIMARY KEY");
 
             return sql;
