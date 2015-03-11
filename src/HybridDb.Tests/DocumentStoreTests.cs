@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Transactions;
 using HybridDb.Commands;
@@ -137,7 +136,7 @@ namespace HybridDb.Tests
             var etag = store.Insert(table.Table, id, new {Field = "Asger"});
 
             // Maybe it should not be required to be a DocumentTable. If we do that everything should part of the projection. 
-            // If we do not do taht, why do we have document as part of the projection? Either or.
+            // If we do not do that, why do we have document as part of the projection? Either or.
             store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "StringProp", "Lars" } });
 
             var row = database.RawQuery<dynamic>("select * from #Entities").Single();

@@ -18,20 +18,13 @@ namespace HybridDb.Config
                 Type = typeof(Enum);
             }
 
-            if (Nullable)
+            if (!Nullable && defaultValue == null)
             {
-                DefaultValue = defaultValue;
+                DefaultValue = Type.IsA<string>() ? "" : Activator.CreateInstance(type);
             }
             else
             {
-                if (Type.IsA<string>())
-                {
-                    DefaultValue = "";
-                }
-                else
-                {
-                    DefaultValue = defaultValue ?? Activator.CreateInstance(type);
-                }
+                DefaultValue = defaultValue;
             }
         }
 

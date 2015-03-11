@@ -11,7 +11,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Migration
 {
-    public class MigrationRunnerTests : HybridDbTests
+    public class MigrationRunnerTests : HybridDbStoreTests
     {
         readonly ConsoleLogger logger;
 
@@ -160,6 +160,33 @@ namespace HybridDb.Tests.Migration
             }
 
             database.QuerySchema().ShouldNotContainKey("Testing");
+        }
+
+        [Fact]
+        public void SetsRequiresReprojectionOnTablesWithNewColumns()
+        {
+            var designer = Document<Entity>().With(x => x.Number);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity
+                {
+                    Number = 42,
+                    Property = "Asger"
+                });
+                session.SaveChanges();
+            }
+
+            // add another projection
+            designer.With(x => x.Property);
+
+            var runner = new MigrationRunner(
+                logger,
+                new StaticMigrationProvider(),
+                new SchemaDiffer());
+
+            //runner.Migrate()
+
         }
 
         void CreateMetadataTable()

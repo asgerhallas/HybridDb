@@ -1,11 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Config;
 using HybridDb.Logging;
-using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migration
 {
