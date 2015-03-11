@@ -135,7 +135,6 @@
     <Compile Include="Config\DocumentTable.cs" />
     <Compile Include="Config\IndexDesigner.cs" />
     <Compile Include="Config\IndexTable.cs" />
-    <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
     <Compile Include="DefaultBsonSerializer.cs" />

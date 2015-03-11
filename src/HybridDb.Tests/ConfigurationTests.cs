@@ -119,8 +119,8 @@ namespace HybridDb.Tests
         {
             configuration.Document<AbstractEntity>().With(x => x.Number);
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(false);
         }
 
@@ -131,8 +131,8 @@ namespace HybridDb.Tests
             configuration.Document<MoreDerivedEntity1>().With(x => x.Number);
             configuration.Document<MoreDerivedEntity2>();
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(true);
         }
 
@@ -170,8 +170,8 @@ namespace HybridDb.Tests
             configuration.Document<AbstractEntity>().With(x => x.LongNumber);
             configuration.Document<MoreDerivedEntity1>().With("LongNumber", x => x.Number);
 
-            var sqlColumn = TableFor<AbstractEntity>()["LongNumber"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int64);
+            var sqlColumn = TableFor<AbstractEntity>()["LongNumber"];
+            sqlColumn.Type.ShouldBe(typeof(long));
             sqlColumn.Nullable.ShouldBe(false);
 
             ProjectionsFor<AbstractEntity>()["LongNumber"].Projector(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 }).ShouldBe(1);
@@ -184,8 +184,8 @@ namespace HybridDb.Tests
             configuration.Document<AbstractEntity>().With(x => x.Number);
             configuration.Document<MoreDerivedEntity1>().With("Number", x => (int?)null);
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(true);
         }
 
@@ -195,8 +195,8 @@ namespace HybridDb.Tests
             configuration.Document<AbstractEntity>().With(x => x.Number);
             configuration.Document<MoreDerivedEntity1>().With(x => x.Number);
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(false);
         }
 

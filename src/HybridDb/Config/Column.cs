@@ -1,34 +1,37 @@
 ﻿using System;
+using System.Linq;
 
 namespace HybridDb.Config
 {
     public class Column
     {
-        public Column(string name, Type type, SqlColumn sqlColumn)
+        public Column(string name, Type type, int? length = null, bool nullable = false, object defaultValue = null, bool isPrimaryKey = false)
         {
+            if (IsPrimaryKey && nullable)
+                throw new ArgumentException("Column can not be primary key and nullable.");
+
+            Length = length;
+            DefaultValue = defaultValue;
+            IsPrimaryKey = isPrimaryKey;
+
             Name = name;
-            Nullable = type.IsNullable();
-            Type = Nullable ? System.Nullable.GetUnderlyingType(type) : type;
-            SqlColumn = sqlColumn;
+            Nullable = nullable || (type.CanBeNull() && !isPrimaryKey);
+            Type = Nullable && type.IsNullable() ? System.Nullable.GetUnderlyingType(type) : type;
+
+            if (!SqlTypeMap.ForNetType(Type).Any())
+                throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
         }
 
-        public Column(string name, Type type)
-            : this(name, type, type != null ? new SqlColumn(type) : new SqlColumn())
-        {}
-
         public string Name { get; protected set; }
-        public Type Type { get; protected set; }
-        
-        public int? Length { get; set; }
+        public Type Type { get; protected set; }        
+        public int? Length { get; protected set; }
         public bool Nullable { get; set; }
-        public object DefaultValue { get; set; }
-        public bool IsPrimaryKey { get; set; }
-
-        public SqlColumn SqlColumn { get; protected set; }
+        public object DefaultValue { get; protected set; }
+        public bool IsPrimaryKey { get; protected set; }
 
         public override string ToString()
         {
-            return string.Format("{0} ({1})", Name, SqlColumn.Type);
+            return string.Format("{0} ({1})", Name, Type);
         }
 
         protected bool Equals(Column other)

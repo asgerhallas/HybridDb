@@ -74,9 +74,9 @@ namespace HybridDb.Tests
             Use(mode);
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, nullable: true))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, nullable: false))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), nullable: true)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string),  nullable: true)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  nullable: false)).Execute(database);
 
             var schema = database.QuerySchema();
 
@@ -93,8 +93,8 @@ namespace HybridDb.Tests
             Use(mode);
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, isPrimaryKey: true))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, isPrimaryKey: false))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string),  isPrimaryKey: false)).Execute(database);
 
             var schema = database.QuerySchema();
 
@@ -110,10 +110,10 @@ namespace HybridDb.Tests
             Use(mode);
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: null))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int), new SqlColumn(DbType.Int32, nullable: true, defaultValue: 42))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), new SqlColumn(DbType.String, defaultValue: "peter"))).Execute(database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), new SqlColumn(DbType.Int32, defaultValue: 666))).Execute(database);
+            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int),  nullable: true, defaultValue: null)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int),  nullable: true, defaultValue: 42)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string),  defaultValue: "peter")).Execute(database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(database);
 
             var schema = database.QuerySchema();
 

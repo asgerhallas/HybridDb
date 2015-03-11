@@ -25,6 +25,7 @@ namespace HybridDb.Migration.Commands
                 GetTableExistsSql(database, Table.Name),
                 database.FormatTableNameAndEscape(Table.Name));
 
+
             var i = 0;
             foreach (var column in Table.Columns)
             {

@@ -48,12 +48,12 @@ namespace HybridDb.Config
             return sqlTypeMappings.Where(x => x.SqlType == type);
         }
 
-        public static object GetDefaultValue(Type columnType, string defaultValue)
+        public static object GetDefaultValue(Type columnType, string defaultValue2)
         {
-            if (defaultValue == null)
+            if (defaultValue2 == null)
                 return null;
             
-            defaultValue = defaultValue.Replace("'", "").Trim('(', ')');
+            var defaultValue = defaultValue2.Replace("'", "").Trim('(', ')');
             
             if (columnType == typeof(string))
                 return defaultValue;
@@ -108,6 +108,11 @@ namespace HybridDb.Config
             public Type NetType { get; private set; }
             public DbType DbType { get; private set; }
             public string SqlType { get; private set; }
+        }
+
+        public static DbType GetDbType(Type type)
+        {
+            return ForNetType(type).First().DbType;
         }
     }
 }

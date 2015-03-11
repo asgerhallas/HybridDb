@@ -52,7 +52,7 @@ namespace HybridDb.Tests.Migration
                 logger, 
                 new StaticMigrationProvider(
                     new InlineMigration(1,
-                        new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
+                        new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                         new AddColumn("Testing", new Column("Noget", typeof (int))))),
                 new FakeSchemaDiffer());
 
@@ -73,7 +73,7 @@ namespace HybridDb.Tests.Migration
                 logger, 
                 new StaticMigrationProvider(),
                 new FakeSchemaDiffer(
-                    new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
+                    new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                     new AddColumn("Testing", new Column("Noget", typeof (int)))));
 
             runner.Migrate(database, configuration);
@@ -150,7 +150,7 @@ namespace HybridDb.Tests.Migration
                     logger,
                     new StaticMigrationProvider(),
                     new FakeSchemaDiffer(
-                        new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true)))),
+                        new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
                         new ThrowingCommand()));
 
                 runner.Migrate(database, configuration);

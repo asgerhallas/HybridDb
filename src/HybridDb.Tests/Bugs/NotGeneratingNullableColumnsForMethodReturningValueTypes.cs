@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Bugs
                 configurator: new LambdaHybridDbConfigurator(config => config.Document<Entity>().With(x => x.SomeEnumerable.Count())));
 
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerableCount"];
-            column.SqlColumn.Nullable.ShouldBe(true);
+            column.Nullable.ShouldBe(true);
         }
 
         public class Entity

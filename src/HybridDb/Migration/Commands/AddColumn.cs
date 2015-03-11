@@ -20,7 +20,7 @@ namespace HybridDb.Migration.Commands
             var sql = new SqlBuilder();
             sql.Append("alter table {0} add {1}", database.FormatTableNameAndEscape(Tablename), database.Escape(Column.Name));
             sql.Append(GetColumnSqlType(Column));
-            
+
             database.RawExecute(sql.ToString());
         }
     }

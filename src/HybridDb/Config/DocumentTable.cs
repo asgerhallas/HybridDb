@@ -7,25 +7,25 @@ namespace HybridDb.Config
     {
         public DocumentTable(string name) : base(name)
         {
-            IdColumn = new SystemColumn("Id", typeof(Guid), new SqlColumn(DbType.Guid, isPrimaryKey: true));
+            IdColumn = new SystemColumn("Id", typeof(Guid),  isPrimaryKey: true);
             Register(IdColumn);
 
-            EtagColumn = new SystemColumn("Etag", typeof(Guid), new SqlColumn(DbType.Guid));
+            EtagColumn = new SystemColumn("Etag", typeof(Guid));
             Register(EtagColumn);
 
-            CreatedAtColumn = new SystemColumn("CreatedAt", typeof(DateTimeOffset), new SqlColumn(DbType.DateTimeOffset));
+            CreatedAtColumn = new SystemColumn("CreatedAt", typeof(DateTimeOffset));
             Register(CreatedAtColumn);
 
-            ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset), new SqlColumn(DbType.DateTimeOffset));
+            ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset));
             Register(ModifiedAtColumn);
 
-            DocumentColumn = new Column("Document", typeof(byte[]), new SqlColumn(DbType.Binary, Int32.MaxValue, nullable: true));
+            DocumentColumn = new Column("Document", typeof(byte[]), length: Int32.MaxValue, nullable: true);
             Register(DocumentColumn);
 
-            DiscriminatorColumn = new Column("Discriminator", typeof(string), new SqlColumn(DbType.StringFixedLength, 255, nullable: true));
+            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 255, nullable: true);  //TODO: should be fixed length?!
             Register(DiscriminatorColumn);
 
-            VersionColumn = new Column("Version", typeof(int), new SqlColumn(DbType.Int32, nullable: true));
+            VersionColumn = new Column("Version", typeof(int), nullable: true);
             Register(VersionColumn);
         }
 
