@@ -35,7 +35,7 @@ namespace HybridDb.Tests
                     UseTempTables();
                     break;
                 case TableMode.UseGlobalTempTables:
-                    throw new Exception();
+                    UseGlobalTempTables();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("mode");
@@ -46,6 +46,12 @@ namespace HybridDb.Tests
         {
             connectionString = "data source=.;Integrated Security=True";
             database = Using(new Database(logger, connectionString, TableMode.UseTempTables, testMode: true));
+        }
+
+        protected void UseGlobalTempTables()
+        {
+            connectionString = "data source=.;Integrated Security=True";
+            database = Using(new Database(logger, connectionString, TableMode.UseGlobalTempTables, testMode: true));
         }
 
         protected void UseRealTables()

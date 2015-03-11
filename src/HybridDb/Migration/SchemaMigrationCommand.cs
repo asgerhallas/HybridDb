@@ -10,11 +10,11 @@ namespace HybridDb.Migration
         protected SchemaMigrationCommand()
         {
             Unsafe = false;
-            RequiresReprojection = false;
+            RequiresReprojectionOf = null;
         }
 
         public bool Unsafe { get; protected set; }
-        public bool RequiresReprojection { get; protected set; }
+        public string RequiresReprojectionOf { get; protected set; }
 
         protected string GetTableExistsSql(Database db, string tablename)
         {

@@ -38,7 +38,7 @@ namespace HybridDb.Tests.Migration.Commands
         [Fact]
         public void DoesNotRequireReprojection()
         {
-            new RenameColumn(new Table("Entities"), "c1", "c2").RequiresReprojection.ShouldBe(false);
+            new RenameColumn(new Table("Entities"), "c1", "c2").RequiresReprojectionOf.ShouldBe(null);
         }
 
         [Fact]

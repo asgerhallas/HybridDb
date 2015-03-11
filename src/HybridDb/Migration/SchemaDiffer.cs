@@ -23,7 +23,7 @@ namespace HybridDb.Migration
 
                 foreach (var column in table.Columns)
                 {
-                    var existingColumn = existingTable.Columns.SingleOrDefault(x => x.Equals(column));
+                    var existingColumn = existingTable.Columns.SingleOrDefault(x => Equals(x.Name, column.Name));
                     if (existingColumn == null)
                     {
                         commands.Add(new AddColumn(table.Name, column));
@@ -32,7 +32,7 @@ namespace HybridDb.Migration
 
                 foreach (var column in existingTable.Columns)
                 {
-                    if (table.Columns.Any(x => x.Equals(column)))
+                    if (table.Columns.Any(x => Equals(x.Name, column.Name)))
                         continue;
 
                     commands.Add(new RemoveColumn(table, column));

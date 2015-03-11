@@ -81,7 +81,7 @@ namespace HybridDb.Tests.Migration.Commands
         [Fact]
         public void DoesNotRequireReprojection()
         {
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).RequiresReprojection.ShouldBe(false);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).RequiresReprojectionOf.ShouldBe(null);
         }
 
         [Fact]

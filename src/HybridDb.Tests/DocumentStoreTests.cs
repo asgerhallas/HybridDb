@@ -413,6 +413,9 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
 
+            // the initial migrations might issue some requests
+            var initialNumberOfRequest = store.NumberOfRequests;
+
             var commands = new List<DatabaseCommand>();
             for (var i = 0; i < 2100/4 + 1; i++)
             {
@@ -420,7 +423,7 @@ namespace HybridDb.Tests
             }
 
             store.Execute(commands.ToArray());
-            store.NumberOfRequests.ShouldBe(2);
+            store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
         }
 
         [Fact]

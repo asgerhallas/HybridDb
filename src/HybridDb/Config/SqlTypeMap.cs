@@ -14,7 +14,7 @@ namespace HybridDb.Config
             sqlTypeMappings = new List<SqlTypeMapping>
             {
                 new SqlTypeMapping(typeof (long), DbType.Int64, "bigint"),
-                new SqlTypeMapping(typeof (byte[]), DbType.Binary, "binary"),
+                new SqlTypeMapping(typeof (byte[]), DbType.Binary, "varbinary"),
                 new SqlTypeMapping(typeof (bool), DbType.Boolean, "bit"),
                 new SqlTypeMapping(typeof (string), DbType.String, "nvarchar"),
                 new SqlTypeMapping(typeof (string), DbType.StringFixedLength, "nchar"), //fixed

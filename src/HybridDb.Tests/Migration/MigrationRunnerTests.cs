@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
+using Dapper;
 using HybridDb.Config;
 using HybridDb.Logging;
 using HybridDb.Migration;
@@ -25,7 +25,7 @@ namespace HybridDb.Tests.Migration
         {
             var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new SchemaDiffer());
 
-            runner.Migrate(database, configuration);
+            runner.Migrate(store, configuration);
 
             configuration.Tables.ShouldContainKey("HybridDb");
             database.RawQuery<int>("select top 1 SchemaVersion from #HybridDb").Single().ShouldBe(0);
@@ -38,7 +38,7 @@ namespace HybridDb.Tests.Migration
 
             var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new FakeSchemaDiffer());
 
-            runner.Migrate(database, configuration);
+            runner.Migrate(store, configuration);
 
             database.QuerySchema().Count.ShouldBe(1); // the metadata table and nothing else
         }
@@ -48,15 +48,14 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(
-                logger, 
+            var runner = new MigrationRunner(logger, 
                 new StaticMigrationProvider(
                     new InlineMigration(1,
                         new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                         new AddColumn("Testing", new Column("Noget", typeof (int))))),
                 new FakeSchemaDiffer());
 
-            runner.Migrate(database, configuration);
+            runner.Migrate(store, configuration);
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -69,14 +68,13 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(
-                logger, 
+            var runner = new MigrationRunner(logger, 
                 new StaticMigrationProvider(),
                 new FakeSchemaDiffer(
                     new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                     new AddColumn("Testing", new Column("Noget", typeof (int)))));
 
-            runner.Migrate(database, configuration);
+            runner.Migrate(store, configuration);
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -89,14 +87,13 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(
-                logger, 
+            var runner = new MigrationRunner(logger, 
                 new StaticMigrationProvider(
                     new InlineMigration(1, new UnsafeThrowingCommand())),
                 new FakeSchemaDiffer(
                     new UnsafeThrowingCommand()));
 
-            Should.NotThrow(() => runner.Migrate(database, configuration));
+            Should.NotThrow(() => runner.Migrate(store, configuration));
         }
 
         [Fact]
@@ -106,13 +103,12 @@ namespace HybridDb.Tests.Migration
 
             var command = new CountingCommand();
 
-            var runner = new MigrationRunner(
-                logger,
+            var runner = new MigrationRunner(logger,
                 new StaticMigrationProvider(new InlineMigration(1, command)),
                 new FakeSchemaDiffer());
 
-            runner.Migrate(database, configuration);
-            runner.Migrate(database, configuration);
+            runner.Migrate(store, configuration);
+            runner.Migrate(store, configuration);
 
             command.NumberOfTimesCalled.ShouldBe(1);
         }
@@ -127,14 +123,14 @@ namespace HybridDb.Tests.Migration
             new MigrationRunner(logger,
                 new StaticMigrationProvider(
                     new InlineMigration(1, command)),
-                new FakeSchemaDiffer()).Migrate(database, configuration);
+                new FakeSchemaDiffer()).Migrate(store, configuration);
 
             Should.NotThrow(() =>
                 new MigrationRunner(logger,
                     new StaticMigrationProvider(
                         new InlineMigration(1, new ThrowingCommand()),
                         new InlineMigration(2, command)),
-                    new FakeSchemaDiffer()).Migrate(database, configuration));
+                    new FakeSchemaDiffer()).Migrate(store, configuration));
 
             command.NumberOfTimesCalled.ShouldBe(2);
         }
@@ -146,14 +142,13 @@ namespace HybridDb.Tests.Migration
 
             try
             {
-                var runner = new MigrationRunner(
-                    logger,
+                var runner = new MigrationRunner(logger, 
                     new StaticMigrationProvider(),
                     new FakeSchemaDiffer(
-                        new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
+                        new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                         new ThrowingCommand()));
 
-                runner.Migrate(database, configuration);
+                runner.Migrate(store, configuration);
             }
             catch (Exception)
             {
@@ -165,28 +160,84 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void SetsRequiresReprojectionOnTablesWithNewColumns()
         {
-            var designer = Document<Entity>().With(x => x.Number);
+            Document<Entity>();
+            Document<AbstractEntity>();
+            Document<OtherEntity>();
 
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity
-                {
-                    Number = 42,
-                    Property = "Asger"
-                });
+                session.Store(new Entity());
+                session.Store(new Entity());
+                session.Store(new DerivedEntity());
+                session.Store(new DerivedEntity());
+                session.Store(new OtherEntity());
+                session.Store(new OtherEntity());
                 session.SaveChanges();
             }
 
-            // add another projection
-            designer.With(x => x.Property);
+            var runner = new MigrationRunner(logger, 
+                new StaticMigrationProvider(), 
+                new FakeSchemaDiffer(
+                    new AddColumn("Entities", new Column("NewCol", typeof(int))),
+                    new AddColumn("AbstractEntities", new Column("NewCol", typeof(int)))));
+            
+            runner.Migrate(store, configuration);
 
-            var runner = new MigrationRunner(
-                logger,
-                new StaticMigrationProvider(),
-                new SchemaDiffer());
+            store.Database.RawQuery<string>("select state from #Entities").ShouldAllBe(x => x == "RequiresReprojection");
+            store.Database.RawQuery<string>("select state from #AbstractEntities").ShouldAllBe(x => x == "RequiresReprojection");
+            store.Database.RawQuery<string>("select state from #OtherEntities").ShouldAllBe(x => x == null);
+        }
 
-            //runner.Migrate()
+        [Fact]
+        public void ContinuesWithReprojectionOfMarkedRows()
+        {
+            var designer1 = Document<Entity>();
+            var designer2 = Document<AbstractEntity>();
+            var designer3 = Document<OtherEntity>();
 
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Number = 1 });
+                session.Store(new Entity { Number = 2 });
+                session.Store(new DerivedEntity { Property = "Asger" });
+                session.Store(new DerivedEntity { Property = "Peter" });
+                session.Store(new OtherEntity { Number = 41 });
+                session.Store(new OtherEntity { Number = 42 });
+                session.SaveChanges();
+            }
+
+            designer1.With(x => x.Number);
+            designer2.With(x => x.Property);
+
+            // first run changes the schema, but "fail" before the long running task is started
+            new MigrationRunner(logger, new StaticMigrationProvider(), new SchemaDiffer())
+                .Migrate(store, configuration);
+
+            // second run does not change any schema
+            new MigrationRunner(logger, new StaticMigrationProvider(), new FakeSchemaDiffer())
+                .Migrate(store, configuration)
+                .RunSynchronously();
+
+            using (var managedConnection = store.Database.Connect())
+            {
+                var result1 = managedConnection.Connection.Query<string, int, Tuple<string, int>>(
+                    "select State, Number from #Entities order by Number", Tuple.Create, splitOn: "*").ToList();
+                
+                result1[0].ShouldBe(Tuple.Create((string) null, 1));
+                result1[1].ShouldBe(Tuple.Create((string) null, 2));
+
+                var result2 = managedConnection.Connection.Query<string, string, Tuple<string, string>>(
+                    "select State, Property from #AbstractEntities order by Property", Tuple.Create, splitOn: "*").ToList();
+                
+                result2[0].ShouldBe(Tuple.Create((string) null, "Asger"));
+                result2[1].ShouldBe(Tuple.Create((string) null, "Peter"));
+
+                var result3 = managedConnection.Connection.Query<string>(
+                    "select State from #OtherEntities").ToList();
+                
+                result3[0].ShouldBe(null);
+                result3[1].ShouldBe(null);
+            }
         }
 
         void CreateMetadataTable()

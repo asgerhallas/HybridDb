@@ -24,7 +24,7 @@ namespace HybridDb.Tests.Migration.Commands
         [Fact]
         public void DoesNotRequireReprojection()
         {
-            new RemoveTable("Entities").RequiresReprojection.ShouldBe(false);
+            new RemoveTable("Entities").RequiresReprojectionOf.ShouldBe(null);
         }
 
         [Fact]

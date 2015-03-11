@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using HybridDb.Config;
 using HybridDb.Migration.Commands;
@@ -127,7 +125,7 @@ namespace HybridDb.Tests.Migration.Commands
         [Fact]
         public void RequiresReprojection()
         {
-            new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojection.ShouldBe(true);
+            new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe("Entities");
         }
     }
 }

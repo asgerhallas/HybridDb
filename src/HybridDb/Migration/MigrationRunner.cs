@@ -1,7 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Config;
+using HybridDb.Linq;
 using HybridDb.Logging;
 
 namespace HybridDb.Migration
@@ -19,14 +22,17 @@ namespace HybridDb.Migration
             this.differ = differ;
         }
 
-        public Task Migrate(Database database, Configuration configuration)
+        public Task Migrate(DocumentStore store, Configuration configuration)
         {
             var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
             configuration.Tables.TryAdd(metadata.Name, metadata);
 
+            var requiresReprojection = new List<string>();
+
             using (var tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
             {
                 // abstract out so version is store independent
+                var database = store.Database;
                 var schema = database.QuerySchema().Values.ToList(); // demeter go home!
 
                 var currentVersion = schema.Any(x => x.Name == "HybridDb")
@@ -64,6 +70,16 @@ namespace HybridDb.Migration
                     }
 
                     command.Execute(database);
+
+                    if (command.RequiresReprojectionOf != null)
+                    {
+                        requiresReprojection.Add(command.RequiresReprojectionOf);
+                    }
+                }
+
+                foreach (var tablename in requiresReprojection)
+                {
+                    database.RawExecute(string.Format("update {0} set state=@state", database.FormatTableNameAndEscape(tablename)), new { state = "RequiresReprojection" });
                 }
 
                 database.RawExecute(string.Format(@"
@@ -76,8 +92,58 @@ else
 
                 tx.Complete();
             }
-            
-            return Task.FromResult(1);
+
+            return new Task(() =>
+            {
+                foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
+                {
+                    var design = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
+
+                    QueryStats stats;
+                    foreach (var doc in store.Query(table, out stats, where: "State = @state", parameters: new { state = "RequiresReprojection" }))
+                    {
+                        var discriminator = ((string)doc[table.DiscriminatorColumn]).Trim();
+
+                        DocumentDesign concreteDesign;
+                        if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                        {
+                            throw new InvalidOperationException(string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
+                        }
+
+                        var entity = configuration.Serializer.Deserialize((byte[])doc[table.DocumentColumn], concreteDesign.DocumentType);
+
+                        var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
+                        projections.Add("State", null);
+
+                        store.Update(table, (Guid) doc[table.IdColumn], (Guid) doc[table.EtagColumn], projections);
+                    }
+                }
+
+            }, TaskCreationOptions.LongRunning);
         }
+
+        static void OpenAll<T>(IDocumentStore store) where T : class
+        {
+            int i = 0;
+            while (true)
+            {
+                var tableName = store.Configuration.GetDesignFor<T>();
+                using (var session = store.OpenSession())
+                {
+                    QueryStats stats;
+                    var items = session.Query<T>().Statistics(out stats).Where(x => x.Column<int>("Version") == 0).Take(100).ToList();
+
+                    i += stats.RetrievedResults;
+                    Console.WriteLine("Opening {0} {1} / {2}", tableName, i, stats.TotalResults);
+
+                    if (items.Count == 0)
+                        break;
+
+                    session.SaveChanges();
+                    Console.WriteLine("Saved the changes");
+                }
+            }
+        }
+
     }
 }

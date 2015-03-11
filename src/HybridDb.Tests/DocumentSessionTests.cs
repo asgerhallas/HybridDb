@@ -75,10 +75,13 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Advanced.Defer(new InsertCommand(table.Table, id, new{}));
-                store.NumberOfRequests.ShouldBe(0);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
                 session.SaveChanges();
-                store.NumberOfRequests.ShouldBe(1);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
             var entity = database.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
@@ -393,6 +396,9 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges(); // 1
                 session.Advanced.Clear();
@@ -401,7 +407,7 @@ namespace HybridDb.Tests
                 document.Property = "Lars";
                 session.SaveChanges(); // 3
 
-                store.NumberOfRequests.ShouldBe(3);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
                 session.Advanced.Clear();
                 session.Load<Entity>(id).Property.ShouldBe("Lars");
             }
@@ -415,6 +421,9 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges(); // 1
                 session.Advanced.Clear();
@@ -422,7 +431,7 @@ namespace HybridDb.Tests
                 session.Load<Entity>(id); // 2
                 session.SaveChanges(); // Should not issue a request
 
-                store.NumberOfRequests.ShouldBe(2);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
             }
         }
 
@@ -437,21 +446,24 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Store(new Entity { Id = id1, Property = "Asger" });
                 session.Store(new Entity { Id = id2, Property = "Asger" });
                 session.SaveChanges(); // 1
-                store.NumberOfRequests.ShouldBe(1);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
                 session.Advanced.Clear();
 
                 var entity1 = session.Load<Entity>(id1); // 2
                 var entity2 = session.Load<Entity>(id2); // 3
-                store.NumberOfRequests.ShouldBe(3);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
 
                 session.Delete(entity1);
                 entity2.Property = "Lars";
                 session.Store(new Entity { Id = id3, Property = "Jacob" });
                 session.SaveChanges(); // 4
-                store.NumberOfRequests.ShouldBe(4);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 4);
             }
         }
 

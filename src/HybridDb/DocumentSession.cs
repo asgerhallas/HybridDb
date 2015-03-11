@@ -102,6 +102,7 @@ namespace HybridDb
             var type = entity.GetType();
             var design = configuration.TryGetDesignFor(type) ?? configuration.CreateDesignFor(type);
             var id = design.GetId(entity);
+
             if (entities.ContainsKey(id))
                 return;
 

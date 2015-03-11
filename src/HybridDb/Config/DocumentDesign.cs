@@ -50,9 +50,9 @@ namespace HybridDb.Config
 
         public Guid GetId(object entity)
         {
-            return (Guid) Projections[Table.IdColumn].Projector(entity);
+            var id = (Guid)(Projections[Table.IdColumn].Projector(entity) ?? Guid.NewGuid());
+            return id != Guid.Empty ? id : Guid.NewGuid();
         }
-
 
         void AddChild(DocumentDesign design)
         {
