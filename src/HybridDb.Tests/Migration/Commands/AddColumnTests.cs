@@ -108,7 +108,8 @@ namespace HybridDb.Tests.Migration.Commands
             var defaultValueThatOriginatesFromAnEvilSource = "'; DROP TABLE #Entities; SELECT '";
             defaultValueThatOriginatesFromAnEvilSource = "'42'";
 
-            var quoteIdentifier = new SqlCommandBuilder().QuoteIdentifier(defaultValueThatOriginatesFromAnEvilSource);
+            var sqlCommandBuilder = new SqlCommandBuilder();
+            var quoteIdentifier = sqlCommandBuilder.QuoteIdentifier(defaultValueThatOriginatesFromAnEvilSource);
 
             database.RawExecute(string.Format("create table #Entities (somecolumn int default {0})", quoteIdentifier));
 

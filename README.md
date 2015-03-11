@@ -10,7 +10,7 @@ HybridDb gives you:
 - A few simple indexing features that enables querying on document properties
 - A LINQ provider for mentioned queries
 - All the consistency and transactionality of a relational database
-- Migration tools for document changes and database schema changes (we are not going to lie, it is still a relational database mapper)
+- Migration tools for document changes and index changes
 - A nifty little document viewer
 
 HybridDb aims to be a small and focused library with no magic and no surprises.
@@ -32,9 +32,8 @@ How?
 
 Like this:
 
-    var store = DocumentStore.ForTestingWithTempTables();
-    store.Document<Entity>().Project(x => x.Property);
-    store.InitializeDatabase();
+    var store = DocumentStore.ForTesting(TableMode.TempTables);
+    store.Document<Entity>().With(x => x.Property);
     
     using (var session = store.OpenSession())
     {
