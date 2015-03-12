@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
     class StaticMigrationProvider : IMigrationProvider
     {
@@ -11,9 +12,14 @@ namespace HybridDb.Migration
             this.migrations = migrations;
         }
 
-        public IEnumerable<Migration> GetMigrations()
+        public IReadOnlyList<Migration> GetMigrations()
         {
             return migrations;
+        }
+
+        public int CurrentVersion
+        {
+            get { return migrations.Any() ? migrations.Max(x => x.Version) : 0; }
         }
     }
 }

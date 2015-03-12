@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using HybridDb.Config;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
     public interface ISchemaDiffer
     {

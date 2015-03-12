@@ -1,7 +1,7 @@
 using System;
 using HybridDb.Config;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
     public interface ISchemaMigrator : IDisposable
     {

@@ -1,4 +1,4 @@
-namespace HybridDb.Migration.Commands
+namespace HybridDb.Migrations.Commands
 {
     public class RemoveTable : SchemaMigrationCommand
     {

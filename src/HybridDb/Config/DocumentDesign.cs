@@ -22,7 +22,8 @@ namespace HybridDb.Config
             {
                 {Table.IdColumn, Projection.From<Guid>(document => ((dynamic) document).Id)},
                 {Table.DiscriminatorColumn, Projection.From<string>(document => Discriminator)},
-                {Table.DocumentColumn, Projection.From<byte[]>(document => configuration.Serializer.Serialize(document))}
+                {Table.DocumentColumn, Projection.From<byte[]>(document => configuration.Serializer.Serialize(document))},
+                {Table.AwaitsReprojectionColumn, Projection.From<bool>(document => false)}
             };
         }
 

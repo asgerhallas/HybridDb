@@ -1,18 +1,17 @@
 using HybridDb.Config;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;
 
-namespace HybridDb.Tests.Migration.Commands
+namespace HybridDb.Tests.Migrations.Commands
 {
     public class RemoveColumnTests : HybridDbStoreTests
     {
-        [Theory]
-        [InlineData(TableMode.UseRealTables)]
-        public void RemovesColumn(TableMode mode)
+        [Fact]
+        public void RemovesColumn()
         {
-            Use(mode);
+            Use(TableMode.UseRealTables);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
             new CreateTable(table).Execute(database);
@@ -23,10 +22,12 @@ namespace HybridDb.Tests.Migration.Commands
             database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
-        [Fact(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
-        public void RemovesTempTableColumn()
+        [Theory(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
+        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempTables)]
+        public void RemovesTempTableColumn(TableMode mode)
         {
-            Use(TableMode.UseTempTables);
+            Use(mode);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
             new CreateTable(table).Execute(database);

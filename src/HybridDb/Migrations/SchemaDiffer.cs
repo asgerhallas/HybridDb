@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations.Commands;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
     public class SchemaDiffer : ISchemaDiffer
     {

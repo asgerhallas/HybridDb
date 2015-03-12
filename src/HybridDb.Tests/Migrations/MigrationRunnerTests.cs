@@ -4,12 +4,12 @@ using System.Linq;
 using Dapper;
 using HybridDb.Config;
 using HybridDb.Logging;
-using HybridDb.Migration;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations;
+using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.Tests.Migration
+namespace HybridDb.Tests.Migrations
 {
     public class MigrationRunnerTests : HybridDbStoreTests
     {
@@ -23,7 +23,7 @@ namespace HybridDb.Tests.Migration
         [Fact]
         public void AutomaticallyCreatesMetadataTableWhenUsingRealSchemaDiffer()
         {
-            var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new SchemaDiffer());
+            var runner = new MigrationRunner(logger, new SchemaDiffer(), new List<Migration>());
 
             runner.Migrate(store, configuration);
 
@@ -36,7 +36,7 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(logger, new StaticMigrationProvider(), new FakeSchemaDiffer());
+            var runner = new MigrationRunner(logger, new FakeSchemaDiffer(), new List<Migration>());
 
             runner.Migrate(store, configuration);
 
@@ -48,12 +48,11 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(logger, 
-                new StaticMigrationProvider(
-                    new InlineMigration(1,
-                        new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
-                        new AddColumn("Testing", new Column("Noget", typeof (int))))),
-                new FakeSchemaDiffer());
+            var runner = new MigrationRunner(logger,
+                new FakeSchemaDiffer(),
+                new InlineMigration(1,
+                    new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
+                    new AddColumn("Testing", new Column("Noget", typeof (int)))));
 
             runner.Migrate(store, configuration);
 
@@ -68,8 +67,7 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(logger, 
-                new StaticMigrationProvider(),
+            var runner = new MigrationRunner(logger,
                 new FakeSchemaDiffer(
                     new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                     new AddColumn("Testing", new Column("Noget", typeof (int)))));
@@ -87,11 +85,9 @@ namespace HybridDb.Tests.Migration
         {
             CreateMetadataTable();
 
-            var runner = new MigrationRunner(logger, 
-                new StaticMigrationProvider(
-                    new InlineMigration(1, new UnsafeThrowingCommand())),
-                new FakeSchemaDiffer(
-                    new UnsafeThrowingCommand()));
+            var runner = new MigrationRunner(logger,
+                new FakeSchemaDiffer(new UnsafeThrowingCommand()),
+                new InlineMigration(1, new UnsafeThrowingCommand()));
 
             Should.NotThrow<object>(() => runner.Migrate(store, configuration));
         }
@@ -104,8 +100,8 @@ namespace HybridDb.Tests.Migration
             var command = new CountingCommand();
 
             var runner = new MigrationRunner(logger,
-                new StaticMigrationProvider(new InlineMigration(1, command)),
-                new FakeSchemaDiffer());
+                new FakeSchemaDiffer(), 
+                new InlineMigration(1, command));
 
             runner.Migrate(store, configuration);
             runner.Migrate(store, configuration);
@@ -120,16 +116,14 @@ namespace HybridDb.Tests.Migration
 
             var command = new CountingCommand();
 
-            new MigrationRunner(logger,
-                new StaticMigrationProvider(
-                    new InlineMigration(1, command)),
-                new FakeSchemaDiffer()).Migrate(store, configuration);
+            new MigrationRunner(logger, new FakeSchemaDiffer(), new InlineMigration(1, command))
+                .Migrate(store, configuration);
 
             new MigrationRunner(logger,
-                new StaticMigrationProvider(
-                    new InlineMigration(1, new ThrowingCommand()),
-                    new InlineMigration(2, command)),
-                new FakeSchemaDiffer()).Migrate(store, configuration);
+                new FakeSchemaDiffer(),
+                new InlineMigration(1, new ThrowingCommand()),
+                new InlineMigration(2, command))
+                .Migrate(store, configuration);
 
             command.NumberOfTimesCalled.ShouldBe(2);
         }
@@ -141,8 +135,7 @@ namespace HybridDb.Tests.Migration
 
             try
             {
-                var runner = new MigrationRunner(logger, 
-                    new StaticMigrationProvider(),
+                var runner = new MigrationRunner(logger,
                     new FakeSchemaDiffer(
                         new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                         new ThrowingCommand()));
@@ -175,16 +168,15 @@ namespace HybridDb.Tests.Migration
             }
 
             var runner = new MigrationRunner(logger, 
-                new StaticMigrationProvider(), 
                 new FakeSchemaDiffer(
                     new AddColumn("Entities", new Column("NewCol", typeof(int))),
                     new AddColumn("AbstractEntities", new Column("NewCol", typeof(int)))));
             
             runner.Migrate(store, configuration);
 
-            store.Database.RawQuery<string>("select state from #Entities").ShouldAllBe(x => x == "RequiresReprojection");
-            store.Database.RawQuery<string>("select state from #AbstractEntities").ShouldAllBe(x => x == "RequiresReprojection");
-            store.Database.RawQuery<string>("select state from #OtherEntities").ShouldAllBe(x => x == null);
+            database.RawQuery<bool>("select AwaitsReprojection from #Entities").ShouldAllBe(x => x);
+            database.RawQuery<bool>("select AwaitsReprojection from #AbstractEntities").ShouldAllBe(x => x);
+            database.RawQuery<bool>("select AwaitsReprojection from #OtherEntities").ShouldAllBe(x => !x);
         }
 
         [Fact]
@@ -209,54 +201,39 @@ namespace HybridDb.Tests.Migration
             designer2.With(x => x.Property);
 
             // first run changes the schema, but "fail" before the long running task is started
-            new MigrationRunner(logger, new StaticMigrationProvider(), new SchemaDiffer())
+            new MigrationRunner(logger, new SchemaDiffer())
                 .Migrate(store, configuration);
 
             // second run does not change any schema
-            new MigrationRunner(logger, new StaticMigrationProvider(), new FakeSchemaDiffer())
+            new MigrationRunner(logger, new FakeSchemaDiffer())
                 .Migrate(store, configuration)
                 .RunSynchronously();
 
-            using (var managedConnection = store.Database.Connect())
+            using (var managedConnection = database.Connect())
             {
-                var result1 = managedConnection.Connection.Query<string, int, Tuple<string, int>>(
-                    "select State, Number from #Entities order by Number", Tuple.Create, splitOn: "*").ToList();
-                
-                result1[0].ShouldBe(Tuple.Create((string) null, 1));
-                result1[1].ShouldBe(Tuple.Create((string) null, 2));
+                var result1 = managedConnection.Connection.Query<bool, int, Tuple<bool, int>>(
+                    "select AwaitsReprojection, Number from #Entities order by Number", Tuple.Create, splitOn: "*").ToList();
 
-                var result2 = managedConnection.Connection.Query<string, string, Tuple<string, string>>(
-                    "select State, Property from #AbstractEntities order by Property", Tuple.Create, splitOn: "*").ToList();
-                
-                result2[0].ShouldBe(Tuple.Create((string) null, "Asger"));
-                result2[1].ShouldBe(Tuple.Create((string) null, "Peter"));
+                result1[0].ShouldBe(Tuple.Create(false, 1));
+                result1[1].ShouldBe(Tuple.Create(false, 2));
 
-                var result3 = managedConnection.Connection.Query<string>(
-                    "select State from #OtherEntities").ToList();
+                var result2 = managedConnection.Connection.Query<bool, string, Tuple<bool, string>>(
+                    "select AwaitsReprojection, Property from #AbstractEntities order by Property", Tuple.Create, splitOn: "*").ToList();
                 
-                result3[0].ShouldBe(null);
-                result3[1].ShouldBe(null);
+                result2[0].ShouldBe(Tuple.Create(false, "Asger"));
+                result2[1].ShouldBe(Tuple.Create(false, "Peter"));
+
+                var result3 = managedConnection.Connection.Query<bool>(
+                    "select AwaitsReprojection from #OtherEntities").ToList();
+                
+                result3[0].ShouldBe(false);
+                result3[1].ShouldBe(false);
             }
         }
 
         void CreateMetadataTable()
         {
             new CreateTable(new Table("HybridDb", new Column("SchemaVersion", typeof(int)))).Execute(database);
-        }
-
-        public class InlineMigration : HybridDb.Migration.Migration
-        {
-            readonly MigrationCommand[] commands;
-
-            public InlineMigration(int version, params MigrationCommand[] commands) : base(version)
-            {
-                this.commands = commands;
-            }
-
-            public override IEnumerable<MigrationCommand> Migrate()
-            {
-                return commands;
-            }
         }
 
         public class FakeSchemaDiffer : ISchemaDiffer

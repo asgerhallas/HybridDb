@@ -13,7 +13,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace HybridDb
 {
-    public class DefaultBsonSerializer : ISerializer 
+    public class DefaultBsonSerializer : ISerializer
     {
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
@@ -52,6 +52,14 @@ namespace HybridDb
             using (var bsonReader = new BsonReader(inStream))
             {
                 return CreateSerializer().Deserialize(bsonReader, type);
+            }
+        }
+
+        public object Deserialize(JObject data, Type type)
+        {
+            using (var jObjectReader = data.CreateReader())
+            {
+                return CreateSerializer().Deserialize(jObjectReader, type);
             }
         }
 

@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Migrations;
 
 namespace HybridDb
 {
     public interface IDocumentStore : IDisposable
     {
-        Action<Table, IDictionary<string, object>> OnRead { get; set; }
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
-        void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate);
-        void RegisterExtension(IHybridDbExtension hybridDbExtension);
+        int CurrentVersion { get; }
+        IReadOnlyList<Migration> Migrations { get; }
         IDocumentSession OpenSession();
         Guid Execute(params DatabaseCommand[] commands);
         Guid Insert(DocumentTable table, Guid key, object projections);

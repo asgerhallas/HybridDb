@@ -4,6 +4,8 @@ using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
+using HybridDb.Migrations;
+using Newtonsoft.Json.Linq;
 
 namespace HybridDb
 {
@@ -151,6 +153,8 @@ namespace HybridDb
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
+                projections.Add(design.Table.VersionColumn, store.CurrentVersion);
+
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
                 switch (managedEntity.State)
@@ -227,8 +231,8 @@ namespace HybridDb
                            : null;
             }
 
-            var document = (byte[]) row[table.DocumentColumn];
-            var entity = store.Configuration.Serializer.Deserialize(document, concreteDesign.DocumentType);
+            var document = (byte[])row[table.DocumentColumn];
+            var entity = DeserializeAndMigrate(store, concreteDesign, row);
 
             managedEntity = new ManagedEntity
             {
@@ -243,6 +247,31 @@ namespace HybridDb
             return entity;
         }
 
+        internal static object DeserializeAndMigrate(IDocumentStore store, DocumentDesign design, IDictionary<string, object> row)
+        {
+            var table = design.Table;
+            
+            var document = (byte[])row[table.DocumentColumn];
+            
+            var currentDocumentVersion = (int)row[table.VersionColumn];
+            if (store.CurrentVersion <= currentDocumentVersion)
+            {
+                return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
+            }
+            
+            var json = (JObject)store.Configuration.Serializer.Deserialize(document, typeof(JObject));
+
+            foreach (var migration in store.Migrations.Where(x => x.Version > currentDocumentVersion))
+            {
+                var commands = migration.MigrateDocument();
+                foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
+                {
+                    command.Execute(json);
+                }
+            }
+
+            return store.Configuration.Serializer.Deserialize(json, design.DocumentType);
+        }
 
         public void Clear()
         {

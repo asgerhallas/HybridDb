@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using HybridDb.Config;
-using HybridDb.Migration;
+﻿using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
-using Shouldly;
-using Xunit;
 
-namespace HybridDb.Tests.Migration
+namespace HybridDb.Tests.Migrations
 {
     public class DocumentMigratorTests
     {

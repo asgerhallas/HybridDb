@@ -1,6 +1,6 @@
 ﻿using System;
 using HybridDb.Config;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit.Extensions;
 
@@ -10,6 +10,7 @@ namespace HybridDb.Tests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllTables(TableMode mode)
         {
@@ -28,6 +29,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllColumns(TableMode mode)
         {
@@ -49,6 +51,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasTypeInfo(TableMode mode)
         {
@@ -68,6 +71,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasNullableInfo(TableMode mode)
         {
@@ -87,6 +91,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasPrimaryKeyInfo(TableMode mode)
         {
@@ -104,6 +109,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasDefaultValue(TableMode mode)
         {

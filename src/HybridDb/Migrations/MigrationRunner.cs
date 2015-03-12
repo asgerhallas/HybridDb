@@ -4,25 +4,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Config;
-using HybridDb.Linq;
 using HybridDb.Logging;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
     public class MigrationRunner
     {
         readonly ILogger logger;
-        readonly IMigrationProvider provider;
+        readonly IReadOnlyList<Migration> migrations;
         readonly ISchemaDiffer differ;
 
-        public MigrationRunner(ILogger logger, IMigrationProvider provider, ISchemaDiffer differ)
+        public MigrationRunner(ILogger logger, ISchemaDiffer differ, params Migration[] migrations) : this(logger, differ, migrations.ToList()) { }
+
+        public MigrationRunner(ILogger logger, ISchemaDiffer differ, IReadOnlyList<Migration> migrations)
         {
             this.logger = logger;
-            this.provider = provider;
+            this.migrations = migrations;
             this.differ = differ;
         }
 
-        public Task Migrate(DocumentStore store, Configuration configuration)
+        public Task Migrate(IDocumentStore store, Configuration configuration)
         {
             var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
             configuration.Tables.TryAdd(metadata.Name, metadata);
@@ -31,22 +32,19 @@ namespace HybridDb.Migration
 
             using (var tx = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
             {
-                // abstract out so version is store independent
-                var database = store.Database;
+                // todo: abstract out so version is store independent
+                var database = ((DocumentStore)store).Database;
                 var schema = database.QuerySchema().Values.ToList(); // demeter go home!
 
-                var currentVersion = schema.Any(x => x.Name == "HybridDb")
+                var currentSchemaVersion = schema.Any(x => x.Name == "HybridDb")
                     ? database.RawQuery<int>(string.Format("select top 1 SchemaVersion from {0}",
                         database.FormatTableName("HybridDb"))).SingleOrDefault()
                     : 0;
 
-                var enumerable = provider.GetMigrations().ToList();
-                var migrations = enumerable.Where(x => x.Version > currentVersion).ToList();
-
-                foreach (var migration in migrations)
+                foreach (var migration in migrations.Where(x => x.Version > currentSchemaVersion).ToList())
                 {
-                    var migrationCommands = migration.Migrate();
-                    foreach (var command in migrationCommands.OfType<SchemaMigrationCommand>())
+                    var migrationCommands = migration.MigrateSchema();
+                    foreach (var command in migrationCommands)
                     {
                         if (command.Unsafe)
                         {
@@ -57,7 +55,7 @@ namespace HybridDb.Migration
                         command.Execute(database);
                     }
 
-                    currentVersion++;
+                    currentSchemaVersion++;
                 }
 
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
@@ -82,8 +80,8 @@ namespace HybridDb.Migration
                     // TODO: Only set RequireReprojection on command if it is documenttable - can it be done?
                     var design = configuration.DocumentDesigns.FirstOrDefault(x => x.Table.Name == tablename);
                     if (design == null) continue;
-                    
-                    database.RawExecute(string.Format("update {0} set state=@state", database.FormatTableNameAndEscape(tablename)), new { state = "RequiresReprojection" });
+
+                    database.RawExecute(string.Format("update {0} set AwaitsReprojection=@AwaitsReprojection", database.FormatTableNameAndEscape(tablename)), new { AwaitsReprojection = true });
                 }
 
                 database.RawExecute(string.Format(@"
@@ -92,62 +90,41 @@ if not exists (select * from {0})
 else
     update {0} set SchemaVersion=@version",
                 database.FormatTableName("HybridDb")),
-                new { version = currentVersion });
+                new { version = currentSchemaVersion });
 
                 tx.Complete();
             }
+
+            var requiredDocumentVersion = store.CurrentVersion;
 
             return new Task(() =>
             {
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    var design = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
+                    var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
 
                     QueryStats stats;
-                    foreach (var doc in store.Query(table, out stats, where: "State = @state", parameters: new { state = "RequiresReprojection" }))
+                    foreach (var row in store.Query(table, out stats,
+                        where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
+                        parameters: new { AwaitsReprojection = true, version = requiredDocumentVersion }))
                     {
-                        var discriminator = ((string)doc[table.DiscriminatorColumn]).Trim();
+                        var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
 
                         DocumentDesign concreteDesign;
-                        if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                        if (!baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
                         {
                             throw new InvalidOperationException(string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
                         }
 
-                        var entity = configuration.Serializer.Deserialize((byte[])doc[table.DocumentColumn], concreteDesign.DocumentType);
+                        var entity = DocumentSession.DeserializeAndMigrate(store, concreteDesign, row);
+                        var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
+                        projections.Add(table.VersionColumn, store.CurrentVersion);
 
-                        var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-                        projections.Add("State", null);
-
-                        store.Update(table, (Guid) doc[table.IdColumn], (Guid) doc[table.EtagColumn], projections);
+                        store.Update(table, (Guid) row[table.IdColumn], (Guid) row[table.EtagColumn], projections);
                     }
                 }
 
             }, TaskCreationOptions.LongRunning);
         }
-
-        static void OpenAll<T>(IDocumentStore store) where T : class
-        {
-            int i = 0;
-            while (true)
-            {
-                var tableName = store.Configuration.GetDesignFor<T>();
-                using (var session = store.OpenSession())
-                {
-                    QueryStats stats;
-                    var items = session.Query<T>().Statistics(out stats).Where(x => x.Column<int>("Version") == 0).Take(100).ToList();
-
-                    i += stats.RetrievedResults;
-                    Console.WriteLine("Opening {0} {1} / {2}", tableName, i, stats.TotalResults);
-
-                    if (items.Count == 0)
-                        break;
-
-                    session.SaveChanges();
-                    Console.WriteLine("Saved the changes");
-                }
-            }
-        }
-
     }
 }

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using HybridDb.Logging;
-using HybridDb.Migration;
+using HybridDb.Migrations;
 
 namespace HybridDb.Config
 {

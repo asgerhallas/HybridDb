@@ -1,4 +1,4 @@
-namespace HybridDb.Migration.Commands
+namespace HybridDb.Migrations.Commands
 {
     public class RenameTable : SchemaMigrationCommand
     {
@@ -13,7 +13,7 @@ namespace HybridDb.Migration.Commands
 
         public override void Execute(Database database)
         {
-            if (database.TableMode == TableMode.UseTempTables)
+            if (database.TableMode == TableMode.UseTempTables || database.TableMode == TableMode.UseGlobalTempTables)
             {
                 database.RawExecute(string.Format("select * into {1} from {0}; drop table {0};",
                     database.FormatTableNameAndEscape(OldTableName),

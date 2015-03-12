@@ -1,6 +1,6 @@
 using HybridDb.Config;
 
-namespace HybridDb.Migration.Commands
+namespace HybridDb.Migrations.Commands
 {
     public class AddColumn : SchemaMigrationCommand
     {

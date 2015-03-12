@@ -151,9 +151,18 @@ namespace HybridDb
 
         public Dictionary<string, Table> QuerySchema()
         {
-            return tableMode == TableMode.UseRealTables
-                ? GetRealTableSchema()
-                : GetTempTablesSchema();
+            switch (tableMode)
+            {
+                case TableMode.UseRealTables:
+                    return GetRealTableSchema();
+                case TableMode.UseTempTables:
+                    return GetTempTablesSchema();
+                case TableMode.UseGlobalTempTables:
+                    return GetGlobalTempTablesSchema();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         Dictionary<string, Table> GetTempTablesSchema()
@@ -169,6 +178,24 @@ namespace HybridDb
                     String.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
 
                 formattedTableName = formattedTableName.TrimStart('#');
+                schema.Add(
+                    formattedTableName,
+                    new Table(formattedTableName, columns.Select(column => Map(tableName, column, isTempTable: true))));
+            }
+            return schema;
+        }
+
+        Dictionary<string, Table> GetGlobalTempTablesSchema()
+        {
+            var schema = new Dictionary<string, Table>();
+
+            var tempTables = RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '##%'");
+            foreach (var tableName in tempTables)
+            {
+                var columns = RawQuery<QueryColumn>(
+                    String.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", tableName));
+
+                var formattedTableName = tableName.TrimStart('#');
                 schema.Add(
                     formattedTableName,
                     new Table(formattedTableName, columns.Select(column => Map(tableName, column, isTempTable: true))));

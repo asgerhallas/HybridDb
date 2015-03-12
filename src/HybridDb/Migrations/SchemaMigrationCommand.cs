@@ -3,9 +3,9 @@ using System.Data;
 using System.Data.SqlClient;
 using HybridDb.Config;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
-    public abstract class SchemaMigrationCommand : MigrationCommand
+    public abstract class SchemaMigrationCommand : DocumentMigrationCommand
     {
         protected SchemaMigrationCommand()
         {
@@ -15,6 +15,8 @@ namespace HybridDb.Migration
 
         public bool Unsafe { get; protected set; }
         public string RequiresReprojectionOf { get; protected set; }
+
+        public abstract void Execute(Database database);
 
         protected string GetTableExistsSql(Database db, string tablename)
         {
@@ -31,7 +33,7 @@ namespace HybridDb.Migration
 
             var sql = new SqlBuilder();
 
-            var sqlColumn = SqlTypeMap.GetDbType(column);
+            var sqlColumn = SqlTypeMap.Convert(column);
             sql.Append(new SqlParameter { DbType = sqlColumn.DbType }.SqlDbType.ToString());
             sql.Append(sqlColumn.Length != null, "(" + (sqlColumn.Length == Int32.MaxValue ? "MAX" : sqlColumn.Length.ToString()) + ")");
             sql.Append(column.Nullable, "NULL").Or("NOT NULL");

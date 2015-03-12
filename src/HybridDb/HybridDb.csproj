@@ -74,21 +74,21 @@
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
-    <Compile Include="Migration\IMigrationProvider.cs" />
-    <Compile Include="Migration\ISchemaDiffer.cs" />
-    <Compile Include="Migration\Migration.cs" />
-    <Compile Include="Migration\StaticMigrationProvider.cs" />
-    <Compile Include="Migration\MigrationRunner.cs" />
-    <Compile Include="Migration\SchemaDiffer.cs" />
+    <Compile Include="Migrations\IMigrationProvider.cs" />
+    <Compile Include="Migrations\ISchemaDiffer.cs" />
+    <Compile Include="Migrations\Migration.cs" />
+    <Compile Include="Migrations\StaticMigrationProvider.cs" />
+    <Compile Include="Migrations\MigrationRunner.cs" />
+    <Compile Include="Migrations\SchemaDiffer.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
-    <Compile Include="Migration\Commands\AddColumn.cs" />
-    <Compile Include="Migration\Commands\CreateTable.cs" />
-    <Compile Include="Migration\Commands\RemoveColumn.cs" />
-    <Compile Include="Migration\Commands\RemoveTable.cs" />
-    <Compile Include="Migration\Commands\RenameColumn.cs" />
-    <Compile Include="Migration\Commands\RenameTable.cs" />
-    <Compile Include="Migration\ISchemaMigrator.cs" />
+    <Compile Include="Migrations\Commands\AddColumn.cs" />
+    <Compile Include="Migrations\Commands\CreateTable.cs" />
+    <Compile Include="Migrations\Commands\RemoveColumn.cs" />
+    <Compile Include="Migrations\Commands\RemoveTable.cs" />
+    <Compile Include="Migrations\Commands\RenameColumn.cs" />
+    <Compile Include="Migrations\Commands\RenameTable.cs" />
+    <Compile Include="Migrations\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />
     <Compile Include="Linq\Ast\SqlProjectionExpression.cs" />
@@ -123,8 +123,8 @@
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="ManagedConnection.cs" />
     <Compile Include="MemberInfoEx.cs" />
-    <Compile Include="Migration\DocumentMigrator.cs" />
-    <Compile Include="Migration\SchemaMigrationCommand.cs" />
+    <Compile Include="Migrations\DocumentMigrator.cs" />
+    <Compile Include="Migrations\SchemaMigrationCommand.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />
@@ -169,7 +169,7 @@
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Migration\packages.config" />
+    <None Include="Migrations\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Transactions;
 using Dapper;
 using HybridDb.Logging;
+using HybridDb.Migrations;
 using Shouldly;
 
 namespace HybridDb.Tests
@@ -114,21 +116,35 @@ namespace HybridDb.Tests
             public Entity()
             {
                 TheChild = new Child();
-                TheSecondChild = new Child();
                 Children = new List<Child>();
             }
 
             public Guid Id { get; set; }
             public string ProjectedProperty { get; set; }
             public List<Child> Children { get; set; }
+            public string Field;
             public string Property { get; set; }
             public int Number { get; set; }
+            public DateTime DateTimeProp { get; set; }
+            public SomeFreakingEnum EnumProp { get; set; }
             public Child TheChild { get; set; }
-            public Child TheSecondChild { get; set; }
+            public ComplexType Complex { get; set; }
 
             public class Child
             {
                 public string NestedProperty { get; set; }
+                public double NestedDouble { get; set; }
+            }
+
+            public class ComplexType
+            {
+                public string A { get; set; }
+                public int B { get; set; }
+
+                public override string ToString()
+                {
+                    return A + B;
+                }
             }
         }
 
@@ -149,5 +165,42 @@ namespace HybridDb.Tests
         public class MoreDerivedEntity1 : DerivedEntity, IOtherInterface { }
         public class MoreDerivedEntity2 : DerivedEntity { }
 
+        public enum SomeFreakingEnum
+        {
+            One,
+            Two
+        }
+
+        public class InlineMigration : Migration
+        {
+            readonly List<DocumentMigrationCommand> documentCommands;
+            readonly List<SchemaMigrationCommand> schemaCommands;
+
+            public InlineMigration(int version) : base(version)
+            {
+                documentCommands = new List<DocumentMigrationCommand>();
+                schemaCommands = new List<SchemaMigrationCommand>();
+            }
+
+            public InlineMigration(int version, params SchemaMigrationCommand[] commands) : this(version)
+            {
+                schemaCommands = commands.ToList();
+            }
+
+            public InlineMigration(int version, params DocumentMigrationCommand[] commands) : this(version)
+            {
+                documentCommands = commands.ToList();
+            }
+
+            public override IEnumerable<SchemaMigrationCommand> MigrateSchema()
+            {
+                return schemaCommands;
+            }
+
+            public override IEnumerable<DocumentMigrationCommand> MigrateDocument()
+            {
+                return documentCommands;
+            }
+        }
     }
 }

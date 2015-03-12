@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
-using HybridDb.Migration;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations;
+using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.Tests.Migration
+namespace HybridDb.Tests.Migrations
 {
     public class SchemaDifferTests : HybridDbTests
     {

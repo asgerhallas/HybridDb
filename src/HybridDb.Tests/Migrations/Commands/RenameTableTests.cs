@@ -1,15 +1,16 @@
 using HybridDb.Config;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;
 
-namespace HybridDb.Tests.Migration.Commands
+namespace HybridDb.Tests.Migrations.Commands
 {
     public class RenameTableTests : HybridDbTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void RenamesTable(TableMode mode)
         {

@@ -1,5 +1,6 @@
 using HybridDb.Config;
 using HybridDb.Logging;
+using HybridDb.Migrations;
 
 namespace HybridDb
 {
@@ -30,6 +31,11 @@ namespace HybridDb
         protected void UseLogger(ILogger logger)
         {
             configuration.UseLogger(logger);
+        }
+
+        protected void UseMigrations(IMigrationProvider provider)
+        {
+            configuration.UseMigrations(provider);
         }
     }
 }

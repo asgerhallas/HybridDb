@@ -1,7 +1,7 @@
 using System;
 using HybridDb.Config;
 
-namespace HybridDb.Migration.Commands
+namespace HybridDb.Migrations.Commands
 {
     public class RemoveColumn : SchemaMigrationCommand
     {

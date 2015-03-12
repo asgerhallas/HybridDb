@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 
-namespace HybridDb.Migration
+namespace HybridDb.Migrations
 {
     public class DocumentMigrator
     {

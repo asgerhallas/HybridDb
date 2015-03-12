@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.ComponentModel.Composition.Registration;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -11,21 +8,26 @@ using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Logging;
-using HybridDb.Migration;
+using HybridDb.Migrations;
 
 namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
+        readonly IReadOnlyList<Migration> migrations;
+        readonly int version;
+        
         Guid lastWrittenEtag;
         long numberOfRequests;
 
-        DocumentStore(Database database, Configuration configuration)
+        DocumentStore(Database database, Configuration configuration, IReadOnlyList<Migration> migrations)
         {
+            this.migrations = migrations;
+            version = migrations.Any() ? migrations.Max(x => x.Version) : 0;
+            
             Logger = configuration.Logger;
             Database = database;
             Configuration = configuration;
-            OnRead = (table, projections) => { };
         }
 
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
@@ -33,8 +35,9 @@ namespace HybridDb
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
             var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
-            var store = new DocumentStore(database, configuration);
-            var migrationRunner = new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer());
+            var migrations = configuration.MigrationProvider.GetMigrations();
+            var store = new DocumentStore(database, configuration, migrations);
+            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), migrations);
             migrationRunner.Migrate(store, configuration).Start();
             return store;
         }
@@ -49,37 +52,25 @@ namespace HybridDb
 
         public static DocumentStore ForTesting(Database database, Configuration configuration)
         {
-            var store = new DocumentStore(database, configuration);
-            var migrationRunner = new MigrationRunner(configuration.Logger, configuration.MigrationProvider, new SchemaDiffer());
+            var migrations = configuration.MigrationProvider.GetMigrations();
+            var store = new DocumentStore(database, configuration, migrations);
+            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), migrations);
             migrationRunner.Migrate(store, configuration).RunSynchronously();
             return store;
         }
-
-        [ImportMany(typeof(IHybridDbExtension))]
-        IEnumerable<IHybridDbExtension> AddIns { get; set; }
-        public Action<Table, IDictionary<string, object>> OnRead { get; set; }
 
         public Database Database { get; private set; }
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; private set; }
 
-        public void LoadExtensions(string path, Func<IHybridDbExtension, bool> predicate)
+        public int CurrentVersion
         {
-            var registration = new RegistrationBuilder();
-            registration.ForTypesDerivedFrom<IHybridDbExtension>().Export<IHybridDbExtension>();
-
-            var container = new CompositionContainer(new DirectoryCatalog(path, registration));
-            container.ComposeParts(this);
-
-            foreach (var addIn in AddIns.Where(predicate))
-            {
-                RegisterExtension(addIn);
-            }
+            get { return version; }
         }
 
-        public void RegisterExtension(IHybridDbExtension hybridDbExtension)
+        public IReadOnlyList<Migration> Migrations
         {
-            OnRead += hybridDbExtension.OnRead;
+            get { return migrations; }
         }
 
         public IDocumentSession OpenSession()
@@ -177,6 +168,12 @@ namespace HybridDb
             Execute(new DeleteCommand(table, key, etag, lastWriteWins));
         }
 
+        public IEnumerable<IDictionary<string, object>> Query(DocumentTable table, out QueryStats stats, string select = null, string where = "",
+            int skip = 0, int take = 0, string orderby = "", object parameters = null)
+        {
+            return Query<IDictionary<string, object>>(table, out stats, @select, @where, skip, take, @orderby, parameters);
+        }
+
         public IEnumerable<TProjection> Query<TProjection>(DocumentTable table, out QueryStats stats, string select = null, string where = "",
                                                            int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
@@ -226,13 +223,8 @@ namespace HybridDb
                 if (projectToDictionary)
                 {
                     result = (IEnumerable<TProjection>)
-                             InternalQuery<object>(connection, sql, parameters, out stats)
-                                 .Cast<IDictionary<string, object>>()
-                                 .Select(row =>
-                                 {
-                                     OnRead(table, row);
-                                     return row;
-                                 });
+                        InternalQuery<object>(connection, sql, parameters, out stats)
+                            .Cast<IDictionary<string, object>>();
                 }
                 else
                 {
@@ -263,26 +255,21 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<IDictionary<string, object>> Query(DocumentTable table, out QueryStats stats, string select = null, string where = "",
-                                                              int skip = 0, int take = 0, string orderby = "", object parameters = null)
-        {
-            return Query<IDictionary<string, object>>(table, out stats, select, @where, skip, take, orderby, parameters);
-        }
-
-
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
-            var selectedColumns = from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                                  let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
-                                  let column = split[0]
-                                  let alias = split.Length > 1 ? split[1] : null
-                                  where neededColumns.Contains(alias)
-                                  select new { column, alias = alias ?? column };
+            var selectedColumns = 
+                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
+                let column = split[0]
+                let alias = split.Length > 1 ? split[1] : null
+                where neededColumns.Contains(alias)
+                select new { column, alias = alias ?? column };
 
-            var missingColumns = from column in neededColumns
-                                 where !selectedColumns.Select(x => x.alias).Contains(column)
-                                 select new { column, alias = column };
+            var missingColumns =
+                from column in neededColumns
+                where !selectedColumns.Select(x => x.alias).Contains(column)
+                select new {column, alias = column};
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
@@ -300,7 +287,6 @@ namespace HybridDb
                 rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
 
                 Interlocked.Increment(ref numberOfRequests);
-
             }
             rows.ToList();
 
@@ -330,14 +316,10 @@ namespace HybridDb
 
                 connection.Complete();
 
-                if (row == null)
-                    return null;
-
-                OnRead(table, row);
-
                 return row;
             }
         }
+
 
         public long NumberOfRequests
         {

@@ -1,15 +1,16 @@
 using HybridDb.Config;
-using HybridDb.Migration.Commands;
+using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;
 
-namespace HybridDb.Tests.Migration.Commands
+namespace HybridDb.Tests.Migrations.Commands
 {
     public class RemoveTableTests : HybridDbStoreTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void RemovesTable(TableMode mode)
         {
@@ -17,8 +18,8 @@ namespace HybridDb.Tests.Migration.Commands
             new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(database);
 
             new RemoveTable("Entities").Execute(database);
-
-            store.Database.QuerySchema().ShouldNotContainKey("Entities");
+            
+            database.QuerySchema().ShouldNotContainKey("Entities");
         }
 
         [Fact]

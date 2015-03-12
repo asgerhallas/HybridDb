@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using HybridDb.Config;
 
-namespace HybridDb.Migration.Commands
+namespace HybridDb.Migrations.Commands
 {
     public class CreateTable : SchemaMigrationCommand
     {

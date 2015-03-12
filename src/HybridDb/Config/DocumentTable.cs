@@ -25,8 +25,8 @@ namespace HybridDb.Config
             DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 255);
             Register(DiscriminatorColumn);
 
-            StateColumn = new Column("State", typeof(string), length: 255);
-            Register(StateColumn);
+            AwaitsReprojectionColumn = new Column("AwaitsReprojection", typeof(bool));
+            Register(AwaitsReprojectionColumn);
 
             VersionColumn = new Column("Version", typeof(int));
             Register(VersionColumn);
@@ -38,7 +38,7 @@ namespace HybridDb.Config
         public SystemColumn ModifiedAtColumn { get; private set; }
         public Column DocumentColumn { get; private set; }
         public Column DiscriminatorColumn { get; private set; }
-        public Column StateColumn { get; private set; }
+        public Column AwaitsReprojectionColumn { get; private set; }
         public Column VersionColumn { get; private set; }
     }
 }

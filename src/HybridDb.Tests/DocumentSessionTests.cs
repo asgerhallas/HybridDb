@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HybridDb.Commands;
+using HybridDb.Linq;
+using HybridDb.Migrations;
 using Shouldly;
 using Xunit;
-using System.Linq;
-using HybridDb.Linq;
 
 namespace HybridDb.Tests
 {
@@ -865,6 +865,85 @@ namespace HybridDb.Tests
 
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger" && x.Index<EntityIndex>().YksiKaksiKolme > 1);
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
+            }
+        }
+
+        [Fact]
+        public void AppliesDocumentChangeMigrationOnLoad()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            ResetStore();
+
+            UseMigrations(new StaticMigrationProvider(
+                new InlineMigration(1, new ChangeDocument<Entity>(x => { x["Property"] = "Peter"; }))));
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                entity.Property.ShouldBe("Peter");
+            }
+        }
+
+        [Fact]
+        public void DoesNotApplyDocumentChangeMigrationForOtherDocumentTypes()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            ResetStore();
+
+            UseMigrations(new StaticMigrationProvider(
+                new InlineMigration(1, new ChangeDocument<OtherEntity>(x => { x["Property"] = "Hans og Grethe"; }))));
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                entity.Property.ShouldBe("Asger");
+            }
+        }
+
+        [Fact]
+        public void AppliesDocumentChangeMigrationOnQuery()
+        {
+            Document<AbstractEntity>().With(x => x.Number);
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new DerivedEntity { Property = "Asger", Number = 1 });
+                session.Store(new MoreDerivedEntity1 { Property = "Jacob", Number = 2 });
+                session.Store(new MoreDerivedEntity2 { Property = "Lars", Number = 3 });
+                session.SaveChanges();
+            }
+
+            ResetStore();
+
+            UseMigrations(new StaticMigrationProvider(
+                new InlineMigration(1, new ChangeDocument<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
+                new InlineMigration(2, new ChangeDocument<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + " nok"; }))));
+
+            using (var session = store.OpenSession())
+            {
+                var rows = session.Query<AbstractEntity>().OrderBy(x => x.Number).ToList();
+
+                rows[0].Property.ShouldBe("Asger er cool");
+                rows[1].Property.ShouldBe("Jacob er cool");
+                rows[2].Property.ShouldBe("Lars er cool nok"); // sorry Lars!
             }
         }
 
