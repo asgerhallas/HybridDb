@@ -93,7 +93,7 @@ namespace HybridDb.Tests.Migration
                 new FakeSchemaDiffer(
                     new UnsafeThrowingCommand()));
 
-            Should.NotThrow(() => runner.Migrate(store, configuration));
+            Should.NotThrow<object>(() => runner.Migrate(store, configuration));
         }
 
         [Fact]
@@ -125,12 +125,11 @@ namespace HybridDb.Tests.Migration
                     new InlineMigration(1, command)),
                 new FakeSchemaDiffer()).Migrate(store, configuration);
 
-            Should.NotThrow(() =>
-                new MigrationRunner(logger,
-                    new StaticMigrationProvider(
-                        new InlineMigration(1, new ThrowingCommand()),
-                        new InlineMigration(2, command)),
-                    new FakeSchemaDiffer()).Migrate(store, configuration));
+            new MigrationRunner(logger,
+                new StaticMigrationProvider(
+                    new InlineMigration(1, new ThrowingCommand()),
+                    new InlineMigration(2, command)),
+                new FakeSchemaDiffer()).Migrate(store, configuration);
 
             command.NumberOfTimesCalled.ShouldBe(2);
         }

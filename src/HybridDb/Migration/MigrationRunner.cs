@@ -79,6 +79,10 @@ namespace HybridDb.Migration
 
                 foreach (var tablename in requiresReprojection)
                 {
+                    // TODO: Only set RequireReprojection on command if it is documenttable - can it be done?
+                    var design = configuration.DocumentDesigns.FirstOrDefault(x => x.Table.Name == tablename);
+                    if (design == null) continue;
+                    
                     database.RawExecute(string.Format("update {0} set state=@state", database.FormatTableNameAndEscape(tablename)), new { state = "RequiresReprojection" });
                 }
 
