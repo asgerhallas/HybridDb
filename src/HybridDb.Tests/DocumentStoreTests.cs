@@ -873,7 +873,7 @@ namespace HybridDb.Tests
             var table = configuration.GetDesignFor<Entity>().Table;
             var etag = store.Insert(table, id, new { });
 
-            ResetStore();
+            Reset();
 
             UseMigrations(new InlineMigration(1), new InlineMigration(2));
 

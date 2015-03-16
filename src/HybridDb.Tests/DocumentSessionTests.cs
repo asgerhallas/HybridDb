@@ -802,8 +802,14 @@ namespace HybridDb.Tests
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
                 session.SaveChanges();
-                session.Advanced.Clear();
+            }
 
+            Reset();
+
+            Document<AbstractEntity>().With(x => x.Property);
+
+            using (var session = store.OpenSession())
+            {
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
@@ -861,7 +867,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            ResetStore();
+            Reset(keepConfiguration: true);
 
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
@@ -884,7 +890,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            ResetStore();
+            Reset(keepConfiguration: true);
 
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<OtherEntity>(x => { x["Property"] = "Hans og Grethe"; })));
 
@@ -910,7 +916,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            ResetStore();
+            Reset(keepConfiguration: true);
 
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),

@@ -182,9 +182,9 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void ContinuesWithReprojectionOfMarkedRows()
         {
-            var designer1 = Document<Entity>();
-            var designer2 = Document<AbstractEntity>();
-            var designer3 = Document<OtherEntity>();
+            Document<Entity>();
+            Document<AbstractEntity>();
+            Document<OtherEntity>();
 
             using (var session = store.OpenSession())
             {
@@ -197,10 +197,11 @@ namespace HybridDb.Tests.Migrations
                 session.SaveChanges();
             }
 
-            ResetStore();
+            Reset();
 
-            designer1.With(x => x.Number);
-            designer2.With(x => x.Property);
+            Document<Entity>().With(x => x.Number);
+            Document<AbstractEntity>().With(x => x.Property);
+            Document<OtherEntity>();
 
             // first run changes the schema, but "fail" before the long running task is started
             new MigrationRunner(logger, new SchemaDiffer())

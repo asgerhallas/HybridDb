@@ -20,6 +20,11 @@ namespace HybridDb
             return configuration;
         }
 
+        protected virtual void Reset()
+        {
+            configuration = new Configuration();
+        }
+
         protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null)
         {
             return configuration.Document<TEntity>(tablename, discriminator);

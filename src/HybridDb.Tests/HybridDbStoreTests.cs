@@ -8,12 +8,13 @@ namespace HybridDb.Tests
 
         protected HybridDbStoreTests()
         {
-            ResetStore();
+            Reset();
             UseSerializer(new DefaultJsonSerializer());
         }
 
-        public void ResetStore()
+        protected void Reset(bool keepConfiguration = false)
         {
+            base.Reset();
             factory = new Lazy<DocumentStore>(() => Using(DocumentStore.ForTesting(database, configuration)));
         }
 
