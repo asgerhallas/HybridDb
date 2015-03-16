@@ -169,7 +169,7 @@ namespace HybridDb
         {
             var schema = new Dictionary<string, Table>();
 
-            var tempTables = RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '#%'");
+            var tempTables = RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null and name like '#%' and name not like '##%'");
             foreach (var tableName in tempTables)
             {
                 var formattedTableName = tableName.Remove(tableName.Length - 12, 12).TrimEnd('_');

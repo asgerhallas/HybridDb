@@ -97,6 +97,7 @@
     <Compile Include="Performance\QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DatabaseQuerySchemaTests.cs" />
+    <Compile Include="DatabaseTableModeTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
