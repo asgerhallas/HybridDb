@@ -6,15 +6,22 @@ namespace HybridDb.Config
     {
         public Column(string name, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false)
         {
-            if(type == typeof(byte[]) && defaultValue != null)
-                throw new ArgumentException("Byte array column can not have default value.");
+            Type = System.Nullable.GetUnderlyingType(type) ?? type;
+
+            if (defaultValue != null)
+            {
+                if (type == typeof(byte[]))
+                    throw new ArgumentException("Byte array column can not have default value.");
+
+                if (Type != defaultValue.GetType())
+                    throw new ArgumentException(string.Format("Default value ({0}) must be of same type as column ({1}).", type.Name, defaultValue.GetType().Name));
+            }
 
             Name = name;
             Length = length;
             IsPrimaryKey = isPrimaryKey;
 
             Nullable = type.CanBeNull() && !IsPrimaryKey;
-            Type = System.Nullable.GetUnderlyingType(type) ?? type;
 
             if (Type.IsEnum)
             {
