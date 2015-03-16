@@ -32,14 +32,14 @@ namespace HybridDb.Migrations
     public abstract class ChangeDocument : DocumentMigrationCommand
     {
         public abstract bool ForType(Type type);
-        public abstract void Execute(JObject json);
+        public abstract byte[] Execute(ISerializer serializer, byte[] json);
     }
 
     public class ChangeDocument<T> : ChangeDocument
     {
-        private readonly Action<JObject> change;
+        private readonly Func<ISerializer, byte[], byte[]> change;
 
-        public ChangeDocument(Action<JObject> change)
+        public ChangeDocument(Func<ISerializer, byte[], byte[]> change)
         {
             this.change = change;
         }
@@ -49,9 +49,9 @@ namespace HybridDb.Migrations
             return typeof (T).IsAssignableFrom(type);
         }
 
-        public override void Execute(JObject json)
+        public override byte[] Execute(ISerializer serializer, byte[] json)
         {
-            change(json);
+            return change(serializer, json);
         }
     }
 

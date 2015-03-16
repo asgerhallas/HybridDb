@@ -4,6 +4,7 @@ using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Linq;
 using HybridDb.Migrations;
+using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
 
@@ -11,26 +12,6 @@ namespace HybridDb.Tests
 {
     public class DocumentSessionTests : HybridDbStoreTests
     {
-        [Fact(Skip = "Feature on holds")]
-        public void CanProjectCollection()
-        {
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                var entity1 = new Entity
-                {
-                    Id = id,
-                    Children =
-                    {
-                        new Entity.Child {NestedProperty = "A"},
-                        new Entity.Child {NestedProperty = "B"}
-                    }
-                };
-
-                session.Store(entity1);
-            }
-        }
-
         [Fact]
         public void CanEvictEntity()
         {
@@ -882,8 +863,7 @@ namespace HybridDb.Tests
 
             ResetStore();
 
-            UseMigrations(new StaticMigrationProvider(
-                new InlineMigration(1, new ChangeDocument<Entity>(x => { x["Property"] = "Peter"; }))));
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
             using (var session = store.OpenSession())
             {
@@ -906,8 +886,7 @@ namespace HybridDb.Tests
 
             ResetStore();
 
-            UseMigrations(new StaticMigrationProvider(
-                new InlineMigration(1, new ChangeDocument<OtherEntity>(x => { x["Property"] = "Hans og Grethe"; }))));
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<OtherEntity>(x => { x["Property"] = "Hans og Grethe"; })));
 
             using (var session = store.OpenSession())
             {
@@ -933,9 +912,9 @@ namespace HybridDb.Tests
 
             ResetStore();
 
-            UseMigrations(new StaticMigrationProvider(
-                new InlineMigration(1, new ChangeDocument<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
-                new InlineMigration(2, new ChangeDocument<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + " nok"; }))));
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
+                new InlineMigration(2, new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + " nok"; })));
 
             using (var session = store.OpenSession())
             {
@@ -944,6 +923,26 @@ namespace HybridDb.Tests
                 rows[0].Property.ShouldBe("Asger er cool");
                 rows[1].Property.ShouldBe("Jacob er cool");
                 rows[2].Property.ShouldBe("Lars er cool nok"); // sorry Lars!
+            }
+        }
+
+        [Fact(Skip = "Feature on holds")]
+        public void CanProjectCollection()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                var entity1 = new Entity
+                {
+                    Id = id,
+                    Children =
+                    {
+                        new Entity.Child {NestedProperty = "A"},
+                        new Entity.Child {NestedProperty = "B"}
+                    }
+                };
+
+                session.Store(entity1);
             }
         }
 
@@ -957,6 +956,19 @@ namespace HybridDb.Tests
         {
             public string Property { get; set; }
             public int? YksiKaksiKolme { get; set; }
+        }
+
+        public class ChangeDocumentAsJObject<T> : ChangeDocument<T>
+        {
+            public ChangeDocumentAsJObject(Action<JObject> change)
+                : base((s, x) =>
+                {
+                    var jobject = (JObject) s.Deserialize(x, typeof (JObject));
+                    change(jobject);
+                    return s.Serialize(jobject);
+                })
+            {
+            }
         }
     }
 }

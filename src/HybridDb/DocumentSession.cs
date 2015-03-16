@@ -259,18 +259,17 @@ namespace HybridDb
                 return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
             }
             
-            var json = (JObject)store.Configuration.Serializer.Deserialize(document, typeof(JObject));
-
+            var result = document;
             foreach (var migration in store.Migrations.Where(x => x.Version > currentDocumentVersion))
             {
                 var commands = migration.MigrateDocument();
                 foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
                 {
-                    command.Execute(json);
+                    result = command.Execute(store.Configuration.Serializer, result);
                 }
             }
 
-            return store.Configuration.Serializer.Deserialize(json, design.DocumentType);
+            return store.Configuration.Serializer.Deserialize(result, design.DocumentType);
         }
 
         public void Clear()

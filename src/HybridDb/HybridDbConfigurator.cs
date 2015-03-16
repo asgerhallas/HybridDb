@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using HybridDb.Config;
 using HybridDb.Logging;
 using HybridDb.Migrations;
@@ -33,9 +35,14 @@ namespace HybridDb
             configuration.UseLogger(logger);
         }
 
-        protected void UseMigrations(IMigrationProvider provider)
+        protected void UseMigrations(IReadOnlyList<Migration> migrations)
         {
-            configuration.UseMigrations(provider);
+            configuration.UseMigrations(migrations);
+        }
+
+        protected void UseMigrations(params Migration[] migrations)
+        {
+            configuration.UseMigrations(migrations.ToList());
         }
     }
 }

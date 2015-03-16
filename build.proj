@@ -29,7 +29,7 @@
 		<MSBuildCommunityTasksLib>tools\</MSBuildCommunityTasksLib>
 	</PropertyGroup>
 
-	<Target Name="Build" DependsOnTargets="HybridDb;Studio;MigrationRunner" />
+	<Target Name="Build" DependsOnTargets="HybridDb;Studio" />
 	
 	<Target Name="Prepare">
 		<RemoveDir Directories="$(OutputFolder)" ContinueOnError="true"/>
@@ -65,20 +65,6 @@
 		</ItemGroup>
 		
 		<Copy SourceFiles="@(StudioFiles -> '$(SrcFolder)\HybridDb.Studio\$(BinFolder)\%(Identity)')" DestinationFolder="$(OutputFolder)\tools" />		
-	</Target>
-
-	<Target Name="MigrationRunner" DependsOnTargets="Prepare;HybridDb">
-		<MSBuild Projects="$(SrcFolder)\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
-
-		<ItemGroup>
-			<MigrationRunnerFiles Include="HybridDb.MigrationRunner.exe" />
-			<MigrationRunnerFiles Include="Serilog.dll" />
-			<MigrationRunnerFiles Include="Serilog.FullNetFx.dll" />
-		</ItemGroup>
-		
-	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:exe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe @(MigrationRunnerFiles -> '$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\%(Identity)', ' ')  $(OutputFolder)\lib\HybridDb.dll"/>
-		
-		<Copy SourceFiles="$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />
 	</Target>
 	
 	<Target Name="Test">

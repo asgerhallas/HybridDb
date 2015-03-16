@@ -55,14 +55,6 @@ namespace HybridDb
             }
         }
 
-        public object Deserialize(JObject data, Type type)
-        {
-            using (var jObjectReader = data.CreateReader())
-            {
-                return CreateSerializer().Deserialize(jObjectReader, type);
-            }
-        }
-
         public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
         {
             readonly Regex matchesBackingFieldForAutoProperty;

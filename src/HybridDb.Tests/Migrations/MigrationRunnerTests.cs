@@ -197,6 +197,8 @@ namespace HybridDb.Tests.Migrations
                 session.SaveChanges();
             }
 
+            ResetStore();
+
             designer1.With(x => x.Number);
             designer2.With(x => x.Property);
 

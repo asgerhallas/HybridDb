@@ -20,12 +20,12 @@ namespace HybridDb.Config
 
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
             Serializer = new DefaultBsonSerializer();
-            MigrationProvider = new StaticMigrationProvider();
+            Migrations = new List<Migration>();
         }
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
-        public IMigrationProvider MigrationProvider { get; private set; }
+        public IReadOnlyList<Migration> Migrations { get; private set; }
 
         internal ConcurrentDictionary<string, Table> Tables { get; private set; }
         internal List<DocumentDesign> DocumentDesigns { get; private set; }
@@ -111,9 +111,9 @@ namespace HybridDb.Config
             Logger = logger;
         }
 
-        public void UseMigrations(IMigrationProvider provider)
+        public void UseMigrations(IReadOnlyList<Migration> migrations)
         {
-            MigrationProvider = provider;
+            Migrations = migrations;
         }
 
         DocumentTable AddTable(string tablename)

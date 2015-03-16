@@ -20,9 +20,9 @@ namespace HybridDb
         Guid lastWrittenEtag;
         long numberOfRequests;
 
-        DocumentStore(Database database, Configuration configuration, IReadOnlyList<Migration> migrations)
+        DocumentStore(Database database, Configuration configuration)
         {
-            this.migrations = migrations;
+            migrations = configuration.Migrations;
             version = migrations.Any() ? migrations.Max(x => x.Version) : 0;
             
             Logger = configuration.Logger;
@@ -35,9 +35,8 @@ namespace HybridDb
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
             var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
-            var migrations = configuration.MigrationProvider.GetMigrations();
-            var store = new DocumentStore(database, configuration, migrations);
-            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), migrations);
+            var store = new DocumentStore(database, configuration);
+            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations);
             migrationRunner.Migrate(store, configuration).Start();
             return store;
         }
@@ -52,9 +51,8 @@ namespace HybridDb
 
         public static DocumentStore ForTesting(Database database, Configuration configuration)
         {
-            var migrations = configuration.MigrationProvider.GetMigrations();
-            var store = new DocumentStore(database, configuration, migrations);
-            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), migrations);
+            var store = new DocumentStore(database, configuration);
+            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations);
             migrationRunner.Migrate(store, configuration).RunSynchronously();
             return store;
         }

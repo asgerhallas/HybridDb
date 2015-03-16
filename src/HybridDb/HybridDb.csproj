@@ -77,7 +77,6 @@
     <Compile Include="Migrations\IMigrationProvider.cs" />
     <Compile Include="Migrations\ISchemaDiffer.cs" />
     <Compile Include="Migrations\Migration.cs" />
-    <Compile Include="Migrations\StaticMigrationProvider.cs" />
     <Compile Include="Migrations\MigrationRunner.cs" />
     <Compile Include="Migrations\SchemaDiffer.cs" />
     <Compile Include="LinqEx.cs" />

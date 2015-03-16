@@ -843,9 +843,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanReportVersion()
         {
-            UseMigrations(new StaticMigrationProvider(
-                new InlineMigration(1), 
-                new InlineMigration(2)));
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
 
             store.CurrentVersion.ShouldBe(2);
         }
@@ -855,9 +853,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            UseMigrations(new StaticMigrationProvider(
-                new InlineMigration(1),
-                new InlineMigration(2)));
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
 
             var id = Guid.NewGuid();
             var table = configuration.GetDesignFor<Entity>().Table;
@@ -879,9 +875,7 @@ namespace HybridDb.Tests
 
             ResetStore();
 
-            UseMigrations(new StaticMigrationProvider(
-                new InlineMigration(1),
-                new InlineMigration(2)));
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
 
             store.Update(table, id, etag, new { });
 
