@@ -136,6 +136,7 @@ namespace HybridDb.Tests
             new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(database);
             new AddColumn("Entities1", new Column("SomeOtherString", typeof(string), defaultValue: null)).Execute(database);
             new AddColumn("Entities1", new Column("SomeBool", typeof(bool),  defaultValue: true)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeOtherBool", typeof(bool))).Execute(database);
             new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(database);
             new AddColumn("Entities1", new Column("SomeDateTimeOffset", typeof(DateTimeOffset), defaultValue: new DateTimeOffset(new DateTime(1999, 12, 24)))).Execute(database);
             new AddColumn("Entities1", new Column("SomeEnum", typeof(SomeEnum), defaultValue: SomeEnum.SomeOtherValue)).Execute(database);
@@ -161,9 +162,28 @@ namespace HybridDb.Tests
             schema["Entities1"]["SomeString"].DefaultValue.ShouldBe("peter");
             schema["Entities1"]["SomeOtherString"].DefaultValue.ShouldBe(null);
             schema["Entities1"]["SomeBool"].DefaultValue.ShouldBe(true);
+            schema["Entities1"]["SomeOtherBool"].DefaultValue.ShouldBe(false);
             schema["Entities1"]["SomeDateTime"].DefaultValue.ShouldBe(new DateTime(1999, 12, 24));
             schema["Entities1"]["SomeDateTimeOffset"].DefaultValue.ShouldBe(new DateTimeOffset(new DateTime(1999, 12, 24)));
             schema["Entities1"]["SomeEnum"].DefaultValue.ShouldBe("SomeOtherValue");
+        }
+
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseRealTables)]
+        public void CanHandleLegacyBooleanDefaultValues(TableMode mode)
+        {
+            Use(mode);
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
+
+            database.RawExecute(string.Format("alter table {0} add [SomeFalseBool] Bit NOT NULL DEFAULT '0'", database.FormatTableName("Entities1")));
+            database.RawExecute(string.Format("alter table {0} add [SomeTrueBool] Bit NOT NULL DEFAULT '1'", database.FormatTableName("Entities1")));
+
+            var schema = database.QuerySchema();
+
+            schema["Entities1"]["SomeFalseBool"].DefaultValue.ShouldBe(false);
+            schema["Entities1"]["SomeTrueBool"].DefaultValue.ShouldBe(true);
         }
 
         enum SomeEnum
