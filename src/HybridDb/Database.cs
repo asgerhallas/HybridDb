@@ -300,6 +300,15 @@ namespace HybridDb
             if (columnType == typeof(Guid))
                 return Guid.Parse(defaultValue);
 
+            //For legacy support of default boolean values persisted as 0/1
+            if (columnType == typeof (bool))
+            {
+                if (defaultValue == "0")
+                    return false;
+                if (defaultValue == "1")
+                    return true;
+            }
+
             return Convert.ChangeType(defaultValue, columnType);
         }
 

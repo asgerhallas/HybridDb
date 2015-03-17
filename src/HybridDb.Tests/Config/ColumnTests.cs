@@ -43,6 +43,32 @@ namespace HybridDb.Tests.Config
             column.Nullable.ShouldBe(isNullable);
         }
 
+        [Theory]
+        [InlineData(typeof(bool), true)]
+        [InlineData(typeof(int), 1)]
+        [InlineData(typeof(string), "some string")]
+        [InlineData(typeof(double), 1.2)]
+        [InlineData(typeof(int?), 1)]
+        [InlineData(typeof(double?), 1.2)]
+        [InlineData(typeof(bool?), true)]
+        public void CanAddDefaultValue(Type columnType, object defaultValue)
+        {
+             new Column("SomeColumn", columnType, defaultValue: defaultValue).DefaultValue.ShouldBe(defaultValue);
+        }
+
+        [Theory]
+        [InlineData(typeof(bool), "1")]
+        [InlineData(typeof(bool), "True")]
+        [InlineData(typeof(bool), 1)]
+        [InlineData(typeof(int), "1")]
+        [InlineData(typeof(string), 1)]
+        [InlineData(typeof(Guid), "C3CE3F60-9353-4830-8511-F82A5A727EA3")]
+        [InlineData(typeof(DateTime), "1999-12-02")]
+        public void ThrowsIfDefaultValueIsNotOfColumnType(Type columnType, object defaultValue)
+        {
+            Should.Throw<ArgumentException>(() => new Column("SomeColumn", columnType, defaultValue: defaultValue));
+        }
+
         enum SomeEnum{}
     }
 }
