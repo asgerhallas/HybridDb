@@ -43,7 +43,6 @@ namespace HybridDb
             }
 
             var design = store.Configuration.TryGetDesignFor<T>();
-
             if (design == null)
             {
                 throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof (T)));
@@ -102,7 +101,7 @@ namespace HybridDb
         {
             var configuration = store.Configuration;
             var type = entity.GetType();
-            var design = configuration.TryGetDesignFor(type) ?? configuration.CreateDesignFor(type);
+            var design = configuration.GetDesignFor(type);
             var id = design.GetId(entity);
 
             if (entities.ContainsKey(id))

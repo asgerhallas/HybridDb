@@ -792,8 +792,26 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact]
-        public void AutoRegistersSubTypesWhenStoredFirstTime()
+        [Fact(Skip = "Issue 29")]
+        public void AutoRegistersSubTypesOnStore()
+        {
+            Document<AbstractEntity>().With(x => x.Property);
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
+                session.SaveChanges();
+
+                configuration.TryGetDesignFor<MoreDerivedEntity1>().ShouldNotBe(null);
+
+                var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
+            }
+        }
+
+        [Fact(Skip = "Issue 29")]
+        public void AutoRegistersSubTypesOnLoad()
         {
             Document<AbstractEntity>().With(x => x.Property);
 
@@ -810,8 +828,10 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
+                var entity = session.Load<AbstractEntity>(id);
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
+
+                configuration.TryGetDesignFor<MoreDerivedEntity1>().ShouldNotBe(null);
             }
         }
 
@@ -837,7 +857,6 @@ namespace HybridDb.Tests
             Document<AbstractEntity>()
                 .Extend<EntityIndex>(e => e.With(x => x.YksiKaksiKolme, x => x.Number))
                 .With(x => x.Property);
-
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())

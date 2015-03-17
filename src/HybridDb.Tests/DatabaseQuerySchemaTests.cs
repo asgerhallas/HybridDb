@@ -135,7 +135,7 @@ namespace HybridDb.Tests
             new AddColumn("Entities1", new Column("SomeLong", typeof(double), defaultValue: 987654321987654312)).Execute(database);
             new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(database);
             new AddColumn("Entities1", new Column("SomeOtherString", typeof(string), defaultValue: null)).Execute(database);
-            new AddColumn("Entities1", new Column("SomeBool", typeof(bool),  defaultValue: true)).Execute(database);
+            new AddColumn("Entities1", new Column("SomeBool", typeof(bool), defaultValue: true)).Execute(database);
             new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(database);
             new AddColumn("Entities1", new Column("SomeDateTimeOffset", typeof(DateTimeOffset), defaultValue: new DateTimeOffset(new DateTime(1999, 12, 24)))).Execute(database);
             new AddColumn("Entities1", new Column("SomeEnum", typeof(SomeEnum), defaultValue: SomeEnum.SomeOtherValue)).Execute(database);

@@ -154,6 +154,7 @@ namespace HybridDb.Tests.Migrations
         {
             Document<Entity>();
             Document<AbstractEntity>();
+            Document<DerivedEntity>();
             Document<OtherEntity>();
 
             using (var session = store.OpenSession())
@@ -184,6 +185,7 @@ namespace HybridDb.Tests.Migrations
         {
             Document<Entity>();
             Document<AbstractEntity>();
+            Document<DerivedEntity>();
             Document<OtherEntity>();
 
             using (var session = store.OpenSession())
@@ -201,6 +203,7 @@ namespace HybridDb.Tests.Migrations
 
             Document<Entity>().With(x => x.Number);
             Document<AbstractEntity>().With(x => x.Property);
+            Document<DerivedEntity>();
             Document<OtherEntity>();
 
             // first run changes the schema, but "fail" before the long running task is started
