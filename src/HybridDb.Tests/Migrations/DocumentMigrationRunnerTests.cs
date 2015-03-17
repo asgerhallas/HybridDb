@@ -52,10 +52,10 @@ namespace HybridDb.Tests.Migrations
                 });
             }
 
-            var initialNumberOfRequests = store.NumberOfRequests;
-
+            // bump the version of the configuration
             UseMigrations(new InlineMigration(1));
 
+            var initialNumberOfRequests = store.NumberOfRequests;
             new DocumentMigrationRunner(store, configuration).RunSynchronously();
 
             // 1: query for documents below version, return 100
@@ -109,13 +109,6 @@ namespace HybridDb.Tests.Migrations
             gate2.WaitOne();
 
             failed.ShouldBe(false);
-        }
-
-        public class SlowCommand : ChangeDocument<Entity>
-        {
-            public SlowCommand(Func<ISerializer, byte[], byte[]> change) : base(change)
-            {
-            }
         }
 
         [Fact]
