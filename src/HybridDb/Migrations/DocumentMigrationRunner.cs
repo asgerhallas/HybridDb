@@ -36,7 +36,8 @@ namespace HybridDb.Migrations
                     QueryStats stats;
                     var rows = store.Query(table, out stats, 
                         @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
-                        take: 100, 
+                        take: 100,
+                        orderby: "newid()",
                         parameters: new {AwaitsReprojection = true, version = configuration.CurrentVersion});
 
                     if (stats.TotalResults == 0) break;

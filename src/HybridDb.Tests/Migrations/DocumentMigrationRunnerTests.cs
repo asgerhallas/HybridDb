@@ -28,7 +28,7 @@ namespace HybridDb.Tests.Migrations
                 AwaitsReprojection = awaitsReprojection, 
                 Discriminator = "Entity",
                 Version = 0,
-                Document = configuration.Serializer.Serialize(new Entity())
+                Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
             new DocumentMigrationRunner(store, configuration).RunSynchronously();
