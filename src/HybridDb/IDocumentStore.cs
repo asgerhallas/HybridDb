@@ -12,6 +12,7 @@ namespace HybridDb
         Guid LastWrittenEtag { get; }
         IDocumentSession OpenSession();
         Guid Execute(params DatabaseCommand[] commands);
+        Guid Execute(IEnumerable<DatabaseCommand> commands);
         Guid Insert(DocumentTable table, Guid key, object projections);
         Guid Update(DocumentTable table, Guid key, Guid etag, object projections, bool lastWriteWins = false);
         void Delete(DocumentTable table, Guid key, Guid etag, bool lastWriteWins = false);

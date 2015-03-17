@@ -64,7 +64,14 @@ namespace HybridDb
 
         public Guid Execute(params DatabaseCommand[] commands)
         {
-            if (commands.Length == 0)
+            return Execute((IEnumerable<DatabaseCommand>)commands);
+        }
+
+        public Guid Execute(IEnumerable<DatabaseCommand> commands)
+        {
+            commands = commands.ToList();
+
+            if (!commands.Any())
                 throw new ArgumentException("No commands were passed");
 
             var timer = Stopwatch.StartNew();
@@ -117,6 +124,8 @@ namespace HybridDb
 
                 connectionManager.Complete();
 
+                Interlocked.Increment(ref numberOfRequests);
+
                 Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                             numberOfInsertCommands,
                             numberOfUpdateCommands,
@@ -128,11 +137,11 @@ namespace HybridDb
             }
         }
 
+
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             var fastParameters = new FastDynamicParameters(parameters);
             var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
-            Interlocked.Increment(ref numberOfRequests);
             if (rowcount != expectedRowCount)
                 throw new ConcurrencyException();
         }
@@ -269,8 +278,6 @@ namespace HybridDb
             {
                 stats = reader.Read<QueryStats>(buffered: true).Single();
                 rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
-
-                Interlocked.Increment(ref numberOfRequests);
             }
             rows.ToList();
 

@@ -38,24 +38,32 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void MigratesRandomSetOfDocuments()
+        public void MigratesSetOfDocuments()
         {
             Document<Entity>().With(x => x.Number);
-            UseMigrations(new InlineMigration(1));
 
-            var id = Guid.NewGuid();
-            var table = new DocumentTable("Entities");
-            store.Insert(table, id, new
+            for (int i = 0; i < 200; i++)
             {
-                Discriminator = "Entity",
-                Version = 0,
-                Document = configuration.Serializer.Serialize(new Entity())
-            });
+                store.Insert(new DocumentTable("Entities"), Guid.NewGuid(), new
+                {
+                    Discriminator = "Entity", 
+                    Version = 0, 
+                    Document = configuration.Serializer.Serialize(new Entity())
+                });
+            }
+
+            var initialNumberOfRequests = store.NumberOfRequests;
+
+            UseMigrations(new InlineMigration(1));
 
             new DocumentMigrationRunner(store, configuration).RunSynchronously();
 
-            var row = store.Get(table, id);
-            //row["Number"].ShouldBe(result);
+            // 1: query for documents below version, return 100
+            // 2: update documents in batch
+            // 3: query for documents below version, return 100
+            // 4: update documents in batch
+            // 5: query for documents below version, returns 0
+            (store.NumberOfRequests - initialNumberOfRequests).ShouldBe(5);
         }
 
         [Fact]

@@ -175,7 +175,7 @@ namespace HybridDb
             if (commands.Count + deferredCommands.Count == 0)
                 return;
 
-            var etag = store.Execute(commands.Select(x => x.Item3).Concat(deferredCommands).ToArray());
+            var etag = store.Execute(commands.Select(x => x.Item3).Concat(deferredCommands));
 
             foreach (var change in commands)
             {
