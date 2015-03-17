@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using HybridDb.Config;
+using HybridDb.Migrations;
 using Shouldly;
 using Xunit;
 
@@ -241,6 +242,20 @@ namespace HybridDb.Tests
             configuration.GetDesignFor<DerivedEntity>().Parent.ShouldBe(configuration.GetDesignFor<AbstractEntity>());
             configuration.GetDesignFor<MoreDerivedEntity1>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
             configuration.GetDesignFor<MoreDerivedEntity2>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
+        }
+
+
+        [Fact]
+        public void CanReportInitialVersion()
+        {
+            configuration.CurrentVersion.ShouldBe(0);
+        }
+
+        [Fact]
+        public void CanReportVersion()
+        {
+            configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(2) });
+            configuration.CurrentVersion.ShouldBe(2);
         }
 
         public class Entity

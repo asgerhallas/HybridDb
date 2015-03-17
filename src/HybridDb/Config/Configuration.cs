@@ -26,6 +26,7 @@ namespace HybridDb.Config
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
+        public int CurrentVersion { get; private set; }
 
         internal ConcurrentDictionary<string, Table> Tables { get; private set; }
         internal List<DocumentDesign> DocumentDesigns { get; private set; }
@@ -114,6 +115,7 @@ namespace HybridDb.Config
         public void UseMigrations(IReadOnlyList<Migration> migrations)
         {
             Migrations = migrations;
+            CurrentVersion = Migrations.Any() ? Migrations.Max(x => x.Version) : 0;
         }
 
         DocumentTable AddTable(string tablename)

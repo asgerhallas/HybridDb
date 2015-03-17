@@ -4,18 +4,24 @@ namespace HybridDb.Tests
 {
     public abstract class HybridDbStoreTests : HybridDbTests
     {
-        Lazy<DocumentStore> factory;
+        Lazy<IDocumentStore> factory;
 
         protected HybridDbStoreTests()
         {
             Reset();
-            UseSerializer(new DefaultJsonSerializer());
         }
 
-        protected void Reset(bool keepConfiguration = false)
+        protected override sealed void Reset()
         {
             base.Reset();
-            factory = new Lazy<DocumentStore>(() => Using(DocumentStore.ForTesting(database, configuration)));
+
+            UseSerializer(new DefaultJsonSerializer());
+            factory = new Lazy<IDocumentStore>(() => Using(DocumentStore.ForTesting(database, configuration)));
+        }
+
+        protected void InitializeStore()
+        {
+            var x = store;
         }
 
         // ReSharper disable InconsistentNaming

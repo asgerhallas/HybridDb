@@ -14,21 +14,17 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
-        readonly IReadOnlyList<Migration> migrations;
-        readonly int version;
-        
         Guid lastWrittenEtag;
         long numberOfRequests;
 
         DocumentStore(Database database, Configuration configuration)
         {
-            migrations = configuration.Migrations;
-            version = migrations.Any() ? migrations.Max(x => x.Version) : 0;
-            
             Logger = configuration.Logger;
             Database = database;
             Configuration = configuration;
         }
+
+        internal DocumentStore(DocumentStore store, Configuration configuration) : this(store.Database, configuration) {         }
 
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
         {
@@ -36,12 +32,12 @@ namespace HybridDb
             var configuration = configurator.Configure();
             var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
             var store = new DocumentStore(database, configuration);
-            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations);
-            migrationRunner.Migrate(store, configuration).Start();
+            new SchemaMigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations).Run(store, configuration);
+            new DocumentMigrationRunner(store, configuration).RunInBackground();
             return store;
         }
 
-        public static DocumentStore ForTesting(TableMode mode, string connectionString = null, IHybridDbConfigurator configurator = null)
+        public static IDocumentStore ForTesting(TableMode mode, string connectionString = null, IHybridDbConfigurator configurator = null)
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
@@ -49,27 +45,17 @@ namespace HybridDb
             return ForTesting(database, configuration);
         }
 
-        public static DocumentStore ForTesting(Database database, Configuration configuration)
+        public static IDocumentStore ForTesting(Database database, Configuration configuration)
         {
             var store = new DocumentStore(database, configuration);
-            var migrationRunner = new MigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations);
-            migrationRunner.Migrate(store, configuration).RunSynchronously();
+            new SchemaMigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations).Run(store, configuration);
+            new DocumentMigrationRunner(store, configuration).RunSynchronously();
             return store;
         }
 
         public Database Database { get; private set; }
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; private set; }
-
-        public int CurrentVersion
-        {
-            get { return version; }
-        }
-
-        public IReadOnlyList<Migration> Migrations
-        {
-            get { return migrations; }
-        }
 
         public IDocumentSession OpenSession()
         {

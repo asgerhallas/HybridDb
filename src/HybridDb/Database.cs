@@ -110,7 +110,7 @@ namespace HybridDb
                 }
 
                 SqlConnection connection;
-                if (testMode)
+                if (TableMode != TableMode.UseRealTables)
                 {
                     // We don't care about thread safety in test mode
                     if (ambientConnectionForTesting == null)

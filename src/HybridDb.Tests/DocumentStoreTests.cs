@@ -835,20 +835,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanReportInitialVersion()
-        {
-            store.CurrentVersion.ShouldBe(0);
-        }
-
-        [Fact]
-        public void CanReportVersion()
-        {
-            UseMigrations(new InlineMigration(1), new InlineMigration(2));
-
-            store.CurrentVersion.ShouldBe(2);
-        }
-
-        [Fact]
         public void AddsVersionOnInsert()
         {
             Document<Entity>();

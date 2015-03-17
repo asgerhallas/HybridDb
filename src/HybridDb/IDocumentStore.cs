@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Migrations;
 
 namespace HybridDb
 {
@@ -11,8 +10,6 @@ namespace HybridDb
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
-        int CurrentVersion { get; }
-        IReadOnlyList<Migration> Migrations { get; }
         IDocumentSession OpenSession();
         Guid Execute(params DatabaseCommand[] commands);
         Guid Insert(DocumentTable table, Guid key, object projections);

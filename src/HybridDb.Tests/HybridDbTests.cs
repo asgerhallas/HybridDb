@@ -1,19 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Transactions;
 using Dapper;
 using HybridDb.Logging;
-using HybridDb.Migrations;
 using Shouldly;
 
 namespace HybridDb.Tests
 {
     public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
     {
-        readonly ConsoleLogger logger;
         readonly List<Action> disposables;
+
+        protected readonly ConsoleLogger logger;
         
         protected string connectionString;
         protected Database database;
@@ -169,38 +168,6 @@ namespace HybridDb.Tests
         {
             One,
             Two
-        }
-
-        public class InlineMigration : Migration
-        {
-            readonly List<DocumentMigrationCommand> documentCommands;
-            readonly List<SchemaMigrationCommand> schemaCommands;
-
-            public InlineMigration(int version) : base(version)
-            {
-                documentCommands = new List<DocumentMigrationCommand>();
-                schemaCommands = new List<SchemaMigrationCommand>();
-            }
-
-            public InlineMigration(int version, params SchemaMigrationCommand[] commands) : this(version)
-            {
-                schemaCommands = commands.ToList();
-            }
-
-            public InlineMigration(int version, params DocumentMigrationCommand[] commands) : this(version)
-            {
-                documentCommands = commands.ToList();
-            }
-
-            public override IEnumerable<SchemaMigrationCommand> MigrateSchema()
-            {
-                return schemaCommands;
-            }
-
-            public override IEnumerable<DocumentMigrationCommand> MigrateDocument()
-            {
-                return documentCommands;
-            }
         }
     }
 }

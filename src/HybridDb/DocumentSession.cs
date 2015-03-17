@@ -5,7 +5,6 @@ using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
 using HybridDb.Migrations;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb
 {
@@ -152,7 +151,7 @@ namespace HybridDb
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
-                projections.Add(design.Table.VersionColumn, store.CurrentVersion);
+                projections.Add(design.Table.VersionColumn, store.Configuration.CurrentVersion);
 
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
@@ -226,8 +225,8 @@ namespace HybridDb
             if (entities.TryGetValue(id, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                           ? managedEntity.Entity
-                           : null;
+                    ? managedEntity.Entity
+                    : null;
             }
 
             var document = (byte[])row[table.DocumentColumn];
@@ -253,22 +252,21 @@ namespace HybridDb
             var document = (byte[])row[table.DocumentColumn];
             
             var currentDocumentVersion = (int)row[table.VersionColumn];
-            if (store.CurrentVersion <= currentDocumentVersion)
+            if (store.Configuration.CurrentVersion <= currentDocumentVersion)
             {
                 return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
             }
             
-            var result = document;
-            foreach (var migration in store.Migrations.Where(x => x.Version > currentDocumentVersion))
+            foreach (var migration in store.Configuration.Migrations.Where(x => x.Version > currentDocumentVersion))
             {
                 var commands = migration.MigrateDocument();
                 foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
                 {
-                    result = command.Execute(store.Configuration.Serializer, result);
+                    document = command.Execute(store.Configuration.Serializer, document);
                 }
             }
 
-            return store.Configuration.Serializer.Deserialize(result, design.DocumentType);
+            return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
         }
 
         public void Clear()

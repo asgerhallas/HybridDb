@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Migrations
 {
@@ -25,9 +23,7 @@ namespace HybridDb.Migrations
         }
     }
 
-    public abstract class DocumentMigrationCommand
-    {
-    }
+    public abstract class DocumentMigrationCommand {}
 
     public abstract class ChangeDocument : DocumentMigrationCommand
     {
@@ -37,7 +33,7 @@ namespace HybridDb.Migrations
 
     public class ChangeDocument<T> : ChangeDocument
     {
-        private readonly Func<ISerializer, byte[], byte[]> change;
+        readonly Func<ISerializer, byte[], byte[]> change;
 
         public ChangeDocument(Func<ISerializer, byte[], byte[]> change)
         {

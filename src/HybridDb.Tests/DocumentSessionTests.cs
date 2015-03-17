@@ -857,6 +857,7 @@ namespace HybridDb.Tests
             Document<AbstractEntity>()
                 .Extend<EntityIndex>(e => e.With(x => x.YksiKaksiKolme, x => x.Number))
                 .With(x => x.Property);
+            Document<MoreDerivedEntity1>();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
@@ -886,8 +887,9 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset(keepConfiguration: true);
+            Reset();
 
+            Document<Entity>();
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
             using (var session = store.OpenSession())
@@ -909,8 +911,9 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset(keepConfiguration: true);
+            Reset();
 
+            Document<Entity>();
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<OtherEntity>(x => { x["Property"] = "Hans og Grethe"; })));
 
             using (var session = store.OpenSession())
@@ -926,6 +929,7 @@ namespace HybridDb.Tests
             Document<AbstractEntity>().With(x => x.Number);
             Document<DerivedEntity>();
             Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
 
             using (var session = store.OpenSession())
             {
@@ -935,7 +939,12 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset(keepConfiguration: true);
+            Reset();
+
+            Document<AbstractEntity>().With(x => x.Number);
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
 
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),

@@ -74,10 +74,11 @@
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
+    <Compile Include="Migrations\DocumentMigrationRunner.cs" />
     <Compile Include="Migrations\IMigrationProvider.cs" />
     <Compile Include="Migrations\ISchemaDiffer.cs" />
     <Compile Include="Migrations\Migration.cs" />
-    <Compile Include="Migrations\MigrationRunner.cs" />
+    <Compile Include="Migrations\SchemaMigrationRunner.cs" />
     <Compile Include="Migrations\SchemaDiffer.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
