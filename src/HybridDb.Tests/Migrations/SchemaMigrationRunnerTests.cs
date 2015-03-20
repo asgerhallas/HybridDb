@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -177,30 +176,31 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns()
         {
+            UseRealTables();
             CreateMetadataTable();
 
-            var runner = new SchemaMigrationRunner(logger,
-                new SchemaDiffer(),
-                new InlineMigration(1,
-                    new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
-                    new SlowCommand()));
+            var countingCommand = new CountingCommand();
 
-            var gate = new AutoResetEvent(false);
+            Func<SchemaMigrationRunner> runnerFactory = () =>
+                new SchemaMigrationRunner(logger,
+                    new SchemaDiffer(),
+                    new InlineMigration(1,
+                        new AddColumn("Other", new Column("Asger", typeof (int))),
+                        new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
+                        new SlowCommand(),
+                        countingCommand));
 
-            Task.Factory.StartNew(() =>
+            InitializeStore();
+
+            new CreateTable(new DocumentTable("Other")).Execute(database);
+
+            Parallel.For(1, 10, x =>
             {
-                runner.Run(store, configuration);
-                gate.Set();
+                Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                runnerFactory().Run(store, configuration);
             });
 
-            Task.Factory.StartNew(() =>
-            {
-                runner.Run(store, configuration);
-                gate.Set();
-            });
-
-            gate.WaitOne();
-            gate.WaitOne();
+            countingCommand.NumberOfTimesCalled.ShouldBe(1);
         }
 
         void CreateMetadataTable()
@@ -253,7 +253,7 @@ namespace HybridDb.Tests.Migrations
         {
             public override void Execute(Database database)
             {
-                Thread.Sleep(1000);
+                Thread.Sleep(5000);
             }
         }
     }

@@ -26,10 +26,9 @@ namespace HybridDb.Migrations
         {
             var requiresReprojection = new List<string>();
 
-            // todo: abstract out so version is store independent
             var database = ((DocumentStore)store).Database;
 
-            int currentSchemaVersion = 0;
+            int currentSchemaVersion;
             using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
             {
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
@@ -41,12 +40,6 @@ namespace HybridDb.Migrations
                     string.Format("select top 1 SchemaVersion from {0} with (tablockx, holdlock)", 
                     database.FormatTableName("HybridDb"))).SingleOrDefault();
 
-                tx.Complete();
-            }
-
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
-            {
-                var schema = database.QuerySchema().Values.ToList(); // demeter go home!
                 foreach (var migration in migrations.Where(x => x.Version > currentSchemaVersion).ToList())
                 {
                     var migrationCommands = migration.MigrateSchema();
@@ -64,6 +57,7 @@ namespace HybridDb.Migrations
                     currentSchemaVersion++;
                 }
 
+                var schema = database.QuerySchema().Values.ToList(); // demeter go home!
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
                 foreach (var command in commands)
                 {
