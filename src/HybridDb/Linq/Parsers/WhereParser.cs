@@ -34,10 +34,10 @@ namespace HybridDb.Linq.Parsers
         protected override Expression VisitBinary(BinaryExpression expression)
         {
             Visit(expression.Left);
-            var left = ast.Pop();
-
             Visit(expression.Right);
+            
             var right = ast.Pop();
+            var left = ast.Pop();
 
             SqlNodeType nodeType;
             switch (expression.NodeType)
@@ -118,7 +118,7 @@ namespace HybridDb.Linq.Parsers
                     }
                     else
                     {
-                        ast.Push(new SqlConstantExpression(false));
+                        ast.Push(new SqlConstantExpression(typeof(bool), false));
                     }
                     break;
                 default:

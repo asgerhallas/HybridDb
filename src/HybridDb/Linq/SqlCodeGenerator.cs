@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using HybridDb.Linq.Ast;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq
 {
-    public class SqlExpressionTranslator : SqlExpressionVisitor
+    public class SqlCodeGenerator : SqlExpressionVisitor
     {
         readonly StringBuilder sql;
         readonly Dictionary<object, string> parameters;
 
-        public SqlExpressionTranslator(StringBuilder sql, Dictionary<object, string> parameters)
+        public SqlCodeGenerator(StringBuilder sql, Dictionary<object, string> parameters)
         {
             this.sql = sql;
             this.parameters = parameters;

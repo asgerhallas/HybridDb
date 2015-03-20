@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Commands;
@@ -171,6 +174,34 @@ namespace HybridDb.Tests.Migrations
             database.RawQuery<bool>("select AwaitsReprojection from #OtherEntities").ShouldAllBe(x => !x);
         }
 
+        [Fact]
+        public void HandlesConcurrentRuns()
+        {
+            CreateMetadataTable();
+
+            var runner = new SchemaMigrationRunner(logger,
+                new SchemaDiffer(),
+                new InlineMigration(1,
+                    new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
+                    new SlowCommand()));
+
+            var gate = new AutoResetEvent(false);
+
+            Task.Factory.StartNew(() =>
+            {
+                runner.Run(store, configuration);
+                gate.Set();
+            });
+
+            Task.Factory.StartNew(() =>
+            {
+                runner.Run(store, configuration);
+                gate.Set();
+            });
+
+            gate.WaitOne();
+            gate.WaitOne();
+        }
 
         void CreateMetadataTable()
         {
@@ -215,6 +246,14 @@ namespace HybridDb.Tests.Migrations
             public override void Execute(Database database)
             {
                 NumberOfTimesCalled++;
+            }
+        }
+        
+        public class SlowCommand : SchemaMigrationCommand
+        {
+            public override void Execute(Database database)
+            {
+                Thread.Sleep(1000);
             }
         }
     }

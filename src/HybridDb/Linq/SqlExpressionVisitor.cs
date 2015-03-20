@@ -1,8 +1,8 @@
 ﻿using System;
-using HybridDb.Linq.Ast;
 using System.Linq;
+using HybridDb.Linq.Ast;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq
 {
     public abstract class SqlExpressionVisitor
     {

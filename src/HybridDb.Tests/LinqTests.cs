@@ -580,7 +580,7 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", "asger");
         }
 
-        [Fact]
+        [Fact(Skip = "Issue #30")]
         public void CanQueryEnums()
         {
             var translation = Query<Entity>().Where(x => x.Enum == Enumse.Second).Translate();

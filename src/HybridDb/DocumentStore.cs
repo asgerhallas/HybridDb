@@ -37,7 +37,12 @@ namespace HybridDb
             return store;
         }
 
-        public static IDocumentStore ForTesting(TableMode mode, string connectionString = null, IHybridDbConfigurator configurator = null)
+        public static IDocumentStore ForTesting(TableMode mode, IHybridDbConfigurator configurator = null)
+        {
+            return ForTesting(mode, null, configurator);
+        }
+
+        public static IDocumentStore ForTesting(TableMode mode, string connectionString, IHybridDbConfigurator configurator = null)
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
@@ -124,8 +129,6 @@ namespace HybridDb
 
                 connectionManager.Complete();
 
-                Interlocked.Increment(ref numberOfRequests);
-
                 Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                             numberOfInsertCommands,
                             numberOfUpdateCommands,
@@ -142,6 +145,7 @@ namespace HybridDb
         {
             var fastParameters = new FastDynamicParameters(parameters);
             var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+            Interlocked.Increment(ref numberOfRequests);
             if (rowcount != expectedRowCount)
                 throw new ConcurrencyException();
         }
@@ -279,7 +283,6 @@ namespace HybridDb
                 stats = reader.Read<QueryStats>(buffered: true).Single();
                 rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
             }
-            rows.ToList();
 
             return rows;
         }

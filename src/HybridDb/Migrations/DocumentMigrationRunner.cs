@@ -11,6 +11,8 @@ namespace HybridDb.Migrations
 {
     public class DocumentMigrationRunner
     {
+        readonly static object locker = new object();
+
         readonly IDocumentStore store;
         readonly Configuration configuration;
 
@@ -27,45 +29,46 @@ namespace HybridDb.Migrations
 
         public void RunSynchronously()
         {
-            foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
+            lock (locker)
             {
-                var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
-
-                while (true)
+                foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    QueryStats stats;
-                    var rows = store.Query(table, out stats, 
-                        @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
-                        take: 100,
-                        orderby: "newid()",
-                        parameters: new {AwaitsReprojection = true, version = configuration.CurrentVersion});
+                    var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
 
-                    if (stats.TotalResults == 0) break;
-
-                    var updates = new List<UpdateCommand>();
-                    foreach (var row in rows)
+                    while (true)
                     {
-                        var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
+                        QueryStats stats;
+                        var rows = store
+                            .Query(table, out stats,
+                                @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
+                                take: 100,
+                                orderby: "newid()",
+                                parameters: new {AwaitsReprojection = true, version = configuration.CurrentVersion});
 
-                        DocumentDesign concreteDesign;
-                        if (!baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                        if (stats.TotalResults == 0) break;
+
+                        foreach (var row in rows)
                         {
-                            throw new InvalidOperationException(
-                                string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
+                            var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
+
+                            DocumentDesign concreteDesign;
+                            if (!baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                            {
+                                throw new InvalidOperationException(
+                                    string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
+                            }
+
+                            var entity = DocumentSession.DeserializeAndMigrate(store, concreteDesign, row);
+                            var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
+                            projections.Add(table.VersionColumn, configuration.CurrentVersion);
+
+                            try
+                            {
+                                store.Update(table, (Guid) row[table.IdColumn], (Guid) row[table.EtagColumn], projections);
+                            }
+                            catch (ConcurrencyException) { }
                         }
-
-                        var entity = DocumentSession.DeserializeAndMigrate(store, concreteDesign, row);
-                        var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-                        projections.Add(table.VersionColumn, configuration.CurrentVersion);
-
-                        updates.Add(new UpdateCommand(table, (Guid)row[table.IdColumn], (Guid)row[table.EtagColumn], projections, lastWriteWins: false));
                     }
-
-                    try
-                    {
-                        store.Execute(updates);
-                    }
-                    catch (ConcurrencyException) { }
                 }
             }
         }

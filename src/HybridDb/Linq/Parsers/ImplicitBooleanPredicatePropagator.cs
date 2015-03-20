@@ -26,8 +26,8 @@ namespace HybridDb.Linq.Parsers
                 var nodeType = ((bool) expression.Value) ? SqlNodeType.Equal : SqlNodeType.NotEqual;
 
                 return new SqlBinaryExpression(nodeType, 
-                    new SqlConstantExpression(1),
-                    new SqlConstantExpression(1));
+                    new SqlConstantExpression(typeof(int), 1),
+                    new SqlConstantExpression(typeof(int), 1));
             }
 
             return base.Visit(expression);
@@ -36,7 +36,7 @@ namespace HybridDb.Linq.Parsers
         protected override SqlExpression Visit(SqlColumnExpression expression)
         {
             if (expression.Type == typeof(bool))
-                return new SqlBinaryExpression(SqlNodeType.Equal, expression, new SqlConstantExpression(true));
+                return new SqlBinaryExpression(SqlNodeType.Equal, expression, new SqlConstantExpression(typeof(bool), true));
             
             return expression;
         }

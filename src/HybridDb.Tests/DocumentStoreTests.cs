@@ -430,7 +430,7 @@ namespace HybridDb.Tests
             }
 
             store.Execute(commands.ToArray());
-            store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
+            (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
         }
 
         [Fact]

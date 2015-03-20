@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations;
@@ -35,10 +33,11 @@ namespace HybridDb.Tests.Migrations
 
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
+            row["AwaitsReprojection"].ShouldBe(false);
         }
 
         [Fact]
-        public void MigratesSetOfDocuments()
+        public void QueriesInSetsAndUpdatesOneByOne()
         {
             Document<Entity>().With(x => x.Number);
 
@@ -59,11 +58,11 @@ namespace HybridDb.Tests.Migrations
             new DocumentMigrationRunner(store, configuration).RunSynchronously();
 
             // 1: query for documents below version, return 100
-            // 2: update documents in batch
-            // 3: query for documents below version, return 100
-            // 4: update documents in batch
-            // 5: query for documents below version, returns 0
-            (store.NumberOfRequests - initialNumberOfRequests).ShouldBe(5);
+            // 101: update documents one at a time
+            // 102: query for documents below version, return 100
+            // 202: update documents one at a time
+            // 203: query for documents below version, returns 0
+            (store.NumberOfRequests - initialNumberOfRequests).ShouldBe(203);
         }
 
         [Fact]
@@ -110,58 +109,5 @@ namespace HybridDb.Tests.Migrations
 
             failed.ShouldBe(false);
         }
-
-        [Fact]
-        public void RunsProjectionsForDocumentsWithNewColumns()
-        {
-            Document<Entity>();
-            Document<AbstractEntity>();
-            Document<DerivedEntity>();
-            Document<OtherEntity>();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Entity { Number = 1 });
-                session.Store(new Entity { Number = 2 });
-                session.Store(new DerivedEntity { Property = "Asger" });
-                session.Store(new DerivedEntity { Property = "Peter" });
-                session.Store(new OtherEntity { Number = 41 });
-                session.Store(new OtherEntity { Number = 42 });
-                session.SaveChanges();
-            }
-
-            Reset();
-
-            // change configuration
-            Document<Entity>().With(x => x.Number);
-            Document<AbstractEntity>().With(x => x.Property);
-            Document<DerivedEntity>();
-            Document<OtherEntity>();
-
-            // this will trigger migration
-            InitializeStore();
-
-            using (var managedConnection = database.Connect())
-            {
-                var result1 = managedConnection.Connection.Query<bool, int, Tuple<bool, int>>(
-                    "select AwaitsReprojection, Number from #Entities order by Number", Tuple.Create, splitOn: "*").ToList();
-
-                result1[0].ShouldBe(Tuple.Create(false, 1));
-                result1[1].ShouldBe(Tuple.Create(false, 2));
-
-                var result2 = managedConnection.Connection.Query<bool, string, Tuple<bool, string>>(
-                    "select AwaitsReprojection, Property from #AbstractEntities order by Property", Tuple.Create, splitOn: "*").ToList();
-
-                result2[0].ShouldBe(Tuple.Create(false, "Asger"));
-                result2[1].ShouldBe(Tuple.Create(false, "Peter"));
-
-                var result3 = managedConnection.Connection.Query<bool>(
-                    "select AwaitsReprojection from #OtherEntities").ToList();
-
-                result3[0].ShouldBe(false);
-                result3[1].ShouldBe(false);
-            }
-        }
-
     }
 }

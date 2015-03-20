@@ -107,8 +107,8 @@
     <Compile Include="Linq\Ast\SqlColumnExpression.cs" />
     <Compile Include="Linq\Ast\SqlConstantExpression.cs" />
     <Compile Include="Linq\Ast\SqlExpression.cs" />
-    <Compile Include="Linq\Parsers\SqlExpressionTranslator.cs" />
-    <Compile Include="Linq\Parsers\SqlExpressionVisitor.cs" />
+    <Compile Include="Linq\SqlCodeGenerator.cs" />
+    <Compile Include="Linq\SqlExpressionVisitor.cs" />
     <Compile Include="Linq\Ast\SqlNodeType.cs" />
     <Compile Include="Linq\Ast\SqlNotExpression.cs" />
     <Compile Include="Linq\Ast\SqlQueryExpression.cs" />

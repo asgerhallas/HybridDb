@@ -30,7 +30,8 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitConstant(ConstantExpression expression)
         {
-            ast.Push(new SqlConstantExpression(expression.Value));
+            var type = expression.Value != null ? expression.Value.GetType() : typeof(object);
+            ast.Push(new SqlConstantExpression(type, expression.Value));
             return expression;
         }
 
@@ -76,7 +77,7 @@ namespace HybridDb.Linq.Parsers
                                    .Cast<SqlConstantExpression>()
                                    .Select(x => x.Value);
 
-                ast.Push(new SqlConstantExpression(expression.Method.Invoke(null, arguments.ToArray())));
+                ast.Push(new SqlConstantExpression(expression.Method.ReturnType, expression.Method.Invoke(null, arguments.ToArray())));
             }
             else
             {
@@ -85,7 +86,7 @@ namespace HybridDb.Linq.Parsers
                                    .Cast<SqlConstantExpression>()
                                    .Select(x => x.Value);
 
-                ast.Push(new SqlConstantExpression(expression.Method.Invoke(receiver, arguments.ToArray())));
+                ast.Push(new SqlConstantExpression(expression.Method.ReturnType, expression.Method.Invoke(receiver, arguments.ToArray())));
             }
         }
 
@@ -140,7 +141,7 @@ namespace HybridDb.Linq.Parsers
                 items[i] = ((SqlConstantExpression) ast.Pop()).Value;
             }
 
-            ast.Push(new SqlConstantExpression(items));
+            ast.Push(new SqlConstantExpression(typeof(object[]), items));
 
             return expression;
         }
@@ -149,7 +150,7 @@ namespace HybridDb.Linq.Parsers
         {
             if (expression.Expression == null)
             {
-                ast.Push(new SqlConstantExpression(expression.Member.GetValue(null)));
+                ast.Push(new SqlConstantExpression(expression.Member.GetMemberType(), expression.Member.GetValue(null)));
                 return expression;
             }
 
@@ -162,7 +163,7 @@ namespace HybridDb.Linq.Parsers
                     if (constant.Value == null)
                         throw new NullReferenceException();
 
-                    ast.Push(new SqlConstantExpression(expression.Member.GetValue(constant.Value)));
+                    ast.Push(new SqlConstantExpression(expression.Member.GetMemberType(), expression.Member.GetValue(constant.Value)));
                     break;
                 case SqlNodeType.ColumnPrefix:
                     //TODO: clean up this mess. 
