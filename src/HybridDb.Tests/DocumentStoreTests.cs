@@ -320,12 +320,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryStreaming()
-        {
-            throw new NotImplementedException();
-        }
-
-        [Fact]
         public void CanDelete()
         {
             Document<Entity>();
@@ -834,40 +828,6 @@ namespace HybridDb.Tests
             Document<OtherEntityWithSomeSimilarities>().With(x => x.Property);
         }
 
-        [Fact]
-        public void AddsVersionOnInsert()
-        {
-            Document<Entity>();
-
-            UseMigrations(new InlineMigration(1), new InlineMigration(2));
-
-            var id = Guid.NewGuid();
-            var table = configuration.GetDesignFor<Entity>().Table;
-
-            store.Insert(table, id, new { });
-
-            var row = store.Get(table, id);
-            ((int)row[table.VersionColumn]).ShouldBe(2);
-        }
-
-        [Fact]
-        public void UpdatesVersionOnUpdate()
-        {
-            Document<Entity>();
-
-            var id = Guid.NewGuid();
-            var table = configuration.GetDesignFor<Entity>().Table;
-            var etag = store.Insert(table, id, new { });
-
-            Reset();
-
-            UseMigrations(new InlineMigration(1), new InlineMigration(2));
-
-            store.Update(table, id, etag, new { });
-
-            var row = store.Get(table, id);
-            ((int)row[table.VersionColumn]).ShouldBe(2);
-        }
 
         public class Case
         {
@@ -912,5 +872,29 @@ namespace HybridDb.Tests
 
             public class OperationException : Exception { }
         }
+
+        public class CountingSerializer : ISerializer
+        {
+            readonly ISerializer serializer;
+
+            public CountingSerializer(ISerializer serializer)
+            {
+                this.serializer = serializer;
+            }
+
+            public int DeserializeCount { get; private set; }
+
+            public byte[] Serialize(object obj)
+            {
+                return serializer.Serialize(obj);
+            }
+
+            public object Deserialize(byte[] data, Type type)
+            {
+                DeserializeCount++;
+                return serializer.Deserialize(data, type);
+            }
+        }
     }
+
 }

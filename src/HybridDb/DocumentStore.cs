@@ -32,8 +32,8 @@ namespace HybridDb
             var configuration = configurator.Configure();
             var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
             var store = new DocumentStore(database, configuration);
-            new SchemaMigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations).Run(store);
-            new DocumentMigrationRunner(configuration.Logger, store).RunInBackground();
+            new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
+            new DocumentMigrationRunner(store).RunInBackground();
             return store;
         }
 
@@ -53,8 +53,8 @@ namespace HybridDb
         public static IDocumentStore ForTesting(Database database, Configuration configuration)
         {
             var store = new DocumentStore(database, configuration);
-            new SchemaMigrationRunner(configuration.Logger, new SchemaDiffer(), configuration.Migrations).Run(store);
-            new DocumentMigrationRunner(configuration.Logger, store).RunSynchronously();
+            new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
+            new DocumentMigrationRunner(store).RunSynchronously();
             return store;
         }
 
@@ -277,14 +277,11 @@ namespace HybridDb
             var normalizedParameters = new FastDynamicParameters(
                 parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
 
-            IEnumerable<T> rows;
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
                 stats = reader.Read<QueryStats>(buffered: true).Single();
-                rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
+                return reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
             }
-
-            return rows;
         }
 
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)

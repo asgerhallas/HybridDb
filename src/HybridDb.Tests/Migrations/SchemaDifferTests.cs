@@ -96,15 +96,14 @@ namespace HybridDb.Tests.Migrations
             commands[0].Name.ShouldBe("Number");
         }
 
-        [Fact]
+        [Fact(Skip = "Not yet supported")]
         public void FindColumnTypeChange()
         {
             var table = new DocumentTable("Entities");
             table.Register(new Column("Number", typeof(int)));
             schema.Add(table);
 
-            configuration.Document<Entity>()
-                .With("Number", x => x.String);
+            configuration.Document<Entity>().With("Number", x => x.String);
 
             var commands = migrator.CalculateSchemaChanges(schema, configuration).ToList();
 

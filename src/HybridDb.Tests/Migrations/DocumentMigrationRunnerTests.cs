@@ -28,7 +28,7 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
-            new DocumentMigrationRunner(logger, store).RunSynchronously();
+            new DocumentMigrationRunner(store).RunSynchronously();
 
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
@@ -54,7 +54,7 @@ namespace HybridDb.Tests.Migrations
             UseMigrations(new InlineMigration(1));
 
             var initialNumberOfRequests = store.NumberOfRequests;
-            new DocumentMigrationRunner(logger, store).RunSynchronously();
+            new DocumentMigrationRunner(store).RunSynchronously();
 
             // 1: query for documents below version, return 100
             // 101: update documents one at a time
@@ -92,7 +92,7 @@ namespace HybridDb.Tests.Migrations
 
             bool? failed = null;
 
-            new DocumentMigrationRunner(logger, store)
+            new DocumentMigrationRunner(store)
                 .RunInBackground()
                 .ContinueWith(x =>
                 {
@@ -117,7 +117,7 @@ namespace HybridDb.Tests.Migrations
             DisableDocumentMigrationsInBackground();
             Document<Entity>().With(x => x.Number);
             
-            new DocumentMigrationRunner(logger, store).RunInBackground().Wait();
+            new DocumentMigrationRunner(store).RunInBackground().Wait();
 
             store.NumberOfRequests.ShouldBe(0);
         }

@@ -16,9 +16,9 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void AutomaticallyCreatesMetadataTable()
         {
-            var runner = new SchemaMigrationRunner(logger, new SchemaDiffer(), new List<Migration>());
+            var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
 
-            runner.Run(store);
+            runner.Run();
 
             configuration.Tables.ShouldContainKey("HybridDb");
             database.RawQuery<int>("select top 1 SchemaVersion from #HybridDb").Single().ShouldBe(0);
@@ -29,9 +29,9 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            var runner = new SchemaMigrationRunner(logger, new FakeSchemaDiffer(), new List<Migration>());
+            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
-            runner.Run(store);
+            runner.Run();
 
             database.QuerySchema().Single().Key.ShouldBe("HybridDb"); // the metadata table and nothing else
         }
@@ -41,13 +41,13 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            var runner = new SchemaMigrationRunner(logger,
-                new FakeSchemaDiffer(),
-                new InlineMigration(1,
-                    new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
-                    new AddColumn("Testing", new Column("Noget", typeof (int)))));
+            UseMigrations(new InlineMigration(1,
+                new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
+                new AddColumn("Testing", new Column("Noget", typeof (int)))));
 
-            runner.Run(store);
+            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+
+            runner.Run();
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -60,12 +60,12 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            var runner = new SchemaMigrationRunner(logger,
+            var runner = new SchemaMigrationRunner(store,
                 new FakeSchemaDiffer(
                     new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                     new AddColumn("Testing", new Column("Noget", typeof (int)))));
 
-            runner.Run(store);
+            runner.Run();
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -80,12 +80,14 @@ namespace HybridDb.Tests.Migrations
 
             var table = new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true));
 
-            var runner = new SchemaMigrationRunner(logger,
-                new FakeSchemaDiffer(new RenameColumn(table, "Noget", "NogetNyt")),
+            UseMigrations(
                 new InlineMigration(2, new AddColumn("Testing", new Column("Noget", typeof(int)))),
                 new InlineMigration(1, new CreateTable(table)));
 
-            runner.Run(store);
+            var runner = new SchemaMigrationRunner(store,
+                new FakeSchemaDiffer(new RenameColumn(table, "Noget", "NogetNyt")));
+
+            runner.Run();
 
             var tables = database.QuerySchema();
             tables.ShouldContainKey("Testing");
@@ -99,11 +101,12 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            var runner = new SchemaMigrationRunner(logger,
-                new FakeSchemaDiffer(new UnsafeThrowingCommand()),
-                new InlineMigration(1, new UnsafeThrowingCommand()));
+            UseMigrations(new InlineMigration(1, new UnsafeThrowingCommand()));
 
-            Should.NotThrow(() => runner.Run(store));
+            var runner = new SchemaMigrationRunner(store,
+                new FakeSchemaDiffer(new UnsafeThrowingCommand()));
+
+            Should.NotThrow(() => runner.Run());
         }
 
         [Fact]
@@ -113,12 +116,12 @@ namespace HybridDb.Tests.Migrations
 
             var command = new CountingCommand();
 
-            var runner = new SchemaMigrationRunner(logger,
-                new FakeSchemaDiffer(), 
-                new InlineMigration(1, command));
+            UseMigrations(new InlineMigration(1, command));
 
-            runner.Run(store);
-            runner.Run(store);
+            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+
+            runner.Run();
+            runner.Run();
 
             command.NumberOfTimesCalled.ShouldBe(1);
         }
@@ -130,14 +133,15 @@ namespace HybridDb.Tests.Migrations
 
             var command = new CountingCommand();
 
-            new SchemaMigrationRunner(logger, new FakeSchemaDiffer(), new InlineMigration(1, command))
-                .Run(store);
+            UseMigrations(new InlineMigration(1, command));
 
-            new SchemaMigrationRunner(logger,
-                new FakeSchemaDiffer(),
-                new InlineMigration(1, new ThrowingCommand()),
-                new InlineMigration(2, command))
-                .Run(store);
+            new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
+
+            Reset();
+
+            UseMigrations(new InlineMigration(1, new ThrowingCommand()), new InlineMigration(2, command));
+
+            new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             command.NumberOfTimesCalled.ShouldBe(2);
         }
@@ -147,9 +151,13 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            new SchemaMigrationRunner(logger, new FakeSchemaDiffer(), new InlineMigration(1, new CountingCommand())).Run(store);
+            UseMigrations(new InlineMigration(1, new CountingCommand()));
 
-            Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(logger, new FakeSchemaDiffer()).Run(store))
+            new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
+
+            Reset();
+
+            Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run())
                 .Message.ShouldBe("Database schema is ahead of configuration. Schema is version 1, but configuration is version 0.");
         }
 
@@ -160,12 +168,12 @@ namespace HybridDb.Tests.Migrations
 
             try
             {
-                var runner = new SchemaMigrationRunner(logger,
+                var runner = new SchemaMigrationRunner(store,
                     new FakeSchemaDiffer(
                         new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                         new ThrowingCommand()));
 
-                runner.Run(store);
+                runner.Run();
             }
             catch (Exception)
             {
@@ -193,12 +201,12 @@ namespace HybridDb.Tests.Migrations
                 session.SaveChanges();
             }
 
-            var runner = new SchemaMigrationRunner(logger, 
+            var runner = new SchemaMigrationRunner(store, 
                 new FakeSchemaDiffer(
                     new AddColumn("Entities", new Column("NewCol", typeof(int))),
                     new AddColumn("AbstractEntities", new Column("NewCol", typeof(int)))));
             
-            runner.Run(store);
+            runner.Run();
 
             database.RawQuery<bool>("select AwaitsReprojection from #Entities").ShouldAllBe(x => x);
             database.RawQuery<bool>("select AwaitsReprojection from #AbstractEntities").ShouldAllBe(x => x);
@@ -211,25 +219,25 @@ namespace HybridDb.Tests.Migrations
             UseRealTables();
             CreateMetadataTable();
 
+            InitializeStore();
+
             var countingCommand = new CountingCommand();
 
-            Func<SchemaMigrationRunner> runnerFactory = () =>
-                new SchemaMigrationRunner(logger,
-                    new SchemaDiffer(),
-                    new InlineMigration(1,
-                        new AddColumn("Other", new Column("Asger", typeof (int))),
-                        new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
-                        new SlowCommand(),
-                        countingCommand));
+            Func<SchemaMigrationRunner> runnerFactory = () => 
+                new SchemaMigrationRunner(store, new SchemaDiffer());
 
-            InitializeStore();
+            UseMigrations(new InlineMigration(1,
+                new AddColumn("Other", new Column("Asger", typeof(int))),
+                new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
+                new SlowCommand(),
+                countingCommand));
 
             new CreateTable(new DocumentTable("Other")).Execute(database);
 
             Parallel.For(1, 10, x =>
             {
                 Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
-                runnerFactory().Run(store);
+                runnerFactory().Run();
             });
 
             countingCommand.NumberOfTimesCalled.ShouldBe(1);

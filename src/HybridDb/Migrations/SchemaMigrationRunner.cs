@@ -11,19 +11,20 @@ namespace HybridDb.Migrations
     public class SchemaMigrationRunner
     {
         readonly ILogger logger;
+        readonly IDocumentStore store;
         readonly IReadOnlyList<Migration> migrations;
         readonly ISchemaDiffer differ;
 
-        public SchemaMigrationRunner(ILogger logger, ISchemaDiffer differ, params Migration[] migrations) : this(logger, differ, migrations.ToList()) { }
-
-        public SchemaMigrationRunner(ILogger logger, ISchemaDiffer differ, IReadOnlyList<Migration> migrations)
+        public SchemaMigrationRunner(IDocumentStore store, ISchemaDiffer differ)
         {
-            this.logger = logger;
-            this.migrations = migrations;
+            this.store = store;
             this.differ = differ;
+            
+            logger = store.Configuration.Logger;
+            migrations = store.Configuration.Migrations;
         }
 
-        public void Run(IDocumentStore store)
+        public void Run()
         {
             var requiresReprojection = new List<string>();
 

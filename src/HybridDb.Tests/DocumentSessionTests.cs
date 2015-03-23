@@ -963,6 +963,53 @@ namespace HybridDb.Tests
             (store.NumberOfRequests-numberOfRequests).ShouldBe(1);
         }
 
+        [Fact]
+        public void AddsVersionOnInsert()
+        {
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+            }
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+            var row = store.Get(table, id);
+            ((int)row[table.VersionColumn]).ShouldBe(2);
+        }
+
+        [Fact]
+        public void UpdatesVersionOnUpdate()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            var table = configuration.GetDesignFor<Entity>().Table;
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+            }
+
+            Reset();
+            Document<Entity>();
+            InitializeStore();
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                entity.Number++;
+                session.SaveChanges();
+            }
+
+            var row = store.Get(table, id);
+            ((int)row[table.VersionColumn]).ShouldBe(2);
+        }
+
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
         {

@@ -8,17 +8,15 @@ namespace HybridDb.Migrations
 {
     public class DocumentMigrationRunner
     {
-        readonly static object locker = new object();
-
         readonly ILogger logger;
         readonly IDocumentStore store;
         readonly Configuration configuration;
 
-        public DocumentMigrationRunner(ILogger logger, IDocumentStore store)
+        public DocumentMigrationRunner(IDocumentStore store)
         {
-            this.logger = logger;
             this.store = store;
-            
+
+            logger = store.Configuration.Logger;
             configuration = store.Configuration;
         }
 
@@ -34,51 +32,48 @@ namespace HybridDb.Migrations
 
         public void RunSynchronously()
         {
-            lock (locker)
+            var migrator = new DocumentMigrator(store.Configuration);
+
+            foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
             {
-                var migrator = new DocumentMigrator(store.Configuration);
+                var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
 
-                foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
+                while (true)
                 {
-                    var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
+                    QueryStats stats;
+                    var rows = store
+                        .Query(table, out stats,
+                            @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
+                            take: 100,
+                            orderby: "newid()",
+                            parameters: new { AwaitsReprojection = true, version = configuration.ConfiguredVersion });
 
-                    while (true)
+                    if (stats.TotalResults == 0) break;
+
+                    logger.Info("Found {0} document that must be migrated.", stats.TotalResults);
+
+                    foreach (var row in rows)
                     {
-                        QueryStats stats;
-                        var rows = store
-                            .Query(table, out stats,
-                                @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
-                                take: 100,
-                                orderby: "newid()",
-                                parameters: new {AwaitsReprojection = true, version = configuration.ConfiguredVersion});
+                        var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
 
-                        if (stats.TotalResults == 0) break;
-
-                        logger.Info("Found {0} document that must be migrated.", stats.TotalResults);
-
-                        foreach (var row in rows)
+                        DocumentDesign concreteDesign;
+                        if (!baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
                         {
-                            var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
-
-                            DocumentDesign concreteDesign;
-                            if (!baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
-                            {
-                                throw new InvalidOperationException(
-                                    string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
-                            }
-
-                            logger.Info("Trying to migrate document {0}/{1} from version {2} to {3}.", table, row[table.IdColumn], row[table.VersionColumn], configuration.ConfiguredVersion);
-
-                            var entity = migrator.DeserializeAndMigrate(concreteDesign, (Guid) row[table.IdColumn], (byte[]) row[table.DocumentColumn], (int)row[table.VersionColumn]);
-                            var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-                            projections.Add(table.VersionColumn, configuration.ConfiguredVersion);
-
-                            try
-                            {
-                                store.Update(table, (Guid) row[table.IdColumn], (Guid) row[table.EtagColumn], projections);
-                            }
-                            catch (ConcurrencyException) { }
+                            throw new InvalidOperationException(
+                                string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
                         }
+
+                        logger.Info("Trying to migrate document {0}/{1} from version {2} to {3}.", table, row[table.IdColumn], row[table.VersionColumn], configuration.ConfiguredVersion);
+
+                        var entity = migrator.DeserializeAndMigrate(concreteDesign, (Guid)row[table.IdColumn], (byte[])row[table.DocumentColumn], (int)row[table.VersionColumn]);
+                        var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
+                        projections.Add(table.VersionColumn, configuration.ConfiguredVersion);
+
+                        try
+                        {
+                            store.Update(table, (Guid)row[table.IdColumn], (Guid)row[table.EtagColumn], projections);
+                        }
+                        catch (ConcurrencyException) { }
                     }
                 }
             }

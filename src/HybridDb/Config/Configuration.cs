@@ -135,7 +135,7 @@ namespace HybridDb.Config
             BackupWriter = backupWriter;
         }
 
-        public void DisableRunningDocumentMigrationsInBackground()
+        public void DisableDocumentMigrationsInBackground()
         {
             RunDocumentMigrationsInBackground = false;
         }
