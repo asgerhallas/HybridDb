@@ -154,7 +154,6 @@ namespace HybridDb
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
-                projections.Add(design.Table.VersionColumn, store.Configuration.ConfiguredVersion);
 
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
@@ -166,7 +165,7 @@ namespace HybridDb
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))
                         {
-                            commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand) new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins)));
+                            commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins)));
                         }
                         break;
                     case EntityState.Deleted:

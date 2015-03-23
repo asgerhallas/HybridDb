@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Logging;
@@ -63,17 +64,28 @@ namespace HybridDb.Migrations
                                 string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
                         }
 
-                        logger.Info("Trying to migrate document {0}/{1} from version {2} to {3}.", table, row[table.IdColumn], row[table.VersionColumn], configuration.ConfiguredVersion);
+                        var id = (Guid)row[table.IdColumn];
+                        var currentDocumentVersion = (int)row[table.VersionColumn];
 
-                        var entity = migrator.DeserializeAndMigrate(concreteDesign, (Guid)row[table.IdColumn], (byte[])row[table.DocumentColumn], (int)row[table.VersionColumn]);
-                        var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-                        projections.Add(table.VersionColumn, configuration.ConfiguredVersion);
+                        if ((bool)row["AwaitsReprojection"])
+                        {
+                            logger.Info("Reprojection document {0}/{1}.", 
+                                concreteDesign.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
+                        }
 
                         try
                         {
-                            store.Update(table, (Guid)row[table.IdColumn], (Guid)row[table.EtagColumn], projections);
+                            var entity = migrator.DeserializeAndMigrate(concreteDesign, id, (byte[])row[table.DocumentColumn], currentDocumentVersion);
+                            var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
+
+                            store.Update(table, id, (Guid)row[table.EtagColumn], projections);
                         }
                         catch (ConcurrencyException) { }
+                        catch (Exception exception)
+                        {
+                            logger.Error("Error while migrating document with id {0}/{1}.", exception, concreteDesign.DocumentType.FullName, id);
+                            Thread.Sleep(100);
+                        }
                     }
                 }
             }

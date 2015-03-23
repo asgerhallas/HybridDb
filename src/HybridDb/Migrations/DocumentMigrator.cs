@@ -1,16 +1,19 @@
 using System;
 using System.Linq;
 using HybridDb.Config;
+using HybridDb.Logging;
 
 namespace HybridDb.Migrations
 {
     public class DocumentMigrator
     {
         readonly Configuration configuration;
+        readonly ILogger logger;
 
         public DocumentMigrator(Configuration configuration)
         {
             this.configuration = configuration;
+            logger = configuration.Logger;
         }
 
         public object DeserializeAndMigrate(DocumentDesign design, Guid id, byte[] document, int currentDocumentVersion)
@@ -24,9 +27,12 @@ namespace HybridDb.Migrations
             if (configuredVersion < currentDocumentVersion)
             {
                 throw new InvalidOperationException(string.Format(
-                    "Document version is ahead of configuration. Document is version {0}, but configuration is version {1}.",
-                    currentDocumentVersion, configuredVersion));
+                    "Document {0}/{1} version is ahead of configuration. Document is version {2}, but configuration is version {3}.",
+                    design.DocumentType.FullName, id, currentDocumentVersion, configuredVersion));
             }
+
+            logger.Info("Migrating document {0}/{1} from version {2} to {3}.", 
+                design.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
 
             configuration.BackupWriter.Write(design, id, currentDocumentVersion, document);
 
