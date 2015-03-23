@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using HybridDb.Config;
 using HybridDb.Migrations;
@@ -106,6 +107,19 @@ namespace HybridDb.Tests.Migrations
             gate2.WaitOne();
 
             failed.ShouldBe(false);
+        }
+
+        [Fact]
+        public void DoesNotStartBackgroundProcessWhenTurnedOff()
+        {
+            InitializeStore();
+
+            DisableDocumentMigrationsInBackground();
+            Document<Entity>().With(x => x.Number);
+            
+            new DocumentMigrationRunner(logger, store).RunInBackground().Wait();
+
+            store.NumberOfRequests.ShouldBe(0);
         }
     }
 }

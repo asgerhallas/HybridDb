@@ -76,9 +76,12 @@
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="Migrations\DocumentMigrationRunner.cs" />
     <Compile Include="Migrations\DocumentMigrator.cs" />
+    <Compile Include="Migrations\FileBackupWriter.cs" />
+    <Compile Include="Migrations\IBackupWriter.cs" />
     <Compile Include="Migrations\IMigrationProvider.cs" />
     <Compile Include="Migrations\ISchemaDiffer.cs" />
     <Compile Include="Migrations\Migration.cs" />
+    <Compile Include="Migrations\NullBackupWriter.cs" />
     <Compile Include="Migrations\SchemaMigrationRunner.cs" />
     <Compile Include="Migrations\SchemaDiffer.cs" />
     <Compile Include="LinqEx.cs" />

@@ -6,19 +6,19 @@ namespace HybridDb.Migrations
 {
     public class DocumentMigrator
     {
-        readonly IDocumentStore store;
+        readonly Configuration configuration;
 
-        public DocumentMigrator(IDocumentStore store)
+        public DocumentMigrator(Configuration configuration)
         {
-            this.store = store;
+            this.configuration = configuration;
         }
 
-        public object DeserializeAndMigrate(DocumentDesign design, byte[] document, int currentDocumentVersion)
+        public object DeserializeAndMigrate(DocumentDesign design, Guid id, byte[] document, int currentDocumentVersion)
         {
-            var configuredVersion = store.Configuration.ConfiguredVersion;
+            var configuredVersion = configuration.ConfiguredVersion;
             if (configuredVersion == currentDocumentVersion)
             {
-                return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
+                return configuration.Serializer.Deserialize(document, design.DocumentType);
             }
 
             if (configuredVersion < currentDocumentVersion)
@@ -28,16 +28,18 @@ namespace HybridDb.Migrations
                     currentDocumentVersion, configuredVersion));
             }
 
-            foreach (var migration in store.Configuration.Migrations.Where(x => x.Version > currentDocumentVersion))
+            configuration.BackupWriter.Write(design, id, currentDocumentVersion, document);
+
+            foreach (var migration in configuration.Migrations.Where(x => x.Version > currentDocumentVersion))
             {
                 var commands = migration.MigrateDocument();
                 foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
                 {
-                    document = command.Execute(store.Configuration.Serializer, document);
+                    document = command.Execute(configuration.Serializer, document);
                 }
             }
 
-            return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
+            return configuration.Serializer.Deserialize(document, design.DocumentType);
         }
     }
 }

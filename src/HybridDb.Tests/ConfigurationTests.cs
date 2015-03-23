@@ -244,7 +244,6 @@ namespace HybridDb.Tests
             configuration.GetDesignFor<MoreDerivedEntity2>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
         }
 
-
         [Fact]
         public void CanReportInitialVersion()
         {
@@ -270,6 +269,20 @@ namespace HybridDb.Tests
         {
             Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(3) }))
                 .Message.ShouldBe("Missing migration for version 2.");
+        }
+
+        [Fact]
+        public void HasDefaultBackupWriter()
+        {
+            configuration.BackupWriter.ShouldBeOfType<NullBackupWriter>();
+        }
+
+        [Fact]
+        public void CanConfigureBackupWriter()
+        {
+            var writer = new FileBackupWriter("test");
+            configuration.UseBackupWriter(writer);
+            configuration.BackupWriter.ShouldBe(writer);
         }
 
         public class Entity

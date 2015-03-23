@@ -49,5 +49,15 @@ namespace HybridDb
         {
             configuration.UseMigrations(migrations.ToList());
         }
+
+        protected void UseBackupWriter(IBackupWriter writer)
+        {
+            configuration.UseBackupWriter(writer);
+        }
+
+        protected void DisableDocumentMigrationsInBackground()
+        {
+            configuration.DisableDocumentMigrationsInBackground();
+        }
     }
 }

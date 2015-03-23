@@ -76,6 +76,7 @@
     <Compile Include="Config\ColumnTests.cs" />
     <Compile Include="Config\SqlTypeMapTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
+    <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />
     <Compile Include="InlineMigration.cs" />
     <Compile Include="Migrations\Commands\AddColumnTests.cs" />

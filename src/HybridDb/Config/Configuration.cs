@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using HybridDb.Logging;
 using HybridDb.Migrations;
@@ -21,11 +20,15 @@ namespace HybridDb.Config
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
             Serializer = new DefaultBsonSerializer();
             Migrations = new List<Migration>();
+            BackupWriter = new NullBackupWriter();
+            RunDocumentMigrationsInBackground = true;
         }
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
+        public IBackupWriter BackupWriter { get; private set; }
+        public bool RunDocumentMigrationsInBackground { get; private set; }
         public int ConfiguredVersion { get; private set; }
 
         internal ConcurrentDictionary<string, Table> Tables { get; private set; }
@@ -125,6 +128,16 @@ namespace HybridDb.Config
             }).ToList();
 
             ConfiguredVersion = Migrations.Any() ? Migrations.Last().Version : 0;
+        }
+
+        public void UseBackupWriter(IBackupWriter backupWriter)
+        {
+            BackupWriter = backupWriter;
+        }
+
+        public void DisableRunningDocumentMigrationsInBackground()
+        {
+            RunDocumentMigrationsInBackground = false;
         }
 
         DocumentTable AddTable(string tablename)

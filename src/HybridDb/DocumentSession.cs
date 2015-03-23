@@ -19,7 +19,7 @@ namespace HybridDb
         {
             deferredCommands = new List<DatabaseCommand>();
             entities = new Dictionary<Guid, ManagedEntity>();
-            migrator = new DocumentMigrator(store);
+            migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
         }
@@ -234,7 +234,7 @@ namespace HybridDb
 
             var document = (byte[])row[table.DocumentColumn];
             var currentDocumentVersion = (int) row[table.VersionColumn];
-            var entity = migrator.DeserializeAndMigrate(concreteDesign, document, currentDocumentVersion);
+            var entity = migrator.DeserializeAndMigrate(concreteDesign, id, document, currentDocumentVersion);
 
             managedEntity = new ManagedEntity
             {

@@ -24,14 +24,19 @@ namespace HybridDb.Migrations
 
         public Task RunInBackground()
         {
-            return Task.Factory.StartNew(RunSynchronously, TaskCreationOptions.LongRunning);
+            if (store.Configuration.RunDocumentMigrationsInBackground)
+            {
+                return Task.Factory.StartNew(RunSynchronously, TaskCreationOptions.LongRunning);
+            }
+
+            return Task.FromResult(false);
         }
 
         public void RunSynchronously()
         {
             lock (locker)
             {
-                var migrator = new DocumentMigrator(store);
+                var migrator = new DocumentMigrator(store.Configuration);
 
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
@@ -64,7 +69,7 @@ namespace HybridDb.Migrations
 
                             logger.Info("Trying to migrate document {0}/{1} from version {2} to {3}.", table, row[table.IdColumn], row[table.VersionColumn], configuration.ConfiguredVersion);
 
-                            var entity = migrator.DeserializeAndMigrate(concreteDesign, (byte[]) row[table.DocumentColumn], (int)row[table.VersionColumn]);
+                            var entity = migrator.DeserializeAndMigrate(concreteDesign, (Guid) row[table.IdColumn], (byte[]) row[table.DocumentColumn], (int)row[table.VersionColumn]);
                             var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
                             projections.Add(table.VersionColumn, configuration.ConfiguredVersion);
 
