@@ -14,5 +14,10 @@ namespace HybridDb.Migrations.Commands
         {
             database.RawExecute(string.Format("drop table {0};", database.FormatTableNameAndEscape(Tablename)));
         }
+
+        public override string ToString()
+        {
+            return string.Format("Remove table {0}", Tablename);
+        }
     }
 }

@@ -51,11 +51,11 @@ namespace HybridDb.Migrations
         }
     }
 
-    public class Reproject<T> : SchemaMigrationCommand
-    {
-        public override void Execute(Database database)
-        {
-            // set state?
-        }
-    }
+    //public class Reproject<T> : SchemaMigrationCommand
+    //{
+    //    public override void Execute(Database database)
+    //    {
+    //        // set state?
+    //    }
+    //}
 }

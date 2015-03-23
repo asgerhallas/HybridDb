@@ -51,5 +51,10 @@ namespace HybridDb.Migrations.Commands
             database.RawExecute(dropConstraints);                
             database.RawExecute(string.Format("alter table {0} drop column {1};", database.FormatTableNameAndEscape(Table.Name), database.Escape(Name)));
         }
+
+        public override string ToString()
+        {
+            return string.Format("Remove column {0} from table {1}", Name, Table.Name);
+        }
     }
 }

@@ -5,7 +5,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Migrations
 {
-    public abstract class SchemaMigrationCommand : DocumentMigrationCommand
+    public abstract class SchemaMigrationCommand
     {
         protected SchemaMigrationCommand()
         {
@@ -17,6 +17,7 @@ namespace HybridDb.Migrations
         public string RequiresReprojectionOf { get; protected set; }
 
         public abstract void Execute(Database database);
+        public new abstract string ToString();
 
         protected string GetTableExistsSql(Database db, string tablename)
         {

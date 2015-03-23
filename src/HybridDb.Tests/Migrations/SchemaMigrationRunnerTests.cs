@@ -269,6 +269,11 @@ namespace HybridDb.Tests.Migrations
             {
                 throw new InvalidOperationException();
             }
+
+            public override string ToString()
+            {
+                return "";
+            }
         }
 
         public class UnsafeThrowingCommand : ThrowingCommand
@@ -287,6 +292,11 @@ namespace HybridDb.Tests.Migrations
             {
                 NumberOfTimesCalled++;
             }
+
+            public override string ToString()
+            {
+                return "";
+            }
         }
         
         public class SlowCommand : SchemaMigrationCommand
@@ -294,6 +304,11 @@ namespace HybridDb.Tests.Migrations
             public override void Execute(Database database)
             {
                 Thread.Sleep(5000);
+            }
+
+            public override string ToString()
+            {
+                return "";
             }
         }
     }

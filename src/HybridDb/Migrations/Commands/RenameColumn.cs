@@ -25,5 +25,10 @@ namespace HybridDb.Migrations.Commands
                 OldColumnName,
                 NewColumnName));         
         }
+
+        public override string ToString()
+        {
+            return string.Format("Rename column {0} on table {1} to {2}", OldColumnName, Table.Name, NewColumnName);
+        }
     }
 }

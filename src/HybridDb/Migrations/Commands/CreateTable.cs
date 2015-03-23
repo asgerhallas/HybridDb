@@ -42,5 +42,10 @@ namespace HybridDb.Migrations.Commands
 
             database.RawExecute(sql.ToString());
         }
+
+        public override string ToString()
+        {
+            return string.Format("Create table {0} with columns {1}", Table, string.Join(", ", Table.Columns.Select(x => x.ToString())));
+        }
     }
 }

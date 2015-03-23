@@ -26,5 +26,10 @@ namespace HybridDb.Migrations.Commands
                     database.FormatTableNameAndEscape(NewTableName)));
             }
         }
+
+        public override string ToString()
+        {
+            return string.Format("Rename table {0} to {1}", OldTableName, NewTableName);
+        }
     }
 }

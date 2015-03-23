@@ -97,11 +97,11 @@ else
         {
             if (command.Unsafe)
             {
-                logger.Warn("Unsafe migration command '{0}' was skipped.", command);
+                logger.Warn("Unsafe migration command '{0}' was skipped.", command.ToString());
                 yield break;
             }
 
-            logger.Info("Executing migration command '{0}'.", command);
+            logger.Info("Executing migration command '{0}'.", command.ToString());
 
             command.Execute(database);
 
