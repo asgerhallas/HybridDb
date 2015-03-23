@@ -49,26 +49,35 @@ namespace HybridDb.Migrations
                         currentSchemaVersion, store.Configuration.ConfiguredVersion));
                 }
                 
-                var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
 
-                logger.Info("Migrating schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
-
-                foreach (var migration in migrationsToRun)
+                if (currentSchemaVersion < configuration.ConfiguredVersion)
                 {
-                    var migrationCommands = migration.MigrateSchema();
-                    foreach (var command in migrationCommands)
-                    {
-                        requiresReprojection.AddRange(ExecuteCommand(database, command));
-                    }
+                    var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
+                    logger.Info("Migrates schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
 
-                    currentSchemaVersion++;
+                    foreach (var migration in migrationsToRun)
+                    {
+                        var migrationCommands = migration.MigrateSchema();
+                        foreach (var command in migrationCommands)
+                        {
+                            requiresReprojection.AddRange(ExecuteCommand(database, command));
+                        }
+
+                        currentSchemaVersion++;
+                    }
                 }
 
                 var schema = database.QuerySchema().Values.ToList(); // demeter go home!
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
-                foreach (var command in commands)
+
+                if (commands.Any())
                 {
-                    requiresReprojection.AddRange(ExecuteCommand(database, command));
+                    logger.Info("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
+
+                    foreach (var command in commands)
+                    {
+                        requiresReprojection.AddRange(ExecuteCommand(database, command));
+                    }
                 }
 
                 foreach (var tablename in requiresReprojection)

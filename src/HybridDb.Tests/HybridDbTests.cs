@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Transactions;
 using Dapper;
 using HybridDb.Logging;
@@ -21,7 +22,7 @@ namespace HybridDb.Tests
 
         protected HybridDbTests()
         {
-            logger = new ConsoleLogger(LogLevel.Debug, new LoggingColors());
+            logger = new ConsoleLogger(Debugger.IsAttached ? LogLevel.Debug : LogLevel.Info, new LoggingColors());
             disposables = new List<Action>();
 
             UseTempTables();

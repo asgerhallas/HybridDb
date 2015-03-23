@@ -72,7 +72,7 @@ namespace HybridDb
             if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
-            logger.Info(sql);
+            logger.Debug(sql);
 
             using (var connection = Connect())
             {
@@ -87,7 +87,7 @@ namespace HybridDb
             if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
-            logger.Info(sql);
+            logger.Debug(sql);
 
             using (var connection = Connect())
             {
