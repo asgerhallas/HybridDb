@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
 using HybridDb.Config;
@@ -22,13 +23,13 @@ namespace HybridDb.Migrations
             this.differ = differ;
         }
 
-        public void Run(IDocumentStore store, Configuration configuration)
+        public void Run(IDocumentStore store)
         {
             var requiresReprojection = new List<string>();
 
             var database = ((DocumentStore)store).Database;
+            var configuration = store.Configuration;
 
-            int currentSchemaVersion;
             using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
             {
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
@@ -36,22 +37,27 @@ namespace HybridDb.Migrations
 
                 new CreateTable(metadata).Execute(database);
 
-                currentSchemaVersion = database.RawQuery<int>(
+                var currentSchemaVersion = database.RawQuery<int>(
                     string.Format("select top 1 SchemaVersion from {0} with (tablockx, holdlock)", 
-                    database.FormatTableName("HybridDb"))).SingleOrDefault();
+                        database.FormatTableName("HybridDb"))).SingleOrDefault();
 
-                foreach (var migration in migrations.Where(x => x.Version > currentSchemaVersion).ToList())
+                if (currentSchemaVersion > store.Configuration.ConfiguredVersion)
+                {
+                    throw new InvalidOperationException(string.Format(
+                        "Database schema is ahead of configuration. Schema is version {0}, but configuration is version {1}.", 
+                        currentSchemaVersion, store.Configuration.ConfiguredVersion));
+                }
+                
+                var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
+
+                logger.Info("Migrating schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
+
+                foreach (var migration in migrationsToRun)
                 {
                     var migrationCommands = migration.MigrateSchema();
                     foreach (var command in migrationCommands)
                     {
-                        if (command.Unsafe)
-                        {
-                            logger.Warn("Unsafe migration command '{0}' was skipped.", command);
-                            continue;
-                        }
-
-                        command.Execute(database);
+                        requiresReprojection.AddRange(ExecuteCommand(database, command));
                     }
 
                     currentSchemaVersion++;
@@ -61,18 +67,7 @@ namespace HybridDb.Migrations
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
                 foreach (var command in commands)
                 {
-                    if (command.Unsafe)
-                    {
-                        logger.Warn("Unsafe migration command '{0}' was skipped.", command);
-                        continue;
-                    }
-
-                    command.Execute(database);
-
-                    if (command.RequiresReprojectionOf != null)
-                    {
-                        requiresReprojection.Add(command.RequiresReprojectionOf);
-                    }
+                    requiresReprojection.AddRange(ExecuteCommand(database, command));
                 }
 
                 foreach (var tablename in requiresReprojection)
@@ -95,6 +90,22 @@ else
 
                 tx.Complete();
             }
+        }
+
+        IEnumerable<string> ExecuteCommand(Database database, SchemaMigrationCommand command)
+        {
+            if (command.Unsafe)
+            {
+                logger.Warn("Unsafe migration command '{0}' was skipped.", command);
+                yield break;
+            }
+
+            logger.Info("Executing migration command '{0}'.", command);
+
+            command.Execute(database);
+
+            if (command.RequiresReprojectionOf != null)
+                yield return command.RequiresReprojectionOf;
         }
     }
 }

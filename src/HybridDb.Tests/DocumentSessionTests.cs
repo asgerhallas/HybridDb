@@ -1,10 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Linq;
-using HybridDb.Migrations;
-using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
 
@@ -876,7 +875,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void AppliesDocumentChangeMigrationOnLoad()
+        public void AppliesMigrationsOnLoad()
         {
             Document<Entity>();
 
@@ -896,35 +895,12 @@ namespace HybridDb.Tests
             {
                 var entity = session.Load<Entity>(id);
                 entity.Property.ShouldBe("Peter");
-            }
-        }
-
-        [Fact]
-        public void DoesNotApplyDocumentChangeMigrationForOtherDocumentTypes()
-        {
-            Document<Entity>();
-
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges();
             }
-
-            Reset();
-
-            Document<Entity>();
-            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<OtherEntity>(x => { x["Property"] = "Hans og Grethe"; })));
-
-            using (var session = store.OpenSession())
-            {
-                var entity = session.Load<Entity>(id);
-                entity.Property.ShouldBe("Asger");
-            }
         }
 
         [Fact]
-        public void AppliesDocumentChangeMigrationOnQuery()
+        public void AppliesMigrationsOnQuery()
         {
             Document<AbstractEntity>().With(x => x.Number);
             Document<DerivedEntity>();
@@ -948,7 +924,7 @@ namespace HybridDb.Tests
 
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
-                new InlineMigration(2, new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + " nok"; })));
+                new InlineMigration(2, new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
 
             using (var session = store.OpenSession())
             {
@@ -956,8 +932,35 @@ namespace HybridDb.Tests
 
                 rows[0].Property.ShouldBe("Asger er cool");
                 rows[1].Property.ShouldBe("Jacob er cool");
-                rows[2].Property.ShouldBe("Lars er cool nok"); // sorry Lars!
+                rows[2].Property.ShouldBe("Lars er coolio");
             }
+        }
+
+        [Fact]
+        public void TracksChangesFromMigrations()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
+
+            var numberOfRequests = store.NumberOfRequests;
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+                session.SaveChanges();
+            }
+
+            (store.NumberOfRequests-numberOfRequests).ShouldBe(1);
         }
 
         [Fact(Skip = "Feature on holds")]
@@ -990,19 +993,6 @@ namespace HybridDb.Tests
         {
             public string Property { get; set; }
             public int? YksiKaksiKolme { get; set; }
-        }
-
-        public class ChangeDocumentAsJObject<T> : ChangeDocument<T>
-        {
-            public ChangeDocumentAsJObject(Action<JObject> change)
-                : base((s, x) =>
-                {
-                    var jobject = (JObject) s.Deserialize(x, typeof (JObject));
-                    change(jobject);
-                    return s.Serialize(jobject);
-                })
-            {
-            }
         }
     }
 }

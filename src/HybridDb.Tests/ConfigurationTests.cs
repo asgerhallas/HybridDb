@@ -248,14 +248,28 @@ namespace HybridDb.Tests
         [Fact]
         public void CanReportInitialVersion()
         {
-            configuration.CurrentVersion.ShouldBe(0);
+            configuration.ConfiguredVersion.ShouldBe(0);
         }
 
         [Fact]
         public void CanReportVersion()
         {
             configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(2) });
-            configuration.CurrentVersion.ShouldBe(2);
+            configuration.ConfiguredVersion.ShouldBe(2);
+        }
+
+        [Fact]
+        public void ThrowsIfMigrationsDoesNotStartFromOne()
+        {
+            Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(2), new InlineMigration(3) }))
+                .Message.ShouldBe("Missing migration for version 1.");
+        }
+
+        [Fact]
+        public void ThrowsIfMigrationVersionHasHoles()
+        {
+            Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(3) }))
+                .Message.ShouldBe("Missing migration for version 2.");
         }
 
         public class Entity

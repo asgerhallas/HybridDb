@@ -589,6 +589,15 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", "Second");
         }
 
+        [Fact]
+        public void CanQueryOnUserDefinedColumnFromVariable()
+        {
+            var somecolumn = new Entity {StringProp = "SomeColumn"};
+            var translation = Query<Entity>().OrderBy(x => x.Column<string>(somecolumn.StringProp.ToString())).Translate();
+
+            translation.OrderBy.ShouldBe("SomeColumn");
+        }
+
         Query<T> Query<T>() where T : class
         {
             var store = DocumentStore.ForTesting(TableMode.UseTempTables);

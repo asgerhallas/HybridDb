@@ -4,6 +4,8 @@ using System.Data.SqlClient;
 using System.Transactions;
 using Dapper;
 using HybridDb.Logging;
+using HybridDb.Migrations;
+using Newtonsoft.Json.Linq;
 using Shouldly;
 
 namespace HybridDb.Tests
@@ -168,6 +170,19 @@ namespace HybridDb.Tests
         {
             One,
             Two
+        }
+
+        public class ChangeDocumentAsJObject<T> : ChangeDocument<T>
+        {
+            public ChangeDocumentAsJObject(Action<JObject> change)
+                : base((s, x) =>
+                {
+                    var jobject = (JObject)s.Deserialize(x, typeof(JObject));
+                    change(jobject);
+                    return s.Serialize(jobject);
+                })
+            {
+            }
         }
     }
 }

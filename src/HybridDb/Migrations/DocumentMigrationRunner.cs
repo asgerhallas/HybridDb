@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
-using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Logging;
 
 namespace HybridDb.Migrations
 {
@@ -13,13 +10,16 @@ namespace HybridDb.Migrations
     {
         readonly static object locker = new object();
 
+        readonly ILogger logger;
         readonly IDocumentStore store;
         readonly Configuration configuration;
 
-        public DocumentMigrationRunner(IDocumentStore store, Configuration configuration)
+        public DocumentMigrationRunner(ILogger logger, IDocumentStore store)
         {
+            this.logger = logger;
             this.store = store;
-            this.configuration = configuration;
+            
+            configuration = store.Configuration;
         }
 
         public Task RunInBackground()
@@ -31,6 +31,8 @@ namespace HybridDb.Migrations
         {
             lock (locker)
             {
+                var migrator = new DocumentMigrator(store);
+
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
                     var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
@@ -43,9 +45,11 @@ namespace HybridDb.Migrations
                                 @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
                                 take: 100,
                                 orderby: "newid()",
-                                parameters: new {AwaitsReprojection = true, version = configuration.CurrentVersion});
+                                parameters: new {AwaitsReprojection = true, version = configuration.ConfiguredVersion});
 
                         if (stats.TotalResults == 0) break;
+
+                        logger.Info("Found {0} document that must be migrated.", stats.TotalResults);
 
                         foreach (var row in rows)
                         {
@@ -58,9 +62,11 @@ namespace HybridDb.Migrations
                                     string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
                             }
 
-                            var entity = DocumentSession.DeserializeAndMigrate(store, concreteDesign, row);
+                            logger.Info("Trying to migrate document {0}/{1} from version {2} to {3}.", table, row[table.IdColumn], row[table.VersionColumn], configuration.ConfiguredVersion);
+
+                            var entity = migrator.DeserializeAndMigrate(concreteDesign, (byte[]) row[table.DocumentColumn], (int)row[table.VersionColumn]);
                             var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-                            projections.Add(table.VersionColumn, configuration.CurrentVersion);
+                            projections.Add(table.VersionColumn, configuration.ConfiguredVersion);
 
                             try
                             {

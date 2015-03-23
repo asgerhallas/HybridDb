@@ -1,7 +1,5 @@
 using System;
-using System.Linq;
 using System.Threading;
-using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using Shouldly;
@@ -29,7 +27,7 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
-            new DocumentMigrationRunner(store, configuration).RunSynchronously();
+            new DocumentMigrationRunner(logger, store).RunSynchronously();
 
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
@@ -55,7 +53,7 @@ namespace HybridDb.Tests.Migrations
             UseMigrations(new InlineMigration(1));
 
             var initialNumberOfRequests = store.NumberOfRequests;
-            new DocumentMigrationRunner(store, configuration).RunSynchronously();
+            new DocumentMigrationRunner(logger, store).RunSynchronously();
 
             // 1: query for documents below version, return 100
             // 101: update documents one at a time
@@ -93,7 +91,7 @@ namespace HybridDb.Tests.Migrations
 
             bool? failed = null;
 
-            new DocumentMigrationRunner(store, configuration)
+            new DocumentMigrationRunner(logger, store)
                 .RunInBackground()
                 .ContinueWith(x =>
                 {

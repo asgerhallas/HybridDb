@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using HybridDb.Config;
 
@@ -7,43 +6,38 @@ namespace HybridDb.Migrations
 {
     public class DocumentMigrator
     {
-        //public void OnRead(Migration migration, DocumentTable table, IDictionary<string, object> projections)
-        //{
-        //    foreach (var documentMigration in migration.DocumentMigrations.Where(x => x.Tablename == table.Name))
-        //    {
-        //        OnRead(documentMigration, table, projections);
-        //    }
-        //}
+        readonly IDocumentStore store;
 
-        //public void OnRead(Migration.DocumentMigrationDefinition documentMigration, DocumentTable table, IDictionary<string, object> projections)
-        //{
-        //    if (documentMigration.MigrationOnRead == null)
-        //        return;
+        public DocumentMigrator(IDocumentStore store)
+        {
+            this.store = store;
+        }
 
-        //    var currentVersion = AssertCorrectVersion(documentMigration, table, projections);
+        public object DeserializeAndMigrate(DocumentDesign design, byte[] document, int currentDocumentVersion)
+        {
+            var configuredVersion = store.Configuration.ConfiguredVersion;
+            if (configuredVersion == currentDocumentVersion)
+            {
+                return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
+            }
 
-        //    var serializer = documentMigration.Serializer;
-        //    var document = serializer.Deserialize((byte[]) projections[table.DocumentColumn.Name], documentMigration.Type);
-        //    documentMigration.MigrationOnRead(document, projections);
-        //    projections[table.VersionColumn.Name] = currentVersion + 1;
-        //    projections[table.DocumentColumn.Name] = serializer.Serialize(document);
-        //}
+            if (configuredVersion < currentDocumentVersion)
+            {
+                throw new InvalidOperationException(string.Format(
+                    "Document version is ahead of configuration. Document is version {0}, but configuration is version {1}.",
+                    currentDocumentVersion, configuredVersion));
+            }
 
-        //private static int AssertCorrectVersion(Migration.DocumentMigrationDefinition documentMigration, DocumentTable table, IDictionary<string, object> projections)
-        //{
-        //    var id = (Guid) projections[table.IdColumn.Name];
-        //    var version = (int) projections[table.VersionColumn.Name];
-        //    var expectedVersion = documentMigration.Version - 1;
+            foreach (var migration in store.Configuration.Migrations.Where(x => x.Version > currentDocumentVersion))
+            {
+                var commands = migration.MigrateDocument();
+                foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
+                {
+                    document = command.Execute(store.Configuration.Serializer, document);
+                }
+            }
 
-        //    if (version != expectedVersion)
-        //    {
-        //        throw new ArgumentException(string.Format("Row with id {0} is version {1}. " +
-        //                                                  "This document migration requires the current version to be {2}. " +
-        //                                                  "Please migrate all documents to version {2} and retry.",
-        //                                                  id, version, expectedVersion));
-        //    }
-
-        //    return version;
-        //}
+            return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
+        }
     }
 }

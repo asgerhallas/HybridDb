@@ -13,11 +13,14 @@ namespace HybridDb
         readonly Dictionary<Guid, ManagedEntity> entities;
         readonly IDocumentStore store;
         readonly List<DatabaseCommand> deferredCommands;
+        readonly DocumentMigrator migrator;
 
         public DocumentSession(IDocumentStore store)
         {
             deferredCommands = new List<DatabaseCommand>();
             entities = new Dictionary<Guid, ManagedEntity>();
+            migrator = new DocumentMigrator(store);
+
             this.store = store;
         }
 
@@ -151,7 +154,7 @@ namespace HybridDb
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
-                projections.Add(design.Table.VersionColumn, store.Configuration.CurrentVersion);
+                projections.Add(design.Table.VersionColumn, store.Configuration.ConfiguredVersion);
 
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
@@ -230,7 +233,8 @@ namespace HybridDb
             }
 
             var document = (byte[])row[table.DocumentColumn];
-            var entity = DeserializeAndMigrate(store, concreteDesign, row);
+            var currentDocumentVersion = (int) row[table.VersionColumn];
+            var entity = migrator.DeserializeAndMigrate(concreteDesign, document, currentDocumentVersion);
 
             managedEntity = new ManagedEntity
             {
@@ -243,30 +247,6 @@ namespace HybridDb
 
             entities.Add(id, managedEntity);
             return entity;
-        }
-
-        internal static object DeserializeAndMigrate(IDocumentStore store, DocumentDesign design, IDictionary<string, object> row)
-        {
-            var table = design.Table;
-            
-            var document = (byte[])row[table.DocumentColumn];
-            
-            var currentDocumentVersion = (int)row[table.VersionColumn];
-            if (store.Configuration.CurrentVersion <= currentDocumentVersion)
-            {
-                return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
-            }
-            
-            foreach (var migration in store.Configuration.Migrations.Where(x => x.Version > currentDocumentVersion))
-            {
-                var commands = migration.MigrateDocument();
-                foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
-                {
-                    document = command.Execute(store.Configuration.Serializer, document);
-                }
-            }
-
-            return store.Configuration.Serializer.Deserialize(document, design.DocumentType);
         }
 
         public void Clear()
