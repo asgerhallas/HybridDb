@@ -1,6 +1,4 @@
-using HybridDb.Studio.Infrastructure.ViewModels;
-
-namespace HybridDb.Studio.Infrastructure.Views
+namespace HybridDb.Studio.Infrastructure.ViewModels
 {
     public interface IViewModelFactory
     {

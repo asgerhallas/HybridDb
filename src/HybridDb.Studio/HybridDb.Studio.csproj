@@ -65,6 +65,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="CommandBehaviors\MouseDoubleClick.cs" />
+    <Compile Include="Infrastructure\ViewModels\Context.cs" />
+    <Compile Include="Infrastructure\Views\IViewFactory.cs" />
+    <Compile Include="Models\Connections.cs" />
     <Compile Include="Models\Store.cs" />
     <Compile Include="Models\Stores.cs" />
     <Compile Include="Models\Table.cs" />
@@ -80,23 +83,26 @@
     <Compile Include="Infrastructure\Views\View.cs" />
     <Compile Include="Messages\FileOpened.cs" />
     <Compile Include="Messages\RecentFilesUpdated.cs" />
+    <Compile Include="Infrastructure\Windsor\FirstArgumentIsNameSelector.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="Infrastructure\Views\ViewLocator.cs" />
     <Compile Include="ViewModels\ListViewModel.cs" />
     <Compile Include="ViewModels\DocumentViewModel.cs" />
-    <Compile Include="Infrastructure\Views\IViewModelFactory.cs" />
+    <Compile Include="Infrastructure\ViewModels\IViewModelFactory.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Infrastructure\ViewModels\ViewModel.cs" />
-    <Compile Include="Views\DataTemplateDictionary.cs" />
+    <Compile Include="Controls\DataTemplateDictionary.cs" />
     <Compile Include="Views\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\TabContentSelector.cs" />
+    <Compile Include="Controls\TabContentSelector.cs" />
+    <Compile Include="Infrastructure\WindowManager.cs" />
     <Page Include="Views\ListView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\MainWindow.xaml">
+    <Page Include="Views\MainView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -108,8 +114,8 @@
     <Compile Include="Views\ListView.xaml.cs">
       <DependentUpon>ListView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
+    <Compile Include="Views\MainView.xaml.cs">
+      <DependentUpon>MainView.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Views\DocumentView.xaml">

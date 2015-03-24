@@ -1,4 +1,4 @@
-﻿<Window x:Class="HybridDb.Studio.Views.MainWindow"
+﻿<Window x:Class="HybridDb.Studio.Views.MainView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -6,6 +6,8 @@
         xmlns:viewModels="clr-namespace:HybridDb.Studio.ViewModels"
         xmlns:views="clr-namespace:HybridDb.Studio.Views"
         xmlns:commandBehaviors="clr-namespace:HybridDb.Studio.CommandBehaviors"
+        xmlns:controls="clr-namespace:HybridDb.Studio.Controls"
+        xmlns:viewModels1="clr-namespace:HybridDb.Studio.Infrastructure.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
         Title="HybridDb Studio" Height="600" Width="800" x:Name="Self"
@@ -18,8 +20,8 @@
         </Grid.RowDefinitions>
         <Menu IsMainMenu="True" x:Name="MainMenu">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open..." Command="{Binding OpenFile}" />
-                <MenuItem Header="Open _recent" ItemsSource="{Binding RecentlyOpened}" IsEnabled="False">
+                <MenuItem Header="_Open connection" Command="{Binding OpenConnectionDialog}" />
+                <!--<MenuItem Header="Connections" ItemsSource="{Binding RecentlyOpened}" IsEnabled="False">
                     <MenuItem.Style>
                         <Style TargetType="MenuItem">
                             <Style.Triggers>
@@ -35,7 +37,7 @@
                             <Setter Property="CommandParameter" Value="{Binding}" />
                         </Style>
                     </MenuItem.ItemContainerStyle>
-                </MenuItem>
+                </MenuItem>-->
                 <Separator />
                 <MenuItem Header="_Exit" Command="{Binding ExitApplication}" />
             </MenuItem>
@@ -65,7 +67,7 @@
             
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
 
-            <TabControl Grid.Column="2" ItemsSource="{Binding Tabs}" Margin="0,0,5,0">
+            <TabControl Grid.Column="2" ItemsSource="{Binding Tabs}" viewModels1:Context.ViewModel="{Binding ActiveTab}" Margin="0,0,5,0">
                 <TabControl.Style>
                     <Style TargetType="TabControl">
                         <Style.Triggers>
@@ -82,20 +84,6 @@
                         <MenuItem Header="Close All" Command="{Binding CloseAllTabs}" />
                     </ContextMenu>
                 </TabControl.ContextMenu>
-                <TabControl.ContentTemplateSelector>
-                    <views:TabContentSelector>
-                        <views:TabContentSelector.DataTemplates>
-                            <views:DataTemplateDictionary>
-                                <DataTemplate x:Key="DocumentViewModel">
-                                    <views:DocumentView />
-                                </DataTemplate>
-                                <DataTemplate x:Key="ListViewModel">
-                                    <views:ListView />
-                                </DataTemplate>
-                            </views:DataTemplateDictionary>
-                        </views:TabContentSelector.DataTemplates>
-                    </views:TabContentSelector>
-                </TabControl.ContentTemplateSelector>
                 <TabControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" MinWidth="50">

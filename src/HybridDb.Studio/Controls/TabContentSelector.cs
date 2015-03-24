@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace HybridDb.Studio.Views
+namespace HybridDb.Studio.Controls
 {
     public class TabContentSelector : DataTemplateSelector
     {

@@ -18,6 +18,7 @@ namespace HybridDb.Studio.ViewModels
         private readonly IEventAggregator bus;
         private readonly MotherOfAll mother;
         private string statusBarText;
+        private IView activeTab;
 
         public MainViewModel(IViewModelFactory viewModelFactory, IApplication application, ISettings settings, IEventAggregator bus, MotherOfAll mother)
         {
@@ -33,7 +34,7 @@ namespace HybridDb.Studio.ViewModels
 
             StatusBarText = "Does it work?";
 
-            OpenFile = RelayCommand.Create(HandleOpenFile);
+            OpenConnectionDialog = RelayCommand.Create(HandleOpenConnectionDialog);
             OpenRecent = RelayCommand.Create<string>(HandleOpenRecent);
             ExitApplication = RelayCommand.Create(HandleExitApplication);
 
@@ -47,9 +48,14 @@ namespace HybridDb.Studio.ViewModels
             OpenTab<DocumentViewModel>();
         }
 
+        private void HandleOpenConnectionDialog()
+        {
+
+        }
+
         public Stores Stores { get; private set; }
 
-        public IRelayCommand OpenFile { get; private set; }
+        public IRelayCommand OpenConnectionDialog { get; private set; }
         public IRelayCommand OpenRecent { get; private set; }
         public IRelayCommand ExitApplication { get; private set; }
 
@@ -72,6 +78,16 @@ namespace HybridDb.Studio.ViewModels
         }
 
         public ObservableCollection<ViewModel> Tabs { get; private set; }
+
+        public IView ActiveTab
+        {
+            get { return activeTab; }
+            set
+            {
+                activeTab = value;
+                OnPropertyChanged();
+            }
+        }
 
         public void OpenTab<TViewModel>() where TViewModel : ViewModel
         {

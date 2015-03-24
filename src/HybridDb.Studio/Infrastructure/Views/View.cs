@@ -3,7 +3,7 @@ using System.Windows.Controls;
 
 namespace HybridDb.Studio.Infrastructure.Views
 {
-    public class View : UserControl, IView
+    public abstract class View : UserControl, IView
     {
         public void Dispose()
         {
