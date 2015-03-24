@@ -13,6 +13,9 @@
     <releaseNotes></releaseNotes>
     <copyright>Copyright 2013</copyright>
     <tags></tags>
+    <dependencies>
+      <dependency id="Serilog" version="1.4" />
+    </dependencies>
   </metadata>
   <files>
     <file src="lib\*.*" target="lib\net40" />

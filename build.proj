@@ -48,7 +48,7 @@
 			<HybridDbFiles Include="Inflector.dll" />
 		</ItemGroup>
 		
-	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(OutputFolder)\lib\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
+    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(OutputFolder)\lib\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
 
 		<GetAssemblyIdentity AssemblyFiles="$(OutputFolder)\lib\HybridDb.dll">
 			<Output TaskParameter="Assemblies" ItemName="AssemblyIdentity"/>
@@ -70,7 +70,6 @@
 	<Target Name="Test">
 		<MSBuild Projects="$(SrcFolder)\HybridDb.Tests\HybridDb.Tests.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
 
-		<!--<Copy SourceFiles="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />-->
 		<xunit Assembly="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.Tests.dll" />
 	</Target>
 	
