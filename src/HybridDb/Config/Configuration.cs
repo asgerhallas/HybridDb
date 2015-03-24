@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using HybridDb.Logging;
 using HybridDb.Migrations;
+using Serilog;
 
 namespace HybridDb.Config
 {
@@ -17,7 +17,11 @@ namespace HybridDb.Config
             DocumentDesigns = new List<DocumentDesign>();
             documentDesignsCache = new ConcurrentDictionary<Type, DocumentDesign>();
 
-            Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
+            Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.ColoredConsole()
+                .CreateLogger();
+
             Serializer = new DefaultBsonSerializer();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();

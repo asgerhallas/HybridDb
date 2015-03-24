@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using HybridDb.Config;
-using HybridDb.Logging;
 using HybridDb.Migrations;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;
@@ -140,8 +142,8 @@ namespace HybridDb.Tests.Migrations
             Reset();
             Document<Entity>().With(x => x.Number);
 
-            var capturingLogger = new CapturingLogger(store.Configuration.Logger);
-            UseLogger(capturingLogger);
+            var logEventSink = new ListSink();
+            UseLogger(new LoggerConfiguration().WriteTo.Sink(logEventSink).CreateLogger());
 
             InitializeStore();
 
@@ -155,51 +157,25 @@ namespace HybridDb.Tests.Migrations
                 new DocumentMigrationRunner(store).RunInBackground().Wait(1000);
             });
 
-            var numberOfRetries = capturingLogger.Captures.Count(x => x == string.Format("Error while migrating document with id HybridDb.Tests.HybridDbTests+Entity/{0}.", id));
+            var numberOfRetries = logEventSink.Captures.Count(x => x == string.Format("Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id {0}.", id));
             
             // it has a back off of 100ms
             numberOfRetries.ShouldBeLessThan(11);
             numberOfRetries.ShouldBeGreaterThan(9);
         }
 
-        public class CapturingLogger : ILogger
+        public class ListSink : ILogEventSink
         {
-            readonly ILogger logger;
-
-            public CapturingLogger(ILogger logger)
+            public ListSink()
             {
-                this.logger = logger;
-
                 Captures = new List<string>();
             }
 
             public List<string> Captures { get; set; }
 
-            public void Debug(string message, params object[] objs)
+            public void Emit(LogEvent logEvent)
             {
-                logger.Debug(message, objs);
-            }
-
-            public void Info(string message, params object[] objs)
-            {
-                logger.Info(message, objs);
-            }
-
-            public void Warn(string message, params object[] objs)
-            {
-                logger.Warn(message, objs);
-            }
-
-            public void Error(string message, params object[] objs)
-            {
-                logger.Error(message, objs);
-                Captures.Add(string.Format(message, objs));
-            }
-
-            public void Error(string message, Exception exception, params object[] objs)
-            {
-                logger.Error(message, exception, objs);
-                Captures.Add(string.Format(message, objs));
+                Captures.Add(logEvent.RenderMessage());
             }
         }
     }

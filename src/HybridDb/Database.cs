@@ -5,7 +5,7 @@ using System.Linq;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
-using HybridDb.Logging;
+using Serilog;
 
 namespace HybridDb
 {
@@ -315,7 +315,7 @@ namespace HybridDb
         public void Dispose()
         {
             if (numberOfManagedConnections > 0)
-                logger.Warn("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+                logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
 
             if (ambientConnectionForTesting != null)
                 ambientConnectionForTesting.Dispose();

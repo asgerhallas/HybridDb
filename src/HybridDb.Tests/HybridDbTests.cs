@@ -4,9 +4,10 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Transactions;
 using Dapper;
-using HybridDb.Logging;
 using HybridDb.Migrations;
 using Newtonsoft.Json.Linq;
+using Serilog;
+using Serilog.Events;
 using Shouldly;
 
 namespace HybridDb.Tests
@@ -15,14 +16,18 @@ namespace HybridDb.Tests
     {
         readonly List<Action> disposables;
 
-        protected readonly ConsoleLogger logger;
+        protected readonly ILogger logger;
         
         protected string connectionString;
         protected Database database;
 
         protected HybridDbTests()
         {
-            logger = new ConsoleLogger(Debugger.IsAttached ? LogLevel.Debug : LogLevel.Info, new LoggingColors());
+            logger = new LoggerConfiguration()
+                .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
+                .WriteTo.ColoredConsole()
+                .CreateLogger();
+            
             disposables = new List<Action>();
 
             UseTempTables();

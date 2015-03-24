@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
 using HybridDb.Config;
-using HybridDb.Logging;
 using HybridDb.Migrations.Commands;
+using Serilog;
 
 namespace HybridDb.Migrations
 {
@@ -53,7 +53,7 @@ namespace HybridDb.Migrations
                 if (currentSchemaVersion < configuration.ConfiguredVersion)
                 {
                     var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
-                    logger.Info("Migrates schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
+                    logger.Information("Migrates schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
 
                     foreach (var migration in migrationsToRun)
                     {
@@ -72,7 +72,7 @@ namespace HybridDb.Migrations
 
                 if (commands.Any())
                 {
-                    logger.Info("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
+                    logger.Information("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
 
                     foreach (var command in commands)
                     {
@@ -106,11 +106,11 @@ else
         {
             if (command.Unsafe)
             {
-                logger.Warn("Unsafe migration command '{0}' was skipped.", command.ToString());
+                logger.Warning("Unsafe migration command '{0}' was skipped.", command.ToString());
                 yield break;
             }
 
-            logger.Info("Executing migration command '{0}'.", command.ToString());
+            logger.Information("Executing migration command '{0}'.", command.ToString());
 
             command.Execute(database);
 

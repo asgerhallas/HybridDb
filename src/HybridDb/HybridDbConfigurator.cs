@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
-using HybridDb.Logging;
 using HybridDb.Migrations;
+using Serilog;
 
 namespace HybridDb
 {

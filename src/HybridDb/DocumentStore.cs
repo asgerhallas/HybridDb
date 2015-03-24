@@ -7,8 +7,8 @@ using System.Threading;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Logging;
 using HybridDb.Migrations;
+using Serilog;
 
 namespace HybridDb
 {
@@ -129,7 +129,7 @@ namespace HybridDb
 
                 connectionManager.Complete();
 
-                Logger.Info("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
+                Logger.Information("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                             numberOfInsertCommands,
                             numberOfUpdateCommands,
                             numberOfDeleteCommands,
@@ -245,7 +245,7 @@ namespace HybridDb
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Info("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
+                Logger.Information("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
 
                 connection.Complete();
                 return result;
@@ -303,7 +303,7 @@ namespace HybridDb
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Info("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
+                Logger.Information("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 connection.Complete();
 

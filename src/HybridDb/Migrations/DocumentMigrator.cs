@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using HybridDb.Config;
-using HybridDb.Logging;
+using Serilog;
 
 namespace HybridDb.Migrations
 {
@@ -31,7 +31,7 @@ namespace HybridDb.Migrations
                     design.DocumentType.FullName, id, currentDocumentVersion, configuredVersion));
             }
 
-            logger.Info("Migrating document {0}/{1} from version {2} to {3}.", 
+            logger.Information("Migrating document {0}/{1} from version {2} to {3}.", 
                 design.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
 
             configuration.BackupWriter.Write(design, id, currentDocumentVersion, document);

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Logging;
+using Serilog;
 
 namespace HybridDb.Migrations
 {
@@ -51,7 +51,7 @@ namespace HybridDb.Migrations
 
                     if (stats.TotalResults == 0) break;
 
-                    logger.Info("Found {0} document that must be migrated.", stats.TotalResults);
+                    logger.Information("Found {0} document that must be migrated.", stats.TotalResults);
 
                     foreach (var row in rows)
                     {
@@ -69,7 +69,7 @@ namespace HybridDb.Migrations
 
                         if ((bool)row["AwaitsReprojection"])
                         {
-                            logger.Info("Reprojection document {0}/{1}.", 
+                            logger.Information("Reprojection document {0}/{1}.", 
                                 concreteDesign.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
                         }
 
@@ -83,7 +83,7 @@ namespace HybridDb.Migrations
                         catch (ConcurrencyException) { }
                         catch (Exception exception)
                         {
-                            logger.Error("Error while migrating document with id {0}/{1}.", exception, concreteDesign.DocumentType.FullName, id);
+                            logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, id);
                             Thread.Sleep(100);
                         }
                     }
