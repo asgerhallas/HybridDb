@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,9 +47,11 @@ namespace HybridDb.Migrations
                     var rows = store
                         .Query(table, out stats,
                             @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
+                            @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
                             take: 100,
-                            orderby: "newid()",
-                            parameters: new { AwaitsReprojection = true, version = configuration.ConfiguredVersion });
+                            @orderby: "newid()",
+                            parameters: new {AwaitsReprojection = true, version = configuration.ConfiguredVersion})
+                        .ToList();
 
                     if (stats.TotalResults == 0) break;
 
@@ -67,24 +71,47 @@ namespace HybridDb.Migrations
                         var id = (Guid)row[table.IdColumn];
                         var currentDocumentVersion = (int)row[table.VersionColumn];
 
-                        if ((bool)row["AwaitsReprojection"])
+                        var shouldUpdate = false;
+
+                        if ((bool)row[table.AwaitsReprojectionColumn])
                         {
+                            shouldUpdate = true;
                             logger.Information("Reprojection document {0}/{1}.", 
                                 concreteDesign.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
                         }
 
-                        try
+                        if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
                         {
-                            var entity = migrator.DeserializeAndMigrate(concreteDesign, id, (byte[])row[table.DocumentColumn], currentDocumentVersion);
-                            var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-
-                            store.Update(table, id, (Guid)row[table.EtagColumn], projections);
+                            shouldUpdate = true;
                         }
-                        catch (ConcurrencyException) { }
-                        catch (Exception exception)
+
+                        if (shouldUpdate)
                         {
-                            logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, id);
-                            Thread.Sleep(100);
+                            try
+                            {
+                                var rowWithDocument = store.Get(table, id);
+                                var entity = migrator.DeserializeAndMigrate(concreteDesign, id, (byte[]) rowWithDocument[table.DocumentColumn], currentDocumentVersion);
+                                var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
+
+                                store.Update(table, id, (Guid) rowWithDocument[table.EtagColumn], projections);
+                            }
+                            catch (ConcurrencyException) {}
+                            catch (Exception exception)
+                            {
+                                logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, id);
+                                Thread.Sleep(100);
+                            }
+                        }
+                        else
+                        {
+                            logger.Information("Document did not change.");
+
+                            var projection = new Dictionary<string, object>
+                            {
+                                {table.VersionColumn, configuration.ConfiguredVersion}
+                            };
+
+                            store.Update(table, id, (Guid)row[table.EtagColumn], projection);
                         }
                     }
                 }

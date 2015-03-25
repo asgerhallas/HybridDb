@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using Serilog;
@@ -14,6 +15,14 @@ namespace HybridDb.Migrations
         {
             this.configuration = configuration;
             logger = configuration.Logger;
+        }
+
+        public IEnumerable<DocumentMigrationCommand> ApplicableCommands(DocumentDesign design, int currentDocumentVersion)
+        {
+            return configuration.Migrations
+                .Where(x => x.Version > currentDocumentVersion)
+                .SelectMany(x => x.MigrateDocument())
+                .Where(x => x.ForType(design.DocumentType));
         }
 
         public object DeserializeAndMigrate(DocumentDesign design, Guid id, byte[] document, int currentDocumentVersion)
@@ -36,14 +45,9 @@ namespace HybridDb.Migrations
 
             configuration.BackupWriter.Write(design, id, currentDocumentVersion, document);
 
-            foreach (var migration in configuration.Migrations.Where(x => x.Version > currentDocumentVersion))
-            {
-                var commands = migration.MigrateDocument();
-                foreach (var command in commands.OfType<ChangeDocument>().Where(x => x.ForType(design.DocumentType)))
-                {
-                    document = command.Execute(configuration.Serializer, document);
-                }
-            }
+            document = ApplicableCommands(design, currentDocumentVersion)
+                .Aggregate(document, (current, command) => 
+                    command.Execute(configuration.Serializer, current));
 
             return configuration.Serializer.Deserialize(document, design.DocumentType);
         }

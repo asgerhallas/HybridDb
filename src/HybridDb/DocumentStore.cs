@@ -30,7 +30,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
-            var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables, testMode: false);
+            var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables);
             var store = new DocumentStore(database, configuration);
             new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
             new DocumentMigrationRunner(store).RunInBackground();
@@ -46,7 +46,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
-            var database = new Database(configuration.Logger, connectionString ?? "data source=.;Integrated Security=True", mode, testMode: true);
+            var database = new Database(configuration.Logger, connectionString ?? "data source=.;Integrated Security=True", mode);
             return ForTesting(database, configuration);
         }
 
@@ -65,11 +65,6 @@ namespace HybridDb
         public IDocumentSession OpenSession()
         {
             return new DocumentSession(this);
-        }
-
-        public Guid Execute(params DatabaseCommand[] commands)
-        {
-            return Execute((IEnumerable<DatabaseCommand>)commands);
         }
 
         public Guid Execute(IEnumerable<DatabaseCommand> commands)
@@ -150,29 +145,9 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        public Guid Insert(DocumentTable table, Guid key, object projections)
-        {
-            return Execute(new InsertCommand(table, key, projections));
-        }
-
-        public Guid Update(DocumentTable table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
-        {
-            return Execute(new UpdateCommand(table, key, etag, projections, lastWriteWins));
-        }
-
-        public void Delete(DocumentTable table, Guid key, Guid etag, bool lastWriteWins = false)
-        {
-            Execute(new DeleteCommand(table, key, etag, lastWriteWins));
-        }
-
-        public IEnumerable<IDictionary<string, object>> Query(DocumentTable table, out QueryStats stats, string select = null, string where = "",
+        public IEnumerable<TProjection> Query<TProjection>(
+            DocumentTable table, out QueryStats stats, string select = null, string where = "",
             int skip = 0, int take = 0, string orderby = "", object parameters = null)
-        {
-            return Query<IDictionary<string, object>>(table, out stats, @select, @where, skip, take, @orderby, parameters);
-        }
-
-        public IEnumerable<TProjection> Query<TProjection>(DocumentTable table, out QueryStats stats, string select = null, string where = "",
-                                                           int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
                 select = "";

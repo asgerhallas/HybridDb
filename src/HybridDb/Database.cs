@@ -14,17 +14,15 @@ namespace HybridDb
         readonly ILogger logger;
         readonly string connectionString;
         readonly TableMode tableMode;
-        readonly bool testMode;
 
         int numberOfManagedConnections;
         SqlConnection ambientConnectionForTesting;
 
-        public Database(ILogger logger, string connectionString, TableMode tableMode, bool testMode)
+        public Database(ILogger logger, string connectionString, TableMode tableMode)
         {
             this.logger = logger;
             this.connectionString = connectionString;
             this.tableMode = tableMode;
-            this.testMode = testMode;
 
             OnMessage = message => { };
         }
@@ -104,7 +102,10 @@ namespace HybridDb
             {
                 if (Transaction.Current == null)
                 {
-                    var tx = new TransactionScope();
+                    var tx = new TransactionScope(
+                        TransactionScopeOption.RequiresNew, 
+                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
+                    
                     complete += tx.Complete;
                     dispose += tx.Dispose;
                 }
@@ -112,7 +113,6 @@ namespace HybridDb
                 SqlConnection connection;
                 if (TableMode != TableMode.UseRealTables)
                 {
-                    // We don't care about thread safety in test mode
                     if (ambientConnectionForTesting == null)
                     {
                         ambientConnectionForTesting = new SqlConnection(connectionString);

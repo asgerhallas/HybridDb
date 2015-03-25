@@ -54,13 +54,13 @@ namespace HybridDb.Tests
         protected void UseTempTables()
         {
             connectionString = "data source=.;Integrated Security=True";
-            database = Using(new Database(logger, connectionString, TableMode.UseTempTables, testMode: true));
+            database = Using(new Database(logger, connectionString, TableMode.UseTempTables));
         }
 
         protected void UseGlobalTempTables()
         {
             connectionString = "data source=.;Integrated Security=True";
-            database = Using(new Database(logger, connectionString, TableMode.UseGlobalTempTables, testMode: true));
+            database = Using(new Database(logger, connectionString, TableMode.UseGlobalTempTables));
         }
 
         protected void UseRealTables()
@@ -79,7 +79,7 @@ namespace HybridDb.Tests
 
             connectionString = "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName;
 
-            database = Using(new Database(logger, connectionString, TableMode.UseRealTables, testMode: true));
+            database = Using(new Database(logger, connectionString, TableMode.UseRealTables));
 
             disposables.Add(() =>
             {

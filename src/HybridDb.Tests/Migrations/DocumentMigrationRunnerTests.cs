@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using HybridDb.Config;
@@ -38,6 +37,37 @@ namespace HybridDb.Tests.Migrations
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
             row["AwaitsReprojection"].ShouldBe(false);
+            row[table.VersionColumn].ShouldBe(0);
+        }
+
+        [Fact]
+        public void DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
+        {
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            // add migration for same version and one for other document
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
+                new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
+
+            var id = Guid.NewGuid();
+            var table = configuration.GetDesignFor<Entity>().Table;
+            store.Insert(table, id, new
+            {
+                AwaitsReprojection = false,
+                Discriminator = "Entity",
+                Version = 1,
+                Document = configuration.Serializer.Serialize(new Entity())
+            });
+
+            var counter = new TracingDocumentStore(store);
+            
+            new DocumentMigrationRunner(counter).RunSynchronously();
+
+            var row = store.Get(table, id);
+            counter.Gets.ShouldBeEmpty();
+            row[table.VersionColumn].ShouldBe(2);
         }
 
         [Fact]
@@ -58,15 +88,15 @@ namespace HybridDb.Tests.Migrations
             // bump the version of the configuration
             UseMigrations(new InlineMigration(1));
 
-            var initialNumberOfRequests = store.NumberOfRequests;
-            new DocumentMigrationRunner(store).RunSynchronously();
+            var counter = new TracingDocumentStore(store);
 
-            // 1: query for documents below version, return 100
-            // 101: update documents one at a time
-            // 102: query for documents below version, return 100
-            // 202: update documents one at a time
-            // 203: query for documents below version, returns 0
-            (store.NumberOfRequests - initialNumberOfRequests).ShouldBe(203);
+            new DocumentMigrationRunner(counter).RunSynchronously();
+
+            // 3 query for documents below version, first two return 100 rows each, last returns 0
+            counter.Queries.Count.ShouldBe(3);
+            
+            // each document is being updated individually
+            counter.Updates.Count.ShouldBe(200);
         }
 
         [Fact]
@@ -163,6 +193,7 @@ namespace HybridDb.Tests.Migrations
             numberOfRetries.ShouldBeLessThan(11);
             numberOfRetries.ShouldBeGreaterThan(9);
         }
+
 
         public class ListSink : ILogEventSink
         {

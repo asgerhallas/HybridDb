@@ -96,6 +96,7 @@
     <Compile Include="HybridDbStoreTests.cs" />
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
+    <Compile Include="TracingDocumentStore.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />

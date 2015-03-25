@@ -23,15 +23,13 @@ namespace HybridDb.Migrations
         }
     }
 
-    public abstract class DocumentMigrationCommand {}
-
-    public abstract class ChangeDocument : DocumentMigrationCommand
+    public abstract class DocumentMigrationCommand
     {
         public abstract bool ForType(Type type);
         public abstract byte[] Execute(ISerializer serializer, byte[] json);
     }
 
-    public class ChangeDocument<T> : ChangeDocument
+    public class ChangeDocument<T> : DocumentMigrationCommand
     {
         readonly Func<ISerializer, byte[], byte[]> change;
 
