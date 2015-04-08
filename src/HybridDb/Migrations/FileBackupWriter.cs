@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
-using HybridDb.Config;
+using System.Runtime.InteropServices;
+using System.Security.AccessControl;
 
 namespace HybridDb.Migrations
 {
@@ -15,9 +16,17 @@ namespace HybridDb.Migrations
             Directory.CreateDirectory(path);
         }
 
-        public void Write(DocumentDesign design, Guid id, int version, byte[] document)
+        public void Write(string name, byte[] document)
         {
-            File.WriteAllBytes(Path.Combine(path, string.Format("{0}_{1}_{2}.bak", design.DocumentType.FullName, id, version)), document);
+            try
+            {
+                File.WriteAllBytes(Path.Combine(path, name), document);
+            }
+            catch (IOException e)
+            {
+                var errorCode = Marshal.GetHRForException(e) & ((1 << 16) - 1);
+                if (errorCode != 32 && errorCode != 33) throw;
+            }
         }
     }
 }

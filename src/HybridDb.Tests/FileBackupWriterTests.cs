@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using HybridDb.Migrations;
 using Shouldly;
@@ -6,36 +5,38 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class FileBackupWriterTests : HybridDbTests
+    public class FileBackupWriterTests
     {
         [Fact]
         public void WritesToFile()
         {
-            Document<Entity>();
-
-            var id = Guid.NewGuid();
-
             var writer = new FileBackupWriter(".");
-            writer.Write(configuration.GetDesignFor<Entity>(), id, 5, new byte[]{ 1, 2, 3 });
+            writer.Write("hans.bak", new byte[]{ 1, 2, 3 });
 
-            var bytes = File.ReadAllBytes(string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_5.bak", id));
+            var bytes = File.ReadAllBytes("hans.bak");
             bytes.ShouldBe(new byte[] { 1, 2, 3 });
         }
 
         [Fact]
         public void CanWriteSameDocumentTwice()
         {
-            Document<Entity>();
-
-            var id = Guid.NewGuid();
-
             var writer = new FileBackupWriter(".");
-            writer.Write(configuration.GetDesignFor<Entity>(), id, 5, new byte[]{ 1, 2, 3 });
+            writer.Write("jacob.bak", new byte[]{ 1, 2, 3 });
             
-            Should.NotThrow(() => writer.Write(configuration.GetDesignFor<Entity>(), id, 5, new byte[]{ 1, 2, 3 }));
+            Should.NotThrow(() => writer.Write("jacob.bak", new byte[]{ 1, 2, 3 }));
 
-            var bytes = File.ReadAllBytes(string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_5.bak", id));
+            var bytes = File.ReadAllBytes("jacob.bak");
             bytes.ShouldBe(new byte[] { 1, 2, 3 });
+        }
+
+        [Fact]
+        public void ConcurrentWritesDoesNotFail()
+        {
+            using (File.Create("jacob.bak"))
+            {
+                var writer = new FileBackupWriter(".");
+                Should.NotThrow(() => writer.Write("jacob.bak", new byte[] { 1, 2, 3 }));
+            }
         }
     }
 }

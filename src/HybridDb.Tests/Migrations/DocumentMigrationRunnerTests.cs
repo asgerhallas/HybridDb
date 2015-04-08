@@ -194,6 +194,32 @@ namespace HybridDb.Tests.Migrations
             numberOfRetries.ShouldBeGreaterThan(9);
         }
 
+        [Fact]
+        public void BacksUpMigratedDocumentBeforeMigration()
+        {
+            var id = Guid.NewGuid();
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
+
+            var backupWriter = new FakeBackupWriter();
+            UseBackupWriter(backupWriter);
+
+            InitializeStore();
+
+            backupWriter.Files.Count.ShouldBe(1);
+            backupWriter.Files[string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_0.bak", id)]
+                .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
+        }
+
 
         public class ListSink : ILogEventSink
         {

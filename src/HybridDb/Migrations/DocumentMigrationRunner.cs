@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using HybridDb.Commands;
 using HybridDb.Config;
 using Serilog;
 
@@ -25,16 +26,14 @@ namespace HybridDb.Migrations
 
         public Task RunInBackground()
         {
-            if (store.Configuration.RunDocumentMigrationsInBackground)
-            {
-                return Task.Factory.StartNew(RunSynchronously, TaskCreationOptions.LongRunning);
-            }
-
-            return Task.FromResult(false);
+            return Task.Factory.StartNew(RunSynchronously, TaskCreationOptions.LongRunning);
         }
 
         public void RunSynchronously()
         {
+            if (!store.Configuration.RunDocumentMigrationsOnStartup)
+                return;
+                
             var migrator = new DocumentMigrator(store.Configuration);
 
             foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
@@ -90,10 +89,16 @@ namespace HybridDb.Migrations
                             try
                             {
                                 var rowWithDocument = store.Get(table, id);
-                                var entity = migrator.DeserializeAndMigrate(concreteDesign, id, (byte[]) rowWithDocument[table.DocumentColumn], currentDocumentVersion);
+                                
+                                var document = (byte[]) rowWithDocument[table.DocumentColumn];
+                                var etag = (Guid)rowWithDocument[table.EtagColumn];
+
+                                var entity = migrator.DeserializeAndMigrate(concreteDesign, id, document, currentDocumentVersion);
                                 var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
 
-                                store.Update(table, id, (Guid) rowWithDocument[table.EtagColumn], projections);
+                                store.Execute(new BackupCommand(
+                                    new UpdateCommand(table, id, etag, projections, false),
+                                    store.Configuration.BackupWriter, concreteDesign, id, currentDocumentVersion, document));
                             }
                             catch (ConcurrencyException) {}
                             catch (Exception exception)

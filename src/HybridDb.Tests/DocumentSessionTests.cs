@@ -895,7 +895,6 @@ namespace HybridDb.Tests
             {
                 var entity = session.Load<Entity>(id);
                 entity.Property.ShouldBe("Peter");
-                session.SaveChanges();
             }
         }
 
@@ -1008,6 +1007,71 @@ namespace HybridDb.Tests
 
             var row = store.Get(table, id);
             ((int)row[table.VersionColumn]).ShouldBe(2);
+        }
+
+        [Fact]
+        public void BacksUpMigratedDocumentOnSave()
+        {
+            var id = Guid.NewGuid();
+
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<Entity>();
+            DisableDocumentMigrationsInBackground();
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })),
+                new InlineMigration(2, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "2"; })));
+
+            var backupWriter = new FakeBackupWriter();
+            UseBackupWriter(backupWriter);
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+
+                // no backup on load
+                backupWriter.Files.Count.ShouldBe(0);
+
+                session.SaveChanges();
+
+                // backup on save
+                backupWriter.Files.Count.ShouldBe(1);
+                backupWriter.Files[string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_0.bak", id)]
+                    .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
+            }
+        }
+
+        [Fact]
+        public void DoesNotBackUpDocumentWithNoMigrations()
+        {
+            Document<Entity>();
+
+            var backupWriter = new FakeBackupWriter();
+            UseBackupWriter(backupWriter);
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+                session.SaveChanges();
+
+                // no migrations, means no backup
+                backupWriter.Files.Count.ShouldBe(0);
+            }
         }
 
         [Fact(Skip = "Feature on holds")]

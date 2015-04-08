@@ -14,6 +14,7 @@ namespace HybridDb
         readonly IDocumentStore store;
         readonly List<DatabaseCommand> deferredCommands;
         readonly DocumentMigrator migrator;
+        bool saving = false;
 
         public DocumentSession(IDocumentStore store)
         {
@@ -148,28 +149,45 @@ namespace HybridDb
 
         void SaveChangesInternal(bool lastWriteWins)
         {
-            var commands = new List<Tuple<ManagedEntity, byte[], DatabaseCommand>>();
-            foreach (var managedEntity in entities.Values)
+            if (saving)
+            {
+                throw new InvalidOperationException("Session is not in a valid state. Please dispose it and open a new one.");
+            }
+
+            saving = true;
+
+            var commands = new Dictionary<ManagedEntity, DatabaseCommand>();
+            foreach (var managedEntity in entities.Values.ToList())
             {
                 var id = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
 
+                var version = (int)projections[design.Table.VersionColumn];
                 var document = (byte[])projections[design.Table.DocumentColumn];
 
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, projections)));
+                        commands.Add(managedEntity, new InsertCommand(design.Table, id, projections));
+                        managedEntity.State = EntityState.Loaded;
+                        managedEntity.Version = version;
+                        managedEntity.Document = document;
                         break;
                     case EntityState.Loaded:
-                        if (!managedEntity.Document.SequenceEqual(document))
-                        {
-                            commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins)));
-                        }
+                        if (managedEntity.Document.SequenceEqual(document)) 
+                            break;
+                        
+                        commands.Add(managedEntity, new BackupCommand(
+                            new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins),
+                            store.Configuration.BackupWriter, design, id, managedEntity.Version, managedEntity.Document));
+                        
+                        managedEntity.Version = version;
+                        managedEntity.Document = document;
                         break;
                     case EntityState.Deleted:
-                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new DeleteCommand(design.Table, id, managedEntity.Etag, lastWriteWins)));
+                        commands.Add(managedEntity, new DeleteCommand(design.Table, id, managedEntity.Etag, lastWriteWins));
+                        entities.Remove(managedEntity.Key);
                         break;
                 }
             }
@@ -177,36 +195,14 @@ namespace HybridDb
             if (commands.Count + deferredCommands.Count == 0)
                 return;
 
-            var etag = store.Execute(commands.Select(x => x.Item3).Concat(deferredCommands));
+            var etag = store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
 
-            foreach (var change in commands)
+            foreach (var managedEntity in commands.Keys)
             {
-                var managedEntity = change.Item1;
-                var document = change.Item2;
-                var command = change.Item3;
-
-                var insertCommand = command as InsertCommand;
-                if (insertCommand != null)
-                {
-                    managedEntity.State = EntityState.Loaded;
-                    managedEntity.Etag = etag;
-                    managedEntity.Document = document;
-                    continue;
-                }
-
-                var updateCommand = command as UpdateCommand;
-                if (updateCommand != null)
-                {
-                    managedEntity.Etag = etag;
-                    managedEntity.Document = document;
-                    continue;
-                }
-
-                if (command is DeleteCommand)
-                {
-                    entities.Remove(managedEntity.Key);
-                }
+                managedEntity.Etag = etag;
             }
+
+            saving = false;
         }
 
         public void Dispose() {}
@@ -241,6 +237,7 @@ namespace HybridDb
                 Entity = entity,
                 Etag = (Guid) row[table.EtagColumn],
                 State = EntityState.Loaded,
+                Version = currentDocumentVersion,
                 Document = document
             };
 
@@ -276,6 +273,7 @@ namespace HybridDb
             public Guid Key { get; set; }
             public Guid Etag { get; set; }
             public EntityState State { get; set; }
+            public int Version { get; set; }
             public byte[] Document { get; set; }
         }
     }

@@ -25,14 +25,14 @@ namespace HybridDb.Config
             Serializer = new DefaultBsonSerializer();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
-            RunDocumentMigrationsInBackground = true;
+            RunDocumentMigrationsOnStartup = true;
         }
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
-        public bool RunDocumentMigrationsInBackground { get; private set; }
+        public bool RunDocumentMigrationsOnStartup { get; private set; }
         public int ConfiguredVersion { get; private set; }
 
         internal ConcurrentDictionary<string, Table> Tables { get; private set; }
@@ -139,9 +139,9 @@ namespace HybridDb.Config
             BackupWriter = backupWriter;
         }
 
-        public void DisableDocumentMigrationsInBackground()
+        public void DisableDocumentMigrationsOnStartup()
         {
-            RunDocumentMigrationsInBackground = false;
+            RunDocumentMigrationsOnStartup = false;
         }
 
         DocumentTable AddTable(string tablename)

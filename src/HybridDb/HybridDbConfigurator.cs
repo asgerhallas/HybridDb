@@ -57,7 +57,7 @@ namespace HybridDb
 
         protected void DisableDocumentMigrationsInBackground()
         {
-            configuration.DisableDocumentMigrationsInBackground();
+            configuration.DisableDocumentMigrationsOnStartup();
         }
     }
 }
