@@ -1,7 +1,5 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.AccessControl;
 
 namespace HybridDb.Migrations
 {

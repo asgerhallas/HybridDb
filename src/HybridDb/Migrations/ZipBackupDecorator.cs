@@ -14,12 +14,15 @@ namespace HybridDb.Migrations
 
         public void Write(string name, byte[] document)
         {
-            using (var original = new MemoryStream(document))
-            using (var zip = new GZipStream(original, CompressionMode.Decompress))
-            using (var zipdocument = new MemoryStream())
+            using (var output = new MemoryStream())
             {
-                zip.BaseStream.CopyTo(zipdocument);
-                writer.Write(name + ".zip", zipdocument.ToArray());
+                using (var zip = new GZipStream(output, CompressionMode.Compress))
+                using (var input = new MemoryStream(document))
+                {
+                    input.CopyTo(zip);
+                }
+
+                writer.Write(name + ".zip", output.ToArray());
             }
         }
     }

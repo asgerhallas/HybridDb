@@ -14,18 +14,28 @@ namespace HybridDb.Tests
             var inner = new FakeBackupWriter();
             var decorator = new ZipBackupDecorator(inner);
 
-            var document = new byte[] { 1, 2, 3 };
+            var document = new byte[] { 65, 66, 67 };
 
             decorator.Write("jacob.bak", document);
 
-            using (var s = new MemoryStream(inner.Files["jacob.bak.zip"]))
-            using (var z = new GZipStream(s, CompressionMode.Decompress))
-            using (var r = new MemoryStream())
+            using (var input = new MemoryStream(inner.Files["jacob.bak.zip"]))
+            using (var zip = new GZipStream(input, CompressionMode.Decompress))
+            using (var output = new MemoryStream())
             {
-                z.BaseStream.CopyTo(r);
-
-                r.ToArray().ShouldBe(document);
+                zip.CopyTo(output);
+                output.ToArray().ShouldBe(document);
             }
+        }
+
+        [Fact]
+        public void WriteToZipFile()
+        {
+            var inner = new FileBackupWriter(".");
+            var decorator = new ZipBackupDecorator(inner);
+
+            var document = new byte[] { 65, 66, 67 };
+
+            decorator.Write("jacob.bak", document);
         }
     }
 }
