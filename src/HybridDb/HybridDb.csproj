@@ -82,7 +82,6 @@
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
-    <Compile Include="InterceptingDocumentStoreDecorator.cs" />
     <Compile Include="Migrations\ChangeDocument.cs" />
     <Compile Include="Migrations\DocumentMigrationCommand.cs" />
     <Compile Include="Migrations\DocumentMigrationRunner.cs" />
