@@ -6,11 +6,11 @@ using HybridDb.Config;
 
 namespace HybridDb.Tests
 {
-    public class TracingDocumentStore : IDocumentStore
+    public class TracingDocumentStoreDecorator : IDocumentStore
     {
         readonly IDocumentStore store;
 
-        public TracingDocumentStore(IDocumentStore store)
+        public TracingDocumentStoreDecorator(IDocumentStore store)
         {
             this.store = store;
 
@@ -40,7 +40,7 @@ namespace HybridDb.Tests
 
         public IDocumentSession OpenSession()
         {
-            return store.OpenSession();
+            return new DocumentSession(this);
         }
 
         public Guid Execute(IEnumerable<DatabaseCommand> commands)

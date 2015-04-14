@@ -72,7 +72,7 @@ namespace HybridDb
             commands = commands.ToList();
 
             if (!commands.Any())
-                throw new ArgumentException("No commands were passed");
+                return LastWrittenEtag;
 
             var timer = Stopwatch.StartNew();
             using (var connectionManager = Database.Connect())

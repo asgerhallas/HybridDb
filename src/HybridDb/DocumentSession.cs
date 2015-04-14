@@ -192,9 +192,6 @@ namespace HybridDb
                 }
             }
 
-            if (commands.Count + deferredCommands.Count == 0)
-                return;
-
             var etag = store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
 
             foreach (var managedEntity in commands.Keys)

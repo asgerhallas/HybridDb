@@ -86,6 +86,7 @@
     <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />
     <Compile Include="InlineMigration.cs" />
+    <Compile Include="InterceptingDocumentStoreDecorator.cs" />
     <Compile Include="Migrations\Commands\AddColumnTests.cs" />
     <Compile Include="Migrations\Commands\CreateTableTests.cs" />
     <Compile Include="Migrations\Commands\RemoveColumnTests.cs" />
@@ -96,7 +97,7 @@
     <Compile Include="HybridDbStoreTests.cs" />
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
-    <Compile Include="TracingDocumentStore.cs" />
+    <Compile Include="TracingDocumentStoreDecorator.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />

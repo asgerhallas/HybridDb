@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using FakeItEasy;
+using FakeItEasy.ExtensionSyntax;
 using HybridDb.Commands;
 using HybridDb.Linq;
 using Shouldly;
@@ -1071,6 +1074,58 @@ namespace HybridDb.Tests
 
                 // no migrations, means no backup
                 backupWriter.Files.Count.ShouldBe(0);
+            }
+        }
+
+        [Fact]
+        public void FailsOnSaveChangesWhenPreviousSaveFailed()
+        {
+            Document<Entity>();
+
+            var interceptor = new InterceptingDocumentStoreDecorator(store)
+            {
+                OverrideExecute = (documentStore, commands) =>
+                {
+                    throw new Exception();
+                }
+            };
+
+            using (var session = interceptor.OpenSession())
+            {
+                session.Store(new Entity());
+
+                try
+                {
+                    session.SaveChanges(); // fails when in an inconsitent state
+                }
+                catch (Exception){}
+                
+                Should.Throw<InvalidOperationException>(() => session.SaveChanges())
+                    .Message.ShouldBe("Session is not in a valid state. Please dispose it and open a new one.");
+            }
+        }
+
+        [Fact]
+        public void DoesNotFailsOnSaveChangesWhenPreviousSaveWasSuccessful()
+        {
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity());
+
+                session.SaveChanges();
+                session.SaveChanges();
+            }
+        }
+
+        [Fact]
+        public void DoesNotFailsOnSaveChangesWhenPreviousSaveWasNoop()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.SaveChanges();
+                session.SaveChanges();
             }
         }
 

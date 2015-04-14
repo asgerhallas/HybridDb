@@ -61,7 +61,7 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity())
             });
 
-            var counter = new TracingDocumentStore(store);
+            var counter = new TracingDocumentStoreDecorator(store);
             
             new DocumentMigrationRunner(counter).RunSynchronously();
 
@@ -88,7 +88,7 @@ namespace HybridDb.Tests.Migrations
             // bump the version of the configuration
             UseMigrations(new InlineMigration(1));
 
-            var counter = new TracingDocumentStore(store);
+            var counter = new TracingDocumentStoreDecorator(store);
 
             new DocumentMigrationRunner(counter).RunSynchronously();
 
