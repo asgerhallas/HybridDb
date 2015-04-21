@@ -108,6 +108,9 @@ namespace HybridDb.Linq.Parsers
                 case "StartsWith":
                     ast.Push(new SqlBinaryExpression(SqlNodeType.LikeStartsWith, ast.Pop(), ast.Pop()));
                     break;
+                case "Contains":
+                    ast.Push(new SqlBinaryExpression(SqlNodeType.LikeContains, ast.Pop(), ast.Pop()));
+                    break;
                 case "In":
                     var column = ast.Pop();
                     var sqlExpression = ast.Pop();

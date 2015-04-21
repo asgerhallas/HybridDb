@@ -47,6 +47,13 @@ namespace HybridDb.Linq
                     Visit(expression.Right);
                     sql.Append(" + '%'");
                     break;
+                case SqlNodeType.LikeContains:
+                    Visit(expression.Left);
+                    sql.Append(" LIKE ");
+                    sql.Append("'%' + ");
+                    Visit(expression.Right);
+                    sql.Append(" + '%'");
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }

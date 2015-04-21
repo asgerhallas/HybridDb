@@ -163,6 +163,14 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithContains()
+        {
+            var translation = Query<Entity>().Where(x => x.StringProp.Contains("L")).Translate();
+            translation.Where.ShouldBe("(StringProp LIKE '%' + @Value0 + '%')");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "L");
+        }
+
+        [Fact]
         public void CanQueryWithTypeConversion()
         {
             var translation = Query<Entity>().Where(x => x.NullableProperty == 2).Translate();
