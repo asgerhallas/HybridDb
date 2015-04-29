@@ -87,7 +87,7 @@ namespace HybridDb.Serialization
             converters = new JsonConverter[]
             {
                 new StringEnumConverter(), 
-                new GuidToStringConverter(),
+                //new GuidToStringConverter(),
             };
 
             contractResolver = new DefaultContractResolver();
