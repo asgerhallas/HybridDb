@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Migrations;
+using HybridDb.Serialization;
 using Serilog;
 
 namespace HybridDb.Config
@@ -22,7 +23,7 @@ namespace HybridDb.Config
                 .WriteTo.ColoredConsole()
                 .CreateLogger();
 
-            Serializer = new DefaultBsonSerializer();
+            Serializer = new DefaultSerializer();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunDocumentMigrationsOnStartup = true;

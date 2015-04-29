@@ -150,8 +150,7 @@
     <Compile Include="Config\IndexDesigner.cs" />
     <Compile Include="Config\IndexTable.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
-    <Compile Include="DefaultBsonSerializer.cs" />
-    <Compile Include="DefaultJsonSerializer.cs" />
+    <Compile Include="Serialization\DefaultJsonSerializer.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
     <Compile Include="Commands\InsertCommand.cs" />
@@ -161,6 +160,8 @@
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
+    <Compile Include="Serialization\DefaultSerializer.cs" />
+    <Compile Include="Serialization\GuidToStringConverter.cs" />
     <Compile Include="SqlBuilder.cs" />
     <Compile Include="Config\Table.cs" />
     <Compile Include="Config\SystemColumn.cs" />
@@ -182,10 +183,6 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>echo $(SolutionDir)merge.bat</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

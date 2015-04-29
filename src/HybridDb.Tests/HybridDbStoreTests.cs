@@ -1,4 +1,5 @@
 using System;
+using HybridDb.Serialization;
 
 namespace HybridDb.Tests
 {

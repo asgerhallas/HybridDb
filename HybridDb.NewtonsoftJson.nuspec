@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>HybridDb</id>
+    <id>HybridDb.NewtonsoftJson</id>
     <version>{VERSION}</version>
     <authors>Asger Hallas</authors>
     <owners>Asger Hallas</owners>
@@ -9,16 +9,15 @@
     <projectUrl>http://github.com/asgerhallas/HybridDb</projectUrl>
     <iconUrl>http://github.com/asgerhallas/HybridDb/assets/hybriddb.ico</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>It's an O/RM... it's a document store... no it's SQL Server!</description>
+    <description>Json.NET serializer for HybridDb</description>
     <releaseNotes></releaseNotes>
     <copyright>Copyright 2013</copyright>
     <tags></tags>
     <dependencies>
-      <dependency id="Serilog" version="1.4" />
+      <dependency id="Newtonsoft.Json" version="6.0.8" />
     </dependencies>
   </metadata>
   <files>
-    <file src="HybridDb\lib\*.*" target="lib\net40" />
-    <file src="HybridDb\tools\*.*" target="tools" />
+    <file src="NewtonsoftJson\lib\*.*" target="lib\net40" />
   </files>
 </package>

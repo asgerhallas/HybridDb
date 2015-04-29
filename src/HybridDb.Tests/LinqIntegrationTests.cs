@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using HybridDb.Linq;
+using HybridDb.Serialization;
 using Shouldly;
 using Xunit;
 

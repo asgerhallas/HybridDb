@@ -3,9 +3,9 @@ using System.IO;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace HybridDb
+namespace HybridDb.Serialization
 {
-    public class DefaultJsonSerializer : DefaultBsonSerializer
+    public class DefaultJsonSerializer : DefaultSerializer
     {
         public override byte[] Serialize(object obj)
         {

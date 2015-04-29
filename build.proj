@@ -2,6 +2,9 @@
 	<PropertyGroup>
 		<OutputFolder>build</OutputFolder>
 		<TempFolder>$(OutputFolder)\temp</TempFolder>
+    <HybridDbOutputFolder>$(OutputFolder)\HybridDb\lib</HybridDbOutputFolder>
+    <StudioOutputFolder>$(OutputFolder)\HybridDb\tools</StudioOutputFolder>
+    <NewtonsoftJsonOutputFolder>$(OutputFolder)\NewtonsoftJson\lib</NewtonsoftJsonOutputFolder>
 		<ToolsFolder>tools</ToolsFolder>
 		<IlMerge>$(ToolsFolder)\IlMerge.exe</IlMerge>
 		<Nuget>$(ToolsFolder)\Nuget.exe</Nuget>
@@ -38,8 +41,9 @@
 	<Target Name="Prepare" DependsOnTargets="Versionize">
 		<RemoveDir Directories="$(OutputFolder)" ContinueOnError="true"/>
 		<MakeDir Directories="$(OutputFolder)" ContinueOnError="true"/>
-		<MakeDir Directories="$(OutputFolder)\lib" ContinueOnError="false"/>
-		<MakeDir Directories="$(OutputFolder)\tools" ContinueOnError="false"/>
+    <MakeDir Directories="$(HybridDbOutputFolder)" ContinueOnError="true"/>
+    <MakeDir Directories="$(StudioOutputFolder)" ContinueOnError="false"/>
+		<MakeDir Directories="$(NewtonsoftJsonOutputFolder)" ContinueOnError="false"/>
 	</Target>
 
 	<Target Name="HybridDb" DependsOnTargets="Prepare">
@@ -52,9 +56,9 @@
 			<HybridDbFiles Include="Inflector.dll" />
 		</ItemGroup>
 		
-    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(OutputFolder)\lib\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
+    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(HybridDbOutputFolder)\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
 
-		<GetAssemblyIdentity AssemblyFiles="$(OutputFolder)\lib\HybridDb.dll">
+		<GetAssemblyIdentity AssemblyFiles="$(HybridDbOutputFolder)\HybridDb.dll">
 			<Output TaskParameter="Assemblies" ItemName="AssemblyIdentity"/>
 		</GetAssemblyIdentity>
 	</Target>
@@ -68,10 +72,21 @@
 			<StudioFiles Include="HybridDb.Studio.exe.config" />
 		</ItemGroup>
 		
-		<Copy SourceFiles="@(StudioFiles -> '$(SrcFolder)\HybridDb.Studio\$(BinFolder)\%(Identity)')" DestinationFolder="$(OutputFolder)\tools" />		
+		<Copy SourceFiles="@(StudioFiles -> '$(SrcFolder)\HybridDb.Studio\$(BinFolder)\%(Identity)')" DestinationFolder="$(StudioOutputFolder)" />		
 	</Target>
-	
-	<Target Name="Build" DependsOnTargets="HybridDb;Studio" />
+
+  <Target Name="NewtonsoftJson" DependsOnTargets="Prepare">
+    <MSBuild Projects="$(SrcFolder)\HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
+
+    <ItemGroup>
+      <NewtonsoftJsonFiles Include="HybridDb.NewtonsoftJson.dll" />
+      <NewtonsoftJsonFiles Include="HybridDb.NewtonsoftJson.pdb" />
+    </ItemGroup>
+    
+    <Copy SourceFiles="@(NewtonsoftJsonFiles -> '$(SrcFolder)\HybridDb.NewtonsoftJson\$(BinFolder)\%(Identity)')" DestinationFolder="$(NewtonsoftJsonOutputFolder)" />    
+  </Target>
+  
+	<Target Name="Build" DependsOnTargets="HybridDb;Studio;NewtonsoftJson" />
 
 	<Target Name="Test">
 		<MSBuild Projects="$(SrcFolder)\HybridDb.Tests\HybridDb.Tests.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
@@ -79,14 +94,19 @@
 		<xunit Assembly="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.Tests.dll" />
 	</Target>
 	
-	<Target Name="Pack" DependsOnTargets="Build;Test">
+	<Target Name="Pack" DependsOnTargets="Build">
 		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.nuspec" />
 		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.nuspec" Query="//version" Value="$(Version)" />
 		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.nuspec -OutputDirectory $(OutputFolder)"/>
+
+    <Copy SourceFiles="HybridDb.NewtonsoftJson.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.NewtonsoftJson.nuspec" />
+    <XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.NewtonsoftJson.nuspec" Query="//version" Value="$(Version)" />
+    <Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.NewtonsoftJson.nuspec -OutputDirectory $(OutputFolder)"/>
 	</Target>
 
-	<Target Name="Deploy" DependsOnTargets="Pack">
+	<Target Name="Deploy" DependsOnTargets="Pack;Test">
 		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.$(Version).nupkg"/>
+    <Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.NewtonsoftJson.$(Version).nupkg"/>
     <Exec Command="git tag $(Version)" />
     <Message Text="Tagged commit with tag '%VERSION%' - push tags to origin with 'git push --tags'" />
 	</Target>	
