@@ -12,9 +12,9 @@ namespace HybridDb.Linq.Parsers
                 switch (expression.NodeType)
                 {
                     case SqlNodeType.Equal:
-                        return new SqlBinaryExpression(SqlNodeType.Is, expression.Left, new SqlConstantExpression(null));
+                        return new SqlBinaryExpression(SqlNodeType.Is, expression.Left, new SqlConstantExpression(typeof(object), null));
                     case SqlNodeType.NotEqual:
-                        return new SqlBinaryExpression(SqlNodeType.IsNot, expression.Left, new SqlConstantExpression(null));
+                        return new SqlBinaryExpression(SqlNodeType.IsNot, expression.Left, new SqlConstantExpression(typeof(object), null));
                 }
             }
 

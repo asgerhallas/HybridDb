@@ -18,15 +18,15 @@ namespace HybridDb.Linq.Parsers
 
             var selectSql = new StringBuilder();
             if (queryVisitor.Select != null)
-                new SqlExpressionTranslator(selectSql, parameters).Visit(queryVisitor.Select);
+                new SqlCodeGenerator(selectSql, parameters).Visit(queryVisitor.Select);
 
             var whereSql = new StringBuilder();
             if (queryVisitor.Where != null)
-                new SqlExpressionTranslator(whereSql, parameters).Visit(queryVisitor.Where);
+                new SqlCodeGenerator(whereSql, parameters).Visit(queryVisitor.Where);
 
             var orderBySql = new StringBuilder();
             if (queryVisitor.OrderBy != null)
-                new SqlExpressionTranslator(orderBySql, parameters).Visit(queryVisitor.OrderBy);
+                new SqlCodeGenerator(orderBySql, parameters).Visit(queryVisitor.OrderBy);
 
             return new Translation
             {

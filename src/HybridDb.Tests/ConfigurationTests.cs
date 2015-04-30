@@ -4,7 +4,8 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using HybridDb.Schema;
+using HybridDb.Config;
+using HybridDb.Migrations;
 using Shouldly;
 using Xunit;
 
@@ -119,8 +120,8 @@ namespace HybridDb.Tests
         {
             configuration.Document<AbstractEntity>().With(x => x.Number);
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(false);
         }
 
@@ -131,8 +132,8 @@ namespace HybridDb.Tests
             configuration.Document<MoreDerivedEntity1>().With(x => x.Number);
             configuration.Document<MoreDerivedEntity2>();
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(true);
         }
 
@@ -170,8 +171,8 @@ namespace HybridDb.Tests
             configuration.Document<AbstractEntity>().With(x => x.LongNumber);
             configuration.Document<MoreDerivedEntity1>().With("LongNumber", x => x.Number);
 
-            var sqlColumn = TableFor<AbstractEntity>()["LongNumber"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int64);
+            var sqlColumn = TableFor<AbstractEntity>()["LongNumber"];
+            sqlColumn.Type.ShouldBe(typeof(long));
             sqlColumn.Nullable.ShouldBe(false);
 
             ProjectionsFor<AbstractEntity>()["LongNumber"].Projector(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 }).ShouldBe(1);
@@ -184,8 +185,8 @@ namespace HybridDb.Tests
             configuration.Document<AbstractEntity>().With(x => x.Number);
             configuration.Document<MoreDerivedEntity1>().With("Number", x => (int?)null);
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(true);
         }
 
@@ -195,8 +196,8 @@ namespace HybridDb.Tests
             configuration.Document<AbstractEntity>().With(x => x.Number);
             configuration.Document<MoreDerivedEntity1>().With(x => x.Number);
 
-            var sqlColumn = TableFor<AbstractEntity>()["Number"].SqlColumn;
-            sqlColumn.Type.ShouldBe(DbType.Int32);
+            var sqlColumn = TableFor<AbstractEntity>()["Number"];
+            sqlColumn.Type.ShouldBe(typeof(int));
             sqlColumn.Nullable.ShouldBe(false);
         }
 
@@ -241,6 +242,47 @@ namespace HybridDb.Tests
             configuration.GetDesignFor<DerivedEntity>().Parent.ShouldBe(configuration.GetDesignFor<AbstractEntity>());
             configuration.GetDesignFor<MoreDerivedEntity1>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
             configuration.GetDesignFor<MoreDerivedEntity2>().Parent.ShouldBe(configuration.GetDesignFor<DerivedEntity>());
+        }
+
+        [Fact]
+        public void CanReportInitialVersion()
+        {
+            configuration.ConfiguredVersion.ShouldBe(0);
+        }
+
+        [Fact]
+        public void CanReportVersion()
+        {
+            configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(2) });
+            configuration.ConfiguredVersion.ShouldBe(2);
+        }
+
+        [Fact]
+        public void ThrowsIfMigrationsDoesNotStartFromOne()
+        {
+            Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(2), new InlineMigration(3) }))
+                .Message.ShouldBe("Missing migration for version 1.");
+        }
+
+        [Fact]
+        public void ThrowsIfMigrationVersionHasHoles()
+        {
+            Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(3) }))
+                .Message.ShouldBe("Missing migration for version 2.");
+        }
+
+        [Fact]
+        public void HasDefaultBackupWriter()
+        {
+            configuration.BackupWriter.ShouldBeOfType<NullBackupWriter>();
+        }
+
+        [Fact]
+        public void CanConfigureBackupWriter()
+        {
+            var writer = new FileBackupWriter("test");
+            configuration.UseBackupWriter(writer);
+            configuration.BackupWriter.ShouldBe(writer);
         }
 
         public class Entity

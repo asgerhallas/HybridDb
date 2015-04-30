@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using HybridDb.Schema;
+using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
@@ -25,7 +25,8 @@ namespace HybridDb.Commands
             foreach (var projection in projections)
             {
                 var column = projection.Key;
-                AddTo(parameters, "@" + column.Name + i, projection.Value, column.SqlColumn.Type, column.SqlColumn.Length);
+                var sqlColumn = SqlTypeMap.Convert(column);
+                AddTo(parameters, "@" + column.Name + i, projection.Value, sqlColumn.DbType, sqlColumn.Length);
             }
 
             return parameters;

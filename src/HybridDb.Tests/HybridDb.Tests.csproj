@@ -34,22 +34,27 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Castle.Core">
-      <HintPath>..\packages\Castle.Core.3.1.0\lib\net35\Castle.Core.dll</HintPath>
-    </Reference>
     <Reference Include="Dapper, Version=1.12.1.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Dapper.1.13\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="FakeItEasy">
-      <HintPath>..\packages\FakeItEasy.1.7.4626.65\lib\NET40\FakeItEasy.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="FakeItEasy, Version=1.25.2.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\FakeItEasy.1.25.2\lib\net40\FakeItEasy.dll</HintPath>
     </Reference>
-    <Reference Include="Shouldly">
-      <HintPath>..\packages\Shouldly.1.1.1.1\lib\35\Shouldly.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog">
+      <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.FullNetFx">
+      <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.FullNetFx.dll</HintPath>
+    </Reference>
+    <Reference Include="Shouldly, Version=2.4.0.0, Culture=neutral, PublicKeyToken=6042cbcb05cbc941, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Shouldly.2.4.0\lib\net40\Shouldly.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -71,12 +76,28 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
+    <Compile Include="Bugs\NotGeneratingNullableColumnsForMethodReturningValueTypes.cs" />
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
-    <Compile Include="Migration\Commands\CreateTableTests.cs" />
-    <Compile Include="Migration\DocumentMigratorTests.cs" />
+    <Compile Include="Config\ColumnTests.cs" />
+    <Compile Include="Config\SqlTypeMapTests.cs" />
+    <Compile Include="DocumentMigratorTests.cs" />
+    <Compile Include="FakeBackupWriter.cs" />
+    <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />
-    <Compile Include="Migration\MigratorTests.cs" />
+    <Compile Include="InlineMigration.cs" />
+    <Compile Include="InterceptingDocumentStoreDecorator.cs" />
+    <Compile Include="Migrations\Commands\AddColumnTests.cs" />
+    <Compile Include="Migrations\Commands\CreateTableTests.cs" />
+    <Compile Include="Migrations\Commands\RemoveColumnTests.cs" />
+    <Compile Include="Migrations\Commands\RemoveTableTests.cs" />
+    <Compile Include="Migrations\Commands\RenameColumnTests.cs" />
+    <Compile Include="Migrations\Commands\RenameTableTests.cs" />
+    <Compile Include="Migrations\DocumentMigrationRunnerTests.cs" />
+    <Compile Include="HybridDbStoreTests.cs" />
+    <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
+    <Compile Include="Migrations\SchemaDifferTests.cs" />
+    <Compile Include="TracingDocumentStoreDecorator.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />
@@ -84,10 +105,12 @@
     <Compile Include="LinqTests.cs" />
     <Compile Include="Performance\BinaryComparisonPerformance.cs" />
     <Compile Include="Performance\PerformanceTests.cs" />
-    <Compile Include="Migration\SchemaMigratorTests.cs" />
     <Compile Include="Performance\Entity.cs" />
     <Compile Include="Performance\QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="DatabaseQuerySchemaTests.cs" />
+    <Compile Include="DatabaseTableModeTests.cs" />
+    <Compile Include="ZipBackupDecoratorTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -96,10 +119,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj">
-      <Project>{D93D1D1C-17DE-49D7-924B-D3977F0A54F4}</Project>
-      <Name>HybridDb.MigrationRunner</Name>
-    </ProjectReference>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj">
       <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
       <Name>HybridDb</Name>

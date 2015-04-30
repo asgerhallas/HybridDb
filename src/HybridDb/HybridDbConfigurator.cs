@@ -1,5 +1,8 @@
-using HybridDb.Logging;
-using HybridDb.Schema;
+using System.Collections.Generic;
+using System.Linq;
+using HybridDb.Config;
+using HybridDb.Migrations;
+using Serilog;
 
 namespace HybridDb
 {
@@ -17,6 +20,11 @@ namespace HybridDb
             return configuration;
         }
 
+        protected virtual void Reset()
+        {
+            configuration = new Configuration();
+        }
+
         protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null)
         {
             return configuration.Document<TEntity>(tablename, discriminator);
@@ -30,6 +38,26 @@ namespace HybridDb
         protected void UseLogger(ILogger logger)
         {
             configuration.UseLogger(logger);
+        }
+
+        protected void UseMigrations(IReadOnlyList<Migration> migrations)
+        {
+            configuration.UseMigrations(migrations);
+        }
+
+        protected void UseMigrations(params Migration[] migrations)
+        {
+            configuration.UseMigrations(migrations.ToList());
+        }
+
+        protected void UseBackupWriter(IBackupWriter writer)
+        {
+            configuration.UseBackupWriter(writer);
+        }
+
+        protected void DisableDocumentMigrationsInBackground()
+        {
+            configuration.DisableDocumentMigrationsOnStartup();
         }
     }
 }

@@ -1,37 +1,41 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	<UsingTask TaskName="Microsoft.Build.Tasks.XmlPoke" AssemblyName="Microsoft.Build.Tasks.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
-
-	<UsingTask TaskName="Now" TaskFactory="CodeTaskFactory"  AssemblyName="Microsoft.Build.Tasks.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-		<ParameterGroup>
-			<Timestamp ParameterType="System.String" Output="true" />
-		</ParameterGroup>
-		<Task>
-			<Using Namespace="System"/>
-			<Code Type="Fragment" Language="cs">
-			<![CDATA[
-				Timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-			]]>
-			</Code>
-		</Task>
-	</UsingTask>
-	
-	<UsingTask AssemblyFile="tools\xunit\xunit.runner.msbuild.dll" TaskName="Xunit.Runner.MSBuild.xunit"/>
-	
 	<PropertyGroup>
 		<OutputFolder>build</OutputFolder>
 		<TempFolder>$(OutputFolder)\temp</TempFolder>
 		<ToolsFolder>tools</ToolsFolder>
 		<IlMerge>$(ToolsFolder)\IlMerge.exe</IlMerge>
 		<Nuget>$(ToolsFolder)\Nuget.exe</Nuget>
-		
 		<SrcFolder>src</SrcFolder>
 		<BinFolder>bin\Release</BinFolder>
-		<MSBuildCommunityTasksLib>tools\</MSBuildCommunityTasksLib>
 	</PropertyGroup>
 
-	<Target Name="Build" DependsOnTargets="HybridDb;Studio;MigrationRunner" />
-	
-	<Target Name="Prepare">
+  <Import Project="$(ToolsFolder)\FileReplace.targets" /> 
+	<UsingTask TaskName="Microsoft.Build.Tasks.XmlPoke" AssemblyName="Microsoft.Build.Tasks.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
+	<UsingTask AssemblyFile="tools\xunit\xunit.runner.msbuild.dll" TaskName="Xunit.Runner.MSBuild.xunit"/>
+
+  <Target Name="ValidateVersion">
+    <Error Condition="'$(Version)' == ''" Text="No version specified! The version parameter must be specified in order to build &amp; release NuGet packages."/>
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^\d+\.\d+\.\d+(\-.+)?$'))" Text="Specified version is not correct format."/>
+  </Target>
+
+  <Target Name="Versionize" DependsOnTargets="ValidateVersion">
+    <ItemGroup>
+     <AssemblyInfos Include=".\**\AssemblyInfo.cs" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <AssemblyVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '^(\d+\.\d+)\.\d+(\-.+)?$', '$1'))</AssemblyVersion>
+      <AssemblyFileVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '^(\d+\.\d+\.\d+)(\-.+)?$', '$1'))</AssemblyFileVersion>
+    </PropertyGroup>
+
+    <FileReplace 
+      Files="$(SrcFolder)\GlobalAssemblyInfo.cs" 
+      Match='AssemblyVersion\(".+"\);AssemblyFileVersion\(".+"\);AssemblyInformationalVersion\(".+"\)'
+      ReplaceWith='AssemblyVersion("$(AssemblyVersion)");AssemblyFileVersion("$(AssemblyFileVersion)");AssemblyInformationalVersion("$(Version)")' />
+
+  </Target>
+
+	<Target Name="Prepare" DependsOnTargets="Versionize">
 		<RemoveDir Directories="$(OutputFolder)" ContinueOnError="true"/>
 		<MakeDir Directories="$(OutputFolder)" ContinueOnError="true"/>
 		<MakeDir Directories="$(OutputFolder)\lib" ContinueOnError="false"/>
@@ -48,7 +52,7 @@
 			<HybridDbFiles Include="Inflector.dll" />
 		</ItemGroup>
 		
-	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(OutputFolder)\lib\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
+    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(OutputFolder)\lib\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>
 
 		<GetAssemblyIdentity AssemblyFiles="$(OutputFolder)\lib\HybridDb.dll">
 			<Output TaskParameter="Assemblies" ItemName="AssemblyIdentity"/>
@@ -66,45 +70,25 @@
 		
 		<Copy SourceFiles="@(StudioFiles -> '$(SrcFolder)\HybridDb.Studio\$(BinFolder)\%(Identity)')" DestinationFolder="$(OutputFolder)\tools" />		
 	</Target>
-
-	<Target Name="MigrationRunner" DependsOnTargets="Prepare;HybridDb">
-		<MSBuild Projects="$(SrcFolder)\HybridDb.MigrationRunner\HybridDb.MigrationRunner.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
-
-		<ItemGroup>
-			<MigrationRunnerFiles Include="HybridDb.MigrationRunner.exe" />
-			<MigrationRunnerFiles Include="Serilog.dll" />
-			<MigrationRunnerFiles Include="Serilog.FullNetFx.dll" />
-		</ItemGroup>
-		
-	    <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:exe /internalize /out:$(OutputFolder)\tools\HybridDb.MigrationRunner.exe @(MigrationRunnerFiles -> '$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\%(Identity)', ' ')  $(OutputFolder)\lib\HybridDb.dll"/>
-		
-		<Copy SourceFiles="$(SrcFolder)\HybridDb.MigrationRunner\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />
-	</Target>
 	
+	<Target Name="Build" DependsOnTargets="HybridDb;Studio" />
+
 	<Target Name="Test">
 		<MSBuild Projects="$(SrcFolder)\HybridDb.Tests\HybridDb.Tests.csproj" StopOnFirstFailure="true" Properties="Configuration=Release" />
 
-		<!--<Copy SourceFiles="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.MigrationRunner.exe.config" DestinationFolder="$(OutputFolder)\tools" />-->
 		<xunit Assembly="$(SrcFolder)\HybridDb.Tests\$(BinFolder)\HybridDb.Tests.dll" />
 	</Target>
 	
-	
-	<Target Name="DeployRelease" DependsOnTargets="Build;Test">
-		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.release.nuspec" />
-		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.release.nuspec" Query="//version" Value="%(AssemblyIdentity.Version)" />
-		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.release.nuspec -OutputDirectory $(OutputFolder)"/>
-		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.%(AssemblyIdentity.Version).nupkg"/>
+	<Target Name="Pack" DependsOnTargets="Build;Test">
+		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.nuspec" />
+		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.nuspec" Query="//version" Value="$(Version)" />
+		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.nuspec -OutputDirectory $(OutputFolder)"/>
 	</Target>
 
-	<Target Name="DeployPreRelease" DependsOnTargets="Build">
-		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.prerelease.nuspec" />
-
-		<Now><Output TaskParameter="Timestamp" PropertyName="Timestamp" /></Now>
-	
-		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.prerelease.nuspec" Query="//version" Value="%(AssemblyIdentity.Version)-pre$(Timestamp)" />
-
-		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.prerelease.nuspec -OutputDirectory $(OutputFolder)"/>
-		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.%(AssemblyIdentity.Version)-pre$(Timestamp).nupkg"/>
+	<Target Name="Deploy" DependsOnTargets="Pack">
+		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.$(Version).nupkg"/>
+    <Exec Command="git tag $(Version)" />
+    <Message Text="Tagged commit with tag '%VERSION%' - push tags to origin with 'git push --tags'" />
 	</Target>	
 	
 </Project>

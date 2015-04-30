@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using HybridDb.Schema;
+using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
@@ -8,9 +8,9 @@ namespace HybridDb.Commands
     {
         readonly Guid key;
         readonly object projections;
-        readonly Table table;
+        readonly DocumentTable table;
 
-        public InsertCommand(Table table, Guid key, object projections)
+        public InsertCommand(DocumentTable table, Guid key, object projections)
         {
             this.table = table;
             this.key = key;
@@ -27,27 +27,9 @@ namespace HybridDb.Commands
             values[table.ModifiedAtColumn] = DateTimeOffset.Now;
 
             var sql = string.Format("insert into {0} ({1}) values ({2});",
-                store.FormatTableNameAndEscape(table.Name),
+                store.Database.FormatTableNameAndEscape(table.Name),
                 string.Join(", ", from column in values.Keys select column.Name),
                 string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier));
-
-            //var collectionProjections = values.Where(x => x.Key is CollectionColumn)
-            //                                  .ToDictionary(x => (CollectionColumn) x.Key, x => x.Value);
-
-            //foreach (var collectionProjection in collectionProjections)
-            //{
-            //    var projectionTable = collectionProjection.Key.Table;
-
-            //    var blahs = new Dictionary<Column, object> { { collectionProjection.Key, collectionProjection.Value } };
-
-            //    blahs.Add(projectionTable.DocumentIdColumn, key);
-            //    //blahs.Add(projectionTable.DocumentColumn, document);
-
-            //    //sql += string.Format("insert into {0} ({1}) values ({2});",
-            //    //                     store.Escape(store.GetFormattedTableName(projectionTable)),
-            //    //                     string.Join(", ", from column in blahs.Keys select column.Name),
-            //    //                     string.Join(", ", from column in blahs.Keys select "@" + column.Name + uniqueParameterIdentifier));
-            //}
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
 

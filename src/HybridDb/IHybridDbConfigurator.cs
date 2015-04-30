@@ -1,4 +1,5 @@
 using System;
+using HybridDb.Config;
 
 namespace HybridDb
 {

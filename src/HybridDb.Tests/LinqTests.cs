@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Reflection;
-using System.Security.Policy;
 using HybridDb.Linq;
-using HybridDb.Schema;
 using Shouldly;
 using Xunit;
 
@@ -166,6 +163,14 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithContains()
+        {
+            var translation = Query<Entity>().Where(x => x.StringProp.Contains("L")).Translate();
+            translation.Where.ShouldBe("(StringProp LIKE '%' + @Value0 + '%')");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "L");
+        }
+
+        [Fact]
         public void CanQueryWithTypeConversion()
         {
             var translation = Query<Entity>().Where(x => x.NullableProperty == 2).Translate();
@@ -212,8 +217,8 @@ namespace HybridDb.Tests
             var queryable = Query<Entity>().Where(x => x.Property == 2).AsProjection<ProjectedEntity>();
             var translation = queryable.Translate();
 
-            queryable.ShouldBeTypeOf<IQueryable<ProjectedEntity>>();
-            queryable.Provider.ShouldBeTypeOf<QueryProvider<Entity>>();
+            queryable.ShouldBeOfType<Query<ProjectedEntity>>();
+            queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("(Property = @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 2);
@@ -223,8 +228,8 @@ namespace HybridDb.Tests
         public void CanQueryWithOnlyNamedProjection()
         {
             var queryable = Query<Entity>().AsProjection<ProjectedEntity>();
-            queryable.ShouldBeTypeOf<IQueryable<ProjectedEntity>>();
-            queryable.Provider.ShouldBeTypeOf<QueryProvider<Entity>>();
+            queryable.ShouldBeOfType<Query<ProjectedEntity>>();
+            queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
         }
 
         [Fact]
@@ -581,7 +586,7 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", "asger");
         }
 
-        [Fact]
+        [Fact(Skip = "Issue #30")]
         public void CanQueryEnums()
         {
             var translation = Query<Entity>().Where(x => x.Enum == Enumse.Second).Translate();
@@ -590,9 +595,18 @@ namespace HybridDb.Tests
             translation.Parameters.ShouldContainKeyAndValue("@Value0", "Second");
         }
 
+        [Fact]
+        public void CanQueryOnUserDefinedColumnFromVariable()
+        {
+            var somecolumn = new Entity {StringProp = "SomeColumn"};
+            var translation = Query<Entity>().OrderBy(x => x.Column<string>(somecolumn.StringProp.ToString())).Translate();
+
+            translation.OrderBy.ShouldBe("SomeColumn");
+        }
+
         Query<T> Query<T>() where T : class
         {
-            var store = DocumentStore.ForTestingWithTempTables();
+            var store = DocumentStore.ForTesting(TableMode.UseTempTables);
             var session = new DocumentSession(store);
             return new Query<T>(new QueryProvider<T>(session, null));
         }

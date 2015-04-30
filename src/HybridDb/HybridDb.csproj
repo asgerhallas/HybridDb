@@ -46,9 +46,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Inflector.1.0.0.0\lib\net45\Inflector.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog">
+      <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.FullNetFx">
+      <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.FullNetFx.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -67,16 +73,36 @@
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
-    <Compile Include="DocumentStoreEx.cs" />
+    <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Config\DynamicDocumentTable.cs" />
+    <Compile Include="Config\SqlColumn.cs" />
+    <Compile Include="Config\SqlTypeMap.cs" />
+    <Compile Include="Database.cs" />
+    <Compile Include="DocumentStoreExtensions.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
-    <Compile Include="IMigration.cs" />
+    <Compile Include="Migrations\ChangeDocument.cs" />
+    <Compile Include="Migrations\DocumentMigrationCommand.cs" />
+    <Compile Include="Migrations\DocumentMigrationRunner.cs" />
+    <Compile Include="Migrations\DocumentMigrator.cs" />
+    <Compile Include="Migrations\FileBackupWriter.cs" />
+    <Compile Include="Migrations\IBackupWriter.cs" />
+    <Compile Include="Migrations\IMigrationProvider.cs" />
+    <Compile Include="Migrations\ISchemaDiffer.cs" />
+    <Compile Include="Migrations\Migration.cs" />
+    <Compile Include="Migrations\NullBackupWriter.cs" />
+    <Compile Include="Migrations\SchemaMigrationRunner.cs" />
+    <Compile Include="Migrations\SchemaDiffer.cs" />
     <Compile Include="LinqEx.cs" />
     <Compile Include="Linq\Ast\SqlColumnPrefixExpression.cs" />
-    <Compile Include="Migration\Commands\CreateTable.cs" />
-    <Compile Include="Migration\Commands\RemoveTable.cs" />
-    <Compile Include="Migration\ISchemaMigrator.cs" />
+    <Compile Include="Migrations\Commands\AddColumn.cs" />
+    <Compile Include="Migrations\Commands\CreateTable.cs" />
+    <Compile Include="Migrations\Commands\RemoveColumn.cs" />
+    <Compile Include="Migrations\Commands\RemoveTable.cs" />
+    <Compile Include="Migrations\Commands\RenameColumn.cs" />
+    <Compile Include="Migrations\Commands\RenameTable.cs" />
+    <Compile Include="Migrations\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />
     <Compile Include="Linq\Ast\SqlProjectionExpression.cs" />
@@ -95,8 +121,8 @@
     <Compile Include="Linq\Ast\SqlColumnExpression.cs" />
     <Compile Include="Linq\Ast\SqlConstantExpression.cs" />
     <Compile Include="Linq\Ast\SqlExpression.cs" />
-    <Compile Include="Linq\Parsers\SqlExpressionTranslator.cs" />
-    <Compile Include="Linq\Parsers\SqlExpressionVisitor.cs" />
+    <Compile Include="Linq\SqlCodeGenerator.cs" />
+    <Compile Include="Linq\SqlExpressionVisitor.cs" />
     <Compile Include="Linq\Ast\SqlNodeType.cs" />
     <Compile Include="Linq\Ast\SqlNotExpression.cs" />
     <Compile Include="Linq\Ast\SqlQueryExpression.cs" />
@@ -111,54 +137,47 @@
     <Compile Include="Linq\Translation.cs" />
     <Compile Include="ManagedConnection.cs" />
     <Compile Include="MemberInfoEx.cs" />
-    <Compile Include="Migration\DocumentMigrator.cs" />
-    <Compile Include="Migration\Migration.cs" />
-    <Compile Include="Migration\SchemaMigrationCommand.cs" />
-    <Compile Include="Migration\SchemaMigrator.cs" />
+    <Compile Include="Migrations\SchemaMigrationCommand.cs" />
+    <Compile Include="Migrations\ZipBackupDecorator.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />
-    <Compile Include="Logging\ColorSetting.cs" />
-    <Compile Include="Schema\Column.cs" />
-    <Compile Include="Schema\DocumentDesign.cs" />
+    <Compile Include="Config\Column.cs" />
+    <Compile Include="Config\DocumentDesign.cs" />
     <Compile Include="NullCheckInjector.cs" />
-    <Compile Include="Schema\DocumentDesigner.cs" />
-    <Compile Include="Schema\DocumentTable.cs" />
-    <Compile Include="Schema\IndexDesigner.cs" />
-    <Compile Include="Schema\IndexTable.cs" />
-    <Compile Include="Schema\SqlColumn.cs" />
-    <Compile Include="Logging\ConsoleLogger.cs" />
+    <Compile Include="Config\DocumentDesigner.cs" />
+    <Compile Include="Config\DocumentTable.cs" />
+    <Compile Include="Config\IndexDesigner.cs" />
+    <Compile Include="Config\IndexTable.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
     <Compile Include="DefaultBsonSerializer.cs" />
     <Compile Include="DefaultJsonSerializer.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
-    <Compile Include="Logging\ILogger.cs" />
     <Compile Include="Commands\InsertCommand.cs" />
     <Compile Include="ISerializer.cs" />
-    <Compile Include="Logging\LoggingColors.cs" />
-    <Compile Include="Logging\LogLevel.cs" />
-    <Compile Include="Schema\CollectionColumn.cs" />
+    <Compile Include="Config\CollectionColumn.cs" />
     <Compile Include="ConcurrencyException.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
     <Compile Include="SqlBuilder.cs" />
-    <Compile Include="Schema\Table.cs" />
-    <Compile Include="Schema\SystemColumn.cs" />
+    <Compile Include="Config\Table.cs" />
+    <Compile Include="Config\SystemColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
-    <Compile Include="Schema\ITable.cs" />
-    <Compile Include="Configuration.cs" />
+    <Compile Include="Config\ITable.cs" />
+    <Compile Include="Config\Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringEx.cs" />
     <Compile Include="TableBuilder.cs" />
+    <Compile Include="TableMode.cs" />
     <Compile Include="TableNotFoundException.cs" />
     <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Migration\packages.config" />
+    <None Include="Migrations\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

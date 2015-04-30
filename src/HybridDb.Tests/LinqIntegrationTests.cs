@@ -6,7 +6,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class LinqIntegrationTests : HybridDbTests
+    public class LinqIntegrationTests : HybridDbStoreTests
     {
         readonly IDocumentSession session;
 

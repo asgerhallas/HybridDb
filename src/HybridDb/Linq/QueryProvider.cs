@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using HybridDb.Schema;
+using HybridDb.Config;
 
 namespace HybridDb.Linq
 {
@@ -111,7 +111,7 @@ namespace HybridDb.Linq
             }
             else
             {
-                var table = (Table) design.Table;
+                var table = design.Table;
 
                 QueryStats storeStats;
                 var results = store.Query<TProjection>(

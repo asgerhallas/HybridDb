@@ -130,7 +130,8 @@ namespace HybridDb.Tests.Performance
         {
             public SystemModifierFixture()
             {
-                using (var store = DocumentStore.ForTestingWithTempTables(
+                using (var store = DocumentStore.ForTesting(
+                    TableMode.UseTempTables,
                     configurator: new LambdaHybridDbConfigurator(c =>
                         c.Document<Entity>()
                             .With(x => x.SomeData)
@@ -150,7 +151,7 @@ namespace HybridDb.Tests.Performance
                     decimal time = 0;
                     for (var i = 0; i < 10; i++)
                     {
-                        time += Time(() => store.RawQuery<object>("select * from #Entities").ToList(), 1m);
+                        time += Time(() => ((DocumentStore)store).Database.RawQuery<object>("select * from #Entities").ToList(), 1m);
                     }
 
                     // The below constant is chosen to get as close 1.0 on my machine as possible.

@@ -9,7 +9,7 @@ namespace HybridDb.Tests.Performance
 {
     public class QueryPerformanceTests : PerformanceTests, IUseFixture<QueryPerformanceTests.Fixture>
     {
-        protected DocumentStore store;
+        protected IDocumentStore store;
 
         [Fact]
         public void SimpleQueryWithoutMaterialization()
@@ -60,9 +60,9 @@ namespace HybridDb.Tests.Performance
 
         public class Fixture : IDisposable
         {
-            readonly DocumentStore store;
+            readonly IDocumentStore store;
 
-            public DocumentStore Store
+            public IDocumentStore Store
             {
                 get { return store; }
             }
@@ -71,7 +71,9 @@ namespace HybridDb.Tests.Performance
             {
                 const string connectionString = "data source=.;Integrated Security=True";
 
-                store = DocumentStore.ForTestingWithTempTables(connectionString,
+                store = DocumentStore.ForTesting(
+                    TableMode.UseTempTables,
+                    connectionString,
                     new LambdaHybridDbConfigurator(c =>
                         c.Document<Entity>()
                             .With(x => x.SomeData)

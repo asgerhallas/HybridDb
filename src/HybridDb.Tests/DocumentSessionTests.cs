@@ -1,36 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
+using FakeItEasy;
+using FakeItEasy.ExtensionSyntax;
 using HybridDb.Commands;
+using HybridDb.Linq;
 using Shouldly;
 using Xunit;
-using System.Linq;
-using HybridDb.Linq;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTests : HybridDbTests
+    public class DocumentSessionTests : HybridDbStoreTests
     {
-        [Fact(Skip = "Feature on holds")]
-        public void CanProjectCollection()
-        {
-            var id = Guid.NewGuid();
-            using (var session = store.OpenSession())
-            {
-                var entity1 = new Entity
-                {
-                    Id = id,
-                    Children =
-                    {
-                        new Entity.Child {NestedProperty = "A"},
-                        new Entity.Child {NestedProperty = "B"}
-                    }
-                };
-
-                session.Store(entity1);
-            }
-        }
-
         [Fact]
         public void CanEvictEntity()
         {
@@ -75,13 +58,16 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Advanced.Defer(new InsertCommand(table.Table, id, new{}));
-                store.NumberOfRequests.ShouldBe(0);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
                 session.SaveChanges();
-                store.NumberOfRequests.ShouldBe(1);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
-            var entity = store.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
+            var entity = database.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
             Assert.NotNull(entity);
         }
 
@@ -102,7 +88,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);
@@ -122,7 +108,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.Null(entity.TheChildNestedProperty);
         }
 
@@ -153,7 +139,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var retrivedId = store.RawQuery<Guid>("select Id from #Entities").SingleOrDefault();
+            var retrivedId = database.RawQuery<Guid>("select Id from #Entities").SingleOrDefault();
             retrivedId.ShouldBe(id);
         }
 
@@ -393,6 +379,9 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges(); // 1
                 session.Advanced.Clear();
@@ -401,7 +390,7 @@ namespace HybridDb.Tests
                 document.Property = "Lars";
                 session.SaveChanges(); // 3
 
-                store.NumberOfRequests.ShouldBe(3);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
                 session.Advanced.Clear();
                 session.Load<Entity>(id).Property.ShouldBe("Lars");
             }
@@ -415,6 +404,9 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges(); // 1
                 session.Advanced.Clear();
@@ -422,7 +414,7 @@ namespace HybridDb.Tests
                 session.Load<Entity>(id); // 2
                 session.SaveChanges(); // Should not issue a request
 
-                store.NumberOfRequests.ShouldBe(2);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
             }
         }
 
@@ -437,21 +429,24 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
+                // the initial migrations might issue some requests
+                var initialNumberOfRequest = store.NumberOfRequests;
+
                 session.Store(new Entity { Id = id1, Property = "Asger" });
                 session.Store(new Entity { Id = id2, Property = "Asger" });
                 session.SaveChanges(); // 1
-                store.NumberOfRequests.ShouldBe(1);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
                 session.Advanced.Clear();
 
                 var entity1 = session.Load<Entity>(id1); // 2
                 var entity2 = session.Load<Entity>(id2); // 3
-                store.NumberOfRequests.ShouldBe(3);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
 
                 session.Delete(entity1);
                 entity2.Property = "Lars";
                 session.Store(new Entity { Id = id3, Property = "Jacob" });
                 session.SaveChanges(); // 4
-                store.NumberOfRequests.ShouldBe(4);
+                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 4);
             }
         }
 
@@ -656,11 +651,11 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity1 = session.Load<ISomeInterface>(id);
-                entity1.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity1.ShouldBeOfType<MoreDerivedEntity1>();
                 entity1.Property.ShouldBe("Asger");
 
                 var entity2 = session.Load<IOtherInterface>(id);
-                entity2.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity2.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -678,7 +673,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Load<AbstractEntity>(id);
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -696,7 +691,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Load<MoreDerivedEntity1>(id);
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -749,12 +744,12 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<ISomeInterface>().OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities.Count().ShouldBe(2);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
-                entities[1].ShouldBeTypeOf<MoreDerivedEntity2>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity1>();
+                entities[1].ShouldBeOfType<MoreDerivedEntity2>();
 
                 var entities2 = session.Query<IOtherInterface>().OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities2.Count().ShouldBe(1);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
 
@@ -774,8 +769,8 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").OrderBy(x => x.Column<string>("Discriminator")).ToList();
                 entities.Count().ShouldBe(2);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity1>();
-                entities[1].ShouldBeTypeOf<MoreDerivedEntity2>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity1>();
+                entities[1].ShouldBeOfType<MoreDerivedEntity2>();
             }
         }
 
@@ -795,12 +790,12 @@ namespace HybridDb.Tests
 
                 var entities = session.Query<MoreDerivedEntity2>().Where(x => x.Property == "Asger").ToList();
                 entities.Count.ShouldBe(1);
-                entities[0].ShouldBeTypeOf<MoreDerivedEntity2>();
+                entities[0].ShouldBeOfType<MoreDerivedEntity2>();
             }
         }
 
-        [Fact]
-        public void AutoRegistersSubTypesWhenStoredFirstTime()
+        [Fact(Skip = "Issue 29")]
+        public void AutoRegistersSubTypesOnStore()
         {
             Document<AbstractEntity>().With(x => x.Property);
 
@@ -809,10 +804,36 @@ namespace HybridDb.Tests
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
                 session.SaveChanges();
-                session.Advanced.Clear();
+
+                configuration.TryGetDesignFor<MoreDerivedEntity1>().ShouldNotBe(null);
 
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
+            }
+        }
+
+        [Fact(Skip = "Issue 29")]
+        public void AutoRegistersSubTypesOnLoad()
+        {
+            Document<AbstractEntity>().With(x => x.Property);
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<AbstractEntity>().With(x => x.Property);
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<AbstractEntity>(id);
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
+
+                configuration.TryGetDesignFor<MoreDerivedEntity1>().ShouldNotBe(null);
             }
         }
 
@@ -838,7 +859,7 @@ namespace HybridDb.Tests
             Document<AbstractEntity>()
                 .Extend<EntityIndex>(e => e.With(x => x.YksiKaksiKolme, x => x.Number))
                 .With(x => x.Property);
-
+            Document<MoreDerivedEntity1>();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
@@ -852,7 +873,279 @@ namespace HybridDb.Tests
                 //           select x;
 
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger" && x.Index<EntityIndex>().YksiKaksiKolme > 1);
-                entity.ShouldBeTypeOf<MoreDerivedEntity1>();
+                entity.ShouldBeOfType<MoreDerivedEntity1>();
+            }
+        }
+
+        [Fact]
+        public void AppliesMigrationsOnLoad()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                entity.Property.ShouldBe("Peter");
+            }
+        }
+
+        [Fact]
+        public void AppliesMigrationsOnQuery()
+        {
+            Document<AbstractEntity>().With(x => x.Number);
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new DerivedEntity { Property = "Asger", Number = 1 });
+                session.Store(new MoreDerivedEntity1 { Property = "Jacob", Number = 2 });
+                session.Store(new MoreDerivedEntity2 { Property = "Lars", Number = 3 });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<AbstractEntity>().With(x => x.Number);
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
+                new InlineMigration(2, new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
+
+            using (var session = store.OpenSession())
+            {
+                var rows = session.Query<AbstractEntity>().OrderBy(x => x.Number).ToList();
+
+                rows[0].Property.ShouldBe("Asger er cool");
+                rows[1].Property.ShouldBe("Jacob er cool");
+                rows[2].Property.ShouldBe("Lars er coolio");
+            }
+        }
+
+        [Fact]
+        public void TracksChangesFromMigrations()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
+
+            var numberOfRequests = store.NumberOfRequests;
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+                session.SaveChanges();
+            }
+
+            (store.NumberOfRequests-numberOfRequests).ShouldBe(1);
+        }
+
+        [Fact]
+        public void AddsVersionOnInsert()
+        {
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+            }
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+            var row = store.Get(table, id);
+            ((int)row[table.VersionColumn]).ShouldBe(2);
+        }
+
+        [Fact]
+        public void UpdatesVersionOnUpdate()
+        {
+            Document<Entity>();
+
+            var id = Guid.NewGuid();
+            var table = configuration.GetDesignFor<Entity>().Table;
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+            }
+
+            Reset();
+            Document<Entity>();
+            InitializeStore();
+            UseMigrations(new InlineMigration(1), new InlineMigration(2));
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                entity.Number++;
+                session.SaveChanges();
+            }
+
+            var row = store.Get(table, id);
+            ((int)row[table.VersionColumn]).ShouldBe(2);
+        }
+
+        [Fact]
+        public void BacksUpMigratedDocumentOnSave()
+        {
+            var id = Guid.NewGuid();
+
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<Entity>();
+            DisableDocumentMigrationsInBackground();
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })),
+                new InlineMigration(2, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "2"; })));
+
+            var backupWriter = new FakeBackupWriter();
+            UseBackupWriter(backupWriter);
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+
+                // no backup on load
+                backupWriter.Files.Count.ShouldBe(0);
+
+                session.SaveChanges();
+
+                // backup on save
+                backupWriter.Files.Count.ShouldBe(1);
+                backupWriter.Files[string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_0.bak", id)]
+                    .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
+            }
+        }
+
+        [Fact]
+        public void DoesNotBackUpDocumentWithNoMigrations()
+        {
+            Document<Entity>();
+
+            var backupWriter = new FakeBackupWriter();
+            UseBackupWriter(backupWriter);
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+                session.SaveChanges();
+
+                // no migrations, means no backup
+                backupWriter.Files.Count.ShouldBe(0);
+            }
+        }
+
+        [Fact]
+        public void FailsOnSaveChangesWhenPreviousSaveFailed()
+        {
+            Document<Entity>();
+
+            var interceptor = new InterceptingDocumentStoreDecorator(store)
+            {
+                OverrideExecute = (documentStore, commands) =>
+                {
+                    throw new Exception();
+                }
+            };
+
+            using (var session = interceptor.OpenSession())
+            {
+                session.Store(new Entity());
+
+                try
+                {
+                    session.SaveChanges(); // fails when in an inconsitent state
+                }
+                catch (Exception){}
+                
+                Should.Throw<InvalidOperationException>(() => session.SaveChanges())
+                    .Message.ShouldBe("Session is not in a valid state. Please dispose it and open a new one.");
+            }
+        }
+
+        [Fact]
+        public void DoesNotFailsOnSaveChangesWhenPreviousSaveWasSuccessful()
+        {
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity());
+
+                session.SaveChanges();
+                session.SaveChanges();
+            }
+        }
+
+        [Fact]
+        public void DoesNotFailsOnSaveChangesWhenPreviousSaveWasNoop()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.SaveChanges();
+                session.SaveChanges();
+            }
+        }
+
+        [Fact(Skip = "Feature on holds")]
+        public void CanProjectCollection()
+        {
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                var entity1 = new Entity
+                {
+                    Id = id,
+                    Children =
+                    {
+                        new Entity.Child {NestedProperty = "A"},
+                        new Entity.Child {NestedProperty = "B"}
+                    }
+                };
+
+                session.Store(entity1);
             }
         }
 

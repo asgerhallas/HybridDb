@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
-using HybridDb.Schema;
+using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
@@ -11,9 +11,9 @@ namespace HybridDb.Commands
         readonly Guid currentEtag;
         readonly bool lastWriteWins;
         readonly Guid key;
-        readonly Table table;
+        readonly DocumentTable table;
 
-        public DeleteCommand(Table table, Guid key, Guid etag, bool lastWriteWins)
+        public DeleteCommand(DocumentTable table, Guid key, Guid etag, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;
@@ -25,7 +25,7 @@ namespace HybridDb.Commands
         {
             var sql = new SqlBuilder()
                 .Append("delete from {0} where {1} = @Id{2}",
-                        store.FormatTableNameAndEscape(table.Name),
+                        store.Database.FormatTableNameAndEscape(table.Name),
                         table.IdColumn.Name,
                         uniqueParameterIdentifier)
                 .Append(!lastWriteWins,
@@ -35,11 +35,11 @@ namespace HybridDb.Commands
                 .ToString();
 
             var parameters = new Dictionary<string, Parameter>();
-            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, table.IdColumn.SqlColumn.Type, null);
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, key, SqlTypeMap.Convert(table.IdColumn).DbType, null);
 
             if (!lastWriteWins)
             {
-                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, table.EtagColumn.SqlColumn.Type, null);
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, currentEtag, SqlTypeMap.Convert(table.EtagColumn).DbType, null);
             }
 
             return new PreparedDatabaseCommand
