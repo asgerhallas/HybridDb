@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using HybridDb.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Converters;
@@ -15,82 +15,67 @@ using Newtonsoft.Json.Serialization;
 
 namespace HybridDb.Serialization
 {
-    //public class Discriminators
-    //{
-    //    readonly IDiscriminator[] discriminators;
-
-    //    public Discriminators()
-    //    {
-    //        discriminators = new IDiscriminator[]
-    //        {
-    //            new RootDiscriminator(),
-    //            new FieldDataDiscriminator(),
-    //            new CaseProgressDiscriminator(),
-    //            new PurchaseStateDiscriminator(),
-    //            new TemplateDiscriminator(),
-    //            new BuildingUnitDiscriminator(),
-    //            new ContextDiscriminator(),
-    //            new EnergyLabelClassificationScaleDiscriminator(),
-    //            new UnitPricedFuelExchangeDiscriminator(),
-    //        };
-
-    //        Context = new StreamingContext(
-    //                StreamingContextStates.All,
-    //                new SerializationContext(
-    //                    typeof(Scenario),
-    //                    typeof(EnergyRequirement),
-    //                    typeof(EnergyFrameCompliance),
-    //                    typeof(EnergyFrame),
-    //                    typeof(FullResult),
-    //                    typeof(ResultYear),
-    //                    typeof(BeResult),
-    //                    typeof(Fuel))),
-
-    //            new DiscriminatedTypeConverter(discriminators),
-
-    //    }
-
-
-    //    public IDiscriminator GetDiscriminatorFor(Type type)
-    //    {
-    //        return discriminators.SingleOrDefault(x => x.Discriminates(type));
-    //    }
-    //EnableCheckForDuplicates(contract);
-    //EnableAutomaticBackReferences(contract);
-    //EnableInvisibleAggregateRootReferences(contract);
-    //EnableInvisibleDomainEventsCollection(contract);
-
-
-                //var discriminator = serializer.GetDiscriminatorFor(type);
-                //if (discriminator != null)
-                //{
-                //    properties.Add(new JsonProperty
-                //    {
-                //        PropertyName = "Discriminator",
-                //        PropertyType = typeof(string),
-                //        ValueProvider = new DiscriminatorValueProvider(discriminator),
-                //        Writable = false,
-                //        Readable = true
-                //    });
-                //}
-
-    //}
-
-
-    public class DefaultSerializer : ISerializer
+    public class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
     {
-        readonly JsonConverter[] converters;
-        readonly DefaultContractResolver contractResolver;
+        Action<JsonSerializerSettings> setup = x => { };
+
+        IExtendedContractResolver contractResolver;
+        List<JsonConverter> converters = new List<JsonConverter>();
+
+        readonly List<Func<JsonProperty, bool>> ordering = new List<Func<JsonProperty, bool>>
+        {
+            p => p.PropertyName == "Id",
+            p => p.PropertyType.IsValueType,
+            p => p.PropertyType == typeof (string),
+            p => !typeof (IEnumerable).IsAssignableFrom(p.PropertyType)
+        };
 
         public DefaultSerializer()
         {
-            converters = new JsonConverter[]
-            {
-                new StringEnumConverter(), 
-                //new GuidToStringConverter(),
-            };
+            AddConverter(new StringEnumConverter());
+            SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));
+        }
 
-            contractResolver = new DefaultContractResolver();
+        public void AddConverter(JsonConverter converter)
+        {
+            converters = converters.Concat(new[] { converter }).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        }
+
+        public void Order(int index, Func<JsonProperty, bool> predicate)
+        {
+            ordering.Insert(index, predicate);
+        }
+        
+        public void Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+        }
+
+        public void SetContractResolver(IExtendedContractResolver resolver)
+        {
+            contractResolver = resolver;
+        }
+
+        public void EnableAutomaticBackReferences(params Type[] valueTypes)
+        {
+            SetContractResolver(new AutomaticBackReferencesContractResolverDecorator(contractResolver));
+
+            Setup(settings =>
+            {
+                settings.PreserveReferencesHandling = PreserveReferencesHandling.None;
+                settings.Context = new StreamingContext(StreamingContextStates.All, new SerializationContext(valueTypes));
+            });
+        }
+
+        public void EnableDiscriminators(params Discriminator[] discriminators)
+        {
+            var collection = new Discriminators(discriminators);
+
+            SetContractResolver(new DiscriminatorContractResolverDecorator(contractResolver, collection));
+
+            AddConverter(new DiscriminatedTypeConverter(collection, converters));
+            Order(1, property => property.PropertyName == "Discriminator");
+            Setup(settings => { settings.TypeNameHandling = TypeNameHandling.None; });
         }
 
         /// <summary>
@@ -100,16 +85,26 @@ namespace HybridDb.Serialization
         /// </summary>
         public JsonSerializer CreateSerializer()
         {
-            return JsonSerializer.Create(new JsonSerializerSettings
+            var settings = new JsonSerializerSettings
             {
-                ContractResolver = contractResolver,
+                ContractResolver = null,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 TypeNameHandling = TypeNameHandling.Auto,
                 PreserveReferencesHandling = PreserveReferencesHandling.All,
                 ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
-                
                 Converters = converters
-            });
+            };
+
+            setup(settings);
+
+            if (settings.ContractResolver != null)
+            {
+                throw new InvalidOperationException("Please set ContractResolver with the SetContractResolver() method.");
+            }
+
+            settings.ContractResolver = contractResolver;
+
+            return JsonSerializer.Create(settings);
         }
 
         public virtual byte[] Serialize(object obj)
@@ -134,16 +129,15 @@ namespace HybridDb.Serialization
         public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
         {
             readonly static Regex matchesBackingFieldForAutoProperty = new Regex(@"\<(?<name>.*?)\>k__BackingField");
+            readonly static Regex matchesFieldNameForAnonymousType = new Regex(@"\<(?<name>.*?)\>i__Field");
 
-            readonly ConcurrentDictionary<Type, JsonContract> contracts = new ConcurrentDictionary<Type, JsonContract>();
+            readonly DefaultSerializer serializer;
 
-            public DefaultContractResolver() : base(shareCache: false) { }
-
-            public override JsonContract ResolveContract(Type type)
+            public DefaultContractResolver(DefaultSerializer serializer) : base(shareCache: false)
             {
-                return contracts.GetOrAdd(type, key => base.ResolveContract(type));
+                this.serializer = serializer;
             }
-
+            
             protected override JsonObjectContract CreateObjectContract(Type objectType)
             {
                 var contract = base.CreateObjectContract(objectType);
@@ -162,7 +156,7 @@ namespace HybridDb.Serialization
                             BindingFlags.DeclaredOnly | BindingFlags.Instance |
                             BindingFlags.NonPublic | BindingFlags.Public)
                         .OfType<FieldInfo>()
-                        .Where(member => !member.FieldType.IsA(typeof (EventHandler<>))));
+                        .Where(member => !member.FieldType.IsSubclassOf(typeof(MulticastDelegate))));
 
                     objectType = objectType.BaseType;
                 }
@@ -172,8 +166,9 @@ namespace HybridDb.Serialization
 
             protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
             {
-                var properties = base.CreateProperties(type, memberSerialization);
-                return properties.OrderBy(Ordering).ThenBy(x => x.PropertyName).ToList();
+                return base.CreateProperties(type, memberSerialization)
+                    .OrderBy(Ordering).ThenBy(x => x.PropertyName)
+                    .ToList();
             }
 
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
@@ -184,22 +179,15 @@ namespace HybridDb.Serialization
                 property.Readable = member.MemberType == MemberTypes.Field;
 
                 NormalizeAutoPropertyBackingFieldName(property);
+                NormalizeAnonymousTypeFieldName(property);
                 UppercaseFirstLetterOfFieldName(property);
 
                 return property;
             }
 
-            static int Ordering(JsonProperty property)
+            int Ordering(JsonProperty property)
             {
-                var orders = new List<Func<JsonProperty, bool>>
-                {
-                    p => p.PropertyName == "Id",
-                    p => property.PropertyType.IsValueType,
-                    p => property.PropertyType == typeof(string),
-                    p => !typeof(IEnumerable).IsAssignableFrom(property.PropertyType)
-                };
-
-                foreach (var order in orders.Select((x, i) => new { check = x, index = i }))
+                foreach (var order in serializer.ordering.Select((x, i) => new { check = x, index = i }))
                 {
                     if (order.check(property))
                         return order.index;
@@ -214,12 +202,19 @@ namespace HybridDb.Serialization
                 property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
             }
 
+            static void NormalizeAnonymousTypeFieldName(JsonProperty property)
+            {
+                var match = matchesFieldNameForAnonymousType.Match(property.PropertyName);
+                property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
+            }
+
             static void UppercaseFirstLetterOfFieldName(JsonProperty property)
             {
                 property.PropertyName =
                     property.PropertyName.First().ToString(CultureInfo.InvariantCulture).ToUpper() +
                     property.PropertyName.Substring(1);
             }
+
         }
     }
 }
