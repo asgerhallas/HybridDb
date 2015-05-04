@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
-using HybridDb.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Converters;
@@ -30,7 +29,7 @@ namespace HybridDb.Serialization
             p => !typeof (IEnumerable).IsAssignableFrom(p.PropertyType)
         };
 
-        public DefaultSerializer()
+        internal DefaultSerializer()
         {
             AddConverter(new StringEnumConverter());
             SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));

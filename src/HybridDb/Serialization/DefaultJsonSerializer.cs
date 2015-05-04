@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Serialization
 {
-    public class DefaultJsonSerializer : DefaultSerializer
+    internal class DefaultJsonSerializer : DefaultSerializer
     {
         public override byte[] Serialize(object obj)
         {

@@ -47,9 +47,7 @@
     <Compile Include="..\HybridDb\Serialization\DefaultSerializer.cs">
       <Link>DefaultSerializer.cs</Link>
     </Compile>
-    <Compile Include="..\HybridDb\Serialization\GuidToStringConverter.cs">
-      <Link>GuidToStringConverter.cs</Link>
-    </Compile>
+    <Compile Include="JsonNetSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
