@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Migrations;
 using HybridDb.Serialization;
+using HybridDb.Serialization.JsonNet;
 using Serilog;
 
 namespace HybridDb.Config

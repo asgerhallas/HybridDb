@@ -44,10 +44,36 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\HybridDb\Serialization\DefaultSerializer.cs">
+    <Compile Include="..\HybridDb\Serialization\JsonNet\AutomaticBackReferencesContractResolverDecorator.cs">
+      <Link>AutomaticBackReferencesContractResolverDecorator.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\BackReferenceConverter.cs">
+      <Link>BackReferenceConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\CachingContractResolverDecorator.cs">
+      <Link>CachingContractResolverDecorator.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\DefaultSerializer.cs">
       <Link>DefaultSerializer.cs</Link>
     </Compile>
-    <Compile Include="JsonNetSerializer.cs" />
+    <Compile Include="..\HybridDb\Serialization\JsonNet\DiscriminatedTypeConverter.cs">
+      <Link>DiscriminatedTypeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\DiscriminatorContractResolverDecorator.cs">
+      <Link>DiscriminatorContractResolverDecorator.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\DiscriminatorValueProvider.cs">
+      <Link>DiscriminatorValueProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\ExtendedContractResolver.cs">
+      <Link>ExtendedContractResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\GuidToStringConverter.cs">
+      <Link>GuidToStringConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\HybridDb\Serialization\JsonNet\IExtendedContractResolver.cs">
+      <Link>IExtendedContractResolver.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -55,7 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj">
-      <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
+      <Project>{97e49da1-c846-4900-ba32-e17c0163a331}</Project>
       <Name>HybridDb</Name>
     </ProjectReference>
   </ItemGroup>

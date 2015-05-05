@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using HybridDb.Serialization;
+using HybridDb.Serialization.JsonNet;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Shouldly;
