@@ -5,6 +5,14 @@ using Newtonsoft.Json.Serialization;
 
 namespace HybridDb.NewtonsoftJson
 {
+    public class Noget
+    {
+        public Noget()
+        {
+            
+        }
+    }
+
     //public class JsonNetSerializer : DefaultSerializer
     //{
     //    public new JsonNetSerializer AddConverters2(params JsonConverter[] converters)
