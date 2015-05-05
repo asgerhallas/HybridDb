@@ -163,12 +163,12 @@ namespace HybridDb.Tests
             serializer.EnableAutomaticBackReferences();
 
             var root = new Parent();
-            var child = new Child
+            var child = new Parent.ParentsChild
             {
                 Parent = root
             };
 
-            child.GrandChild = new Child
+            child.GrandChild = new Parent.ParentsChild
             {
                 Root = root,
                 Parent = child
@@ -197,19 +197,19 @@ namespace HybridDb.Tests
             serializer.EnableAutomaticBackReferences();
 
             var root = new Parent();
-            var child = new Child
+            var child = new Parent.ParentsChild
             {
                 Parent = root
             };
 
-            root.Children = new List<Child>
+            root.Children = new List<Parent.ParentsChild>
             {
                 child
             };
 
-            child.GrandChildren = new List<Child>
+            child.GrandChildren = new List<Parent.ParentsChild>
             {
-                new Child
+                new Parent.ParentsChild
                 {
                     Root = root,
                     Parent = child
@@ -265,6 +265,35 @@ namespace HybridDb.Tests
 
             var copy = jObject.ToObject<Base>(CreateSerializer());
             copy.BaseChild.ShouldNotBe(copy.BaseChildren[0]);
+        }
+
+        [Fact]
+        public void OnlyHandlesBackReferencesForClassesAndInterfaces()
+        {
+            serializer.EnableAutomaticBackReferences();
+
+
+            var original = new RootWithPrimitive
+            {
+                Child = new RootWithPrimitive.ChildWithPrimitive
+                {
+                    Int = 2,
+                    DateTime = DateTime.Now
+                }
+            };
+
+            Should.NotThrow(() => JObject.FromObject(original, CreateSerializer()).ToObject<RootWithPrimitive>(CreateSerializer()));
+        }
+
+        public class RootWithPrimitive
+        {
+            public ChildWithPrimitive Child { get; set; }
+
+            public class ChildWithPrimitive
+            {
+                public int Int { get; set; }
+                public DateTime DateTime { get; set; }
+            }
         }
 
         [Fact]
@@ -447,16 +476,16 @@ namespace HybridDb.Tests
 
         public class Parent
         {
-            public Child Child { get; set; }
-            public List<Child> Children { get; set; }
-        }
+            public ParentsChild Child { get; set; }
+            public List<ParentsChild> Children { get; set; }
 
-        public class Child
-        {
-            public object Root { get; set; }
-            public object Parent { get; set; }
-            public Child GrandChild { get; set; }
-            public List<Child> GrandChildren { get; set; }
+            public class ParentsChild
+            {
+                public object Root { get; set; }
+                public object Parent { get; set; }
+                public ParentsChild GrandChild { get; set; }
+                public List<ParentsChild> GrandChildren { get; set; }
+            }
         }
 
         public class WithSomePrivates

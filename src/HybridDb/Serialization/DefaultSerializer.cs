@@ -276,12 +276,9 @@ namespace HybridDb.Serialization
 
                 foreach (var property in contract.Properties)
                 {
-                    //if (property.PropertyName == "Root")
-                    //    property.Ignored = true;
-
                     // Assign a "once only" converter to handle back references.
                     // This does not handle the DomainObject.AggregateRoot which is ignored below.
-                    if (typeof(object).IsAssignableFrom(property.PropertyType))
+                    if (property.PropertyType.IsClass || property.PropertyType.IsInterface)
                     {
                         property.Converter = property.MemberConverter = new BackReferenceConverter();
                     }
