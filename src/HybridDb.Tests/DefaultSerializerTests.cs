@@ -139,7 +139,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanAddConverter()
         {
-            serializer.AddConverter(new StringToStringLengthConverter());
+            serializer.AddConverters(new StringToStringLengthConverter());
 
             var jObject = JObject.FromObject(new { String = "asger" }, CreateSerializer());
 
@@ -399,7 +399,7 @@ namespace HybridDb.Tests
                 new Discriminator<Derived2>("D2"));
 
             // Comes after enablind discriptors. Order matters.
-            serializer.AddConverter(new StrangeConverterThatAlwaysCreatedAnInstanceOfDerived2());
+            serializer.AddConverters(new StrangeConverterThatAlwaysCreatedAnInstanceOfDerived2());
 
             var jObject = JObject.FromObject(new Root
             {

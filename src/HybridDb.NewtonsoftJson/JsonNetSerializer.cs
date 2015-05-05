@@ -7,24 +7,33 @@ namespace HybridDb.NewtonsoftJson
 {
     public class JsonNetSerializer : DefaultSerializer
     {
-        public new void AddConverter(JsonConverter converter)
+        public new JsonNetSerializer AddConverters(params JsonConverter[] converters)
         {
-            base.AddConverter(converter);
+            base.AddConverters(converters);
+            return this;
         }
 
-        public new void Order(int index, Func<JsonProperty, bool> predicate)
+        public new JsonNetSerializer Order(int index, Func<JsonProperty, bool> predicate)
         {
             base.Order(index, predicate);
+            return this;
         }
 
-        public new void Setup(Action<JsonSerializerSettings> action)
+        public new JsonNetSerializer Setup(Action<JsonSerializerSettings> action)
         {
             base.Setup(action);
+            return this;
         }
 
-        public new void SetContractResolver(IExtendedContractResolver resolver)
+        public new JsonNetSerializer SetContractResolver(IExtendedContractResolver resolver)
         {
             base.SetContractResolver(resolver);
+            return this;
+        }
+
+        public new JsonSerializer CreateSerializer()
+        {
+            return base.CreateSerializer();
         }
     }
 }

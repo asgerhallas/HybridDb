@@ -31,7 +31,7 @@ namespace HybridDb.Serialization
 
         public DefaultSerializer()
         {
-            AddConverter(new StringEnumConverter());
+            AddConverters(new StringEnumConverter());
             SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));
         }
 
@@ -54,16 +54,16 @@ namespace HybridDb.Serialization
 
             SetContractResolver(new DiscriminatorContractResolverDecorator(contractResolver, collection));
 
-            AddConverter(new DiscriminatedTypeConverter(collection, converters));
+            AddConverters(new DiscriminatedTypeConverter(collection, converters));
             Order(1, property => property.PropertyName == "Discriminator");
             Setup(settings => { settings.TypeNameHandling = TypeNameHandling.None; });
 
             return this;
         }
 
-        protected internal void AddConverter(JsonConverter converter)
+        protected internal void AddConverters(params JsonConverter[] converters)
         {
-            converters = converters.Concat(new[] { converter }).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
         }
 
         protected internal void Order(int index, Func<JsonProperty, bool> predicate)
