@@ -32,7 +32,6 @@ namespace HybridDb.Serialization
     {
         Action<JsonSerializerSettings> setup = x => { };
 
-        IExtendedContractResolver contractResolver;
         List<JsonConverter> converters = new List<JsonConverter>();
 
         readonly List<Func<JsonProperty, bool>> ordering = new List<Func<JsonProperty, bool>>
@@ -49,9 +48,11 @@ namespace HybridDb.Serialization
             SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));
         }
 
+        public IExtendedContractResolver ContractResolver { get; private set; }
+
         public IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes)
         {
-            SetContractResolver(new AutomaticBackReferencesContractResolverDecorator(contractResolver));
+            SetContractResolver(new AutomaticBackReferencesContractResolverDecorator(ContractResolver));
 
             Setup(settings =>
             {
@@ -66,13 +67,33 @@ namespace HybridDb.Serialization
         {
             var collection = new Discriminators(discriminators);
 
-            SetContractResolver(new DiscriminatorContractResolverDecorator(contractResolver, collection));
+            SetContractResolver(new DiscriminatorContractResolverDecorator(ContractResolver, collection));
 
             AddConverters(new DiscriminatedTypeConverter(collection));
             Order(1, property => property.PropertyName == "Discriminator");
             Setup(settings => { settings.TypeNameHandling = TypeNameHandling.None; });
 
             return this;
+        }
+
+        public void AddConverters(params JsonConverter[] converters)
+        {
+            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        }
+
+        public void Order(int index, Func<JsonProperty, bool> predicate)
+        {
+            ordering.Insert(index, predicate);
+        }
+
+        public void Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+        }
+
+        public void SetContractResolver(IExtendedContractResolver resolver)
+        {
+            ContractResolver = resolver;
         }
 
         /// <summary>
@@ -99,7 +120,7 @@ namespace HybridDb.Serialization
                 throw new InvalidOperationException("Please set ContractResolver with the SetContractResolver() method.");
             }
 
-            settings.ContractResolver = contractResolver;
+            settings.ContractResolver = ContractResolver;
 
             return JsonSerializer.Create(settings);
         }
@@ -122,26 +143,6 @@ namespace HybridDb.Serialization
             {
                 return CreateSerializer().Deserialize(bsonReader, type);
             }
-        }
-
-        protected internal void AddConverters(params JsonConverter[] converters)
-        {
-            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
-        }
-
-        protected internal void Order(int index, Func<JsonProperty, bool> predicate)
-        {
-            ordering.Insert(index, predicate);
-        }
-
-        protected internal void Setup(Action<JsonSerializerSettings> action)
-        {
-            setup += action;
-        }
-
-        protected internal void SetContractResolver(IExtendedContractResolver resolver)
-        {
-            contractResolver = resolver;
         }
 
         public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
