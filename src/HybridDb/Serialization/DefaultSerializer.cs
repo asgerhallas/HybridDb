@@ -14,7 +14,11 @@ using Newtonsoft.Json.Serialization;
 
 namespace HybridDb.Serialization
 {
+#if NEWTONSOFT
     public class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+#else
+    internal class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+#endif
     {
         Action<JsonSerializerSettings> setup = x => { };
 
@@ -61,32 +65,12 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        protected internal void AddConverters(params JsonConverter[] converters)
-        {
-            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
-        }
-
-        protected internal void Order(int index, Func<JsonProperty, bool> predicate)
-        {
-            ordering.Insert(index, predicate);
-        }
-
-        protected internal void Setup(Action<JsonSerializerSettings> action)
-        {
-            setup += action;
-        }
-
-        protected internal void SetContractResolver(IExtendedContractResolver resolver)
-        {
-            contractResolver = resolver;
-        }
-
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
         /// That will result in each serialization to be different and we lose the ability to use it for change tracking.
         /// Therefore we need to create a new serializer each and every time we serialize.
         /// </summary>
-        protected internal virtual JsonSerializer CreateSerializer()
+        public virtual JsonSerializer CreateSerializer()
         {
             var settings = new JsonSerializerSettings
             {
@@ -110,6 +94,7 @@ namespace HybridDb.Serialization
             return JsonSerializer.Create(settings);
         }
 
+
         public virtual byte[] Serialize(object obj)
         {
             using (var outStream = new MemoryStream())
@@ -127,6 +112,26 @@ namespace HybridDb.Serialization
             {
                 return CreateSerializer().Deserialize(bsonReader, type);
             }
+        }
+
+        protected internal void AddConverters(params JsonConverter[] converters)
+        {
+            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        }
+
+        protected internal void Order(int index, Func<JsonProperty, bool> predicate)
+        {
+            ordering.Insert(index, predicate);
+        }
+
+        protected internal void Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+        }
+
+        protected internal void SetContractResolver(IExtendedContractResolver resolver)
+        {
+            contractResolver = resolver;
         }
 
         public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver

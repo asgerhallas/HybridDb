@@ -11,11 +11,11 @@ namespace HybridDb.Tests
 {
     public class DefaultSerializerTests
     {
-        readonly Serialization.DefaultSerializer serializer;
+        readonly DefaultSerializer serializer;
 
         public DefaultSerializerTests()
         {
-            serializer = new Serialization.DefaultSerializer();
+            serializer = new DefaultSerializer();
         }
 
         JsonSerializer CreateSerializer()
