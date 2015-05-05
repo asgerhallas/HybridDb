@@ -35,16 +35,6 @@ namespace HybridDb.Serialization
             SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));
         }
 
-        protected internal void AddConverter(JsonConverter converter)
-        {
-            converters = converters.Concat(new[] { converter }).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
-        }
-
-        protected internal void Order(int index, Func<JsonProperty, bool> predicate)
-        {
-            ordering.Insert(index, predicate);
-        }
-
         public IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes)
         {
             SetContractResolver(new AutomaticBackReferencesContractResolverDecorator(contractResolver));
@@ -71,12 +61,32 @@ namespace HybridDb.Serialization
             return this;
         }
 
+        protected internal void AddConverter(JsonConverter converter)
+        {
+            converters = converters.Concat(new[] { converter }).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        }
+
+        protected internal void Order(int index, Func<JsonProperty, bool> predicate)
+        {
+            ordering.Insert(index, predicate);
+        }
+
+        protected internal void Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+        }
+
+        protected internal void SetContractResolver(IExtendedContractResolver resolver)
+        {
+            contractResolver = resolver;
+        }
+
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
         /// That will result in each serialization to be different and we lose the ability to use it for change tracking.
         /// Therefore we need to create a new serializer each and every time we serialize.
         /// </summary>
-        internal JsonSerializer CreateSerializer()
+        protected internal virtual JsonSerializer CreateSerializer()
         {
             var settings = new JsonSerializerSettings
             {
@@ -117,16 +127,6 @@ namespace HybridDb.Serialization
             {
                 return CreateSerializer().Deserialize(bsonReader, type);
             }
-        }
-
-        void Setup(Action<JsonSerializerSettings> action)
-        {
-            setup += action;
-        }
-
-        void SetContractResolver(IExtendedContractResolver resolver)
-        {
-            contractResolver = resolver;
         }
 
         public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
