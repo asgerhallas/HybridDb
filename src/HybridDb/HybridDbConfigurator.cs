@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations;
-using HybridDb.Serialization;
 using Serilog;
 
 namespace HybridDb
@@ -34,13 +33,6 @@ namespace HybridDb
         protected void UseSerializer(ISerializer serializer)
         {
             configuration.UseSerializer(serializer);
-        }
-
-        protected IDefaultSerializerConfigurator UseDefaultSerializer()
-        {
-            var serializer = new DefaultSerializer();
-            UseSerializer(serializer);
-            return serializer;
         }
 
         protected void UseLogger(ILogger logger)

@@ -33,4 +33,9 @@ namespace HybridDb.Serialization
             return type.IsClass && type != typeof(string);
         }
     }
+
+    public class Discriminator<T> : Discriminator
+    {
+        public Discriminator(string name) : base(typeof(T), name) {}
+    }
 }

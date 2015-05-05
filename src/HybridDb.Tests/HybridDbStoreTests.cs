@@ -16,7 +16,7 @@ namespace HybridDb.Tests
         {
             base.Reset();
 
-            UseSerializer(new DefaultJsonSerializer());
+            UseSerializer(new DefaultSerializer());
             factory = new Lazy<IDocumentStore>(() => Using(DocumentStore.ForTesting(database, configuration)));
         }
 

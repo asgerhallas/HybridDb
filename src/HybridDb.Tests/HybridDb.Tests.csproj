@@ -120,6 +120,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.csproj">
+      <Project>{1671a056-76a1-4fcd-98a4-acedb0fea56c}</Project>
+      <Name>HybridDb.NewtonsoftJson</Name>
+    </ProjectReference>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj">
       <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
       <Name>HybridDb</Name>

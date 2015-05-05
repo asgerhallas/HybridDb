@@ -4,7 +4,7 @@ namespace HybridDb.Serialization
 {
     public interface IDefaultSerializerConfigurator
     {
-        void EnableAutomaticBackReferences(params Type[] valueTypes);
-        void EnableDiscriminators(params Discriminator[] discriminators);
+        IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes);
+        IDefaultSerializerConfigurator EnableDiscriminators(params Discriminator[] discriminators);
     }
 }

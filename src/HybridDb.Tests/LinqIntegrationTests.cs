@@ -18,7 +18,7 @@ namespace HybridDb.Tests
                 .With(x => x.StringProp)
                 .With(x => x.TheChild.NestedProperty);
             
-            store.Configuration.UseSerializer(new DefaultJsonSerializer());
+            store.Configuration.UseSerializer(new DefaultSerializer());
 
             session = Using(store.OpenSession());
             session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger" });

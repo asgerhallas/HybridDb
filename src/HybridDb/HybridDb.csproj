@@ -150,10 +150,6 @@
     <Compile Include="Config\IndexDesigner.cs" />
     <Compile Include="Config\IndexTable.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
-    <Compile Include="Serialization\AutomaticBackReferencesContractResolverDecorator.cs" />
-    <Compile Include="Serialization\BackReferenceConverter.cs" />
-    <Compile Include="Serialization\CachingContractResolverDecorator.cs" />
-    <Compile Include="Serialization\DefaultJsonSerializer.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
     <Compile Include="Commands\InsertCommand.cs" />
@@ -163,6 +159,10 @@
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
+    <Compile Include="Serialization\AutomaticBackReferencesContractResolverDecorator.cs" />
+    <Compile Include="Serialization\BackReferenceConverter.cs" />
+    <Compile Include="Serialization\CachingContractResolverDecorator.cs" />
+    <Compile Include="Serialization\DefaultJsonSerializer.cs" />
     <Compile Include="Serialization\DefaultSerializer.cs" />
     <Compile Include="Serialization\DiscriminatedTypeConverter.cs" />
     <Compile Include="Serialization\Discriminator.cs" />
@@ -173,7 +173,6 @@
     <Compile Include="Serialization\ExtendedContractResolver.cs" />
     <Compile Include="Serialization\GuidToStringConverter.cs" />
     <Compile Include="Serialization\IDefaultSerializerConfigurator.cs" />
-    <Compile Include="Serialization\IDiscriminator.cs" />
     <Compile Include="Serialization\IExtendedContractResolver.cs" />
     <Compile Include="Serialization\ReferenceEqualityComparer.cs" />
     <Compile Include="Serialization\SerializationContext.cs" />

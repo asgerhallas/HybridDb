@@ -29,33 +29,23 @@ namespace HybridDb.Serialization
             p => !typeof (IEnumerable).IsAssignableFrom(p.PropertyType)
         };
 
-        internal DefaultSerializer()
+        public DefaultSerializer()
         {
             AddConverter(new StringEnumConverter());
             SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));
         }
 
-        public void AddConverter(JsonConverter converter)
+        protected internal void AddConverter(JsonConverter converter)
         {
             converters = converters.Concat(new[] { converter }).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
         }
 
-        public void Order(int index, Func<JsonProperty, bool> predicate)
+        protected internal void Order(int index, Func<JsonProperty, bool> predicate)
         {
             ordering.Insert(index, predicate);
         }
-        
-        public void Setup(Action<JsonSerializerSettings> action)
-        {
-            setup += action;
-        }
 
-        public void SetContractResolver(IExtendedContractResolver resolver)
-        {
-            contractResolver = resolver;
-        }
-
-        public void EnableAutomaticBackReferences(params Type[] valueTypes)
+        public IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes)
         {
             SetContractResolver(new AutomaticBackReferencesContractResolverDecorator(contractResolver));
 
@@ -64,9 +54,11 @@ namespace HybridDb.Serialization
                 settings.PreserveReferencesHandling = PreserveReferencesHandling.None;
                 settings.Context = new StreamingContext(StreamingContextStates.All, new SerializationContext(valueTypes));
             });
+
+            return this;
         }
 
-        public void EnableDiscriminators(params Discriminator[] discriminators)
+        public IDefaultSerializerConfigurator EnableDiscriminators(params Discriminator[] discriminators)
         {
             var collection = new Discriminators(discriminators);
 
@@ -75,6 +67,8 @@ namespace HybridDb.Serialization
             AddConverter(new DiscriminatedTypeConverter(collection, converters));
             Order(1, property => property.PropertyName == "Discriminator");
             Setup(settings => { settings.TypeNameHandling = TypeNameHandling.None; });
+
+            return this;
         }
 
         /// <summary>
@@ -82,7 +76,7 @@ namespace HybridDb.Serialization
         /// That will result in each serialization to be different and we lose the ability to use it for change tracking.
         /// Therefore we need to create a new serializer each and every time we serialize.
         /// </summary>
-        public JsonSerializer CreateSerializer()
+        internal JsonSerializer CreateSerializer()
         {
             var settings = new JsonSerializerSettings
             {
@@ -123,6 +117,16 @@ namespace HybridDb.Serialization
             {
                 return CreateSerializer().Deserialize(bsonReader, type);
             }
+        }
+
+        void Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+        }
+
+        void SetContractResolver(IExtendedContractResolver resolver)
+        {
+            contractResolver = resolver;
         }
 
         public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
