@@ -7,18 +7,19 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using HybridDb.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
-namespace HybridDb.Serialization
-{
 #if NEWTONSOFT
-    public class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+namespace HybridDb.NewtonsoftJson
 #else
-    internal class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+namespace HybridDb.Serialization
 #endif
+{
+    public class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
     {
         Action<JsonSerializerSettings> setup = x => { };
 
