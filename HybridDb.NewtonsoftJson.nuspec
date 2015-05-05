@@ -14,6 +14,7 @@
     <copyright>Copyright 2013</copyright>
     <tags></tags>
     <dependencies>
+      <dependency id="HybridDb" version="" />
       <dependency id="Newtonsoft.Json" version="6.0.8" />
     </dependencies>
   </metadata>

@@ -7,7 +7,7 @@ namespace HybridDb.NewtonsoftJson
 {
     public class JsonNetSerializer : DefaultSerializer
     {
-        public new JsonNetSerializer AddConverters(params JsonConverter[] converters)
+        public new JsonNetSerializer AddConverters2(params JsonConverter[] converters)
         {
             base.AddConverters(converters);
             return this;
