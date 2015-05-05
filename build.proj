@@ -13,7 +13,6 @@
 	</PropertyGroup>
 
   <Import Project="$(ToolsFolder)\FileReplace.targets" /> 
-	<UsingTask TaskName="Microsoft.Build.Tasks.XmlPoke" AssemblyName="Microsoft.Build.Tasks.v4.0, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
 	<UsingTask AssemblyFile="tools\xunit\xunit.runner.msbuild.dll" TaskName="Xunit.Runner.MSBuild.xunit"/>
 
   <Target Name="ValidateGitStatus">
@@ -103,11 +102,12 @@
 	
 	<Target Name="Pack" DependsOnTargets="Build">
 		<Copy SourceFiles="HybridDb.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.nuspec" />
-		<XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.nuspec" Query="//version" Value="$(Version)" />
-		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.nuspec -OutputDirectory $(OutputFolder)"/>
-
     <Copy SourceFiles="HybridDb.NewtonsoftJson.nuspec" DestinationFiles="$(OutputFolder)\HybridDb.NewtonsoftJson.nuspec" />
-    <XmlPoke XmlInputPath="$(OutputFolder)\HybridDb.NewtonsoftJson.nuspec" Query="//version" Value="$(Version)" />
+
+    <FileReplace Files="$(OutputFolder)\HybridDb.nuspec" Match='{VERSION}' ReplaceWith='$(Version)' />
+    <FileReplace Files="$(OutputFolder)\HybridDb.NewtonsoftJson.nuspec" Match='{VERSION}' ReplaceWith='$(Version)' />
+
+		<Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.nuspec -OutputDirectory $(OutputFolder)"/>
     <Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.NewtonsoftJson.nuspec -OutputDirectory $(OutputFolder)"/>
 	</Target>
 
