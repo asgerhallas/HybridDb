@@ -1,6 +1,5 @@
 using System;
 using HybridDb.Serialization;
-using HybridDb.Serialization.JsonNet;
 
 namespace HybridDb.Tests
 {
