@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
@@ -33,6 +34,8 @@ namespace HybridDb.Serialization
         Action<JsonSerializerSettings> setup = x => { };
 
         List<JsonConverter> converters = new List<JsonConverter>();
+        readonly List<IContractMutator> contractFilters = new List<IContractMutator>();
+        readonly HybridDbContractResolver contractResolver;
 
         readonly List<Func<JsonProperty, bool>> ordering = new List<Func<JsonProperty, bool>>
         {
@@ -45,14 +48,12 @@ namespace HybridDb.Serialization
         public DefaultSerializer()
         {
             AddConverters(new StringEnumConverter());
-            SetContractResolver(new CachingContractResolverDecorator(new DefaultContractResolver(this)));
+            contractResolver = new HybridDbContractResolver(this);
         }
-
-        public IExtendedContractResolver ContractResolver { get; private set; }
 
         public IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes)
         {
-            SetContractResolver(new AutomaticBackReferencesContractResolverDecorator(ContractResolver));
+            AddContractMutator(new AutomaticBackReferencesContractMutator());
 
             Setup(settings =>
             {
@@ -67,7 +68,7 @@ namespace HybridDb.Serialization
         {
             var collection = new Discriminators(discriminators);
 
-            SetContractResolver(new DiscriminatorContractResolverDecorator(ContractResolver, collection));
+            AddContractMutator(new DiscriminatorContractMutator(collection));
 
             AddConverters(new DiscriminatedTypeConverter(collection));
             Order(1, property => property.PropertyName == "Discriminator");
@@ -76,9 +77,27 @@ namespace HybridDb.Serialization
             return this;
         }
 
+        public void Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default) where TReturn : class
+        {
+            var memberExpression = selector.Body as MemberExpression;
+            if (memberExpression == null)
+            {
+                throw new ArgumentException("Selector must point to a member.");
+            }
+
+            var name = memberExpression.Member.Name;
+
+            AddContractMutator(new HidePropertyContractMutatator<T>(name, @default));
+        }
+
         public void AddConverters(params JsonConverter[] converters)
         {
             this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        }
+
+        public void AddContractMutator(IContractMutator mutator)
+        {
+            contractFilters.Add(mutator);
         }
 
         public void Order(int index, Func<JsonProperty, bool> predicate)
@@ -91,11 +110,6 @@ namespace HybridDb.Serialization
             setup += action;
         }
 
-        public void SetContractResolver(IExtendedContractResolver resolver)
-        {
-            ContractResolver = resolver;
-        }
-
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
         /// That will result in each serialization to be different and we lose the ability to use it for change tracking.
@@ -105,7 +119,7 @@ namespace HybridDb.Serialization
         {
             var settings = new JsonSerializerSettings
             {
-                ContractResolver = null,
+                ContractResolver = contractResolver,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 TypeNameHandling = TypeNameHandling.Auto,
                 PreserveReferencesHandling = PreserveReferencesHandling.All,
@@ -114,13 +128,6 @@ namespace HybridDb.Serialization
             };
 
             setup(settings);
-
-            if (settings.ContractResolver != null)
-            {
-                throw new InvalidOperationException("Please set ContractResolver with the SetContractResolver() method.");
-            }
-
-            settings.ContractResolver = ContractResolver;
 
             return JsonSerializer.Create(settings);
         }
@@ -145,18 +152,46 @@ namespace HybridDb.Serialization
             }
         }
 
-        public class DefaultContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
+        public class HybridDbContractResolver : DefaultContractResolver
         {
             readonly static Regex matchesBackingFieldForAutoProperty = new Regex(@"\<(?<name>.*?)\>k__BackingField");
             readonly static Regex matchesFieldNameForAnonymousType = new Regex(@"\<(?<name>.*?)\>i__Field");
 
+            readonly ConcurrentDictionary<Type, JsonContract> contracts = new ConcurrentDictionary<Type, JsonContract>();
             readonly DefaultSerializer serializer;
 
-            public DefaultContractResolver(DefaultSerializer serializer) : base(shareCache: false)
+            public HybridDbContractResolver(DefaultSerializer serializer) : base(shareCache: false)
             {
                 this.serializer = serializer;
             }
-            
+
+            public sealed override JsonContract ResolveContract(Type type)
+            {
+                return contracts.GetOrAdd(type, key =>
+                {
+                    var contract = base.ResolveContract(type);
+                    foreach (var filter in serializer.contractFilters)
+                    {
+                        filter.Mutate(contract);
+                    }
+
+                    return contract;
+                });
+            }
+
+            // We use this as the main entrance for resolving contracts
+            public bool ResolveContract(Type type, out JsonContract contract)
+            {
+                var foundInCache = true;
+                contract = contracts.GetOrAdd(type, key =>
+                {
+                    foundInCache = false;
+                    return ResolveContract(type);
+                });
+
+                return foundInCache;
+            }
+
             protected override JsonObjectContract CreateObjectContract(Type objectType)
             {
                 var contract = base.CreateObjectContract(objectType);
@@ -235,26 +270,9 @@ namespace HybridDb.Serialization
             }
         }
 
-        public class AutomaticBackReferencesContractResolverDecorator : ExtendedContractResolver
+        public class AutomaticBackReferencesContractMutator : ContractMutator<JsonObjectContract>
         {
-            readonly IExtendedContractResolver resolver;
-
-            public AutomaticBackReferencesContractResolverDecorator(IExtendedContractResolver resolver)
-            {
-                this.resolver = resolver;
-            }
-
-            public override bool ResolveContract(Type type, out JsonContract contract)
-            {
-                if (resolver.ResolveContract(type, out contract))
-                    return true;
-
-                Setup(contract as JsonObjectContract);
-
-                return false;
-            }
-
-            static void Setup(JsonObjectContract contract)
+            public override void Mutate(JsonObjectContract contract)
             {
                 if (contract == null)
                     return;
@@ -332,29 +350,6 @@ namespace HybridDb.Serialization
             }
         }
 
-        public class CachingContractResolverDecorator : ExtendedContractResolver
-        {
-            readonly IContractResolver resolver;
-            readonly ConcurrentDictionary<Type, JsonContract> contracts = new ConcurrentDictionary<Type, JsonContract>();
-
-            public CachingContractResolverDecorator(IContractResolver resolver)
-            {
-                this.resolver = resolver;
-            }
-
-            public override bool ResolveContract(Type type, out JsonContract contract)
-            {
-                var foundInCache = true;
-                contract = contracts.GetOrAdd(type, key =>
-                {
-                    foundInCache = false;
-                    return resolver.ResolveContract(type);
-                });
-
-                return foundInCache;
-            }
-        }
-
         public class DiscriminatedTypeConverter : JsonConverter
         {
             readonly Discriminators discriminators;
@@ -405,31 +400,17 @@ namespace HybridDb.Serialization
             }
         }
 
-        public class DiscriminatorContractResolverDecorator : ExtendedContractResolver
+        public class DiscriminatorContractMutator : ContractMutator<JsonObjectContract>
         {
-            readonly IExtendedContractResolver resolver;
             readonly Discriminators discriminators;
 
-            public DiscriminatorContractResolverDecorator(IExtendedContractResolver resolver, Discriminators discriminators)
+            public DiscriminatorContractMutator(Discriminators discriminators)
             {
-                this.resolver = resolver;
                 this.discriminators = discriminators;
             }
 
-            public override bool ResolveContract(Type type, out JsonContract contract)
+            public override void Mutate(JsonObjectContract contract)
             {
-                if (resolver.ResolveContract(type, out contract))
-                    return true;
-
-                Setup(contract as JsonObjectContract);
-
-                return false;
-            }
-
-            void Setup(JsonObjectContract contract)
-            {
-                if (contract == null) return;
-
                 if (!discriminators.IsDiscriminated(contract.CreatedType))
                     return;
 
@@ -469,26 +450,51 @@ namespace HybridDb.Serialization
                 return value;
             }
         }
-    }
 
-    public interface IExtendedContractResolver : IContractResolver
-    {
-        bool ResolveContract(Type type, out JsonContract contract);
-    }
-
-    public abstract class ExtendedContractResolver : IExtendedContractResolver
-    {
-        public JsonContract ResolveContract(Type type)
+        public class HidePropertyContractMutatator<T> : ContractMutator<JsonObjectContract>
         {
-            JsonContract contract;
-            ResolveContract(type, out contract);
-            return contract;
-        }
+            readonly string name;
+            readonly Func<object> @default;
 
-        /// <summary>
-        /// Returns a boolean that indicates if the contract has already been initialized,
-        /// so decorators can know if they have additional work to do or can just use the contract as is.
-        /// </summary>
-        public abstract bool ResolveContract(Type type, out JsonContract contract);
+            public HidePropertyContractMutatator(string name, Func<object> @default)
+            {
+                this.name = name;
+                this.@default = @default;
+            }
+
+            public override void Mutate(JsonObjectContract contract)
+            {
+                if (!typeof(T).IsAssignableFrom(contract.UnderlyingType))
+                    return;
+
+                var property = contract.Properties.GetProperty(name, StringComparison.InvariantCultureIgnoreCase);
+                
+                if (property == null)
+                    return;
+
+                property.Ignored = true;
+                contract.OnDeserializedCallbacks.Add((target, context) =>
+                    property.ValueProvider.SetValue(target, @default()));
+            }
+        }
+    }
+
+    public interface IContractMutator
+    {
+        void Mutate(JsonContract contract);
+    }
+
+    public abstract class ContractMutator<T> : IContractMutator where T : JsonContract
+    {
+        public abstract void Mutate(T contract);
+        
+        public void Mutate(JsonContract contract)
+        {
+            var tContract = contract as T;
+            if (tContract != null)
+            {
+                Mutate(tContract);
+            }
+        }
     }
 }

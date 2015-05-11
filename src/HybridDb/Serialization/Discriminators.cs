@@ -11,8 +11,8 @@ namespace HybridDb.Serialization
 
         public Discriminators(params Discriminator[] discriminators)
         {
-            discriminatorToType = discriminators.ToDictionary(x => x.Name, x => x.Type);
-            typeToDiscriminator = discriminators.ToDictionary(x => x.Type, x => x.Name);
+            discriminatorToType = discriminators.ToDictionary(x => x.Name, x => x.Basetype);
+            typeToDiscriminator = discriminators.ToDictionary(x => x.Basetype, x => x.Name);
         }
 
         public bool TryGetFromType(Type type, out string discriminator)

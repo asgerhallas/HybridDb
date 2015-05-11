@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using HybridDb.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -441,6 +442,73 @@ namespace HybridDb.Tests
             copy.Base.ShouldBeOfType<Derived2>();
         }
 
+        //[Fact]
+        //public void CanAddDiscriminatorsDynamically()
+        //{
+        //    serializer.EnableDiscriminators(new Discriminator<object>("Test"));
+
+        //    var jObject = JObject.FromObject(new Root
+        //    {
+        //        Base = new Derived1()
+        //    }, CreateSerializer());
+
+        //    jObject["Discriminator"].ShouldBe("Test");
+        //}
+
+        [Fact]
+        public void CanHideProperties()
+        {
+            serializer.Hide((WithPropertyAndField x) => x.Property, () => new Collection<string>());
+
+            var input = new WithPropertyAndField
+            {
+                Property =
+                {
+                    "Lille", "Peter", "Edderkop"
+                },
+            };
+
+            var jObject = JObject.FromObject(input, CreateSerializer());
+
+            jObject.ShouldNotContainKey("Property");
+
+            var copy = jObject.ToObject<WithPropertyAndField>(CreateSerializer());
+
+            copy.Property.ShouldNotBe(null);
+            copy.Property.ShouldBeOfType<Collection<string>>();
+            copy.Property.ShouldBeEmpty();
+        }
+        
+        [Fact]
+        public void CanHideFields()
+        {
+            serializer.Hide((WithPropertyAndField x) => x.field, () => new List<string>());
+
+            var input = new WithPropertyAndField
+            {
+                field =
+                {
+                    "Se", "Den", "Lille", "Kattekilling"
+                }
+            };
+
+            var jObject = JObject.FromObject(input, CreateSerializer());
+
+            jObject.ShouldNotContainKey("field");
+            jObject.ShouldNotContainKey("Field");
+
+            var copy = jObject.ToObject<WithPropertyAndField>(CreateSerializer());
+
+            copy.field.ShouldNotBe(null);
+            copy.field.ShouldBeOfType<List<string>>();
+            copy.field.ShouldBeEmpty();
+        }
+
+        public class ByTypeNameDiscriminator : Discriminator 
+        {
+            public ByTypeNameDiscriminator(Type basetype, string name) : base(basetype, name) {}
+        }
+
         public class StrangeConverterThatAlwaysCreatedAnInstanceOfDerived2 : JsonConverter
         {
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -548,6 +616,17 @@ namespace HybridDb.Tests
             public Guid Id { get; set; }
             public List<object> List { get; set; }
             public int Number { get; set; }
+        }
+
+        public class WithPropertyAndField
+        {
+            public WithPropertyAndField()
+            {
+                Property = new List<string>();
+            }
+
+            public List<string> field = new List<string>();
+            public ICollection<string> Property { get; private set; }
         }
 
         public class StringToStringLengthConverter : JsonConverter
