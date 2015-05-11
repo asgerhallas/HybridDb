@@ -179,23 +179,11 @@ namespace HybridDb.Serialization
                 });
             }
 
-            // We use this as the main entrance for resolving contracts
-            public bool ResolveContract(Type type, out JsonContract contract)
-            {
-                var foundInCache = true;
-                contract = contracts.GetOrAdd(type, key =>
-                {
-                    foundInCache = false;
-                    return ResolveContract(type);
-                });
-
-                return foundInCache;
-            }
-
             protected override JsonObjectContract CreateObjectContract(Type objectType)
             {
                 var contract = base.CreateObjectContract(objectType);
                 contract.DefaultCreator = () => FormatterServices.GetUninitializedObject(objectType);
+
                 return contract;
             }
 

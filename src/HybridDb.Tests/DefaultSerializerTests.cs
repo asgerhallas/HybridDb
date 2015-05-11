@@ -45,6 +45,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void FailsWhenHavingConflictingNamesDueToCaseInsensivity()
+        {
+            // could be cool to have it throw something hybrid specific that could be catched and that explains how to solve the issue
+            Should.Throw<JsonSerializationException>(() => JObject.FromObject(new WithConflictingNames(), CreateSerializer()));
+        }
+
+        [Fact]
         public void RoundTripsPropertyBackingField()
         {
             var original = new WithPropertyWithBackingField
@@ -560,6 +567,12 @@ namespace HybridDb.Tests
                 public ParentsChild GrandChild { get; set; }
                 public List<ParentsChild> GrandChildren { get; set; }
             }
+        }
+
+        public class WithConflictingNames
+        {
+            public string property;
+            public string Property { get; set; }
         }
 
         public class WithSomePrivates
