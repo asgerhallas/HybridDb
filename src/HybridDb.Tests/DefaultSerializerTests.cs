@@ -286,17 +286,6 @@ namespace HybridDb.Tests
             Should.NotThrow(() => JObject.FromObject(original, CreateSerializer()).ToObject<RootWithPrimitive>(CreateSerializer()));
         }
 
-        public class RootWithPrimitive
-        {
-            public ChildWithPrimitive Child { get; set; }
-
-            public class ChildWithPrimitive
-            {
-                public int Int { get; set; }
-                public DateTime DateTime { get; set; }
-            }
-        }
-
         [Fact]
         public void RoundtripsPolymorphicTypesAsDefault()
         {
@@ -504,6 +493,23 @@ namespace HybridDb.Tests
             copy.field.ShouldBeEmpty();
         }
 
+        [Fact]
+        public void FailsWhenHidingNonMember()
+        {
+            Should.Throw<ArgumentException>(() => serializer.Hide((WithMethod x) => x.TheMethod(), () => 10));
+        }
+
+        public class RootWithPrimitive
+        {
+            public ChildWithPrimitive Child { get; set; }
+
+            public class ChildWithPrimitive
+            {
+                public int Int { get; set; }
+                public DateTime DateTime { get; set; }
+            }
+        }
+
         public class ByTypeNameDiscriminator : Discriminator 
         {
             public ByTypeNameDiscriminator(Type basetype, string name) : base(basetype, name) {}
@@ -627,6 +633,14 @@ namespace HybridDb.Tests
 
             public List<string> field = new List<string>();
             public ICollection<string> Property { get; private set; }
+        }
+
+        public class WithMethod
+        {
+            public int TheMethod()
+            {
+                return 0;
+            }
         }
 
         public class StringToStringLengthConverter : JsonConverter
