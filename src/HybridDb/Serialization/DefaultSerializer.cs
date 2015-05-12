@@ -77,7 +77,7 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public void Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
+        public IDefaultSerializerConfigurator Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
         {
             var memberExpression = selector.Body as MemberExpression;
             if (memberExpression == null)
@@ -88,6 +88,8 @@ namespace HybridDb.Serialization
             var name = memberExpression.Member.Name;
 
             AddContractMutator(new HidePropertyContractMutatator<T>(name, () => @default()));
+
+            return this;
         }
 
         public void AddConverters(params JsonConverter[] converters)
