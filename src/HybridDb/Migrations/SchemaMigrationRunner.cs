@@ -48,23 +48,29 @@ namespace HybridDb.Migrations
                         "Database schema is ahead of configuration. Schema is version {0}, but configuration is version {1}.", 
                         currentSchemaVersion, store.Configuration.ConfiguredVersion));
                 }
-                
 
-                if (currentSchemaVersion < configuration.ConfiguredVersion)
+                if (database.TableMode == TableMode.UseRealTables)
                 {
-                    var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
-                    logger.Information("Migrates schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
-
-                    foreach (var migration in migrationsToRun)
+                    if (currentSchemaVersion < configuration.ConfiguredVersion)
                     {
-                        var migrationCommands = migration.MigrateSchema();
-                        foreach (var command in migrationCommands)
-                        {
-                            requiresReprojection.AddRange(ExecuteCommand(database, command));
-                        }
+                        var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
+                        logger.Information("Migrates schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
 
-                        currentSchemaVersion++;
+                        foreach (var migration in migrationsToRun)
+                        {
+                            var migrationCommands = migration.MigrateSchema();
+                            foreach (var command in migrationCommands)
+                            {
+                                requiresReprojection.AddRange(ExecuteCommand(database, command));
+                            }
+
+                            currentSchemaVersion++;
+                        }
                     }
+                }
+                else
+                {
+                    logger.Information("Skips provided migrations when not using real tables.");
                 }
 
                 var schema = database.QuerySchema().Values.ToList(); // demeter go home!

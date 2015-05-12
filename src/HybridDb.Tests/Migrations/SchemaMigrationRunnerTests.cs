@@ -8,11 +8,17 @@ using HybridDb.Migrations;
 using HybridDb.Migrations.Commands;
 using Shouldly;
 using Xunit;
+using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migrations
 {
     public class SchemaMigrationRunnerTests : HybridDbStoreTests
     {
+        public SchemaMigrationRunnerTests()
+        {
+            UseRealTables();
+        }
+
         [Fact]
         public void AutomaticallyCreatesMetadataTable()
         {
@@ -21,7 +27,7 @@ namespace HybridDb.Tests.Migrations
             runner.Run();
 
             configuration.Tables.ShouldContainKey("HybridDb");
-            database.RawQuery<int>("select top 1 SchemaVersion from #HybridDb").Single().ShouldBe(0);
+            database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Single().ShouldBe(0);
         }
 
         [Fact]
@@ -36,7 +42,6 @@ namespace HybridDb.Tests.Migrations
             database.QuerySchema().Single().Key.ShouldBe("HybridDb"); // the metadata table and nothing else
         }
 
-        [Fact]
         public void RunsProvidedSchemaMigrations()
         {
             CreateMetadataTable();
@@ -53,6 +58,27 @@ namespace HybridDb.Tests.Migrations
             tables.ShouldContainKey("Testing");
             tables["Testing"]["Id"].ShouldNotBe(null);
             tables["Testing"]["Noget"].ShouldNotBe(null);
+        }
+
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
+        public void DoesNotRunProvidedSchemaMigrationsOnTempTables(TableMode mode)
+        {
+            Use(mode);
+
+            CreateMetadataTable();
+
+            UseMigrations(new InlineMigration(1,
+                new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
+                new AddColumn("Testing", new Column("Noget", typeof(int)))));
+
+            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+
+            runner.Run();
+
+            var tables = database.QuerySchema();
+            tables.ShouldNotContainKey("Testing");
         }
 
         [Fact]
@@ -208,9 +234,9 @@ namespace HybridDb.Tests.Migrations
             
             runner.Run();
 
-            database.RawQuery<bool>("select AwaitsReprojection from #Entities").ShouldAllBe(x => x);
-            database.RawQuery<bool>("select AwaitsReprojection from #AbstractEntities").ShouldAllBe(x => x);
-            database.RawQuery<bool>("select AwaitsReprojection from #OtherEntities").ShouldAllBe(x => !x);
+            database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x);
+            database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x);
+            database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => !x);
         }
 
         [Fact]
