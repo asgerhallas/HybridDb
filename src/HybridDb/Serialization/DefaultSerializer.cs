@@ -85,7 +85,7 @@ namespace HybridDb.Serialization
                 throw new ArgumentException("Selector must point to a member.");
             }
 
-            Hide<T>(memberExpression.Member.Name, () => @default);
+            Hide<T>(memberExpression.Member.Name, () => @default());
 
             return this;
         }
@@ -470,6 +470,7 @@ namespace HybridDb.Serialization
                 property.Ignored = true;
                 contract.OnDeserializedCallbacks.Add((target, context) =>
                     property.ValueProvider.SetValue(target, @default()));
+                
             }
         }
     }
