@@ -85,9 +85,14 @@ namespace HybridDb.Serialization
                 throw new ArgumentException("Selector must point to a member.");
             }
 
-            var name = memberExpression.Member.Name;
+            Hide<T>(memberExpression.Member.Name, () => @default);
 
-            AddContractMutator(new HidePropertyContractMutatator<T>(name, () => @default()));
+            return this;
+        }
+
+        public IDefaultSerializerConfigurator Hide<T>(string name, Func<object> @default)
+        {
+            AddContractMutator(new HidePropertyContractMutatator<T>(name, @default));
 
             return this;
         }
