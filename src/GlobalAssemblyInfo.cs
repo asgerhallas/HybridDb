@@ -7,5 +7,5 @@ using System.Reflection;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: AssemblyVersion("0.6")]
-[assembly: AssemblyFileVersion("0.6.18")]
-[assembly: AssemblyInformationalVersion("0.6.18")]
+[assembly: AssemblyFileVersion("0.6.19")]
+[assembly: AssemblyInformationalVersion("0.6.19")]
