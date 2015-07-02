@@ -25,12 +25,12 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
 
             var row = database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid) row.Id).ShouldBe(id);
+            ((string) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
             ((string) row.Field).ShouldBe("Asger");
@@ -41,11 +41,11 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
 
             var row = database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid) row.Id).ShouldBe(id);
+            ((string) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
             ((string) row.Field).ShouldBe("Asger");
@@ -56,9 +56,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
 
-            store.Insert(new DynamicDocumentTable("Entities"),
-                         Guid.NewGuid(),
-                         new Dictionary<string, object> {{"Field", null}});
+            store.Insert(new DynamicDocumentTable("Entities"), NewId(), new Dictionary<string, object> {{"Field", null}});
 
             var row = database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
@@ -79,7 +77,7 @@ namespace HybridDb.Tests
             Document<Entity>();
             
             Should.Throw<ArgumentException>(() =>
-                store.Insert(new DynamicDocumentTable("Entities"), Guid.NewGuid(), new { Complex = new Entity.ComplexType() }));
+                store.Insert(new DynamicDocumentTable("Entities"), NewId(), new { Complex = new Entity.ComplexType() }));
         }
 
         [Fact(Skip = "Feature on hold")]
@@ -87,7 +85,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Children.Select(y => y.NestedProperty));
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var schema = store.Configuration.GetDesignFor<Entity>();
             store.Insert(
                 schema.Table, id,
@@ -101,13 +99,13 @@ namespace HybridDb.Tests
                 });
 
             var mainrow = database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid)mainrow.Id).ShouldBe(id);
+            ((string)mainrow.Id).ShouldBe(id);
 
             var utilrows = database.RawQuery<dynamic>("select * from #Entities_Children").ToList();
             utilrows.Count.ShouldBe(2);
             
             var utilrow = utilrows.First();
-            ((Guid)utilrow.DocumentId).ShouldBe(id);
+            ((string)utilrow.DocumentId).ShouldBe(id);
             ((string)utilrow.NestedString).ShouldBe("A");
         }
 
@@ -116,7 +114,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger"});
 
@@ -132,7 +130,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field).With(x => x.Property);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger"});
 
@@ -151,7 +149,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}});
 
@@ -163,7 +161,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
                         
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
@@ -175,12 +173,12 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var etag = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, Guid.NewGuid(), etag, new {Field = "Lars"}));
+            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new {Field = "Lars"}));
         }
 
         [Fact]
@@ -188,7 +186,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field).With(x => x.Complex.ToString());
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
 
@@ -205,7 +203,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
@@ -221,7 +219,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.TheChild.NestedDouble);
             
-            var id1 = Guid.NewGuid();
+            var id1 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
 
@@ -236,9 +234,9 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+            var id1 = NewId();
+            var id2 = NewId();
+            var id3 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
             var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
@@ -248,12 +246,12 @@ namespace HybridDb.Tests
             var rows = store.Query(table.Table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
 
             rows.Count().ShouldBe(2);
-            var first = rows.Single(x => (Guid)x[table.Table.IdColumn] == id1);
+            var first = rows.Single(x => (string)x[table.Table.IdColumn] == id1);
             first[table.Table.EtagColumn].ShouldBe(etag1);
             first[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
             first[table.Table["Field"]].ShouldBe("Asger");
 
-            var second = rows.Single(x => (Guid)x[table.Table.IdColumn] == id2);
+            var second = rows.Single(x => (string)x[table.Table.IdColumn] == id2);
             second[table.Table.IdColumn].ShouldBe(id2);
             second[table.Table.EtagColumn].ShouldBe(etag2);
             second[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -265,7 +263,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
@@ -288,7 +286,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
@@ -304,8 +302,8 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field).With(x => x.Property);
             
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
+            var id1 = NewId();
+            var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = documentAsByteArray });
             store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
@@ -324,7 +322,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
 
@@ -338,7 +336,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
 
@@ -350,7 +348,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
 
@@ -362,11 +360,11 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
             
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, Guid.NewGuid(), etag));
+            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, NewId(), etag));
         }
 
         [Fact]
@@ -374,8 +372,8 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
+            var id1 = NewId();
+            var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }),
                                      new InsertCommand(table.Table, id2, new { Field = "B" }));
@@ -391,7 +389,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Field);
             
-            var id1 = Guid.NewGuid();
+            var id1 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etagThatMakesItFail = Guid.NewGuid();
             try
@@ -420,7 +418,7 @@ namespace HybridDb.Tests
             var commands = new List<DatabaseCommand>();
             for (var i = 0; i < 2100/4 + 1; i++)
             {
-                commands.Add(new InsertCommand(table.Table, Guid.NewGuid(), new { Field = "A", Document = documentAsByteArray }));
+                commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
             }
 
             store.Execute(commands.ToArray());
@@ -433,7 +431,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.EnumProp);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            var id = Guid.NewGuid();
+            var id = NewId();
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
 
             var result = store.Get(table.Table, id);
@@ -446,7 +444,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.EnumProp);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            var id = Guid.NewGuid();
+            var id = NewId();
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
 
             QueryStats stats;
@@ -460,7 +458,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            var id = Guid.NewGuid();
+            var id = NewId();
             store.Insert(table.Table, id, new { Property = "Hest" });
 
             var result = store.Get(table.Table, id);
@@ -473,7 +471,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            var id = Guid.NewGuid();
+            var id = NewId();
             store.Insert(table.Table, id, new { Property = (string)null });
 
             QueryStats stats;
@@ -487,7 +485,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.DateTimeProp);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            var id = Guid.NewGuid();
+            var id = NewId();
             store.Insert(table.Table, id, new { DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1) });
 
             QueryStats stats;
@@ -502,7 +500,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Number = i });
+                store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, skip: 2, take: 5, orderby: "Number").ToList();
@@ -524,7 +522,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Number = i });
+                store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, take: 2, orderby: "Number").ToList();
@@ -543,7 +541,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Number = i });
+                store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, skip: 7, orderby: "Number").ToList();
@@ -562,7 +560,7 @@ namespace HybridDb.Tests
             Document<Entity>();
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, Guid.NewGuid(), new { });
+            store.Insert(table.Table, NewId(), new { });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats).ToList();
@@ -577,7 +575,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5");
@@ -593,7 +591,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", skip: 1);
@@ -622,12 +620,12 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 10 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 11 });
-            store.Insert(table.Table, Guid.NewGuid(), new { Property = 11 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 11 });
+            store.Insert(table.Table, NewId(), new { Property = 11 });
 
             QueryStats stats;
             store.Query(table.Table, out stats, @orderby: "Property", skip: 1);
@@ -643,7 +641,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", skip: 10);
@@ -659,7 +657,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", take: 2);
@@ -675,7 +673,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                store.Insert(table.Table, Guid.NewGuid(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", take: 20);
@@ -691,7 +689,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                store.Insert(table.Table, Guid.NewGuid(), new { Field = i });
+                store.Insert(table.Table, NewId(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, orderby: "Field").ToList();
@@ -711,7 +709,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                store.Insert(table.Table, new Guid("00000000-0000-0000-0000-00000000000" + i), new { Field = i });
+                store.Insert(table.Table, i.ToString(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id").ToList();
@@ -731,7 +729,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                store.Insert(table.Table, new Guid("00000000-0000-0000-0000-00000000000" + i), new { Field = i });
+                store.Insert(table.Table, i.ToString(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id", skip: 1, take:1).Single();
@@ -746,7 +744,7 @@ namespace HybridDb.Tests
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                store.Insert(table.Table, Guid.NewGuid(), new { Field = i });
+                store.Insert(table.Table, NewId(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, skip: 2, take: 2, orderby: "Field desc").ToList();
@@ -771,8 +769,8 @@ namespace HybridDb.Tests
 
             using (new TransactionScope())
             {
-                store.Insert(table.Table, Guid.NewGuid(), new { });
-                store.Insert(table.Table, Guid.NewGuid(), new { });
+                store.Insert(table.Table, NewId(), new { });
+                store.Insert(table.Table, NewId(), new { });
 
                 // No tx complete here
             }
@@ -787,7 +785,7 @@ namespace HybridDb.Tests
                 TableMode.UseGlobalTempTables,
                 configurator: new LambdaHybridDbConfigurator(x => x.Document<Case>())))
             {
-                var id = Guid.NewGuid();
+                var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
                 using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables))
@@ -799,7 +797,7 @@ namespace HybridDb.Tests
                 }
             }
 
-            var tables = database.RawQuery<string>(string.Format("select OBJECT_ID('##Cases') as Result"));
+            var tables = database.RawQuery<string>("select OBJECT_ID(\'##Cases\') as Result");
             tables.First().ShouldBe(null);
         }
 
@@ -809,7 +807,7 @@ namespace HybridDb.Tests
             Document<Entity>();
 
             var table = new DocumentTable("Entities");
-            store.Insert(table, Guid.NewGuid(), new { Version = 1 });
+            store.Insert(table, NewId(), new { Version = 1 });
 
             QueryStats stats;
             var result1 = store.Query(table, out stats, skip: 0, take: 2).Single();

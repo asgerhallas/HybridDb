@@ -126,7 +126,7 @@ namespace HybridDb.Tests
                 Children = new List<Child>();
             }
 
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string ProjectedProperty { get; set; }
             public List<Child> Children { get; set; }
             public string Field;
@@ -157,13 +157,13 @@ namespace HybridDb.Tests
 
         public class OtherEntity
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public int Number { get; set; }
         }
 
         public abstract class AbstractEntity : ISomeInterface
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Property { get; set; }
             public int Number { get; set; }
         }

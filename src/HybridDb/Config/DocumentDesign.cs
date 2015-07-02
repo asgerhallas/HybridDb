@@ -50,10 +50,9 @@ namespace HybridDb.Config
             get { return decendentsAndSelf; }
         }
 
-        public Guid GetId(object entity)
+        public string GetId(object entity)
         {
-            var id = (Guid)(Projections[Table.IdColumn].Projector(entity) ?? Guid.NewGuid());
-            return id != Guid.Empty ? id : Guid.NewGuid();
+            return (string)(Projections[Table.IdColumn].Projector(entity) ?? Guid.NewGuid().ToString());
         }
 
         void AddChild(DocumentDesign design)

@@ -21,9 +21,9 @@ namespace HybridDb.Tests
             store.Configuration.UseSerializer(new DefaultSerializer());
 
             session = Using(store.OpenSession());
-            session.Store(new Entity { Id = Guid.NewGuid(), Property = 1, StringProp = "Asger" });
-            session.Store(new Entity { Id = Guid.NewGuid(), Property = 2, StringProp = "Lars", TheChild = new Entity.Child { NestedProperty = 3.1 } });
-            session.Store(new Entity { Id = Guid.NewGuid(), Property = 3, StringProp = null });
+            session.Store(new Entity { Id = NewId(), Property = 1, StringProp = "Asger" });
+            session.Store(new Entity { Id = NewId(), Property = 2, StringProp = "Lars", TheChild = new Entity.Child { NestedProperty = 3.1 } });
+            session.Store(new Entity { Id = NewId(), Property = 3, StringProp = null });
             session.SaveChanges();
         }
 
@@ -246,7 +246,7 @@ namespace HybridDb.Tests
             }
 
             public string Field;
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public int Property { get; set; }
             public string StringProp { get; set; }
             public DateTime DateTimeProp { get; set; }

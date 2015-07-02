@@ -6,7 +6,7 @@ namespace HybridDb.Config
     {
         public DocumentTable(string name) : base(name)
         {
-            IdColumn = new SystemColumn("Id", typeof(Guid),  isPrimaryKey: true);
+            IdColumn = new SystemColumn("Id", typeof(string), length: 1024, isPrimaryKey: true);
             Register(IdColumn);
 
             EtagColumn = new SystemColumn("Etag", typeof(Guid));

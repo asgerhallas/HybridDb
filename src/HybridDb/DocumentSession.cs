@@ -10,7 +10,7 @@ namespace HybridDb
 {
     public class DocumentSession : IDocumentSession, IAdvancedDocumentSessionCommands
     {
-        readonly Dictionary<Guid, ManagedEntity> entities;
+        readonly Dictionary<string, ManagedEntity> entities;
         readonly IDocumentStore store;
         readonly List<DatabaseCommand> deferredCommands;
         readonly DocumentMigrator migrator;
@@ -19,7 +19,7 @@ namespace HybridDb
         public DocumentSession(IDocumentStore store)
         {
             deferredCommands = new List<DatabaseCommand>();
-            entities = new Dictionary<Guid, ManagedEntity>();
+            entities = new Dictionary<string, ManagedEntity>();
             migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
@@ -35,7 +35,7 @@ namespace HybridDb
             get { return entities.Select(x => x.Value.Entity); }
         }
 
-        public T Load<T>(Guid key) where T : class
+        public T Load<T>(string key) where T : class
         {
             ManagedEntity managedEntity;
             if (entities.TryGetValue(key, out managedEntity))
@@ -207,7 +207,7 @@ namespace HybridDb
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign design, IDictionary<string, object> row)
         {
             var table = design.Table;
-            var id = (Guid)row[table.IdColumn];
+            var id = (string)row[table.IdColumn];
             var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
 
             DocumentDesign concreteDesign;
@@ -247,7 +247,7 @@ namespace HybridDb
             entities.Clear();
         }
 
-        public bool IsLoaded(Guid id)
+        public bool IsLoaded(string id)
         {
             return entities.ContainsKey(id);
         }
@@ -267,7 +267,7 @@ namespace HybridDb
         class ManagedEntity
         {
             public object Entity { get; set; }
-            public Guid Key { get; set; }
+            public string Key { get; set; }
             public Guid Etag { get; set; }
             public EntityState State { get; set; }
             public int Version { get; set; }

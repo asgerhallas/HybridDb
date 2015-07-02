@@ -10,10 +10,10 @@ namespace HybridDb.Commands
     {
         readonly Guid currentEtag;
         readonly bool lastWriteWins;
-        readonly Guid key;
+        readonly string key;
         readonly DocumentTable table;
 
-        public DeleteCommand(DocumentTable table, Guid key, Guid etag, bool lastWriteWins)
+        public DeleteCommand(DocumentTable table, string key, Guid etag, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;

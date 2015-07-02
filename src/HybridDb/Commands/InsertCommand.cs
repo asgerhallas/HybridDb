@@ -6,11 +6,11 @@ namespace HybridDb.Commands
 {
     public class InsertCommand : DatabaseCommand
     {
-        readonly Guid key;
+        readonly string key;
         readonly object projections;
         readonly DocumentTable table;
 
-        public InsertCommand(DocumentTable table, Guid key, object projections)
+        public InsertCommand(DocumentTable table, string key, object projections)
         {
             this.table = table;
             this.key = key;

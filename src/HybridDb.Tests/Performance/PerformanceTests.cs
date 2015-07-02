@@ -1,15 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using HybridDb.Commands;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
-using Shouldly;
 using Xunit;
 
 namespace HybridDb.Tests.Performance
@@ -121,7 +115,7 @@ namespace HybridDb.Tests.Performance
 
         public class Entity
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string SomeData { get; set; }
             public int SomeNumber { get; set; }
         }
@@ -132,7 +126,7 @@ namespace HybridDb.Tests.Performance
             {
                 using (var store = DocumentStore.ForTesting(
                     TableMode.UseTempTables,
-                    configurator: new LambdaHybridDbConfigurator(c =>
+                    new LambdaHybridDbConfigurator(c =>
                         c.Document<Entity>()
                             .With(x => x.SomeData)
                             .With(x => x.SomeNumber))))
@@ -142,7 +136,7 @@ namespace HybridDb.Tests.Performance
                     {
                         commands.Add(new InsertCommand(
                             store.Configuration.GetDesignFor<Entity>().Table,
-                            Guid.NewGuid(),
+                            Guid.NewGuid().ToString(),
                             new {SomeNumber = i, SomeData = "ABC"}));
                     }
 

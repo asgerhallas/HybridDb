@@ -67,7 +67,7 @@ namespace HybridDb.Migrations
                                 string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
                         }
 
-                        var id = (Guid)row[table.IdColumn];
+                        var id = (string)row[table.IdColumn];
                         var currentDocumentVersion = (int)row[table.VersionColumn];
 
                         var shouldUpdate = false;

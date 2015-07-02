@@ -31,5 +31,10 @@ namespace HybridDb.Tests
             get { return factory.Value; }
         }
         // ReSharper restore InconsistentNaming
+
+        protected string NewId()
+        {
+            return Guid.NewGuid().ToString();
+        }
     }
 }

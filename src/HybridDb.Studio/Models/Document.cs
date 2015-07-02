@@ -20,14 +20,14 @@ namespace HybridDb.Studio.Models
             get { return projections; }
         }
         
-        public Guid Id
+        public string Id
         {
-            get { return (Guid) idColumn.Value; }
+            get { return (string) idColumn.Value; }
         }
 
         public string Name
         {
-            get { return Table.Name + "/" + Id.ToString().Substring(0, 8); }
+            get { return Table.Name + "/" + Id.Substring(0, 8); }
         }
 
         public Guid? Etag

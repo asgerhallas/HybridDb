@@ -171,7 +171,6 @@
     <Compile Include="Config\SystemColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
-    <Compile Include="Config\ITable.cs" />
     <Compile Include="Config\Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringEx.cs" />

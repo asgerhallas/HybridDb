@@ -43,7 +43,7 @@ namespace HybridDb.Tests
             return OverrideExecute(store, commands);
         }
 
-        public IDictionary<string, object> Get(DocumentTable table, Guid key)
+        public IDictionary<string, object> Get(DocumentTable table, string key)
         {
             return store.Get(table, key);
         }

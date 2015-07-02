@@ -7,12 +7,12 @@ namespace HybridDb.Commands
     public class UpdateCommand : DatabaseCommand
     {
         readonly Guid currentEtag;
-        readonly Guid key;
+        readonly string key;
         readonly object projections;
         readonly bool lastWriteWins;
         readonly DocumentTable table;
 
-        public UpdateCommand(DocumentTable table, Guid key, Guid etag, object projections, bool lastWriteWins)
+        public UpdateCommand(DocumentTable table, string key, Guid etag, object projections, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;

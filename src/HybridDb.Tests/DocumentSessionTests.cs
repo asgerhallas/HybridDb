@@ -19,7 +19,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity1 = new Entity { Id = id, Property = "Asger" };
@@ -37,7 +37,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var entity1 = new Entity { Id = Guid.NewGuid(), Property = "Asger" };
+                var entity1 = new Entity { Id = NewId(), Property = "Asger" };
                 session.Advanced.GetEtagFor(entity1).ShouldBe(null);
 
                 session.Store(entity1);
@@ -55,7 +55,7 @@ namespace HybridDb.Tests
             Document<Entity>();
 
             var table = store.Configuration.GetDesignFor<Entity>();
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
@@ -132,14 +132,14 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
                 session.SaveChanges();
             }
 
-            var retrivedId = database.RawQuery<Guid>("select Id from #Entities").SingleOrDefault();
+            var retrivedId = database.RawQuery<string>("select Id from #Entities").SingleOrDefault();
             retrivedId.ShouldBe(id);
         }
 
@@ -148,7 +148,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity1 = new Entity {Id = id, Property = "Asger"};
@@ -164,7 +164,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity = new Entity {Id = id, Property = "Asger"};
@@ -181,7 +181,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session1 = store.OpenSession())
             using (var session2 = store.OpenSession())
             {
@@ -206,7 +206,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -227,7 +227,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity = new Entity {Id = id, Property = "Asger"};
@@ -242,7 +242,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity = new Entity { Id = id, Property = "Asger" };
@@ -256,7 +256,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -274,7 +274,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -288,7 +288,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -302,7 +302,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Advanced.IsLoaded(id).ShouldBe(false);
@@ -316,7 +316,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -333,7 +333,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -351,7 +351,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity = new Entity {Id = id, Property = "Asger"};
@@ -367,7 +367,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(Guid.NewGuid()).ShouldBe(null);
+                session.Load<Entity>(NewId()).ShouldBe(null);
             }
         }
 
@@ -376,7 +376,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
@@ -401,7 +401,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
@@ -423,9 +423,9 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+            var id1 = NewId();
+            var id2 = NewId();
+            var id3 = NewId();
 
             using (var session = store.OpenSession())
             {
@@ -455,9 +455,9 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id1 = Guid.NewGuid();
-            var id2 = Guid.NewGuid();
-            var id3 = Guid.NewGuid();
+            var id1 = NewId();
+            var id2 = NewId();
+            var id3 = NewId();
 
             using (var session = store.OpenSession())
             {
@@ -488,7 +488,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id1 = Guid.NewGuid();
+            var id1 = NewId();
 
             using (var session1 = store.OpenSession())
             using (var session2 = store.OpenSession())
@@ -512,7 +512,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
@@ -533,7 +533,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
@@ -555,7 +555,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
@@ -574,7 +574,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
@@ -597,7 +597,7 @@ namespace HybridDb.Tests
                 .With(x => x.ProjectedProperty)
                 .With(x => x.TheChild.NestedProperty);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
@@ -620,7 +620,7 @@ namespace HybridDb.Tests
                 .With(x => x.ProjectedProperty)
                 .With(x => x.TheChild.NestedProperty);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity {Id = id, Property = "Asger", ProjectedProperty = "Large"});
@@ -643,7 +643,7 @@ namespace HybridDb.Tests
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
@@ -665,7 +665,7 @@ namespace HybridDb.Tests
             Document<AbstractEntity>();
             Document<MoreDerivedEntity1>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id });
@@ -683,7 +683,7 @@ namespace HybridDb.Tests
             Document<AbstractEntity>();
             Document<MoreDerivedEntity1>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id });
@@ -702,7 +702,7 @@ namespace HybridDb.Tests
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id });
@@ -720,7 +720,7 @@ namespace HybridDb.Tests
             Document<AbstractEntity>();
             Document<MoreDerivedEntity1>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity = session.Load<AbstractEntity>(id);
@@ -737,8 +737,8 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Store(new MoreDerivedEntity1 { Id = Guid.NewGuid(), Property = "Asger" });
-                session.Store(new MoreDerivedEntity2 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity1 { Id = NewId(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity2 { Id = NewId(), Property = "Asger" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -762,8 +762,8 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Store(new MoreDerivedEntity1 { Id = Guid.NewGuid(), Property = "Asger" });
-                session.Store(new MoreDerivedEntity2 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity1 { Id = NewId(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity2 { Id = NewId(), Property = "Asger" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -783,8 +783,8 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Store(new MoreDerivedEntity1 { Id = Guid.NewGuid(), Property = "Asger" });
-                session.Store(new MoreDerivedEntity2 { Id = Guid.NewGuid(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity1 { Id = NewId(), Property = "Asger" });
+                session.Store(new MoreDerivedEntity2 { Id = NewId(), Property = "Asger" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -799,7 +799,7 @@ namespace HybridDb.Tests
         {
             Document<AbstractEntity>().With(x => x.Property);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
@@ -817,7 +817,7 @@ namespace HybridDb.Tests
         {
             Document<AbstractEntity>().With(x => x.Property);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
@@ -842,7 +842,7 @@ namespace HybridDb.Tests
         {
             Document<OtherEntity>().With("Unknown", x => 2);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new OtherEntity { Id = id });
@@ -861,7 +861,7 @@ namespace HybridDb.Tests
                 .With(x => x.Property);
             Document<MoreDerivedEntity1>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger", Number = 2 });
@@ -882,7 +882,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -943,7 +943,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -971,7 +971,7 @@ namespace HybridDb.Tests
             Document<Entity>();
             UseMigrations(new InlineMigration(1), new InlineMigration(2));
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
@@ -988,7 +988,7 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
             using (var session = store.OpenSession())
             {
@@ -1015,7 +1015,7 @@ namespace HybridDb.Tests
         [Fact]
         public void BacksUpMigratedDocumentOnSave()
         {
-            var id = Guid.NewGuid();
+            var id = NewId();
 
             Document<Entity>();
 
@@ -1060,7 +1060,7 @@ namespace HybridDb.Tests
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -1132,7 +1132,7 @@ namespace HybridDb.Tests
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
         {
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
                 var entity1 = new Entity

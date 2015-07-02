@@ -7,17 +7,17 @@ namespace HybridDb
 {
     public static class DocumentStoreExtensions
     {
-        public static Guid Insert(this IDocumentStore store, DocumentTable table, Guid key, object projections)
+        public static Guid Insert(this IDocumentStore store, DocumentTable table, string key, object projections)
         {
             return Execute(store, new InsertCommand(table, key, projections));
         }
 
-        public static Guid Update(this IDocumentStore store, DocumentTable table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
+        public static Guid Update(this IDocumentStore store, DocumentTable table, string key, Guid etag, object projections, bool lastWriteWins = false)
         {
             return Execute(store, new UpdateCommand(table, key, etag, projections, lastWriteWins));
         }
 
-        public static void Delete(this IDocumentStore store, DocumentTable table, Guid key, Guid etag, bool lastWriteWins = false)
+        public static void Delete(this IDocumentStore store, DocumentTable table, string key, Guid etag, bool lastWriteWins = false)
         {
             Execute(store, new DeleteCommand(table, key, etag, lastWriteWins));
         }

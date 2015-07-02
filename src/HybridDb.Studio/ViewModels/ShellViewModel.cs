@@ -151,13 +151,6 @@ namespace HybridDb.Studio.ViewModels
 
             var table = new DocumentTable(TableName);
 
-            Guid documentId;
-            if (!Guid.TryParse(DocumentId, out documentId))
-            {
-                MessageBox.Show("Can not parse id as Guid", "Error", MessageBoxButton.OK);
-                return;
-            }
-
             var sw = Stopwatch.StartNew();
             StatusMessage = string.Format("Getting document {0} from table {1}", documentId, table.Name);
             Loading = true;
@@ -166,7 +159,7 @@ namespace HybridDb.Studio.ViewModels
             StatusMessage = string.Format("Fetched document {0} in {1}ms", documentId, sw.ElapsedMilliseconds);
         }
 
-        void FindDocument(DocumentTable table, Guid documentId)
+        void FindDocument(DocumentTable table, string documentId)
         {
             IDictionary<string, object> projections;
             try

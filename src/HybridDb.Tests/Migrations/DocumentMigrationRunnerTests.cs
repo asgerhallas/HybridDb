@@ -22,7 +22,7 @@ namespace HybridDb.Tests.Migrations
         {
             Document<Entity>().With(x => x.Number);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = new DocumentTable("Entities");
             store.Insert(table, id, new
             {
@@ -51,7 +51,7 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
                 new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
             store.Insert(table, id, new
             {
@@ -77,7 +77,7 @@ namespace HybridDb.Tests.Migrations
 
             for (int i = 0; i < 200; i++)
             {
-                store.Insert(new DocumentTable("Entities"), Guid.NewGuid(), new
+                store.Insert(new DocumentTable("Entities"), NewId(), new
                 {
                     Discriminator = "Entity", 
                     Version = 0, 
@@ -106,7 +106,7 @@ namespace HybridDb.Tests.Migrations
 
             Document<Entity>().With(x => x.Number);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             var table = new DocumentTable("Entities");
             var etag = store.Insert(table, id, new
             {
@@ -162,10 +162,10 @@ namespace HybridDb.Tests.Migrations
         {
             Document<Entity>().With(x => x.Number);
 
-            var id = Guid.NewGuid();
+            var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity() { Id = id });
+                session.Store(new Entity { Id = id });
                 session.SaveChanges();
             }
 
@@ -181,13 +181,13 @@ namespace HybridDb.Tests.Migrations
             {
                 throw new Exception();
             })));
-            
+
             Should.NotThrow(() =>
             {
                 new DocumentMigrationRunner(store).RunInBackground().Wait(1000);
             });
 
-            var numberOfRetries = logEventSink.Captures.Count(x => x == string.Format("Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id {0}.", id));
+            var numberOfRetries = logEventSink.Captures.Count(x => x == string.Format("Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{0}\".", id));
             
             // it has a back off of 100ms
             numberOfRetries.ShouldBeLessThan(11);
@@ -197,7 +197,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void BacksUpMigratedDocumentBeforeMigration()
         {
-            var id = Guid.NewGuid();
+            var id = NewId();
             Document<Entity>();
 
             using (var session = store.OpenSession())

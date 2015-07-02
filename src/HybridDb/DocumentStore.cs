@@ -265,7 +265,7 @@ namespace HybridDb
                    select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
         }
 
-        public IDictionary<string, object> Get(DocumentTable table, Guid key)
+        public IDictionary<string, object> Get(DocumentTable table, string key)
         {
             var timer = Stopwatch.StartNew();
             using (var connection = Database.Connect())

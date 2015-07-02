@@ -14,12 +14,12 @@ namespace HybridDb.Tests
         {
             this.store = store;
 
-            Gets = new List<Tuple<DocumentTable, Guid>>();
+            Gets = new List<Tuple<DocumentTable, string>>();
             Queries = new List<Tuple<DocumentTable>>();
             Updates = new List<UpdateCommand>();
         }
 
-        public List<Tuple<DocumentTable, Guid>> Gets { get; private set; }
+        public List<Tuple<DocumentTable, string>> Gets { get; private set; }
         public List<Tuple<DocumentTable>> Queries { get; private set; }
         public List<UpdateCommand> Updates { get; private set; }
 
@@ -56,7 +56,7 @@ namespace HybridDb.Tests
             return store.Execute(commands);
         }
 
-        public IDictionary<string, object> Get(DocumentTable table, Guid key)
+        public IDictionary<string, object> Get(DocumentTable table, string key)
         {
             Gets.Add(Tuple.Create(table, key));
             return store.Get(table, key);

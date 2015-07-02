@@ -25,7 +25,7 @@ namespace HybridDb.Migrations
                 .Where(x => x.ForType(design.DocumentType));
         }
 
-        public object DeserializeAndMigrate(DocumentDesign design, Guid id, byte[] document, int currentDocumentVersion)
+        public object DeserializeAndMigrate(DocumentDesign design, string id, byte[] document, int currentDocumentVersion)
         {
             var configuredVersion = configuration.ConfiguredVersion;
             if (configuredVersion == currentDocumentVersion)
