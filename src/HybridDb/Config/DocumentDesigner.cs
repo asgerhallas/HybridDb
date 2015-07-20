@@ -34,7 +34,7 @@ namespace HybridDb.Config
                 var nullCheckInjector = new NullCheckInjector();
                 var nullCheckedProjector = (Expression<Func<TEntity, object>>)nullCheckInjector.Visit(projector);
 
-                if (!nullCheckInjector.CanBeTrustedToNeverReturnNull)
+                if (!nullCheckInjector.CanBeTrustedToNeverReturnNull && !column.IsPrimaryKey)
                 {
                     column.Nullable = true;
                 }
@@ -58,7 +58,7 @@ namespace HybridDb.Config
             Projection existingProjection;
             if (!design.Projections.TryGetValue(name, out existingProjection))
             {
-                if (design.Parent != null)
+                if (design.Parent != null && !column.IsPrimaryKey)
                 {
                     column.Nullable = true;
                 }

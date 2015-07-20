@@ -1129,6 +1129,19 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void CanUseADifferentIdProjection()
+        {
+            Document<Entity>().With("Id", x => x.Property);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity() { Property = "TheId" });
+
+                session.SaveChanges();
+            }
+        }
+
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
         {

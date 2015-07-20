@@ -135,7 +135,6 @@ namespace HybridDb
             }
         }
 
-
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             var fastParameters = new FastDynamicParameters(parameters);

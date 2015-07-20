@@ -285,6 +285,14 @@ namespace HybridDb.Tests
             configuration.BackupWriter.ShouldBe(writer);
         }
 
+        [Fact]
+        public void CanOverrideIdProjection()
+        {
+            configuration.Document<Entity>().With("Id", x => x.String);
+
+            ProjectionsFor<Entity>()["Id"].Projector(new Entity { String = "TheId" }).ShouldBe("TheId");
+        }
+
         public class Entity
         {
             public string String { get; set; }
