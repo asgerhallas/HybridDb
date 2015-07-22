@@ -11,9 +11,9 @@ namespace HybridDb.Migrations.Commands
         public string OldTableName { get; private set; }
         public string NewTableName { get; private set; }
 
-        public override void Execute(Database database)
+        public override void Execute(IDatabase database)
         {
-            if (database.TableMode == TableMode.UseTempTables || database.TableMode == TableMode.UseGlobalTempTables)
+            if (database is SqlServerUsingTempTables)
             {
                 database.RawExecute(string.Format("select * into {1} from {0}; drop table {0};",
                     database.FormatTableNameAndEscape(OldTableName),

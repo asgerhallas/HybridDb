@@ -17,10 +17,10 @@ namespace HybridDb.Migrations.Commands
         public string OldColumnName { get; private set; }
         public string NewColumnName { get; private set; }
 
-        public override void Execute(Database database)
+        public override void Execute(IDatabase database)
         {
             database.RawExecute(string.Format("{0}sp_rename '{1}.{2}', '{3}', 'COLUMN'",
-                database.TableMode == TableMode.UseTempTables || database.TableMode == TableMode.UseGlobalTempTables ? "tempdb.." : "",
+                database is SqlServerUsingTempTables ? "tempdb.." : "",
                 database.FormatTableNameAndEscape(Table.Name),
                 OldColumnName,
                 NewColumnName));         

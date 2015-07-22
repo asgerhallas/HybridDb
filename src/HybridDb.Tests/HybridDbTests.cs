@@ -19,7 +19,7 @@ namespace HybridDb.Tests
         protected readonly ILogger logger;
         
         protected string connectionString;
-        protected Database database;
+        protected IDatabase database;
 
         protected HybridDbTests()
         {
@@ -33,18 +33,18 @@ namespace HybridDb.Tests
             UseTempTables();
         }
 
-        protected void Use(TableMode mode)
+        protected void Use(TableMode mode, string prefix = null)
         {
             switch (mode)
             {
                 case TableMode.UseRealTables:
-                    UseRealTables();
+                    UseRealTables(prefix);
                     break;
                 case TableMode.UseTempTables:
                     UseTempTables();
                     break;
-                case TableMode.UseGlobalTempTables:
-                    UseGlobalTempTables();
+                case TableMode.UseTempDb:
+                    UseTempDb(prefix);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("mode");
@@ -54,16 +54,16 @@ namespace HybridDb.Tests
         protected void UseTempTables()
         {
             connectionString = "data source=.;Integrated Security=True";
-            database = Using(new Database(logger, connectionString, TableMode.UseTempTables));
+            database = Using(new SqlServerUsingTempTables(logger, connectionString));
         }
 
-        protected void UseGlobalTempTables()
+        protected void UseTempDb(string sessionKey = null)
         {
             connectionString = "data source=.;Integrated Security=True";
-            database = Using(new Database(logger, connectionString, TableMode.UseGlobalTempTables));
+            database = Using(new SqlServerUsingTempDb(logger, connectionString, sessionKey));
         }
 
-        protected void UseRealTables()
+        protected void UseRealTables(string prefix = null)
         {
             var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
             using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
@@ -79,7 +79,7 @@ namespace HybridDb.Tests
 
             connectionString = "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName;
 
-            database = Using(new Database(logger, connectionString, TableMode.UseRealTables));
+            database = Using(new SqlServerUsingRealTables(logger, connectionString, prefix));
 
             disposables.Add(() =>
             {
@@ -88,7 +88,7 @@ namespace HybridDb.Tests
                 using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=Master"))
                 {
                     connection.Open();
-                    connection.Execute(String.Format("DROP DATABASE {0}", uniqueDbName));
+                    connection.Execute(string.Format("DROP DATABASE {0}", uniqueDbName));
                 }
             });
         }

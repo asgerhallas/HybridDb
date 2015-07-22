@@ -13,7 +13,7 @@ namespace HybridDb.Migrations.Commands
 
         public Table Table { get; private set; }
 
-        public override void Execute(Database database)
+        public override void Execute(IDatabase database)
         {
             if (!Table.Columns.Any())
             {

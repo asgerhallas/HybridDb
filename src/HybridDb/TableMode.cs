@@ -4,6 +4,6 @@ namespace HybridDb
     {
         UseRealTables,
         UseTempTables,
-        UseGlobalTempTables
+        UseTempDb
     }
 }

@@ -1137,8 +1137,14 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity() { Property = "TheId" });
-
                 session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>("TheId");
+                
+                entity.ShouldNotBe(null);
             }
         }
 

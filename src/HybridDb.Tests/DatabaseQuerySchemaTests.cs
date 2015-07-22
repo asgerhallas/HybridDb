@@ -10,11 +10,11 @@ namespace HybridDb.Tests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllTables(TableMode mode)
         {
-            Use(mode);
+            Use(mode, "randomprefix_");
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
             new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(database);
@@ -29,11 +29,11 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllColumns(TableMode mode)
         {
-            Use(mode);
+            Use(mode, "randomprefix");
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
             new AddColumn("Entities1", new Column("SomeInt", typeof(int))).Execute(database);
@@ -51,7 +51,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasTypeInfo(TableMode mode)
         {
@@ -71,7 +71,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasNullableInfo(TableMode mode)
         {
@@ -91,7 +91,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasPrimaryKeyInfo(TableMode mode)
         {
@@ -109,7 +109,7 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void ColumnsHasDefaultValue(TableMode mode)
         {
@@ -170,15 +170,16 @@ namespace HybridDb.Tests
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void CanHandleLegacyBooleanDefaultValues(TableMode mode)
         {
             Use(mode);
+
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
 
-            database.RawExecute(string.Format("alter table {0} add [SomeFalseBool] Bit NOT NULL DEFAULT '0'", database.FormatTableName("Entities1")));
-            database.RawExecute(string.Format("alter table {0} add [SomeTrueBool] Bit NOT NULL DEFAULT '1'", database.FormatTableName("Entities1")));
+            database.RawExecute(string.Format("alter table {0} add [SomeFalseBool] Bit NOT NULL DEFAULT '0'", database.FormatTableNameAndEscape("Entities1")));
+            database.RawExecute(string.Format("alter table {0} add [SomeTrueBool] Bit NOT NULL DEFAULT '1'", database.FormatTableNameAndEscape("Entities1")));
 
             var schema = database.QuerySchema();
 

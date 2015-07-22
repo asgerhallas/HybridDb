@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -779,26 +781,33 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanUseGlobalTempTables()
+        public void CanUseTempDb()
         {
-            using (var globalStore1 = DocumentStore.ForTesting(
-                TableMode.UseGlobalTempTables,
-                configurator: new LambdaHybridDbConfigurator(x => x.Document<Case>())))
+            var sessionkey = Guid.NewGuid().ToString();
+
+            UseTempDb(sessionkey);
+
+            var configurator = new LambdaHybridDbConfigurator(x =>
+            {
+                x.UseTableNamePrefix(sessionkey);
+                x.Document<Case>();
+            });
+
+            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseTempDb, configurator))
             {
                 var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables))
+                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, configurator))
                 {
-                    globalStore2.Configuration.Document<Case>();
                     var result = globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
 
                     result.ShouldNotBe(null);
                 }
             }
 
-            var tables = database.RawQuery<string>("select OBJECT_ID(\'##Cases\') as Result");
-            tables.First().ShouldBe(null);
+            // the tempdb connection does not currently delete it's own tables
+            // database.QuerySchema().ShouldNotContainKey("Cases");
         }
 
         [Fact]
@@ -826,6 +835,21 @@ namespace HybridDb.Tests
             Document<OtherEntityWithSomeSimilarities>().With(x => x.Property);
         }
 
+        [Fact]
+        public void CanExecuteOnMultipleThreads()
+        {
+            UseTempDb();
+
+            Document<Entity>().With(x => x.Property);
+
+            InitializeStore();
+
+            Parallel.For(0, 10, x =>
+            {
+                var table = new DocumentTable("Entities");
+                store.Insert(table, NewId(), new { Property = "Asger", Version = 1 });
+            });
+        }
 
         public class Case
         {

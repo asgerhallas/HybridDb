@@ -35,6 +35,7 @@ namespace HybridDb.Config
         public IBackupWriter BackupWriter { get; private set; }
         public bool RunDocumentMigrationsOnStartup { get; private set; }
         public int ConfiguredVersion { get; private set; }
+        public string TableNamePrefix { get; private set; }
 
         internal ConcurrentDictionary<string, Table> Tables { get; private set; }
         internal List<DocumentDesign> DocumentDesigns { get; private set; }
@@ -138,6 +139,14 @@ namespace HybridDb.Config
         public void UseBackupWriter(IBackupWriter backupWriter)
         {
             BackupWriter = backupWriter;
+        }
+
+        public void UseTableNamePrefix(string prefix)
+        {
+            if (prefix == "")
+                throw new ArgumentException("Prefix must not be empty string.");
+
+            TableNamePrefix = prefix;
         }
 
         public void DisableDocumentMigrationsOnStartup()

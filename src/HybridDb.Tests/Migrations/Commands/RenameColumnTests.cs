@@ -10,7 +10,7 @@ namespace HybridDb.Tests.Migrations.Commands
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void RenamesColumn(TableMode mode)
         {

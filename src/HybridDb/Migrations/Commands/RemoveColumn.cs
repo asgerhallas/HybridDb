@@ -16,14 +16,14 @@ namespace HybridDb.Migrations.Commands
         public Table Table { get; private set; }
         public string Name { get; private set; }
 
-        public override void Execute(Database database)
+        public override void Execute(IDatabase database)
         {
             // Bug in SQL server 2012 prevents us to query SYS.DEFAULT_CONSTRAINTS for temp tables. Furthermore it is only possible to query
             // the table sys.objects$ and the value parent_object_id of sys.objects if using DAC, for which reason it is not possible to get
             // column constraints on a specific column.
             // See: https://connect.microsoft.com/SQLServer/feedback/details/765777/sys-default-constraints-empty-for-temporary-tables-in-tempdb
             // See: http://www.sqlservercentral.com/Forums/Topic1359991-3077-1.aspx
-            if(database.TableMode == TableMode.UseTempTables)
+            if (database is SqlServerUsingTempTables)
                 throw new InvalidOperationException("It is currently not possible to remove columns on temp tables.");
 
             var tableName = database.FormatTableNameAndEscape(Table.Name);

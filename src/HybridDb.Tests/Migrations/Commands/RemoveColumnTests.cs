@@ -23,7 +23,7 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseTempTables)]
         public void RemovesTempTableColumn(TableMode mode)
         {

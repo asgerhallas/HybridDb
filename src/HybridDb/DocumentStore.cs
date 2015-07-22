@@ -17,7 +17,7 @@ namespace HybridDb
         Guid lastWrittenEtag;
         long numberOfRequests;
 
-        DocumentStore(Database database, Configuration configuration)
+        DocumentStore(IDatabase database, Configuration configuration)
         {
             Logger = configuration.Logger;
             Database = database;
@@ -30,7 +30,7 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
-            var database = new Database(configuration.Logger, connectionString, TableMode.UseRealTables);
+            var database = new SqlServerUsingRealTables(configuration.Logger, connectionString, configuration.TableNamePrefix);
             var store = new DocumentStore(database, configuration);
             new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
             new DocumentMigrationRunner(store).RunInBackground();
@@ -46,11 +46,28 @@ namespace HybridDb
         {
             configurator = configurator ?? new NullHybridDbConfigurator();
             var configuration = configurator.Configure();
-            var database = new Database(configuration.Logger, connectionString ?? "data source=.;Integrated Security=True", mode);
+            var resultingConnectionString = connectionString ?? "data source=.;Integrated Security=True";
+
+            IDatabase database;
+            switch (mode)
+            {
+                case TableMode.UseRealTables:
+                    database = new SqlServerUsingRealTables(configuration.Logger, resultingConnectionString, configuration.TableNamePrefix);
+                    break;
+                case TableMode.UseTempTables:
+                    database = new SqlServerUsingTempTables(configuration.Logger, resultingConnectionString);
+                    break;
+                case TableMode.UseTempDb:
+                    database = new SqlServerUsingTempDb(configuration.Logger, resultingConnectionString, configuration.TableNamePrefix);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("mode", mode, null);
+            }
+
             return ForTesting(database, configuration);
         }
 
-        public static IDocumentStore ForTesting(Database database, Configuration configuration)
+        public static IDocumentStore ForTesting(IDatabase database, Configuration configuration)
         {
             var store = new DocumentStore(database, configuration);
             new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
@@ -58,7 +75,7 @@ namespace HybridDb
             return store;
         }
 
-        public Database Database { get; private set; }
+        public IDatabase Database { get; private set; }
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; private set; }
 

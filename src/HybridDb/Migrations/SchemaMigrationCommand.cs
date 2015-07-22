@@ -16,12 +16,12 @@ namespace HybridDb.Migrations
         public bool Unsafe { get; protected set; }
         public string RequiresReprojectionOf { get; protected set; }
 
-        public abstract void Execute(Database database);
+        public abstract void Execute(IDatabase database);
         public new abstract string ToString();
 
-        protected string GetTableExistsSql(Database db, string tablename)
+        protected string GetTableExistsSql(IDatabase db, string tablename)
         {
-            return string.Format(db.TableMode == TableMode.UseRealTables
+            return string.Format(db is SqlServerUsingRealTables || db is SqlServerUsingTempDb
                 ? "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')"
                 : "OBJECT_ID('tempdb..{0}') is not null",
                 db.FormatTableName(tablename));

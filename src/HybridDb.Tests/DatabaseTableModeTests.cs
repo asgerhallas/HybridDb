@@ -12,7 +12,7 @@ namespace HybridDb.Tests
             {
                 var configurator = new LambdaHybridDbConfigurator(x => x.Document<Case>());
 
-                using (DocumentStore.ForTesting(TableMode.UseGlobalTempTables, configurator: configurator))
+                using (DocumentStore.ForTesting(TableMode.UseTempDb, configurator: configurator))
                 using (DocumentStore.ForTesting(TableMode.UseTempTables, configurator: configurator)) { }
             });
         }

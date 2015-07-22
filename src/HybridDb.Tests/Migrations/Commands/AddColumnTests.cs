@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Migrations.Commands
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void AddsColumn(TableMode mode)
         {
@@ -25,13 +25,13 @@ namespace HybridDb.Tests.Migrations.Commands
 
         [Theory]
         [InlineData(TableMode.UseTempTables, typeof(int), false)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(int), false)]
+        [InlineData(TableMode.UseTempDb, typeof(int), false)]
         [InlineData(TableMode.UseRealTables, typeof(int), false)]
         [InlineData(TableMode.UseTempTables, typeof(double), false)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(double), false)]
+        [InlineData(TableMode.UseTempDb, typeof(double), false)]
         [InlineData(TableMode.UseRealTables, typeof(double), false)]
         [InlineData(TableMode.UseTempTables, typeof(string), true)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(string), true)]
+        [InlineData(TableMode.UseTempDb, typeof(string), true)]
         [InlineData(TableMode.UseRealTables, typeof(string), true)]
         public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
@@ -46,7 +46,7 @@ namespace HybridDb.Tests.Migrations.Commands
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void SetsColumnAsNullableAndUsesUnderlyingTypeWhenNullable(TableMode mode)
         {
@@ -61,7 +61,7 @@ namespace HybridDb.Tests.Migrations.Commands
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void CanSetColumnAsPrimaryKey(TableMode mode)
         {
@@ -75,7 +75,7 @@ namespace HybridDb.Tests.Migrations.Commands
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void CanAddColumnWithDefaultValue(TableMode mode)
         {

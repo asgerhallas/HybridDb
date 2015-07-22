@@ -40,7 +40,7 @@ namespace HybridDb.Migrations
 
                 var currentSchemaVersion = database.RawQuery<int>(
                     string.Format("select top 1 SchemaVersion from {0} with (tablockx, holdlock)", 
-                        database.FormatTableName("HybridDb"))).SingleOrDefault();
+                        database.FormatTableNameAndEscape("HybridDb"))).SingleOrDefault();
 
                 if (currentSchemaVersion > store.Configuration.ConfiguredVersion)
                 {
@@ -49,7 +49,7 @@ namespace HybridDb.Migrations
                         currentSchemaVersion, store.Configuration.ConfiguredVersion));
                 }
 
-                if (database.TableMode == TableMode.UseRealTables)
+                if (database is SqlServerUsingRealTables)
                 {
                     if (currentSchemaVersion < configuration.ConfiguredVersion)
                     {
@@ -101,14 +101,14 @@ if not exists (select * from {0})
     insert into {0} (SchemaVersion) values (@version); 
 else
     update {0} set SchemaVersion=@version",
-                    database.FormatTableName("HybridDb")),
+                    database.FormatTableNameAndEscape("HybridDb")),
                     new { version = currentSchemaVersion });
 
                 tx.Complete();
             }
         }
 
-        IEnumerable<string> ExecuteCommand(Database database, SchemaMigrationCommand command)
+        IEnumerable<string> ExecuteCommand(IDatabase database, SchemaMigrationCommand command)
         {
             if (command.Unsafe)
             {

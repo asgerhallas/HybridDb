@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Migrations
 
         [Theory]
         [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.UseTempDb)]
         public void DoesNotRunProvidedSchemaMigrationsOnTempTables(TableMode mode)
         {
             Use(mode);
@@ -291,7 +291,7 @@ namespace HybridDb.Tests.Migrations
 
         public class ThrowingCommand : SchemaMigrationCommand
         {
-            public override void Execute(Database database)
+            public override void Execute(IDatabase database)
             {
                 throw new InvalidOperationException();
             }
@@ -314,7 +314,7 @@ namespace HybridDb.Tests.Migrations
         {
             public int NumberOfTimesCalled { get; private set; }
 
-            public override void Execute(Database database)
+            public override void Execute(IDatabase database)
             {
                 NumberOfTimesCalled++;
             }
@@ -327,7 +327,7 @@ namespace HybridDb.Tests.Migrations
         
         public class SlowCommand : SchemaMigrationCommand
         {
-            public override void Execute(Database database)
+            public override void Execute(IDatabase database)
             {
                 Thread.Sleep(5000);
             }
