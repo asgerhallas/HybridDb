@@ -14,7 +14,7 @@ namespace HybridDb.Tests
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllTables(TableMode mode)
         {
-            Use(mode, "randomprefix_");
+            Use(mode, prefix: Guid.NewGuid().ToString());
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
             new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(database);
@@ -33,7 +33,7 @@ namespace HybridDb.Tests
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllColumns(TableMode mode)
         {
-            Use(mode, "randomprefix");
+            Use(mode, prefix: Guid.NewGuid().ToString());
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(database);
             new AddColumn("Entities1", new Column("SomeInt", typeof(int))).Execute(database);
