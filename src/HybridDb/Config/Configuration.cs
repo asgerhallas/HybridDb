@@ -26,7 +26,7 @@ namespace HybridDb.Config
             Serializer = new DefaultSerializer();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
-            RunMigrationsOnStartup = true;
+            RunSchemaMigrationsOnStartup = true;
             RunDocumentMigrationsOnStartup = true;
         }
 
@@ -34,7 +34,7 @@ namespace HybridDb.Config
         public ISerializer Serializer { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
-        public bool RunMigrationsOnStartup { get; private set; }
+        public bool RunSchemaMigrationsOnStartup { get; private set; }
         public bool RunDocumentMigrationsOnStartup { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
@@ -153,7 +153,7 @@ namespace HybridDb.Config
 
         internal void DisableMigrationsOnStartup()
         {
-            RunMigrationsOnStartup = false;
+            RunSchemaMigrationsOnStartup = false;
             RunDocumentMigrationsOnStartup = false;
         }
 

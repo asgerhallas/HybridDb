@@ -26,7 +26,7 @@ namespace HybridDb.Migrations
 
         public void Run()
         {
-            if (!store.Configuration.RunMigrationsOnStartup)
+            if (!store.Configuration.RunSchemaMigrationsOnStartup)
                 return;
 
             var requiresReprojection = new List<string>();
