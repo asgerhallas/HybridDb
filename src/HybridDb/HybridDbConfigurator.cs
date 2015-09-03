@@ -63,6 +63,11 @@ namespace HybridDb
             configuration.UseBackupWriter(writer);
         }
 
+        internal void DisableMigrations()
+        {
+            configuration.DisableMigrationsOnStartup();
+        }
+
         protected void DisableDocumentMigrationsInBackground()
         {
             configuration.DisableDocumentMigrationsOnStartup();

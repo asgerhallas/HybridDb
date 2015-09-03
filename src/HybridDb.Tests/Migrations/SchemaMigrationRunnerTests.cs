@@ -31,6 +31,20 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
+        public void DoesNothingWhenTurnedOff()
+        {
+            DisableMigrations();
+            CreateMetadataTable();
+
+            var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
+
+            runner.Run();
+
+            configuration.Tables.ShouldNotContainKey("HybridDb");
+            database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Any().ShouldBe(false);
+        }
+
+        [Fact]
         public void DoesNothingGivenNoMigrations()
         {
             CreateMetadataTable();
