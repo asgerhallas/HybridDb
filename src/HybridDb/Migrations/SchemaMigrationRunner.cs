@@ -26,6 +26,9 @@ namespace HybridDb.Migrations
 
         public void Run()
         {
+            if (!store.Configuration.RunMigrationsOnStartup)
+                return;
+
             var requiresReprojection = new List<string>();
 
             var database = ((DocumentStore)store).Database;

@@ -28,14 +28,44 @@ namespace HybridDb.Studio.ViewModels
             this.documentViewModelFactory = documentViewModelFactory;
             this.settings = settings;
             this.windowManager = windowManager;
-            store = DocumentStore.Create(settings.ConnectionString);
+
+            DisplayName = "HybridDb Studio";
+        }
+
+        void CreateStore()
+        {
+            store = DocumentStore.Create(
+                settings.ConnectionString, 
+                new LambdaHybridDbConfigurator(x => x.DisableMigrationsOnStartup()));
+        }
+
+        protected override void OnViewLoaded(object view)
+        {
+            if (string.IsNullOrWhiteSpace(settings.ConnectionString) || !settings.ConnectionIsValid())
+            {
+                OpenSettings();
+                return;
+            }
+
+            CreateStore();
         }
 
         public void OpenSettings()
         {
-            windowManager.ShowDialog(settings);
-            store.Dispose();
-            store = DocumentStore.Create(settings.ConnectionString);
+            var dialogResult = windowManager.ShowDialog(settings);
+
+            if (dialogResult != true && !settings.ConnectionIsValid())
+            {
+                TryClose();
+                return;
+            }
+
+            if (store != null)
+            {
+                store.Dispose();
+            }
+
+            CreateStore();
         }
 
         public string DocumentId

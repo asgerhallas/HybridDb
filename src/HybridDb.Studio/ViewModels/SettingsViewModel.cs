@@ -8,6 +8,11 @@ namespace HybridDb.Studio.ViewModels
 {
     public class SettingsViewModel : Screen, ISettings
     {
+        public SettingsViewModel()
+        {
+            DisplayName = "Setup connectionstring";
+        }
+
         public string ConnectionString
         {
             get { return (string) Settings.Default["ConnectionString"]; }
@@ -37,31 +42,12 @@ namespace HybridDb.Studio.ViewModels
             }
         }
 
-        public override void CanClose(Action<bool> callback)
+        public void Save()
         {
             bool connectionIsValid = ConnectionIsValid();
             if (!connectionIsValid)
             {
-                MessageBoxResult result = MessageBox.Show("Could not establish connection with connectionstring.", "Error", MessageBoxButton.OKCancel);
-                if (result != MessageBoxResult.OK)
-                {
-                    App.Current.Shutdown();
-                    return;
-                }
-            }
-            
-            callback(connectionIsValid);
-        }
-
-        public void Save()
-        {
-            if (!ConnectionIsValid())
-            {
-                MessageBoxResult result = MessageBox.Show("Could not establish connection with connectionstring.", "Error", MessageBoxButton.OKCancel);
-                if (result != MessageBoxResult.OK)
-                {
-                    App.Current.Shutdown();
-                }
+                MessageBox.Show("Could not establish connection with connectionstring.", "Error", MessageBoxButton.OK);
                 return;
             }
 

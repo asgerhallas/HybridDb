@@ -26,6 +26,7 @@ namespace HybridDb.Config
             Serializer = new DefaultSerializer();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
+            RunMigrationsOnStartup = true;
             RunDocumentMigrationsOnStartup = true;
         }
 
@@ -33,6 +34,7 @@ namespace HybridDb.Config
         public ISerializer Serializer { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
+        public bool RunMigrationsOnStartup { get; private set; }
         public bool RunDocumentMigrationsOnStartup { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
@@ -147,6 +149,12 @@ namespace HybridDb.Config
                 throw new ArgumentException("Prefix must not be empty string.");
 
             TableNamePrefix = prefix;
+        }
+
+        internal void DisableMigrationsOnStartup()
+        {
+            RunMigrationsOnStartup = false;
+            RunDocumentMigrationsOnStartup = false;
         }
 
         public void DisableDocumentMigrationsOnStartup()
