@@ -22,7 +22,7 @@ namespace HybridDb.Studio.Models
         
         public string Id
         {
-            get { return (string) idColumn.Value; }
+            get { return idColumn.Value.ToString(); }
         }
 
         public string Name
