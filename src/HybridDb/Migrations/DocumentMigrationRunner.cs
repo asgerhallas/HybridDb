@@ -91,7 +91,7 @@ namespace HybridDb.Migrations
                                 using (var session = store.OpenSession())
                                 {
                                     session.Load<object>(id);
-                                    session.Advanced.SaveChanges(lastWriteWins: false, force: true);
+                                    session.Advanced.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                 }
                             }
                             catch (ConcurrencyException) {}
