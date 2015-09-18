@@ -194,7 +194,7 @@ namespace HybridDb.Tests
                 session2.SaveChanges();
 
                 entityFromSession1.Property += " er 4 real";
-                session1.Advanced.SaveChangesLastWriterWins();
+                session1.Advanced.SaveChanges(lastWriteWins: true, force: false);
 
                 session1.Advanced.Clear();
                 session1.Load<Entity>(id).Property.ShouldBe("Asger er 4 real");

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using HybridDb.Commands;
 
 namespace HybridDb
@@ -12,7 +13,7 @@ namespace HybridDb
         void Defer(DatabaseCommand command);
         void Evict(object entity);
         Guid? GetEtagFor(object entity);
-        void SaveChangesLastWriterWins();
+        void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument);
         IEnumerable<object> ManagedEntities { get; }
     }
 }

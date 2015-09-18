@@ -181,11 +181,13 @@ namespace HybridDb.Tests
         public class ChangeDocumentAsJObject<T> : ChangeDocument<T>
         {
             public ChangeDocumentAsJObject(Action<JObject> change)
-                : base((s, x) =>
+                : base((session, serializer, json) =>
                 {
-                    var jobject = (JObject)s.Deserialize(x, typeof(JObject));
-                    change(jobject);
-                    return s.Serialize(jobject);
+                    var jObject = (JObject)serializer.Deserialize(json, typeof(JObject));
+                    
+                    change(jObject);
+                    
+                    return serializer.Serialize(jObject);
                 })
             {
             }

@@ -88,17 +88,11 @@ namespace HybridDb.Migrations
                         {
                             try
                             {
-                                var rowWithDocument = store.Get(table, id);
-                                
-                                var document = (byte[]) rowWithDocument[table.DocumentColumn];
-                                var etag = (Guid)rowWithDocument[table.EtagColumn];
-
-                                var entity = migrator.DeserializeAndMigrate(concreteDesign, id, document, currentDocumentVersion);
-                                var projections = concreteDesign.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(entity));
-
-                                store.Execute(new BackupCommand(
-                                    new UpdateCommand(table, id, etag, projections, false),
-                                    store.Configuration.BackupWriter, concreteDesign, id, currentDocumentVersion, document));
+                                using (var session = store.OpenSession())
+                                {
+                                    session.Load<object>(id);
+                                    session.Advanced.SaveChanges(lastWriteWins: false, force: true);
+                                }
                             }
                             catch (ConcurrencyException) {}
                             catch (Exception exception)

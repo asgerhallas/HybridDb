@@ -25,7 +25,7 @@ namespace HybridDb.Migrations
                 .Where(x => x.ForType(design.DocumentType));
         }
 
-        public object DeserializeAndMigrate(DocumentDesign design, string id, byte[] document, int currentDocumentVersion)
+        public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, byte[] document, int currentDocumentVersion)
         {
             var configuredVersion = configuration.ConfiguredVersion;
             if (configuredVersion == currentDocumentVersion)
@@ -44,8 +44,8 @@ namespace HybridDb.Migrations
                 design.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
 
             document = ApplicableCommands(design, currentDocumentVersion)
-                .Aggregate(document, (current, command) => 
-                    command.Execute(configuration.Serializer, current));
+                .Aggregate(document, (currentDocument, command) => 
+                    command.Execute(session, configuration.Serializer, currentDocument));
 
             return configuration.Serializer.Deserialize(document, design.DocumentType);
         }

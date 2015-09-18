@@ -139,15 +139,15 @@ namespace HybridDb
 
         public void SaveChanges()
         {
-            SaveChangesInternal(false);
+            SaveChangesInternal(lastWriteWins: false, force: false);
         }
 
-        public void SaveChangesLastWriterWins()
+        public void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
-            SaveChangesInternal(true);
+            SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
         }
 
-        void SaveChangesInternal(bool lastWriteWins)
+        void SaveChangesInternal(bool lastWriteWins, bool force)
         {
             if (saving)
             {
@@ -175,7 +175,7 @@ namespace HybridDb
                         managedEntity.Document = document;
                         break;
                     case EntityState.Loaded:
-                        if (managedEntity.Document.SequenceEqual(document)) 
+                        if (!force && managedEntity.Document.SequenceEqual(document)) 
                             break;
                         
                         commands.Add(managedEntity, new BackupCommand(
@@ -226,7 +226,7 @@ namespace HybridDb
 
             var document = (byte[])row[table.DocumentColumn];
             var currentDocumentVersion = (int) row[table.VersionColumn];
-            var entity = migrator.DeserializeAndMigrate(concreteDesign, id, document, currentDocumentVersion);
+            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, id, document, currentDocumentVersion);
 
             managedEntity = new ManagedEntity
             {
