@@ -11,7 +11,7 @@ namespace HybridDb
         void Clear();
         bool IsLoaded(string id);
         IDocumentStore DocumentStore { get; }
-        T Load<T>(string key, DocumentDesign design) where T : class;
+        object Load(DocumentDesign design, string key);
         void Defer(DatabaseCommand command);
         void Evict(object entity);
         Guid? GetEtagFor(object entity);

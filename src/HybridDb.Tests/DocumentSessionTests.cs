@@ -337,7 +337,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Advanced.Load<object>(id, store.Configuration.GetDesignFor<Entity>());
+                var entity = session.Advanced.Load(store.Configuration.GetDesignFor<Entity>(), id);
                 
                 entity.ShouldBeOfType<Entity>();
             }

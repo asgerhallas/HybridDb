@@ -43,16 +43,16 @@ namespace HybridDb
                 throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof(T)));
             }
 
-            return Load<T>(key, design);
+            return Load(design, key) as T;
         }
 
-        public T Load<T>(string key, DocumentDesign design) where T : class
+        public object Load(DocumentDesign design, string key)
         {
             ManagedEntity managedEntity;
             if (entities.TryGetValue(key, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
-                    ? managedEntity.Entity as T
+                    ? managedEntity.Entity
                     : null;
             }
             
@@ -60,7 +60,7 @@ namespace HybridDb
             
             if (row == null) return null;
 
-            return (T)ConvertToEntityAndPutUnderManagement(design, row);
+            return ConvertToEntityAndPutUnderManagement(design, row);
         }
 
         public IQueryable<T> Query<T>() where T : class
