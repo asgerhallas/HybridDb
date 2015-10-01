@@ -37,18 +37,23 @@ namespace HybridDb
 
         public T Load<T>(string key) where T : class
         {
+            var design = store.Configuration.TryGetDesignFor<T>();
+            if (design == null)
+            {
+                throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof(T)));
+            }
+
+            return Load<T>(key, design);
+        }
+
+        public T Load<T>(string key, DocumentDesign design) where T : class
+        {
             ManagedEntity managedEntity;
             if (entities.TryGetValue(key, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity as T
                     : null;
-            }
-
-            var design = store.Configuration.TryGetDesignFor<T>();
-            if (design == null)
-            {
-                throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof (T)));
             }
             
             var row = store.Get(design.Table, key);

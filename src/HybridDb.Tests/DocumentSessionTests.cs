@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using FakeItEasy;
-using FakeItEasy.ExtensionSyntax;
 using HybridDb.Commands;
 using HybridDb.Linq;
 using Shouldly;
@@ -273,6 +269,7 @@ namespace HybridDb.Tests
         public void LoadingAManagedDocumentWithWrongTypeReturnsNothing()
         {
             Document<Entity>();
+            Document<OtherEntity>();
 
             var id = NewId();
             using (var session = store.OpenSession())
@@ -325,6 +322,24 @@ namespace HybridDb.Tests
 
                 var entity = session.Load<Entity>(id);
                 entity.Property.ShouldBe("Asger");
+            }
+        }
+
+        [Fact]
+        public void CanLoadDocumentWithDesign()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                var entity = session.Advanced.Load<object>(id, store.Configuration.GetDesignFor<Entity>());
+                
+                entity.ShouldBeOfType<Entity>();
             }
         }
 

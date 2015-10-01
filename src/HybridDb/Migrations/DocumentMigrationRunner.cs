@@ -90,7 +90,7 @@ namespace HybridDb.Migrations
                             {
                                 using (var session = store.OpenSession())
                                 {
-                                    session.Load<object>(id);
+                                    session.Advanced.Load<object>(id, concreteDesign);
                                     session.Advanced.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                 }
                             }
