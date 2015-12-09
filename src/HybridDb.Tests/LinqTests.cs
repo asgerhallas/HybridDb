@@ -524,7 +524,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWhereWithInEmptyArray()
         {
-            var translation = Query<Entity>().Where(x => x.Id.In()).Translate();
+            var translation = Query<Entity>().Where(x => x.Id.In(new Guid[0])).Translate();
             translation.Where.ShouldBe("(@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }
@@ -532,7 +532,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWhereWithNotInEmptyArray()
         {
-            var translation = Query<Entity>().Where(x => !x.Id.In()).Translate();
+            var translation = Query<Entity>().Where(x => !x.Id.In(new Guid[0])).Translate();
             translation.Where.ShouldBe(" NOT (@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }

@@ -134,11 +134,17 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitNewArray(NewArrayExpression expression)
         {
-            var items = new object[expression.Expressions.Count];
-            for (var i = 0; i < expression.Expressions.Count; i++)
+            var items = new object[0];
+
+            if (expression.NodeType == ExpressionType.NewArrayInit)
             {
-                Visit(expression.Expressions[i]);
-                items[i] = ((SqlConstantExpression) ast.Pop()).Value;
+                items = new object[expression.Expressions.Count];
+
+                for (var i = 0; i < expression.Expressions.Count; i++)
+                {
+                    Visit(expression.Expressions[i]);
+                    items[i] = ((SqlConstantExpression) ast.Pop()).Value;
+                }
             }
 
             ast.Push(new SqlConstantExpression(typeof(object[]), items));
