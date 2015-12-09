@@ -19,21 +19,21 @@ namespace HybridDb.Tests.Migrations.Commands
             new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(database);
             new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(database);
 
-            new SqlMigrationCommand("add some index", x => x
-                .Append($"alter table {database.FormatTableNameAndEscape("Entities")} add {database.Escape("Col3")} int"))
+            new SqlMigrationCommand("add some index", (sql, db) => sql
+                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int"))
                 .Execute(database);
         }
 
         [Fact]
         public void IsSafe()
         {
-            new SqlMigrationCommand("add some index", x => x.MarkAsUnsafe()).Unsafe.ShouldBe(true);
+            new SqlMigrationCommand("is always safe", (sql, db) => { }).Unsafe.ShouldBe(false);
         }
 
         [Fact]
         public void RequiresReprojection()
         {
-            new SqlMigrationCommand("add some index", x => x.RequiresReprojectionOf("hansoggrethe")).RequiresReprojectionOf.ShouldBe("hansoggrethe");
+            new SqlMigrationCommand("add some index", "hansoggrethe", (sql, db) => { }).RequiresReprojectionOf.ShouldBe("hansoggrethe");
         }
     }
 }

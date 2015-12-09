@@ -4,51 +4,32 @@ namespace HybridDb.Migrations.Commands
 {
     public class SqlMigrationCommand : SchemaMigrationCommand
     {
-        readonly Action<SqlMigrationBuilder> builder;
+        readonly Action<SqlBuilder, IDatabase> builder;
 
-        public SqlMigrationCommand(string description, Action<SqlMigrationBuilder> builder)
+        public SqlMigrationCommand(string description, Action<SqlBuilder, IDatabase> builder) : this(description, null, builder) { }
+
+        public SqlMigrationCommand(string description, string requiresReprojectionOf, Action<SqlBuilder, IDatabase> builder)
         {
             this.builder = builder;
+
             Description = description;
+            RequiresReprojectionOf = requiresReprojectionOf;
+
+            Unsafe = false;
         }
 
         public string Description { get; }
 
         public sealed override void Execute(IDatabase database)
         {
-            var sql = new SqlMigrationBuilder(this, database);
-            builder(sql);
+            var sql = new SqlBuilder();
+            builder(sql, database);
             database.RawExecute(sql.ToString());
         }
 
         public override string ToString()
         {
             return Description;
-        }
-
-        public class SqlMigrationBuilder : SqlBuilder
-        {
-            readonly SqlMigrationCommand command;
-
-            public SqlMigrationBuilder(SqlMigrationCommand command, IDatabase database)
-            {
-                this.command = command;
-                Database = database;
-            }
-
-            public IDatabase Database { get;  }
-
-            public SqlMigrationBuilder MarkAsUnsafe()
-            {
-                command.Unsafe = true;
-                return this;
-            }
-
-            public SqlMigrationBuilder RequiresReprojectionOf(string tablename)
-            {
-                command.RequiresReprojectionOf = tablename;
-                return this;
-            }
         }
     }
 }
