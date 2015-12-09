@@ -84,6 +84,7 @@
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="Migrations\ChangeDocument.cs" />
+    <Compile Include="Migrations\Commands\SqlMigrationCommand.cs" />
     <Compile Include="Migrations\DocumentMigrationCommand.cs" />
     <Compile Include="Migrations\DocumentMigrationRunner.cs" />
     <Compile Include="Migrations\DocumentMigrator.cs" />
