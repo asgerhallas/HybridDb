@@ -524,6 +524,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWhereWithInEmptyArray()
         {
+            // ReSharper disable once RedundantExplicitParamsArrayCreation
             var translation = Query<Entity>().Where(x => x.Id.In(new Guid[0])).Translate();
             translation.Where.ShouldBe("(@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
@@ -532,6 +533,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWhereWithNotInEmptyArray()
         {
+            // ReSharper disable once RedundantExplicitParamsArrayCreation
             var translation = Query<Entity>().Where(x => !x.Id.In(new Guid[0])).Translate();
             translation.Where.ShouldBe(" NOT (@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
