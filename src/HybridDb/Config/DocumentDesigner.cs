@@ -6,11 +6,17 @@ namespace HybridDb.Config
 {
     public class DocumentDesigner<TEntity>
     {
-        private readonly DocumentDesign design;
+        readonly DocumentDesign design;
 
         public DocumentDesigner(DocumentDesign design)
         {
             this.design = design;
+        }
+
+        public DocumentDesigner<TEntity> Key(Func<TEntity, string> projector)
+        {
+            design.GetKey = entity => projector((TEntity) entity);
+            return this;
         }
 
         public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
@@ -22,6 +28,12 @@ namespace HybridDb.Config
         public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
         {
             var column = design.Table[name];
+
+            if (design.Table.IdColumn.Equals(column))
+            {
+                throw new ArgumentException("You can not make a projection for IdColumn. Use Document.Key() method instead.");
+            }
+
             if (column == null)
             {
                 column = new Column(name, typeof(TMember));

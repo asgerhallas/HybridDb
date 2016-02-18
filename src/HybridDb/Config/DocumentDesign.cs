@@ -20,7 +20,7 @@ namespace HybridDb.Config
             
             Projections = new Dictionary<string, Projection>
             {
-                {Table.IdColumn, Projection.From<Guid>(document => ((dynamic) document).Id)},
+                //{Table.IdColumn, Projection.From<Guid>(document => ((dynamic) document).Id)},
                 {Table.DiscriminatorColumn, Projection.From<string>(document => Discriminator)},
                 {Table.DocumentColumn, Projection.From<byte[]>(document => configuration.Serializer.Serialize(document))},
                 {Table.VersionColumn, Projection.From<int>(document => configuration.ConfiguredVersion)},
@@ -45,25 +45,16 @@ namespace HybridDb.Config
 
         public Dictionary<string, Projection> Projections { get; private set; }
 
-        public IReadOnlyDictionary<string, DocumentDesign> DecendentsAndSelf
-        {
-            get { return decendentsAndSelf; }
-        }
+        public IReadOnlyDictionary<string, DocumentDesign> DecendentsAndSelf => decendentsAndSelf;
 
-        public string GetKey(object entity)
-        {
-            return (string)(Projections[Table.IdColumn].Projector(entity) ?? Guid.NewGuid().ToString());
-        }
+        public Func<object, string> GetKey { get; internal set; } = entity => (string) (((dynamic) entity).Id ?? Guid.NewGuid().ToString());
 
         void AddChild(DocumentDesign design)
         {
-            if (Parent != null)
-            {
-                Parent.AddChild(design);
-            }
+            Parent?.AddChild(design);
 
             if (decendentsAndSelf.ContainsKey(design.Discriminator))
-                throw new InvalidOperationException(string.Format("Discriminator '{0}' is already in use.", design.Discriminator));
+                throw new InvalidOperationException($"Discriminator '{design.Discriminator}' is already in use.");
 
             decendentsAndSelf.Add(design.Discriminator, design);
         }

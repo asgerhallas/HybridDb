@@ -1147,7 +1147,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUseADifferentIdProjection()
         {
-            Document<Entity>().With("Id", x => x.Property);
+            Document<Entity>().Key(x => x.Property);
 
             using (var session = store.OpenSession())
             {
@@ -1159,6 +1159,25 @@ namespace HybridDb.Tests
             {
                 var entity = session.Load<Entity>("TheId");
                 
+                entity.ShouldNotBe(null);
+            }
+        }
+
+        [Fact]
+        public void CanStoreWithGivenKey()
+        {
+            Document<EntityWithoutId>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store("mykey", new EntityWithoutId { Data = "TheId" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<EntityWithoutId>("mykey");
+
                 entity.ShouldNotBe(null);
             }
         }
@@ -1193,6 +1212,11 @@ namespace HybridDb.Tests
         {
             public string Property { get; set; }
             public int? YksiKaksiKolme { get; set; }
+        }
+
+        public class EntityWithoutId
+        {
+            public string Data { get; set; }
         }
     }
 }

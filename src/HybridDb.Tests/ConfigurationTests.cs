@@ -286,11 +286,9 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanOverrideIdProjection()
+        public void FailWhenTryingtoOverrideIdProjection()
         {
-            configuration.Document<Entity>().With("Id", x => x.String);
-
-            ProjectionsFor<Entity>()["Id"].Projector(new Entity { String = "TheId" }).ShouldBe("TheId");
+            Should.Throw<ArgumentException>(() => configuration.Document<Entity>().With("Id", x => x.String));
         }
 
         public class Entity
