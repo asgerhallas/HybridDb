@@ -50,7 +50,7 @@ namespace HybridDb.Config
             get { return decendentsAndSelf; }
         }
 
-        public string GetId(object entity)
+        public string GetKey(object entity)
         {
             return (string)(Projections[Table.IdColumn].Projector(entity) ?? Guid.NewGuid().ToString());
         }

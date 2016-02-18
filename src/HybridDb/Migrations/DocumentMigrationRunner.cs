@@ -90,8 +90,8 @@ namespace HybridDb.Migrations
                             {
                                 using (var session = store.OpenSession())
                                 {
-                                    session.Advanced.Load(concreteDesign, id);
-                                    session.Advanced.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                    session.Load(concreteDesign, id);
+                                    session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                 }
                             }
                             catch (ConcurrencyException) {}

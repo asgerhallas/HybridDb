@@ -25,24 +25,22 @@ namespace HybridDb
             this.store = store;
         }
 
-        public IAdvancedDocumentSessionCommands Advanced
-        {
-            get { return this; }
-        }
+        public IAdvancedDocumentSessionCommands Advanced => this;
 
-        public IEnumerable<object> ManagedEntities
-        {
-            get { return entities.Select(x => x.Value.Entity); }
-        }
+        public IEnumerable<ManagedEntity> ManagedEntities => entities
+            .Select(x => new ManagedEntity
+            {
+                Key = x.Value.Key,
+                Entity = x.Value.Entity,
+                Etag = x.Value.Etag,
+                State = x.Value.State,
+                Version = x.Value.Version,
+                Document = x.Value.Document,
+            });
 
         public T Load<T>(string key) where T : class
         {
-            var design = store.Configuration.TryGetDesignFor<T>();
-            if (design == null)
-            {
-                throw new InvalidOperationException(string.Format("No design registered for document of type {0}", typeof(T)));
-            }
-
+            var design = store.Configuration.GetDesignFor<T>();
             return Load(design, key) as T;
         }
 
@@ -67,11 +65,7 @@ namespace HybridDb
         {
             var configuration = store.Configuration;
             
-            var design = configuration.TryGetDesignFor<T>();
-            if (design == null)
-            {
-                throw new InvalidOperationException(string.Format("No design registered for type {0}", typeof(T)));
-            }
+            var design = configuration.GetDesignFor<T>();
 
             var discriminators = design.DecendentsAndSelf.Keys.ToArray();
 
@@ -89,14 +83,14 @@ namespace HybridDb
         public void Evict(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetId(entity);
+            var id = design.GetKey(entity);
             entities.Remove(id);
         }
 
         public Guid? GetEtagFor(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetId(entity);
+            var id = design.GetKey(entity);
 
             ManagedEntity managedEntity;
             if (!entities.TryGetValue(id, out managedEntity))
@@ -105,46 +99,49 @@ namespace HybridDb
             return managedEntity.Etag;
         }
 
-        public void Store(object entity)
+        public void Store(string key, object entity)
         {
-            var configuration = store.Configuration;
-            var type = entity.GetType();
-            var design = configuration.GetDesignFor(type);
-            var id = design.GetId(entity);
-
-            if (entities.ContainsKey(id))
+            if (entities.ContainsKey(key))
                 return;
 
-            entities.Add(id, new ManagedEntity
+            entities.Add(key, new ManagedEntity
             {
-                Key = id,
+                Key = key,
                 Entity = entity,
                 State = EntityState.Transient
             });
         }
 
+        public void Store(object entity)
+        {
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = design.GetKey(entity);
+
+            Store(id, entity);
+        }
+
         public void Delete(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetId(entity);
+            var key = design.GetKey(entity);
 
             ManagedEntity managedEntity;
-            if (!entities.TryGetValue(id, out managedEntity))
+            if (!entities.TryGetValue(key, out managedEntity))
                 return;
 
             if (managedEntity.State == EntityState.Transient)
             {
-                entities.Remove(id);
+                entities.Remove(key);
             }
             else
             {
-                entities[id].State = EntityState.Deleted;
+                entities[key].State = EntityState.Deleted;
             }
         }
 
         public void SaveChanges()
         {
-            SaveChangesInternal(lastWriteWins: false, force: false);
+            SaveChangesInternal(lastWriteWins: false, forceWriteUnchangedDocument: false);
         }
 
         public void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument)
@@ -152,7 +149,7 @@ namespace HybridDb
             SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
         }
 
-        void SaveChangesInternal(bool lastWriteWins, bool force)
+        void SaveChangesInternal(bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
             if (saving)
             {
@@ -164,7 +161,7 @@ namespace HybridDb
             var commands = new Dictionary<ManagedEntity, DatabaseCommand>();
             foreach (var managedEntity in entities.Values.ToList())
             {
-                var id = managedEntity.Key;
+                var key = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
 
@@ -174,24 +171,24 @@ namespace HybridDb
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(managedEntity, new InsertCommand(design.Table, id, projections));
+                        commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));
                         managedEntity.State = EntityState.Loaded;
                         managedEntity.Version = version;
                         managedEntity.Document = document;
                         break;
                     case EntityState.Loaded:
-                        if (!force && managedEntity.Document.SequenceEqual(document)) 
+                        if (!forceWriteUnchangedDocument && managedEntity.Document.SequenceEqual(document)) 
                             break;
                         
                         commands.Add(managedEntity, new BackupCommand(
-                            new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins),
-                            store.Configuration.BackupWriter, design, id, managedEntity.Version, managedEntity.Document));
+                            new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins),
+                            store.Configuration.BackupWriter, design, key, managedEntity.Version, managedEntity.Document));
                         
                         managedEntity.Version = version;
                         managedEntity.Document = document;
                         break;
                     case EntityState.Deleted:
-                        commands.Add(managedEntity, new DeleteCommand(design.Table, id, managedEntity.Etag, lastWriteWins));
+                        commands.Add(managedEntity, new DeleteCommand(design.Table, key, managedEntity.Etag, lastWriteWins));
                         entities.Remove(managedEntity.Key);
                         break;
                 }
@@ -212,17 +209,17 @@ namespace HybridDb
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign design, IDictionary<string, object> row)
         {
             var table = design.Table;
-            var id = (string)row[table.IdColumn];
+            var key = (string)row[table.IdColumn];
             var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
 
             DocumentDesign concreteDesign;
             if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
             {
-                throw new InvalidOperationException(string.Format("Document with id {0} exists, but is not assignable to the given type {1}.", id, design.DocumentType.Name));
+                throw new InvalidOperationException(string.Format("Document with id {0} exists, but is not assignable to the given type {1}.", key, design.DocumentType.Name));
             }
 
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(id, out managedEntity))
+            if (entities.TryGetValue(key, out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -231,11 +228,11 @@ namespace HybridDb
 
             var document = (byte[])row[table.DocumentColumn];
             var currentDocumentVersion = (int) row[table.VersionColumn];
-            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, id, document, currentDocumentVersion);
+            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, document, currentDocumentVersion);
 
             managedEntity = new ManagedEntity
             {
-                Key = id,
+                Key = key,
                 Entity = entity,
                 Etag = (Guid) row[table.EtagColumn],
                 State = EntityState.Loaded,
@@ -243,7 +240,7 @@ namespace HybridDb
                 Document = document
             };
 
-            entities.Add(id, managedEntity);
+            entities.Add(key, managedEntity);
             return entity;
         }
 
@@ -252,31 +249,11 @@ namespace HybridDb
             entities.Clear();
         }
 
-        public bool IsLoaded(string id)
+        public bool IsLoaded(string key)
         {
-            return entities.ContainsKey(id);
+            return entities.ContainsKey(key);
         }
 
-        public IDocumentStore DocumentStore
-        {
-            get { return store; }
-        }
-
-        enum EntityState
-        {
-            Transient,
-            Loaded,
-            Deleted
-        }
-
-        class ManagedEntity
-        {
-            public object Entity { get; set; }
-            public string Key { get; set; }
-            public Guid Etag { get; set; }
-            public EntityState State { get; set; }
-            public int Version { get; set; }
-            public byte[] Document { get; set; }
-        }
+        public IDocumentStore DocumentStore => store;
     }
 }

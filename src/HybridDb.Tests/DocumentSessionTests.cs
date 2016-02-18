@@ -190,7 +190,7 @@ namespace HybridDb.Tests
                 session2.SaveChanges();
 
                 entityFromSession1.Property += " er 4 real";
-                session1.Advanced.SaveChanges(lastWriteWins: true, forceWriteUnchangedDocument: false);
+                session1.SaveChanges(lastWriteWins: true, forceWriteUnchangedDocument: false);
 
                 session1.Advanced.Clear();
                 session1.Load<Entity>(id).Property.ShouldBe("Asger er 4 real");
@@ -337,7 +337,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Advanced.Load(store.Configuration.GetDesignFor<Entity>(), id);
+                var entity = session.Load(store.Configuration.GetDesignFor<Entity>(), id);
                 
                 entity.ShouldBeOfType<Entity>();
             }

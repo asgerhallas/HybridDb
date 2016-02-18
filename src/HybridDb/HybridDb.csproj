@@ -79,10 +79,12 @@
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
     <Compile Include="DocumentStoreExtensions.cs" />
+    <Compile Include="EntityState.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
+    <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\ChangeDocument.cs" />
     <Compile Include="Migrations\Commands\SqlMigrationCommand.cs" />
     <Compile Include="Migrations\DocumentMigrationCommand.cs" />

@@ -86,7 +86,7 @@ namespace HybridDb.Config
             if (design != null) return design;
 
             throw new HybridDbException(string.Format(
-                "No table was registered for type {0}. " +
+                "No design was registered for documents of type {0}. " +
                 "Please run store.Document<{0}>() to register it before use.", 
                 type.Name));
         }
