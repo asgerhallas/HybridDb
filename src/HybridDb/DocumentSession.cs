@@ -82,43 +82,23 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetKey(entity);
-            entities.Remove(id);
+            entities.Remove(GetManagedEntity(entity).Key);
         }
 
         public Guid? GetEtagFor(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetKey(entity);
-
-            ManagedEntity managedEntity;
-            if (!entities.TryGetValue(id, out managedEntity))
-                return null;
-
-            return managedEntity.Etag;
+            return GetManagedEntity(entity)?.Etag;
         }
 
         public Dictionary<string, List<string>> GetMetadataFor(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetKey(entity);
-
-            ManagedEntity managedEntity;
-            if (!entities.TryGetValue(id, out managedEntity))
-                return null;
-
-            return managedEntity.Metadata;
+            return GetManagedEntity(entity)?.Metadata;
         }
 
         public void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetKey(entity);
-
-            ManagedEntity managedEntity;
-            if (!entities.TryGetValue(id, out managedEntity))
-                return;
+            var managedEntity = GetManagedEntity(entity);
+            if (managedEntity == null) return;
 
             managedEntity.Metadata = metadata;
         }
@@ -140,34 +120,21 @@ namespace HybridDb
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
             var key = design.GetKey(entity);
-
-            if (entities.ContainsKey(key))
-                return;
-
-            entities.Add(key, new ManagedEntity
-            {
-                Key = key,
-                Entity = entity,
-                State = EntityState.Transient,
-            });
+            Store(key, entity);
         }
 
         public void Delete(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var key = design.GetKey(entity);
-
-            ManagedEntity managedEntity;
-            if (!entities.TryGetValue(key, out managedEntity))
-                return;
+            var managedEntity = GetManagedEntity(entity);
+            if (managedEntity == null) return;
 
             if (managedEntity.State == EntityState.Transient)
             {
-                entities.Remove(key);
+                entities.Remove(managedEntity.Key);
             }
             else
             {
-                entities[key].State = EntityState.Deleted;
+                entities[managedEntity.Key].State = EntityState.Deleted;
             }
         }
 
@@ -239,17 +206,6 @@ namespace HybridDb
             saving = false;
         }
 
-        bool SafeSequenceEqual<T>(IEnumerable<T> first, IEnumerable<T> second)
-        {
-            if (Equals(first, second))
-                return true;
-
-            if (first == null || second == null)
-                return false;
-
-            return first.SequenceEqual(second);
-        }
-
         public void Dispose() {}
 
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign design, IDictionary<string, object> row)
@@ -308,5 +264,24 @@ namespace HybridDb
         }
 
         public IDocumentStore DocumentStore => store;
+
+
+        ManagedEntity GetManagedEntity(object entity)
+        {
+            return entities
+                .Select(x => x.Value)
+                .SingleOrDefault(x => x.Entity == entity);
+        }
+
+        bool SafeSequenceEqual<T>(IEnumerable<T> first, IEnumerable<T> second)
+        {
+            if (Equals(first, second))
+                return true;
+
+            if (first == null || second == null)
+                return false;
+
+            return first.SequenceEqual(second);
+        }
     }
 }
