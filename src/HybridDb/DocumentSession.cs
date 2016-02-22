@@ -99,6 +99,30 @@ namespace HybridDb
             return managedEntity.Etag;
         }
 
+        public Dictionary<string, List<string>> GetMetadataFor(object entity)
+        {
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = design.GetKey(entity);
+
+            ManagedEntity managedEntity;
+            if (!entities.TryGetValue(id, out managedEntity))
+                return null;
+
+            return managedEntity.Metadata;
+        }
+
+        public void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata)
+        {
+            var design = store.Configuration.GetDesignFor(entity.GetType());
+            var id = design.GetKey(entity);
+
+            ManagedEntity managedEntity;
+            if (!entities.TryGetValue(id, out managedEntity))
+                return;
+
+            managedEntity.Metadata = metadata;
+        }
+
         public void Store(string key, object entity)
         {
             if (entities.ContainsKey(key))
@@ -108,16 +132,24 @@ namespace HybridDb
             {
                 Key = key,
                 Entity = entity,
-                State = EntityState.Transient
+                State = EntityState.Transient,
             });
         }
 
         public void Store(object entity)
         {
             var design = store.Configuration.GetDesignFor(entity.GetType());
-            var id = design.GetKey(entity);
+            var key = design.GetKey(entity);
 
-            Store(id, entity);
+            if (entities.ContainsKey(key))
+                return;
+
+            entities.Add(key, new ManagedEntity
+            {
+                Key = key,
+                Entity = entity,
+                State = EntityState.Transient,
+            });
         }
 
         public void Delete(object entity)
@@ -163,10 +195,11 @@ namespace HybridDb
             {
                 var key = managedEntity.Key;
                 var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
-                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity));
+                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity));
 
                 var version = (int)projections[design.Table.VersionColumn];
                 var document = (byte[])projections[design.Table.DocumentColumn];
+                var metadataDocument = (byte[])projections[design.Table.MetadataColumn];
 
                 switch (managedEntity.State)
                 {
@@ -177,7 +210,9 @@ namespace HybridDb
                         managedEntity.Document = document;
                         break;
                     case EntityState.Loaded:
-                        if (!forceWriteUnchangedDocument && managedEntity.Document.SequenceEqual(document)) 
+                        if (!forceWriteUnchangedDocument && 
+                            SafeSequenceEqual(managedEntity.Document, document) && 
+                            SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument)) 
                             break;
                         
                         commands.Add(managedEntity, new BackupCommand(
@@ -202,6 +237,17 @@ namespace HybridDb
             }
 
             saving = false;
+        }
+
+        bool SafeSequenceEqual<T>(IEnumerable<T> first, IEnumerable<T> second)
+        {
+            if (Equals(first, second))
+                return true;
+
+            if (first == null || second == null)
+                return false;
+
+            return first.SequenceEqual(second);
         }
 
         public void Dispose() {}
@@ -230,14 +276,21 @@ namespace HybridDb
             var currentDocumentVersion = (int) row[table.VersionColumn];
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, document, currentDocumentVersion);
 
+            var metadataDocument = (byte[])row[table.MetadataColumn];
+            var metadata = metadataDocument != null
+                ? (Dictionary<string, List<string>>) store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>)) 
+                : null;
+
             managedEntity = new ManagedEntity
             {
                 Key = key,
                 Entity = entity,
+                Document = document,
+                Metadata = metadata,
+                MetadataDocument = metadataDocument,
                 Etag = (Guid) row[table.EtagColumn],
-                State = EntityState.Loaded,
                 Version = currentDocumentVersion,
-                Document = document
+                State = EntityState.Loaded,
             };
 
             entities.Add(key, managedEntity);

@@ -12,6 +12,8 @@ namespace HybridDb
         void Defer(DatabaseCommand command);
         void Evict(object entity);
         Guid? GetEtagFor(object entity);
+        Dictionary<string, List<string>> GetMetadataFor(object entity);
+        void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata);
         IEnumerable<ManagedEntity> ManagedEntities { get; }
     }
 }

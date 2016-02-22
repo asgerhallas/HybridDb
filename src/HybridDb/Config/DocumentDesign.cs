@@ -20,11 +20,17 @@ namespace HybridDb.Config
             
             Projections = new Dictionary<string, Projection>
             {
-                //{Table.IdColumn, Projection.From<Guid>(document => ((dynamic) document).Id)},
-                {Table.DiscriminatorColumn, Projection.From<string>(document => Discriminator)},
-                {Table.DocumentColumn, Projection.From<byte[]>(document => configuration.Serializer.Serialize(document))},
-                {Table.VersionColumn, Projection.From<int>(document => configuration.ConfiguredVersion)},
-                {Table.AwaitsReprojectionColumn, Projection.From<bool>(document => false)}
+                {Table.DiscriminatorColumn, Projection.From<string>(_ => Discriminator)},
+                {Table.DocumentColumn, Projection.From<byte[]>(managedEntity => configuration.Serializer.Serialize(managedEntity.Entity))},
+                {
+                    Table.MetadataColumn,
+                    Projection.From<byte[]>(managedEntity =>
+                        managedEntity.Metadata != null
+                            ? configuration.Serializer.Serialize(managedEntity.Metadata)
+                            : null)
+                },
+                {Table.VersionColumn, Projection.From<int>(_ => configuration.ConfiguredVersion)},
+                {Table.AwaitsReprojectionColumn, Projection.From<bool>(_ => false)}
             };
         }
 
@@ -33,7 +39,7 @@ namespace HybridDb.Config
         {
             Parent = parent;
             Projections = parent.Projections.ToDictionary();
-            Projections[Table.DiscriminatorColumn] = Projection.From<string>(document => Discriminator);
+            Projections[Table.DiscriminatorColumn] = Projection.From<string>(managedEntity => Discriminator);
         
             Parent.AddChild(this);
         }
@@ -62,24 +68,18 @@ namespace HybridDb.Config
 
     public class Projection
     {
-        Projection(Type returnType, Func<object, object> projector)
+        Projection(Type returnType, Func<ManagedEntity, object> projector)
         {
             ReturnType = returnType;
             Projector = projector;
         }
 
-        public static Projection From<TReturnType>(Func<object, object> projection)
+        public static Projection From<TReturnType>(Func<ManagedEntity, object> projection)
         {
             return new Projection(typeof(TReturnType), projection);
         }
 
-        //public static Projection From<TEntity, TReturnType>(Func<TEntity, TReturnType> projection)
-        //{
-        //    return new Projection(typeof(TEntity), typeof(TReturnType), projection);
-        //}
-
-        //public Type DeclaringType { get; private set; }
         public Type ReturnType { get; private set; }
-        public Func<object, object> Projector { get; private set; }
+        public Func<ManagedEntity, object> Projector { get; private set; }
     }
 }

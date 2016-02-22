@@ -18,8 +18,11 @@ namespace HybridDb.Config
             ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset));
             Register(ModifiedAtColumn);
 
-            DocumentColumn = new Column("Document", typeof(byte[]), Int32.MaxValue);
+            DocumentColumn = new Column("Document", typeof(byte[]), int.MaxValue);
             Register(DocumentColumn);
+
+            MetadataColumn = new Column("Metadata", typeof(byte[]), int.MaxValue);
+            Register(MetadataColumn);
 
             DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 255);
             Register(DiscriminatorColumn);
@@ -36,6 +39,7 @@ namespace HybridDb.Config
         public SystemColumn CreatedAtColumn { get; private set; }
         public SystemColumn ModifiedAtColumn { get; private set; }
         public Column DocumentColumn { get; private set; }
+        public Column MetadataColumn { get; private set; }
         public Column DiscriminatorColumn { get; private set; }
         public Column AwaitsReprojectionColumn { get; private set; }
         public Column VersionColumn { get; private set; }

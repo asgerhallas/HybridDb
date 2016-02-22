@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HybridDb.Commands;
@@ -1179,6 +1180,142 @@ namespace HybridDb.Tests
                 var entity = session.Load<EntityWithoutId>("mykey");
 
                 entity.ShouldNotBe(null);
+            }
+        }
+
+        [Fact]
+        public void CanStoreMetadata()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                var entity = new Entity { Id = id };
+                session.Store(entity);
+                session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
+                {
+                    ["key"] = new List<string> { "value1", "value2" }
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+
+                var metadata = session.Advanced.GetMetadataFor(entity);
+
+                metadata["key"].ShouldBe(new List<string> { "value1", "value2" });
+            }
+        }
+
+        [Fact]
+        public void CanStoreWithoutOverwritingMetadata()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                var entity = new Entity { Id = id };
+                session.Store(entity);
+                session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
+                {
+                    ["key"] = new List<string> { "value1", "value2" }
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                entity.Field = "a new field";
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+
+                var metadata = session.Advanced.GetMetadataFor(entity);
+
+                metadata["key"].ShouldBe(new List<string> { "value1", "value2" });
+            }
+        }
+
+        [Fact]
+        public void CanUpdateMetadata()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                var entity = new Entity { Id = id };
+                session.Store(entity);
+                session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
+                {
+                    ["key"] = new List<string> { "value1", "value2" }
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+                session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
+                {
+                    ["another-key"] = new List<string> {"value"}
+                });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>(id);
+
+                var metadata = session.Advanced.GetMetadataFor(entity);
+
+                metadata.Keys.Count.ShouldBe(1);
+                metadata["another-key"].ShouldBe(new List<string> { "value"});
+            }
+        }
+
+        [Fact]
+        public void CanSetMetadataToNull()
+        {
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                var entity = new Entity();
+                session.Store("id", entity);
+                session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
+                {
+                    ["key"] = new List<string> { "value1", "value2" }
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>("id");
+                session.Advanced.SetMetadataFor(entity, null);
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<Entity>("id");
+
+                var metadata = session.Advanced.GetMetadataFor(entity);
+
+                metadata.ShouldBe(null);
             }
         }
 
