@@ -82,22 +82,22 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            entities.Remove(GetManagedEntity(entity).Key);
+            entities.Remove(TryGetManagedEntity(entity).Key);
         }
 
         public Guid? GetEtagFor(object entity)
         {
-            return GetManagedEntity(entity)?.Etag;
+            return TryGetManagedEntity(entity)?.Etag;
         }
 
         public Dictionary<string, List<string>> GetMetadataFor(object entity)
         {
-            return GetManagedEntity(entity)?.Metadata;
+            return TryGetManagedEntity(entity)?.Metadata;
         }
 
         public void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata)
         {
-            var managedEntity = GetManagedEntity(entity);
+            var managedEntity = TryGetManagedEntity(entity);
             if (managedEntity == null) return;
 
             managedEntity.Metadata = metadata;
@@ -125,7 +125,7 @@ namespace HybridDb
 
         public void Delete(object entity)
         {
-            var managedEntity = GetManagedEntity(entity);
+            var managedEntity = TryGetManagedEntity(entity);
             if (managedEntity == null) return;
 
             if (managedEntity.State == EntityState.Transient)
@@ -266,7 +266,7 @@ namespace HybridDb
         public IDocumentStore DocumentStore => store;
 
 
-        ManagedEntity GetManagedEntity(object entity)
+        ManagedEntity TryGetManagedEntity(object entity)
         {
             return entities
                 .Select(x => x.Value)
