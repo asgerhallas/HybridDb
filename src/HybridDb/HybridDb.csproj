@@ -79,6 +79,7 @@
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
     <Compile Include="DocumentStoreExtensions.cs" />
+    <Compile Include="EntityKey.cs" />
     <Compile Include="EntityState.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
