@@ -10,7 +10,7 @@ namespace HybridDb
 {
     public class DocumentSession : IDocumentSession, IAdvancedDocumentSessionCommands
     {
-        readonly Dictionary<string, ManagedEntity> entities;
+        readonly Dictionary<EntityKey, ManagedEntity> entities;
         readonly IDocumentStore store;
         readonly List<DatabaseCommand> deferredCommands;
         readonly DocumentMigrator migrator;
@@ -19,7 +19,7 @@ namespace HybridDb
         public DocumentSession(IDocumentStore store)
         {
             deferredCommands = new List<DatabaseCommand>();
-            entities = new Dictionary<string, ManagedEntity>();
+            entities = new Dictionary<EntityKey, ManagedEntity>();
             migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
@@ -47,7 +47,7 @@ namespace HybridDb
         public object Load(DocumentDesign design, string key)
         {
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(key, out managedEntity))
+            if (entities.TryGetValue(new EntityKey(design.DocumentType, key), out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -82,7 +82,11 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            entities.Remove(TryGetManagedEntity(entity).Key);
+            var cachedInstance = TryGetManagedEntity(entity);
+
+            if (cachedInstance == null) return;
+
+            entities.Remove(new EntityKey(entity.GetType(), cachedInstance.Key));
         }
 
         public Guid? GetEtagFor(object entity)
@@ -105,10 +109,12 @@ namespace HybridDb
 
         public void Store(string key, object entity)
         {
-            if (entities.ContainsKey(key))
+            var entityKey = new EntityKey(entity.GetType(), key);
+
+            if (entities.ContainsKey(entityKey))
                 return;
 
-            entities.Add(key, new ManagedEntity
+            entities.Add(entityKey, new ManagedEntity
             {
                 Key = key,
                 Entity = entity,
@@ -128,13 +134,15 @@ namespace HybridDb
             var managedEntity = TryGetManagedEntity(entity);
             if (managedEntity == null) return;
 
+            var entityKey = new EntityKey(entity.GetType(), managedEntity.Key);
+
             if (managedEntity.State == EntityState.Transient)
             {
-                entities.Remove(managedEntity.Key);
+                entities.Remove(entityKey);
             }
             else
             {
-                entities[managedEntity.Key].State = EntityState.Deleted;
+                entities[entityKey].State = EntityState.Deleted;
             }
         }
 
@@ -191,7 +199,7 @@ namespace HybridDb
                         break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, managedEntity.Etag, lastWriteWins));
-                        entities.Remove(managedEntity.Key);
+                        entities.Remove(new EntityKey(design.DocumentType, managedEntity.Key));
                         break;
                 }
             }
@@ -221,7 +229,7 @@ namespace HybridDb
             }
 
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(key, out managedEntity))
+            if (entities.TryGetValue(new EntityKey(design.DocumentType, key), out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -249,7 +257,7 @@ namespace HybridDb
                 State = EntityState.Loaded,
             };
 
-            entities.Add(key, managedEntity);
+            entities.Add(new EntityKey(design.DocumentType, key), managedEntity);
             return entity;
         }
 
@@ -258,13 +266,12 @@ namespace HybridDb
             entities.Clear();
         }
 
-        public bool IsLoaded(string key)
+        public bool IsLoaded<T>(string key)
         {
-            return entities.ContainsKey(key);
+            return entities.ContainsKey(new EntityKey(typeof(T), key));
         }
 
         public IDocumentStore DocumentStore => store;
-
 
         ManagedEntity TryGetManagedEntity(object entity)
         {
