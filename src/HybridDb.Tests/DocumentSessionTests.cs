@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Linq;
+using Newtonsoft.Json;
 using Shouldly;
 using Xunit;
 
@@ -731,6 +732,29 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void LoadingDerivedEntityBySiblingTypeThrows2()
+        {
+            var serializeObject = JsonConvert.SerializeObject(new {Value = "asger"}, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
+
+            Document<object>();
+            Document<MoreDerivedEntity1>().With(x => x.Property);
+            Document<MoreDerivedEntity2>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity2 { Id = id });
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                session.Load<object>(id);
+            }
+        }
+
+        [Fact]
         public void LoadByBasetypeCanReturnNull()
         {
             Document<AbstractEntity>();
@@ -1316,6 +1340,18 @@ namespace HybridDb.Tests
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
                 metadata.ShouldBe(null);
+            }
+        }
+
+        [Fact]
+        public void CanStoreAndRetrieveAnonymousObject()
+        {
+            Document<object>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new { SomeString = "Asger" });
+                session.SaveChanges();
             }
         }
 
