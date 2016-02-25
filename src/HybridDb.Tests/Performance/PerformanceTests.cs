@@ -113,21 +113,22 @@ namespace HybridDb.Tests.Performance
             Console.WriteLine("System modifier is " + systemModifier);
         }
 
-        public class Entity
+        public class LocalEntity
         {
             public string Id { get; set; }
             public string SomeData { get; set; }
             public int SomeNumber { get; set; }
         }
 
-        public class SystemModifierFixture
+        public class SystemModifierFixture : HybridDbTests
         {
             public SystemModifierFixture()
             {
                 using (var store = DocumentStore.ForTesting(
                     TableMode.UseTempTables,
+                    connectionString,
                     new LambdaHybridDbConfigurator(c =>
-                        c.Document<Entity>()
+                        c.Document<LocalEntity>()
                             .With(x => x.SomeData)
                             .With(x => x.SomeNumber))))
                 {
@@ -135,7 +136,7 @@ namespace HybridDb.Tests.Performance
                     for (var i = 0; i < 10; i++)
                     {
                         commands.Add(new InsertCommand(
-                            store.Configuration.GetDesignFor<Entity>().Table,
+                            store.Configuration.GetDesignFor<LocalEntity>().Table,
                             Guid.NewGuid().ToString(),
                             new {SomeNumber = i, SomeData = "ABC"}));
                     }
@@ -145,7 +146,7 @@ namespace HybridDb.Tests.Performance
                     decimal time = 0;
                     for (var i = 0; i < 10; i++)
                     {
-                        time += Time(() => ((DocumentStore)store).Database.RawQuery<object>("select * from #Entities").ToList(), 1m);
+                        time += Time(() => ((DocumentStore)store).Database.RawQuery<object>("select * from #LocalEntities").ToList(), 1m);
                     }
 
                     // The below constant is chosen to get as close 1.0 on my machine as possible.
