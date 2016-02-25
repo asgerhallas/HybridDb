@@ -3,7 +3,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class IdentityMapThinksIdsAreGlobal : IDisposable
+    public class IdentityMapThinksIdsAreGlobal : HybridDbTests
     {
         readonly LambdaHybridDbConfigurator configurator = new LambdaHybridDbConfigurator(config =>
         {
@@ -17,12 +17,7 @@ namespace HybridDb.Tests.Bugs
 
         public IdentityMapThinksIdsAreGlobal()
         {
-            documentStore = DocumentStore.ForTesting(TableMode.UseTempTables, configurator);
-        }
-
-        public void Dispose()
-        {
-            documentStore.Dispose();
+            documentStore = Using(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString, configurator));
         }
 
         [Fact]

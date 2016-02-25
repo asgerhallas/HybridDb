@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/ud71up5svo5mhcas/branch/master?svg=true)](https://ci.appveyor.com/project/asgerhallas/hybriddb/branch/master)
+
 HybridDb
 ========
 

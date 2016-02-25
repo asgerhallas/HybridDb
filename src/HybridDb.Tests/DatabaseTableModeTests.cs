@@ -3,7 +3,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DatabaseTableModeTests
+    public class DatabaseTableModeTests : HybridDbTests
     {
         [Fact]
         public void CanUseTempAndGlobalTempTablesConcurrently()
@@ -12,8 +12,8 @@ namespace HybridDb.Tests
             {
                 var configurator = new LambdaHybridDbConfigurator(x => x.Document<Case>());
 
-                using (DocumentStore.ForTesting(TableMode.UseTempDb, configurator: configurator))
-                using (DocumentStore.ForTesting(TableMode.UseTempTables, configurator: configurator)) { }
+                using (DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator: configurator))
+                using (DocumentStore.ForTesting(TableMode.UseTempTables, connectionString, configurator: configurator)) { }
             });
         }
     }
