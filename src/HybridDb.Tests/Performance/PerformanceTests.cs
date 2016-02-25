@@ -18,7 +18,7 @@ namespace HybridDb.Tests.Performance
             long seed = Environment.TickCount;
 
             //use the second Core/Processor for the test
-            Process.GetCurrentProcess().ProcessorAffinity = new IntPtr(2);
+            //Process.GetCurrentProcess().ProcessorAffinity = new IntPtr(2);
 
             //prevent "Normal" Processes from interrupting Threads
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
