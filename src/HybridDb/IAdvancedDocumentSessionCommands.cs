@@ -7,7 +7,7 @@ namespace HybridDb
     public interface IAdvancedDocumentSessionCommands
     {
         void Clear();
-        bool IsLoaded(string key);
+        bool IsLoaded<T>(string key);
         IDocumentStore DocumentStore { get; }
         void Defer(DatabaseCommand command);
         void Evict(object entity);

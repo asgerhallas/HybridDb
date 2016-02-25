@@ -22,9 +22,9 @@ namespace HybridDb.Tests
             {
                 var entity1 = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity1);
-                session.Advanced.IsLoaded(id).ShouldBe(true);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(true);
                 session.Advanced.Evict(entity1);
-                session.Advanced.IsLoaded(id).ShouldBe(false);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
             }
         }
 
@@ -40,7 +40,7 @@ namespace HybridDb.Tests
 
                 session.Store(entity1);
                 session.Advanced.GetEtagFor(entity1).ShouldBe(Guid.Empty);
-                
+
                 session.SaveChanges();
                 session.Advanced.GetEtagFor(entity1).ShouldNotBe(null);
                 session.Advanced.GetEtagFor(entity1).ShouldNotBe(Guid.Empty);
@@ -59,7 +59,7 @@ namespace HybridDb.Tests
                 // the initial migrations might issue some requests
                 var initialNumberOfRequest = store.NumberOfRequests;
 
-                session.Advanced.Defer(new InsertCommand(table.Table, id, new{}));
+                session.Advanced.Defer(new InsertCommand(table.Table, id, new { }));
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
                 session.SaveChanges();
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
@@ -149,8 +149,8 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var entity1 = new Entity {Id = id, Property = "Asger"};
-                var entity2 = new Entity {Id = id, Property = "Asger"};
+                var entity1 = new Entity { Id = id, Property = "Asger" };
+                var entity2 = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity1);
                 session.Store(entity2);
                 session.Load<Entity>(id).ShouldBe(entity1);
@@ -165,7 +165,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var entity = new Entity {Id = id, Property = "Asger"};
+                var entity = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity);
                 session.SaveChanges();
                 entity.Property = "Lars";
@@ -228,10 +228,10 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var entity = new Entity {Id = id, Property = "Asger"};
+                var entity = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity);
                 session.Delete(entity);
-                session.Advanced.IsLoaded(id).ShouldBe(false);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
             }
         }
 
@@ -245,7 +245,7 @@ namespace HybridDb.Tests
             {
                 var entity = new Entity { Id = id, Property = "Asger" };
                 Should.NotThrow(() => session.Delete(entity));
-                session.Advanced.IsLoaded(id).ShouldBe(false);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
             }
         }
 
@@ -260,7 +260,7 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges();
                 session.Advanced.Clear();
-                
+
                 var entity = session.Load<Entity>(id);
                 session.Delete(entity);
                 session.Load<Entity>(id).ShouldBe(null);
@@ -292,7 +292,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.Advanced.Clear();
-                session.Advanced.IsLoaded(id).ShouldBe(false);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
             }
         }
 
@@ -304,9 +304,9 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Advanced.IsLoaded(id).ShouldBe(false);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.Advanced.IsLoaded(id).ShouldBe(true);
+                session.Advanced.IsLoaded<Entity>(id).ShouldBe(true);
             }
         }
 
@@ -340,7 +340,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 var entity = session.Load(store.Configuration.GetDesignFor<Entity>(), id);
-                
+
                 entity.ShouldBeOfType<Entity>();
             }
         }
@@ -371,7 +371,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var entity = new Entity {Id = id, Property = "Asger"};
+                var entity = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity);
                 session.Load<Entity>(id).ShouldBe(entity);
             }
@@ -532,13 +532,13 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
                 session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
                 var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").ToList();
-                
+
                 entities.Count.ShouldBe(1);
                 entities[0].Property.ShouldBe("Asger");
                 entities[0].ProjectedProperty.ShouldBe("Large");
@@ -553,7 +553,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -575,7 +575,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -594,7 +594,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -640,7 +640,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity {Id = id, Property = "Asger", ProjectedProperty = "Large"});
+                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -1002,7 +1002,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            (store.NumberOfRequests-numberOfRequests).ShouldBe(1);
+            (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
         }
 
         [Fact]
@@ -1138,8 +1138,8 @@ namespace HybridDb.Tests
                 {
                     session.SaveChanges(); // fails when in an inconsitent state
                 }
-                catch (Exception){}
-                
+                catch (Exception) { }
+
                 Should.Throw<InvalidOperationException>(() => session.SaveChanges())
                     .Message.ShouldBe("Session is not in a valid state. Please dispose it and open a new one.");
             }
@@ -1183,7 +1183,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 var entity = session.Load<Entity>("TheId");
-                
+
                 entity.ShouldNotBe(null);
             }
         }
@@ -1293,7 +1293,7 @@ namespace HybridDb.Tests
                 var entity = session.Load<Entity>(id);
                 session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
                 {
-                    ["another-key"] = new List<string> {"value"}
+                    ["another-key"] = new List<string> { "value" }
                 });
                 session.SaveChanges();
             }
@@ -1305,7 +1305,7 @@ namespace HybridDb.Tests
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
                 metadata.Keys.Count.ShouldBe(1);
-                metadata["another-key"].ShouldBe(new List<string> { "value"});
+                metadata["another-key"].ShouldBe(new List<string> { "value" });
             }
         }
 
