@@ -755,12 +755,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void FailsIfEntityTypeIsUnknown()
-        {
-            Should.Throw<HybridDbException>(() => store.Configuration.GetDesignFor<int>());
-        }
-
-        [Fact]
         public void WillEnlistCommandsInAmbientTransactions()
         {
             Document<Entity>();

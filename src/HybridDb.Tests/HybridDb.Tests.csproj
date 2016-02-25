@@ -84,6 +84,7 @@
     <Compile Include="Config\ColumnTests.cs" />
     <Compile Include="Config\SqlTypeMapTests.cs" />
     <Compile Include="DefaultSerializerTests.cs" />
+    <Compile Include="DocumentDesignerTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
     <Compile Include="FakeBackupWriter.cs" />
     <Compile Include="FileBackupWriterTests.cs" />

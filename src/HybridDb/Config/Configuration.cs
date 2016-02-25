@@ -12,6 +12,8 @@ namespace HybridDb.Config
     {
         readonly ConcurrentDictionary<Type, DocumentDesign> documentDesignsCache;
 
+        bool initialized = false;
+
         internal Configuration()
         {
             Tables = new ConcurrentDictionary<string, Table>();
@@ -39,37 +41,73 @@ namespace HybridDb.Config
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
 
-        internal ConcurrentDictionary<string, Table> Tables { get; private set; }
-        internal List<DocumentDesign> DocumentDesigns { get; private set; }
+        internal ConcurrentDictionary<string, Table> Tables { get; }
+        internal List<DocumentDesign> DocumentDesigns { get; }
 
         static string GetTableNameByConventionFor(Type type)
         {
             return Inflector.Inflector.Pluralize(type.Name);
         }
 
-        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null)
+        public void Initialize()
         {
-            var design = CreateDesignFor(typeof (TEntity), tablename, discriminator);
-            return new DocumentDesigner<TEntity>(design);
+            DocumentDesigns.Insert(0, new DocumentDesign(this, AddTable("Documents"), typeof(object), "object"));
+            initialized = true;
         }
 
-        public DocumentDesign CreateDesignFor(Type type, string tablename = null, string discriminator = null)
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
-            tablename = tablename ?? GetTableNameByConventionFor(type);
-            discriminator = discriminator ?? type.Name;
+            return new DocumentDesigner<TEntity>(CreateDesignFor(typeof (TEntity), tablename));
+        }
 
-            var child = TryGetDesignFor(type);
-            if (child != null)
+        public DocumentDesign CreateDesignFor(Type type, string tablename = null)
+        {
+            var discriminator = type.AssemblyQualifiedName;
+
+            var parent = TryGetDesignFor(type);
+
+            if (parent != null && tablename == null)
             {
-                throw new InvalidOperationException(string.Format(
-                    "Document {0} must be configured before its subtype {1}.", type, child.DocumentType));
+                var design = new DocumentDesign(this, parent, type, discriminator);
+
+                var afterParent = DocumentDesigns.IndexOf(parent) + 1;
+                DocumentDesigns.Insert(afterParent, design);
+
+                return design;
+            }
+            else
+            {
+                tablename = tablename ?? GetTableNameByConventionFor(type);
+
+                if (initialized)
+                {
+                    throw new InvalidOperationException($"You can not register the table '{tablename}' after store has been initialized.");
+                }
+
+                var existingDesign = DocumentDesigns.FirstOrDefault(existing => type.IsAssignableFrom(existing.DocumentType));
+                if (existingDesign != null)
+                {
+                    throw new InvalidOperationException($"Document {type.Name} must be configured before its subtype {existingDesign.DocumentType}.");
+                }
+
+                var design = new DocumentDesign(this, AddTable(tablename), type, discriminator);
+                DocumentDesigns.Add(design);
+                return design;
+            }
+        }
+
+        public DocumentDesign GetOrCreateDesignFor(Type type)
+        {
+            var discriminator = type.AssemblyQualifiedName;
+
+            var parent = TryGetDesignFor(type);
+
+            if (parent == null)
+            {
+                throw new InvalidOperationException();
             }
 
-            var parent = DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
-
-            var design = parent != null
-                ? new DocumentDesign(this, parent, type, discriminator)
-                : new DocumentDesign(this, AddTable(tablename), type, discriminator);
+            var design = new DocumentDesign(this, parent, type, discriminator);
 
             DocumentDesigns.Add(design);
             return design;
@@ -98,12 +136,50 @@ namespace HybridDb.Config
 
         public DocumentDesign TryGetDesignFor(Type type)
         {
-            DocumentDesign design;
-            if (documentDesignsCache.TryGetValue(type, out design))
-                return design;
+            //DocumentDesign design;
+            //if (documentDesignsCache.TryGetValue(type, out design))
+            //    return design;
 
-            var match = DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType));
+            // get most specific 
+            var match = DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
             
+            // must never associate a type to null in the cache, the design might be added later
+            if (match != null)
+            {
+                documentDesignsCache.TryAdd(type, match);
+            }
+
+            return match;
+        }
+
+        public DocumentDesign GetExactDesignFor(Type type)
+        {
+            var design = TryGetExactDesignFor(type);
+
+            if (design != null) return design;
+
+            throw new HybridDbException(string.Format(
+                "No design was registered for documents of type {0}. " +
+                "Please run store.Document<{0}>() to register it before use.",
+                type.Name));
+        }
+
+        public DocumentDesign TryGetExactDesignFor(Type type)
+        {
+            return DocumentDesigns.FirstOrDefault(x => x.DocumentType == type);
+        }
+
+        public DocumentDesign TryGetLeastSpecificDesignFor(Type type)
+        {
+            //DocumentDesign design;
+            //if (documentDesignsCache.TryGetValue(type, out design))
+            //    return design;
+
+            // get _least_ specific design that can be assigned to given type.
+            // e.g. Load<BaseType>() gets design for BaseType if registered, not DerivedType.
+            // from the BaseType we can use the discriminator from the loaded document to find the concrete design.
+            var match = DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
+
             // must never associate a type to null in the cache, the design might be added later
             if (match != null)
             {
@@ -164,6 +240,9 @@ namespace HybridDb.Config
 
         DocumentTable AddTable(string tablename)
         {
+            if (tablename == null)
+                throw new ArgumentException("Tablename must be provided.");
+
             return (DocumentTable)Tables.GetOrAdd(tablename, name => new DocumentTable(name));
         }
     }

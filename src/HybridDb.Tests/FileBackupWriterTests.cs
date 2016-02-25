@@ -30,7 +30,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void ConcurrentWritesDoesNotFail()
+        public void ConcurrentWritesDoNotFail()
         {
             using (File.Create("jacob.bak"))
             {

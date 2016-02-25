@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HybridDb.Commands;
+using HybridDb.Config;
 using HybridDb.Linq;
 using Newtonsoft.Json;
 using Shouldly;
@@ -732,29 +733,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void LoadingDerivedEntityBySiblingTypeThrows2()
-        {
-            var serializeObject = JsonConvert.SerializeObject(new {Value = "asger"}, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
-
-            Document<object>();
-            Document<MoreDerivedEntity1>().With(x => x.Property);
-            Document<MoreDerivedEntity2>();
-
-            var id = NewId();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new MoreDerivedEntity2 { Id = id });
-                session.SaveChanges();
-                session.Advanced.Clear();
-
-                session.Load<object>(id);
-            }
-        }
-
-        [Fact]
         public void LoadByBasetypeCanReturnNull()
         {
             Document<AbstractEntity>();
@@ -834,7 +812,7 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact(Skip = "Issue 29")]
+        [Fact]
         public void AutoRegistersSubTypesOnStore()
         {
             Document<AbstractEntity>().With(x => x.Property);
@@ -852,7 +830,7 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact(Skip = "Issue 29")]
+        [Fact]
         public void AutoRegistersSubTypesOnLoad()
         {
             Document<AbstractEntity>().With(x => x.Property);
@@ -1346,12 +1324,68 @@ namespace HybridDb.Tests
         [Fact]
         public void CanStoreAndRetrieveAnonymousObject()
         {
-            Document<object>();
+            var entity = new { SomeString = "Asger" };
 
             using (var session = store.OpenSession())
             {
-                session.Store(new { SomeString = "Asger" });
+                session.Store("key", entity);
                 session.SaveChanges();
+            }
+
+            Reset();
+
+            using (var session = store.OpenSession())
+            {
+                var load = session.Load<object>("key");
+                load.ShouldBeOfType(entity.GetType());
+            }
+        }
+
+        [Fact]
+        public void CanStoreAndRetrieveDerivedTypeWhenOnlyRegisteringBaseType()
+        {
+            Document<AbstractEntity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store("key", new DerivedEntity());
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            Document<AbstractEntity>();
+
+            using (var session = store.OpenSession())
+            {
+                var load = session.Load<AbstractEntity>("key");
+                load.ShouldBeOfType<DerivedEntity>();
+            }
+        }
+
+        [Fact]
+        public void CanStoreAndRetrieveDerivedTypeWhenRegisteringNoTypes()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store("key", new DerivedEntity());
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            using (var session = store.OpenSession())
+            {
+                var load = session.Load<AbstractEntity>("key");
+                load.ShouldBeOfType<DerivedEntity>();
+            }
+
+            Reset();
+
+            using (var session = store.OpenSession())
+            {
+                var load = session.Load<object>("key");
+                load.ShouldBeOfType<DerivedEntity>();
             }
         }
 

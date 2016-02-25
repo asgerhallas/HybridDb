@@ -18,6 +18,7 @@ namespace HybridDb
         
         public Configuration Configure()
         {
+            configuration.Initialize();
             return configuration;
         }
 
@@ -26,9 +27,9 @@ namespace HybridDb
             configuration = new Configuration();
         }
 
-        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null)
+        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
-            return configuration.Document<TEntity>(tablename, discriminator);
+            return configuration.Document<TEntity>(tablename);
         }
 
         protected void UseSerializer(ISerializer serializer)

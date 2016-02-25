@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -40,8 +41,7 @@ namespace HybridDb
 
         public T Load<T>(string key) where T : class
         {
-            var design = store.Configuration.GetDesignFor<T>();
-            return Load(design, key) as T;
+            return Load(store.Configuration.TryGetLeastSpecificDesignFor(typeof(T)), key) as T;
         }
 
         public object Load(DocumentDesign design, string key)
@@ -65,7 +65,7 @@ namespace HybridDb
         {
             var configuration = store.Configuration;
             
-            var design = configuration.GetDesignFor<T>();
+            var design = configuration.TryGetLeastSpecificDesignFor(typeof(T));
 
             var discriminators = design.DecendentsAndSelf.Keys.ToArray();
 
@@ -109,6 +109,11 @@ namespace HybridDb
 
         public void Store(string key, object entity)
         {
+            var design = store.Configuration.TryGetExactDesignFor(entity.GetType()) 
+                ?? store.Configuration.CreateDesignFor(entity.GetType());
+
+            key = key ?? design.GetKey(entity);
+
             var entityKey = new EntityKey(entity.GetType(), key);
 
             if (entities.ContainsKey(entityKey))
@@ -124,9 +129,7 @@ namespace HybridDb
 
         public void Store(object entity)
         {
-            var design = store.Configuration.GetDesignFor(entity.GetType());
-            var key = design.GetKey(entity);
-            Store(key, entity);
+            Store(null, entity);
         }
 
         public void Delete(object entity)
@@ -169,7 +172,7 @@ namespace HybridDb
             foreach (var managedEntity in entities.Values.ToList())
             {
                 var key = managedEntity.Key;
-                var design = store.Configuration.GetDesignFor(managedEntity.Entity.GetType());
+                var design = store.Configuration.TryGetExactDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity));
 
                 var version = (int)projections[design.Table.VersionColumn];
@@ -225,7 +228,14 @@ namespace HybridDb
             DocumentDesign concreteDesign;
             if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
             {
-                throw new InvalidOperationException(string.Format("Document with id {0} exists, but is not assignable to the given type {1}.", key, design.DocumentType.Name));
+                var type = Type.GetType(discriminator, false, true);
+
+                if (!design.DocumentType.IsAssignableFrom(type))
+                {
+                    throw new InvalidOperationException($"Document with id {key} exists, but is not assignable to the given type {design.DocumentType.Name}.");
+                }
+
+                concreteDesign = store.Configuration.CreateDesignFor(type);
             }
 
             ManagedEntity managedEntity;

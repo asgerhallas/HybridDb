@@ -12,12 +12,16 @@ namespace HybridDb.Tests
             Reset();
         }
 
-        protected override sealed void Reset()
+        protected sealed override void Reset()
         {
             base.Reset();
 
             UseSerializer(new DefaultSerializer());
-            factory = new Lazy<IDocumentStore>(() => Using(DocumentStore.ForTesting(database, configuration)));
+            factory = new Lazy<IDocumentStore>(() =>
+            {
+                Configure();
+                return Using(DocumentStore.ForTesting(database, configuration));
+            });
         }
 
         protected void InitializeStore()
@@ -26,10 +30,7 @@ namespace HybridDb.Tests
         }
 
         // ReSharper disable InconsistentNaming
-        protected IDocumentStore store
-        {
-            get { return factory.Value; }
-        }
+        protected IDocumentStore store => factory.Value;
         // ReSharper restore InconsistentNaming
 
         protected string NewId()
