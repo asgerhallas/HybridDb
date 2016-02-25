@@ -53,6 +53,11 @@ namespace HybridDb.Tests
 
         protected void UseTempTables()
         {
+            foreach (var variable in Environment.GetEnvironmentVariables())
+            {
+                Console.WriteLine(variable);
+            }
+
             connectionString = GetConnectionString();
             database = Using(new SqlServerUsingTempTables(logger, connectionString));
         }
