@@ -53,13 +53,13 @@ namespace HybridDb.Tests
 
         protected void UseTempTables()
         {
-            connectionString = "data source=.;Integrated Security=True";
+            connectionString = "Server=(local)\\SQL2012SP1;Database=master;User ID=sa;Password=Password12!";
             database = Using(new SqlServerUsingTempTables(logger, connectionString));
         }
 
         protected void UseTempDb(string sessionKey = null)
         {
-            connectionString = "data source=.;Integrated Security=True";
+            connectionString = "Server=(local)\\SQL2012SP1;Database=master;User ID=sa;Password=Password12!";
             database = Using(new SqlServerUsingTempDb(logger, connectionString, sessionKey));
         }
 
