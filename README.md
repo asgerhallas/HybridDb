@@ -50,6 +50,23 @@ Like this:
         session.SaveChanges();
     }
 
+Changelog
+=========
+
+# 0.8.3
+
+- @afkpost added support for separate document metadata
+
+# 0.8.4
+
+- @mookid8000 fixed issue #21
+
+# 0.8.5
+
+- Added support for persisting anonynomous types
+- Added support for persisting non-configured types in an always present Document table 
+- Added TypeMapper instead of requiring configuration for all concrete type manually
+
 Acknowledgements
 ================
 
@@ -60,7 +77,7 @@ Code for managing anonymous objects is taken [from here](http://blog.andreloker.
 [NHibernate](http://nhforge.org/) and [RavenDB](http://ravendb.net/) has been our role models.
 
 So that's it... HybridDb is standing on the shoulder of giants. And it can't get down.
-	
+
 License
 =======
 
