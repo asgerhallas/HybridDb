@@ -53,15 +53,15 @@ Like this:
 Changelog
 =========
 
-### 0.8.3
+#### 0.8.3
 
 - @afkpost added support for separate document metadata
 
-### 0.8.4
+#### 0.8.4
 
 - @mookid8000 fixed issue #21
 
-### 0.8.5
+#### 0.8.5
 
 - Added support for persisting anonynomous types
 - Added support for persisting non-configured types in an always present Document table 
