@@ -14,42 +14,42 @@ namespace HybridDb.Tests.Performance
         [Fact]
         public void SimpleQueryWithoutMaterialization()
         {
-            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats))
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats))
                 .DbTimeLowest.ShouldBeLessThan(40);
         }
 
         [Fact]
         public void SimpleQueryWithMaterializationToDictionary()
         {
-            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats).ToList())
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats).ToList())
                 .CodeTimeLowest.ShouldBeLessThan(40);
         }
 
         [Fact]
         public void SimpleQueryWithMaterializationToProjection()
         {
-            Time((out QueryStats stats) => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats).ToList())
+            Time((out QueryStats stats) => store.Query<LocalEntity>(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats).ToList())
                 .CodeTimeLowest.ShouldBeLessThan(5);
         }
 
         [Fact]
         public void QueryWithWindow()
         {
-            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500))
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500))
                 .DbTimeLowest.ShouldBeLessThan(3);
         }
 
         [Fact]
         public void QueryWithLateWindow()
         {
-            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 9500, take: 500))
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 9500, take: 500))
                 .DbTimeLowest.ShouldBeLessThan(4);
         }
 
         [Fact]
         public void QueryWithWindowMaterializedToProjection()
         {
-            Time((out QueryStats stats) => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500).ToList())
+            Time((out QueryStats stats) => store.Query<LocalEntity>(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500).ToList())
                 .TotalTimeLowest.ShouldBeLessThan(20);
         }
 
@@ -58,7 +58,7 @@ namespace HybridDb.Tests.Performance
             store = data.Store;
         }
 
-        public class Fixture : IDisposable
+        public class Fixture : HybridDbTests
         {
             readonly IDocumentStore store;
 
@@ -69,31 +69,24 @@ namespace HybridDb.Tests.Performance
 
             public Fixture()
             {
-                const string connectionString = "data source=.;Integrated Security=True";
-
-                store = DocumentStore.ForTesting(
+                store = Using(DocumentStore.ForTesting(
                     TableMode.UseTempTables,
                     connectionString,
                     new LambdaHybridDbConfigurator(c =>
-                        c.Document<Entity>()
+                        c.Document<LocalEntity>()
                             .With(x => x.SomeData)
-                            .With(x => x.SomeNumber)));
+                            .With(x => x.SomeNumber))));
 
                 var commands = new List<DatabaseCommand>();
                 for (int i = 0; i < 10000; i++)
                 {
                     commands.Add(new InsertCommand(
-                        store.Configuration.GetDesignFor<Entity>().Table,
+                        store.Configuration.GetDesignFor<LocalEntity>().Table,
                         Guid.NewGuid().ToString(),
                         new {SomeNumber = i, SomeData = "ABC"}));
                 }
 
                 store.Execute(commands.ToArray());
-            }
-
-            public void Dispose()
-            {
-                store.Dispose();
             }
         }
     }

@@ -53,20 +53,21 @@ namespace HybridDb.Tests
 
         protected void UseTempTables()
         {
-            connectionString = "data source=.;Integrated Security=True";
+            connectionString = GetConnectionString();
             database = Using(new SqlServerUsingTempTables(logger, connectionString));
         }
 
         protected void UseTempDb(string sessionKey = null)
         {
-            connectionString = "data source=.;Integrated Security=True";
+            connectionString = GetConnectionString();
             database = Using(new SqlServerUsingTempDb(logger, connectionString, sessionKey));
         }
 
         protected void UseRealTables(string prefix = null)
         {
             var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
-            using (var connection = new SqlConnection("data source=.;Integrated Security=True;Pooling=false"))
+
+            using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
             {
                 connection.Open();
 
@@ -77,7 +78,7 @@ namespace HybridDb.Tests
                         END", uniqueDbName));
             }
 
-            connectionString = "data source=.;Integrated Security=True;Initial Catalog=" + uniqueDbName;
+            connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
 
             database = Using(new SqlServerUsingRealTables(logger, connectionString, prefix));
 
@@ -85,10 +86,10 @@ namespace HybridDb.Tests
             {
                 SqlConnection.ClearAllPools();
 
-                using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=Master"))
+                using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
                 {
                     connection.Open();
-                    connection.Execute(string.Format("DROP DATABASE {0}", uniqueDbName));
+                    connection.Execute($"DROP DATABASE {uniqueDbName}");
                 }
             });
         }
@@ -107,6 +108,15 @@ namespace HybridDb.Tests
             }
 
             Transaction.Current.ShouldBe(null);
+        }
+
+        static string GetConnectionString()
+        {
+            var isAppveyor = Environment.GetEnvironmentVariable("APPVEYOR") != null;
+
+            return isAppveyor
+                ? "Server=(local)\\SQL2012SP1;Database=master;User ID=sa;Password=Password12!"
+                : "data source =.; Integrated Security = True;";
         }
 
         public interface ISomeInterface

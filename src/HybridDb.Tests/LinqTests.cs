@@ -8,7 +8,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class LinqTests
+    public class LinqTests : HybridDbTests
     {
         [Fact]
         public void CanQueryUsingQueryComprehensionSyntax()
@@ -608,7 +608,7 @@ namespace HybridDb.Tests
 
         Query<T> Query<T>() where T : class
         {
-            var store = DocumentStore.ForTesting(TableMode.UseTempTables);
+            var store = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
             var session = new DocumentSession(store);
             return new Query<T>(new QueryProvider<T>(session, null));
         }

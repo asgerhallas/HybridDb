@@ -1,0 +1,6 @@
+version: 1.0.{build}
+build:
+  project: src\HybridDb.sln
+  verbosity: minimal
+services:
+  - mssql2012sp1
