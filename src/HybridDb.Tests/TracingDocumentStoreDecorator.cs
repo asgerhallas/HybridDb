@@ -15,28 +15,17 @@ namespace HybridDb.Tests
             this.store = store;
 
             Gets = new List<Tuple<DocumentTable, string>>();
-            Queries = new List<Tuple<DocumentTable>>();
+            Queries = new List<DocumentTable>();
             Updates = new List<UpdateCommand>();
         }
 
         public List<Tuple<DocumentTable, string>> Gets { get; private set; }
-        public List<Tuple<DocumentTable>> Queries { get; private set; }
+        public List<DocumentTable> Queries { get; private set; }
         public List<UpdateCommand> Updates { get; private set; }
 
-        public Configuration Configuration
-        {
-            get { return store.Configuration; }
-        }
-
-        public long NumberOfRequests
-        {
-            get { return store.NumberOfRequests; }
-        }
-
-        public Guid LastWrittenEtag
-        {
-            get { return store.LastWrittenEtag; }
-        }
+        public Configuration Configuration => store.Configuration;
+        public long NumberOfRequests => store.NumberOfRequests;
+        public Guid LastWrittenEtag => store.LastWrittenEtag;
 
         public IDocumentSession OpenSession()
         {
@@ -65,7 +54,7 @@ namespace HybridDb.Tests
         public IEnumerable<TProjection> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string @select = "", string @where = "", int skip = 0, int take = 0, string @orderby = "", object parameters = null)
         {
-            Queries.Add(Tuple.Create(table));
+            Queries.Add(table);
             return store.Query<TProjection>(table, out stats, select, where, skip, take, orderby, parameters);
         }
 

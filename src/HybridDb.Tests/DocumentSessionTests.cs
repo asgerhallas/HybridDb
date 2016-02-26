@@ -728,7 +728,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 Should.Throw<InvalidOperationException>(() => session.Load<MoreDerivedEntity2>(id))
-                    .Message.ShouldBe("Document with id " + id + " exists, but is not assignable to the given type MoreDerivedEntity2.");
+                    .Message.ShouldBe($"Document with id '{id}' exists, but is not assignable to the given type 'MoreDerivedEntity2'.");
             }
         }
 
@@ -1342,6 +1342,26 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanStoreAndRetrieveAnonymousObjectByPrototype()
+        {
+            var entity = new { SomeString = "Asger" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store("key", entity);
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            using (var session = store.OpenSession())
+            {
+                var load = session.Load(entity, "key");
+                load.ShouldBeOfType(entity.GetType());
+            }
+        }
+
+        [Fact]
         public void CanStoreAndRetrieveDerivedTypeWhenOnlyRegisteringBaseType()
         {
             Document<AbstractEntity>();
@@ -1408,6 +1428,8 @@ namespace HybridDb.Tests
                     .Message.ShouldBe("Document with id \'key\' exists, but no concrete type was found for discriminator \'NoShow\'.");
             }
         }
+
+
 
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()

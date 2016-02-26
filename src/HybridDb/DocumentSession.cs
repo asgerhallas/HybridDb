@@ -44,6 +44,11 @@ namespace HybridDb
             return Load(store.Configuration.TryGetLeastSpecificDesignFor(typeof(T)), key) as T;
         }
 
+        public T Load<T>(T prototype, string key) where T : class
+        {
+            return Load(store.Configuration.TryGetLeastSpecificDesignFor(prototype.GetType()), key) as T;
+        }
+
         public object Load(DocumentDesign design, string key)
         {
             ManagedEntity managedEntity;
@@ -224,24 +229,7 @@ namespace HybridDb
             var table = design.Table;
             var key = (string)row[table.IdColumn];
             var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-
-            DocumentDesign concreteDesign;
-            if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
-            {
-                var type = store.Configuration.TypeMapper.ToType(discriminator);
-
-                if (type == null)
-                {
-                    throw new InvalidOperationException($"Document with id '{key}' exists, but no concrete type was found for discriminator '{discriminator}'.");
-                }
-
-                if (!design.DocumentType.IsAssignableFrom(type))
-                {
-                    throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{design.DocumentType.Name}'.");
-                }
-
-                concreteDesign = store.Configuration.CreateDesignFor(type);
-            }
+            var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(design, discriminator, key);
 
             ManagedEntity managedEntity;
             if (entities.TryGetValue(new EntityKey(design.DocumentType, key), out managedEntity))

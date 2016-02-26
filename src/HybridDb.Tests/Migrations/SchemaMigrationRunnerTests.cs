@@ -53,7 +53,10 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            database.QuerySchema().Single().Key.ShouldBe("HybridDb"); // the metadata table and nothing else
+            var schema = database.QuerySchema();
+            schema.Count.ShouldBe(2);
+            schema.ShouldContainKey("HybridDb"); // the metadata table and nothing else
+            schema.ShouldContainKey("Documents"); // the metadata table and nothing else
         }
 
         public void RunsProvidedSchemaMigrations()

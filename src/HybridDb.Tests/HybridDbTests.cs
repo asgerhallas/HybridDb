@@ -71,7 +71,7 @@ namespace HybridDb.Tests
             {
                 connection.Open();
 
-                connection.Execute(String.Format(@"
+                connection.Execute(string.Format(@"
                         IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
                         BEGIN
                             CREATE DATABASE {0}
@@ -116,7 +116,7 @@ namespace HybridDb.Tests
 
             return isAppveyor
                 ? "Server=(local)\\SQL2012SP1;Database=master;User ID=sa;Password=Password12!"
-                : "data source =.; Integrated Security = True;";
+                : "data source =.; Integrated Security = True";
         }
 
         public interface ISomeInterface

@@ -10,7 +10,7 @@ namespace HybridDb
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
-        
+
         IDocumentSession OpenSession();
         Guid Execute(IEnumerable<DatabaseCommand> commands);
         IDictionary<string, object> Get(DocumentTable table, string key);

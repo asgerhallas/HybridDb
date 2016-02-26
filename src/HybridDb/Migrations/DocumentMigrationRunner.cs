@@ -43,6 +43,7 @@ namespace HybridDb.Migrations
                 while (true)
                 {
                     QueryStats stats;
+
                     var rows = store
                         .Query(table, out stats,
                             @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
@@ -58,17 +59,10 @@ namespace HybridDb.Migrations
 
                     foreach (var row in rows)
                     {
-                        var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-
-                        DocumentDesign concreteDesign;
-                        if (!baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
-                        {
-                            throw new InvalidOperationException(
-                                string.Format("Discriminator '{0}' was not found in configuration.", discriminator));
-                        }
-
-                        var id = (string)row[table.IdColumn];
+                        var key = (string)row[table.IdColumn];
                         var currentDocumentVersion = (int)row[table.VersionColumn];
+                        var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
+                        var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(baseDesign, discriminator, key);
 
                         var shouldUpdate = false;
 
@@ -76,7 +70,7 @@ namespace HybridDb.Migrations
                         {
                             shouldUpdate = true;
                             logger.Information("Reprojection document {0}/{1}.", 
-                                concreteDesign.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
+                                concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
                         }
 
                         if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
@@ -90,14 +84,14 @@ namespace HybridDb.Migrations
                             {
                                 using (var session = store.OpenSession())
                                 {
-                                    session.Load(concreteDesign, id);
+                                    session.Load(concreteDesign, key);
                                     session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                 }
                             }
                             catch (ConcurrencyException) {}
                             catch (Exception exception)
                             {
-                                logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, id);
+                                logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, key);
                                 Thread.Sleep(100);
                             }
                         }
@@ -110,7 +104,7 @@ namespace HybridDb.Migrations
                                 {table.VersionColumn, configuration.ConfiguredVersion}
                             };
 
-                            store.Update(table, id, (Guid)row[table.EtagColumn], projection);
+                            store.Update(table, key, (Guid)row[table.EtagColumn], projection);
                         }
                     }
                 }

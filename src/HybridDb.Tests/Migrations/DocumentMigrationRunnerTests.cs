@@ -27,7 +27,7 @@ namespace HybridDb.Tests.Migrations
             store.Insert(table, id, new
             {
                 AwaitsReprojection = awaitsReprojection, 
-                Discriminator = "Entity",
+                Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
@@ -56,7 +56,7 @@ namespace HybridDb.Tests.Migrations
             store.Insert(table, id, new
             {
                 AwaitsReprojection = false,
-                Discriminator = "Entity",
+                Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 1,
                 Document = configuration.Serializer.Serialize(new Entity())
             });
@@ -79,7 +79,7 @@ namespace HybridDb.Tests.Migrations
             {
                 store.Insert(new DocumentTable("Entities"), NewId(), new
                 {
-                    Discriminator = "Entity", 
+                    Discriminator = typeof(Entity).AssemblyQualifiedName, 
                     Version = 0, 
                     Document = configuration.Serializer.Serialize(new Entity())
                 });
@@ -92,8 +92,9 @@ namespace HybridDb.Tests.Migrations
 
             new DocumentMigrationRunner(counter).RunSynchronously();
 
-            // 3 query for documents below version, first two return 100 rows each, last returns 0
-            counter.Queries.Count.ShouldBe(3);
+            // 1+2: Entities table => 100 rows
+            // 3: Entities table => 0 rows
+            counter.Queries.Count(x => x.Name == "Entities").ShouldBe(3);
             
             // each document is being updated individually
             counter.Updates.Count.ShouldBe(200);
@@ -110,7 +111,7 @@ namespace HybridDb.Tests.Migrations
             var table = new DocumentTable("Entities");
             var etag = store.Insert(table, id, new
             {
-                Discriminator = "Entity",
+                Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
                 Document = configuration.Serializer.Serialize(new Entity())
             });
@@ -147,8 +148,6 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotStartBackgroundProcessWhenTurnedOff()
         {
-            InitializeStore();
-
             DisableDocumentMigrationsInBackground();
             Document<Entity>().With(x => x.Number);
             
@@ -160,8 +159,6 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotStartBackgroundProcessWhenAllMigrationsAreTurnedOff()
         {
-            InitializeStore();
-
             DisableMigrations();
             Document<Entity>().With(x => x.Number);
 

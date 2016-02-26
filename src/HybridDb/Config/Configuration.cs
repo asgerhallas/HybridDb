@@ -128,6 +128,27 @@ namespace HybridDb.Config
             return DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
         }
 
+        public DocumentDesign GetOrCreateConcreteDesign(DocumentDesign @base, string discriminator, string key)
+        {
+            DocumentDesign concreteDesign;
+            if (@base.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                return concreteDesign;
+
+            var type = TypeMapper.ToType(discriminator);
+
+            if (type == null)
+            {
+                throw new InvalidOperationException($"Document with id '{key}' exists, but no concrete type was found for discriminator '{discriminator}'.");
+            }
+
+            if (!@base.DocumentType.IsAssignableFrom(type))
+            {
+                throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{@base.DocumentType.Name}'.");
+            }
+
+            return CreateDesignFor(type);
+        }
+
         public void UseLogger(ILogger logger)
         {
             Logger = logger;
