@@ -75,7 +75,9 @@
     </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Config\AssemblyQualifiedNameTypeMapper.cs" />
     <Compile Include="Config\DynamicDocumentTable.cs" />
+    <Compile Include="Config\ITypeMapper.cs" />
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
     <Compile Include="DocumentStoreExtensions.cs" />

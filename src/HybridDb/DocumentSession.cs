@@ -228,11 +228,16 @@ namespace HybridDb
             DocumentDesign concreteDesign;
             if (!design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
             {
-                var type = Type.GetType(discriminator, false, true);
+                var type = store.Configuration.TypeMapper.ToType(discriminator);
+
+                if (type == null)
+                {
+                    throw new InvalidOperationException($"Document with id '{key}' exists, but no concrete type was found for discriminator '{discriminator}'.");
+                }
 
                 if (!design.DocumentType.IsAssignableFrom(type))
                 {
-                    throw new InvalidOperationException($"Document with id {key} exists, but is not assignable to the given type {design.DocumentType.Name}.");
+                    throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{design.DocumentType.Name}'.");
                 }
 
                 concreteDesign = store.Configuration.CreateDesignFor(type);

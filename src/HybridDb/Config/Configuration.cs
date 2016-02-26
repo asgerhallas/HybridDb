@@ -26,6 +26,7 @@ namespace HybridDb.Config
                 .CreateLogger();
 
             Serializer = new DefaultSerializer();
+            TypeMapper = new AssemblyQualifiedNameTypeMapper();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunSchemaMigrationsOnStartup = true;
@@ -34,6 +35,7 @@ namespace HybridDb.Config
 
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
+        public ITypeMapper TypeMapper { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
         public bool RunSchemaMigrationsOnStartup { get; private set; }
@@ -62,7 +64,7 @@ namespace HybridDb.Config
 
         public DocumentDesign CreateDesignFor(Type type, string tablename = null)
         {
-            var discriminator = type.AssemblyQualifiedName;
+            var discriminator = TypeMapper.ToDiscriminator(type);
 
             var parent = TryGetDesignFor(type);
 
@@ -96,72 +98,21 @@ namespace HybridDb.Config
             }
         }
 
-        public DocumentDesign GetOrCreateDesignFor(Type type)
-        {
-            var discriminator = type.AssemblyQualifiedName;
-
-            var parent = TryGetDesignFor(type);
-
-            if (parent == null)
-            {
-                throw new InvalidOperationException();
-            }
-
-            var design = new DocumentDesign(this, parent, type, discriminator);
-
-            DocumentDesigns.Add(design);
-            return design;
-        }
-
         public DocumentDesign GetDesignFor<T>()
         {
-            return GetDesignFor(typeof(T));
-        }
-
-        public DocumentDesign GetDesignFor(Type type)
-        {
-            var design = TryGetDesignFor(type);
+            var design = TryGetDesignFor(typeof(T));
             if (design != null) return design;
 
             throw new HybridDbException(string.Format(
                 "No design was registered for documents of type {0}. " +
                 "Please run store.Document<{0}>() to register it before use.", 
-                type.Name));
-        }
-
-        public DocumentDesign TryGetDesignFor<T>()
-        {
-            return TryGetDesignFor(typeof(T));
+                typeof(T).Name));
         }
 
         public DocumentDesign TryGetDesignFor(Type type)
         {
-            //DocumentDesign design;
-            //if (documentDesignsCache.TryGetValue(type, out design))
-            //    return design;
-
-            // get most specific 
-            var match = DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
-            
-            // must never associate a type to null in the cache, the design might be added later
-            if (match != null)
-            {
-                documentDesignsCache.TryAdd(type, match);
-            }
-
-            return match;
-        }
-
-        public DocumentDesign GetExactDesignFor(Type type)
-        {
-            var design = TryGetExactDesignFor(type);
-
-            if (design != null) return design;
-
-            throw new HybridDbException(string.Format(
-                "No design was registered for documents of type {0}. " +
-                "Please run store.Document<{0}>() to register it before use.",
-                type.Name));
+            // get most specific type by searching backwards
+            return DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
         }
 
         public DocumentDesign TryGetExactDesignFor(Type type)
@@ -171,22 +122,15 @@ namespace HybridDb.Config
 
         public DocumentDesign TryGetLeastSpecificDesignFor(Type type)
         {
-            //DocumentDesign design;
-            //if (documentDesignsCache.TryGetValue(type, out design))
-            //    return design;
-
             // get _least_ specific design that can be assigned to given type.
             // e.g. Load<BaseType>() gets design for BaseType if registered, not DerivedType.
             // from the BaseType we can use the discriminator from the loaded document to find the concrete design.
-            var match = DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
+            return DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
+        }
 
-            // must never associate a type to null in the cache, the design might be added later
-            if (match != null)
-            {
-                documentDesignsCache.TryAdd(type, match);
-            }
-
-            return match;
+        public void UseLogger(ILogger logger)
+        {
+            Logger = logger;
         }
 
         public void UseSerializer(ISerializer serializer)
@@ -194,9 +138,12 @@ namespace HybridDb.Config
             Serializer = serializer;
         }
 
-        public void UseLogger(ILogger logger)
+        public void UseTypeMapper(ITypeMapper typeMapper)
         {
-            Logger = logger;
+            if (DocumentDesigns.Any())
+                throw new InvalidOperationException("Please call UseTypeMapper() before any documents are configured.");
+
+            TypeMapper = typeMapper;
         }
 
         public void UseMigrations(IReadOnlyList<Migration> migrations)
@@ -208,7 +155,7 @@ namespace HybridDb.Config
                 if (x.Version == expectedVersion)
                     return true;
                 
-                throw new ArgumentException(string.Format("Missing migration for version {0}.", expectedVersion));
+                throw new ArgumentException($"Missing migration for version {expectedVersion}.");
             }).ToList();
 
             ConfiguredVersion = Migrations.Any() ? Migrations.Last().Version : 0;

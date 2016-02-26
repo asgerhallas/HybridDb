@@ -37,6 +37,11 @@ namespace HybridDb
             configuration.UseSerializer(serializer);
         }
 
+        protected void UseTypeMapper(ITypeMapper typeMapper)
+        {
+            configuration.UseTypeMapper(typeMapper);
+        }
+
         protected IDefaultSerializerConfigurator UseDefaultSerializer()
         {
             var serializer = new DefaultSerializer();

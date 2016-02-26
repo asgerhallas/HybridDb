@@ -11,17 +11,17 @@ namespace HybridDb.Serialization
         {
             if (!IsDiscriminatable(basetype))
             {
-                throw new ArgumentException(string.Format("Can not discriminate {0}.", basetype));
+                throw new ArgumentException($"Can not discriminate {basetype}.");
             }
 
             if (basetype.IsAbstract || basetype.IsInterface)
             {
-                throw new ArgumentException(string.Format("Type {0} must be instantiable.", basetype));
+                throw new ArgumentException($"Type {basetype} must be instantiable.");
             }
 
             if (name == null)
             {
-                throw new ArgumentException(string.Format("Discriminator for type {0} should not be null.", basetype));
+                throw new ArgumentException($"Discriminator for type {basetype} should not be null.");
             }
 
             Basetype = basetype;

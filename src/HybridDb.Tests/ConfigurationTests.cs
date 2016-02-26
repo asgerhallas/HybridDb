@@ -115,26 +115,33 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void SetDiscriminator()
+        public void CanUseCustomTypeMapper()
         {
-            throw new NotImplementedException();
-            //configuration.Document<AbstractEntity>(discriminator: "abe");
-            //configuration.Document<MoreDerivedEntity1>(discriminator: "gris");
-            //configuration.Document<MoreDerivedEntity2>();
+            configuration.UseTypeMapper(new OtherTypeMapper("MySiscriminator"));
 
-            //configuration.GetDesignFor<AbstractEntity>().Discriminator.ShouldBe("abe");
-            //configuration.GetDesignFor<MoreDerivedEntity1>().Discriminator.ShouldBe("gris");
-            //configuration.GetDesignFor<MoreDerivedEntity2>().Discriminator.ShouldBe("MoreDerivedEntity2");
+            configuration.Document<Entity>();
+
+            var design = configuration.DocumentDesigns.Single();
+            design.Discriminator.ShouldBe("MySiscriminator");
+        }
+
+        [Fact]
+        public void FailWhenSettingTypeMapperTooLate()
+        {
+            configuration.Document<Entity>();
+            Should.Throw<InvalidOperationException>(() => configuration.UseTypeMapper(new OtherTypeMapper("MySiscriminator")));
         }
 
         [Fact]
         public void FailOnDuplicateDiscriminators()
         {
-            throw new NotImplementedException();
-            //configuration.Document<AbstractEntity>(discriminator: "abe");
-            //Should.Throw<InvalidOperationException>(() => 
-            //    configuration.Document<MoreDerivedEntity1>(discriminator: "abe"))
-            //    .Message.ShouldBe("Discriminator 'abe' is already in use.");
+            configuration.UseTypeMapper(new OtherTypeMapper("AlwaysTheSame"));
+
+            configuration.Document<AbstractEntity>();
+
+            Should.Throw<InvalidOperationException>(() =>
+                configuration.Document<MoreDerivedEntity1>())
+                .Message.ShouldBe("Discriminator 'AlwaysTheSame' is already in use.");
         }
 
         [Fact]
@@ -204,6 +211,25 @@ namespace HybridDb.Tests
             Should.Throw<HybridDbException>(() => configuration.GetDesignFor<int>());
         }
 
+        public class OtherTypeMapper : ITypeMapper
+        {
+            readonly string discriminator;
+
+            public OtherTypeMapper(string discriminator)
+            {
+                this.discriminator = discriminator;
+            }
+
+            public string ToDiscriminator(Type type)
+            {
+                return discriminator;
+            }
+
+            public Type ToType(string discriminator)
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         class Entity
         {

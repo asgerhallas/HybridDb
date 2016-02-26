@@ -823,7 +823,7 @@ namespace HybridDb.Tests
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
                 session.SaveChanges();
 
-                configuration.TryGetDesignFor<MoreDerivedEntity1>().ShouldNotBe(null);
+                configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldNotBe(null);
 
                 var entity = session.Query<AbstractEntity>().Single(x => x.Property == "Asger");
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
@@ -851,7 +851,7 @@ namespace HybridDb.Tests
                 var entity = session.Load<AbstractEntity>(id);
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
 
-                configuration.TryGetDesignFor<MoreDerivedEntity1>().ShouldNotBe(null);
+                configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldNotBe(null);
             }
         }
 
@@ -1389,6 +1389,26 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void FailsIfTypeMapperCantMapToConcreteType()
+        {
+            UseTypeMapper(new FailingTypeMapper());
+
+            using (var session = store.OpenSession())
+            {
+                session.Store("key", new DerivedEntity());
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            using (var session = store.OpenSession())
+            {
+                Should.Throw<InvalidOperationException>(() => session.Load<AbstractEntity>("key"))
+                    .Message.ShouldBe("Document with id \'key\' exists, but no concrete type was found for discriminator \'NoShow\'.");
+            }
+        }
+
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
         {
@@ -1406,6 +1426,19 @@ namespace HybridDb.Tests
                 };
 
                 session.Store(entity1);
+            }
+        }
+
+        public class FailingTypeMapper : ITypeMapper
+        {
+            public string ToDiscriminator(Type type)
+            {
+                return "NoShow";
+            }
+
+            public Type ToType(string discriminator)
+            {
+                return null;
             }
         }
 
