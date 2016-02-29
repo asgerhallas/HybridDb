@@ -75,6 +75,11 @@ Changelog
 
 - Fixed issue with decimal-columns not having any scale. Now they are set to 28, 14.
 
+#### 0.9.2
+
+- Fixed issue with deadlocks while migrating schema in parallel test executing using temp tables
+
+
 Acknowledgements
 ================
 
