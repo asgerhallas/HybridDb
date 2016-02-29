@@ -52,7 +52,7 @@ namespace HybridDb.Config
             return Inflector.Inflector.Pluralize(type.Name);
         }
 
-        public void Initialize()
+        internal void Initialize()
         {
             DocumentDesigns.Insert(0, new DocumentDesign(this, AddTable("Documents"), typeof(object), "object"));
             initialized = true;

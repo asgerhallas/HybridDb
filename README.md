@@ -71,6 +71,10 @@ Changelog
 
 - Changed the configuration api to accomodate ad hoc document setup. Now you need to call store.Initialize() after configuration to run the migrations.
 
+#### 0.9.1
+
+- Fixed issue with decimal-columns not having any scale. Now they are set to 28, 14.
+
 Acknowledgements
 ================
 

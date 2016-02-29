@@ -32,7 +32,7 @@ namespace HybridDb.Commands
             return parameters;
         }
 
-        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, DbType? dbType, int? size)
+        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, DbType? dbType, string size)
         {
             parameters[name] = new Parameter {Name = name, Value = value, DbType = dbType, Size = size};
         }

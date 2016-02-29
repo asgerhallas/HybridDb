@@ -22,9 +22,14 @@ namespace HybridDb
                 dbDataParameter.ParameterName = Clean(parameter.Name);
                 dbDataParameter.Value = parameter.Value ?? DBNull.Value;
                 dbDataParameter.Direction = ParameterDirection.Input;
+
+                // Size is set implicitly by setting Value, see https://msdn.microsoft.com/en-us/library/system.data.common.dbparameter.size(v=vs.110).aspx
+                // DbType is inferred too, but can be overriden for some columns
                 if (parameter.DbType.HasValue)
+                {
                     dbDataParameter.DbType = parameter.DbType.Value;
-                dbDataParameter.Size = parameter.Size ?? 0;
+                }
+
                 command.Parameters.Add(dbDataParameter);
             }
         }

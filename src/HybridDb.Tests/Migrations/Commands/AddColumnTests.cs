@@ -34,6 +34,9 @@ namespace HybridDb.Tests.Migrations.Commands
         [InlineData(TableMode.UseTempTables, typeof(string), true)]
         [InlineData(TableMode.UseTempDb, typeof(string), true)]
         [InlineData(TableMode.UseRealTables, typeof(string), true)]
+        [InlineData(TableMode.UseTempTables, typeof(decimal), false)]
+        [InlineData(TableMode.UseTempDb, typeof(decimal), false)]
+        [InlineData(TableMode.UseRealTables, typeof(decimal), false)]
         public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
             Use(TableMode.UseRealTables);

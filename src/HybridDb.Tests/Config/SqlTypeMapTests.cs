@@ -9,11 +9,11 @@ namespace HybridDb.Tests.Config
     public class SqlTypeMapTests
     {
         [Theory]
-        [InlineData(typeof(string), null, Int32.MaxValue)]
-        [InlineData(typeof(SomeEnum), null, 255)]
-        [InlineData(typeof(byte[]), null, Int32.MaxValue)]
+        [InlineData(typeof(string), null, "MAX")]
+        [InlineData(typeof(SomeEnum), null, "255")]
+        [InlineData(typeof(byte[]), null, "MAX")]
         [InlineData(typeof(double), null, null)]
-        [InlineData(typeof(decimal), null, null)]
+        [InlineData(typeof(decimal), null, "28, 14")]
         [InlineData(typeof(bool), null, null)]
         [InlineData(typeof(byte), null, null)]
         [InlineData(typeof(long), null, null)]
@@ -24,7 +24,7 @@ namespace HybridDb.Tests.Config
         [InlineData(typeof(DateTimeOffset), null, null)]
         [InlineData(typeof(Single), null, null)]
         [InlineData(typeof(TimeSpan), null, null)]
-        public void ConvertGivesCorrectDefaultLength(Type columnType, int? length, int? expectedLenght)
+        public void ConvertGivesCorrectDefaultLength(Type columnType, int? length, string expectedLenght)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, length));
             sqlColumn.Length.ShouldBe(expectedLenght);
@@ -49,7 +49,7 @@ namespace HybridDb.Tests.Config
         public void ConvertGivesCorrectLength(Type columnType)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, length: 42));
-            sqlColumn.Length.ShouldBe(42);
+            sqlColumn.Length.ShouldBe("42");
         }
 
         [Theory]

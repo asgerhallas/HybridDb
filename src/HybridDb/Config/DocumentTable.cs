@@ -18,10 +18,10 @@ namespace HybridDb.Config
             ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset));
             Register(ModifiedAtColumn);
 
-            DocumentColumn = new Column("Document", typeof(byte[]), int.MaxValue);
+            DocumentColumn = new Column("Document", typeof(byte[]));
             Register(DocumentColumn);
 
-            MetadataColumn = new Column("Metadata", typeof(byte[]), int.MaxValue);
+            MetadataColumn = new Column("Metadata", typeof(byte[]));
             Register(MetadataColumn);
 
             DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 1024);

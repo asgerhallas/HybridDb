@@ -56,19 +56,22 @@ namespace HybridDb.Config
             return new SqlColumn(ForNetType(column.Type).First().DbType, GetLength(column));
         }
 
-        static int? GetLength(Column column)
+        static string GetLength(Column column)
         {
             if (column.Length != null)
-                return column.Length;
+                return column.Length.ToString();
 
             if (column.Type == typeof (string))
-                return Int32.MaxValue;
+                return "MAX";
             
             if (column.Type == typeof(Enum))
-                return 255;
+                return "255";
             
             if (column.Type == typeof (byte[]))
-                return Int32.MaxValue;
+                return "MAX";
+
+            if (column.Type == typeof (decimal))
+                return "28, 14";
 
             return null;
         }
