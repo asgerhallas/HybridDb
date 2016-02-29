@@ -32,6 +32,15 @@ namespace HybridDb.Tests
             UseTempTables();
         }
 
+        protected static string GetConnectionString()
+        {
+            var isAppveyor = Environment.GetEnvironmentVariable("APPVEYOR") != null;
+
+            return isAppveyor
+                ? "Server=(local)\\SQL2012SP1;Database=master;User ID=sa;Password=Password12!"
+                : "data source =.; Integrated Security = True";
+        }
+
         protected void Use(TableMode mode, string prefix = null)
         {
             switch (mode)
@@ -107,15 +116,6 @@ namespace HybridDb.Tests
             }
 
             Transaction.Current.ShouldBe(null);
-        }
-
-        static string GetConnectionString()
-        {
-            var isAppveyor = Environment.GetEnvironmentVariable("APPVEYOR") != null;
-
-            return isAppveyor
-                ? "Server=(local)\\SQL2012SP1;Database=master;User ID=sa;Password=Password12!"
-                : "data source =.; Integrated Security = True";
         }
 
         public interface ISomeInterface

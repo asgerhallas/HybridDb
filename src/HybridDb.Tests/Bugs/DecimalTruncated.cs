@@ -3,17 +3,15 @@ using Xunit;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class DecimalTruncated
-    {
-
+    public class DecimalTruncated : HybridDbTests
+    { 
         [Fact]
-        public void FactMethodName()
+        public void ShouldHaveRightPrecisionAndScale()
         {
-            var store = DocumentStore.ForTesting(TableMode.UseTempTables);
-            store.Configuration.Document<ClassWithDecimal>().With(x => x.MyDecimal);
-            store.Initialize();
+            documentStore.Configuration.Document<ClassWithDecimal>().With(x => x.MyDecimal);
+            documentStore.Initialize();
 
-            using (var documentSession = store.OpenSession())
+            using (var documentSession = documentStore.OpenSession())
             {
                 var classWithDecimal = new ClassWithDecimal
                 {
@@ -23,7 +21,7 @@ namespace HybridDb.Tests.Bugs
                 documentSession.SaveChanges();
             }
 
-            store.Get(store.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id")["MyDecimal"].ShouldBe(123.456m);
+            documentStore.Get(documentStore.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id")["MyDecimal"].ShouldBe(123.456m);
         }
 
         public class ClassWithDecimal
