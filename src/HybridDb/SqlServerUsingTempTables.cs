@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
+using Dapper;
 using HybridDb.Config;
 using Serilog;
 
@@ -64,29 +65,56 @@ namespace HybridDb
         {
             var schema = new Dictionary<string, Table>();
 
-            var tempTables = RawQuery<string>("select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null and name like '#%' and name not like '##%'");
-            foreach (var tableName in tempTables)
+            using (var managedConnection = Connect())
             {
-                var formattedTableName = tableName.Remove(tableName.Length - 12, 12).TrimEnd('_');
+                var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>(@"
+SELECT 
+   table_name = SUBSTRING(t.name, 1, CHARINDEX('___', t.name)-1),
+   full_table_name = t.name,
+   column_name = c.name,
+   type_name = (select name from sys.types where user_type_id = c.user_type_id),
+   max_length = c.max_length,
+   is_nullable = c.is_nullable,
+   default_value = (select column_default from tempdb.information_schema.columns where table_name=t.name and column_name=c.name),
+   is_primary_key = (
+        select 1 
+        from tempdb.information_schema.table_constraints as ct
+        join tempdb.information_schema.key_column_usage as k
+        on ct.table_name = k.table_name
+        and ct.constraint_catalog = k.constraint_catalog
+        and ct.constraint_schema = k.constraint_schema 
+        and ct.constraint_name = k.constraint_name
+        where ct.constraint_type = 'primary key'
+        and k.table_name = t.name
+        and k.column_name = c.name)
+FROM tempdb.sys.tables AS t
+INNER JOIN tempdb.sys.columns AS c
+ON t.[object_id] = c.[object_id]
+WHERE t.name LIKE '#%[_][_][_]%'
+AND t.[object_id] = OBJECT_ID('tempdb..' + SUBSTRING(t.name, 1, CHARINDEX('___', t.name)-1))
+OPTION (FORCE ORDER);", 
+  
+    Tuple.Create, splitOn: "column_name");
 
-                var columns = RawQuery<QueryColumn>(
-                    String.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", formattedTableName));
+                foreach (var columnByTable in columns.GroupBy(x => x.Item1))
+                {
+                    var tableName = columnByTable.Key.table_name.TrimStart('#');
+                    schema.Add(tableName, new Table(tableName, columnByTable.Select(column => 
+                        Map(columnByTable.Key.full_table_name, column.Item2))));
+                }
 
-                formattedTableName = formattedTableName.TrimStart('#');
-                schema.Add(
-                    formattedTableName,
-                    new Table(formattedTableName, columns.Select(column => Map(tableName, column, isTempTable: true))));
+                return schema;
             }
-            return schema;
         }
 
         public override void Dispose()
         {
             if (numberOfManagedConnections > 0)
-                this.store.Logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+            {
+                store.Logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+            }
 
-            if (ambientConnectionForTesting != null)
-                ambientConnectionForTesting.Dispose();
+            ambientConnectionForTesting?.Dispose();
         }
     }
 }

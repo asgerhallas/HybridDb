@@ -34,15 +34,20 @@ namespace HybridDb.Migrations
             var database = ((DocumentStore)store).Database;
             var configuration = store.Configuration;
 
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
             {
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
                 configuration.Tables.TryAdd(metadata.Name, metadata);
 
                 new CreateTable(metadata).Execute(database);
 
+                tx.Complete();
+            }
+
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
+            {
                 var currentSchemaVersion = database.RawQuery<int>(
-                    $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")} with (tablockx, holdlock)")
+                    $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}")
                     .SingleOrDefault();
 
                 if (currentSchemaVersion > store.Configuration.ConfiguredVersion)

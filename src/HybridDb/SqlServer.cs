@@ -66,34 +66,27 @@ namespace HybridDb
             }
         }
 
-        protected Column Map(string tableName, QueryColumn sqlcolumn, bool isTempTable)
+        protected Column Map(string fullTableName, QueryColumn sqlcolumn)
         {
-            var columnType = GetType(sqlcolumn);
-            var column = new Column(
-                sqlcolumn.Name, columnType, sqlcolumn.max_length,
-                GetDefaultValue(columnType, tableName, sqlcolumn, isTempTable),
-                IsPrimaryKey(sqlcolumn.Name, isTempTable));
+            var columnType = GetType(sqlcolumn.type_name, sqlcolumn.is_nullable);
+            var defaultValue = GetDefaultValue(columnType, sqlcolumn);
+            var isPrimaryKey = sqlcolumn.is_primary_key;
 
-            column.Nullable = sqlcolumn.is_nullable;
+            var column = new Column(sqlcolumn.column_name, columnType, sqlcolumn.max_length, defaultValue, isPrimaryKey)
+            {
+                Nullable = sqlcolumn.is_nullable
+            };
 
             return column;
         }
 
-        Type GetType(QueryColumn column)
+        Type GetType(string sqlName, bool isNullable)
         {
-            var id = column.system_type_id;
-            //https://msdn.microsoft.com/en-us/library/cc716729.aspx
-            var rawQuery = RawQuery<string>("select name from sys.types where system_type_id = @id", new {id});
-
-            var shortName = rawQuery.FirstOrDefault();
-            if (shortName == null)
-                throw new ArgumentOutOfRangeException(string.Format("Found no matching sys.type for typeId '{0}'.", id));
-
-            var firstMatchingType = SqlTypeMap.ForSqlType(shortName).FirstOrDefault();
+            var firstMatchingType = SqlTypeMap.ForSqlType(sqlName).FirstOrDefault();
             if (firstMatchingType == null)
-                throw new ArgumentOutOfRangeException(string.Format("Found no matching .NET type for typeName type '{0}'.", shortName));
+                throw new ArgumentOutOfRangeException($"Found no matching .NET type for typeName type '{sqlName}'.");
 
-            return column.is_nullable
+            return isNullable
                 ? GetNullableType(firstMatchingType.NetType)
                 : firstMatchingType.NetType;
         }
@@ -111,35 +104,29 @@ namespace HybridDb
         bool IsPrimaryKey(string column, bool isTempTable)
         {
             var dbPrefix = isTempTable ? "tempdb." : "";
-            var sql =
-                "SELECT K.TABLE_NAME, " +
-                "K.COLUMN_NAME, " +
-                "K.CONSTRAINT_NAME " +
-                String.Format("FROM {0}INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C ", dbPrefix) +
-                String.Format("JOIN {0}INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K ", dbPrefix) +
-                "ON C.TABLE_NAME = K.TABLE_NAME " +
-                "AND C.CONSTRAINT_CATALOG = K.CONSTRAINT_CATALOG " +
-                "AND C.CONSTRAINT_SCHEMA = K.CONSTRAINT_SCHEMA " +
-                "AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME " +
-                "WHERE C.CONSTRAINT_TYPE = 'PRIMARY KEY' " +
-                "AND K.COLUMN_NAME = '" + column + "'";
+            var sql = $@"
+select k.table_name, 
+k.column_name,
+k.constraint_name 
+from {dbPrefix}information_schema.table_constraints as c
+join {dbPrefix}information_schema.key_column_usage as k
+on c.table_name = k.table_name
+and c.constraint_catalog = k.constraint_catalog
+and c.constraint_schema = k.constraint_schema 
+and c.constraint_name = k.constraint_name
+where c.constraint_type = 'primary key'
+and k.column_name = '{column}'";
 
             var isPrimaryKey = RawQuery<dynamic>(sql).Any();
             return isPrimaryKey;
         }
 
-        object GetDefaultValue(Type columnType, string tableName, QueryColumn column, bool isTempTable)
+        object GetDefaultValue(Type columnType, QueryColumn column)
         {
-            var defaultValueInDb = RawQuery<string>(
-                String.Format("select column_default from {0}information_schema.columns where table_name='{1}' and column_name='{2}'",
-                    isTempTable ? "tempdb." : "",
-                    tableName,
-                    column.Name)).SingleOrDefault();
-
-            if (defaultValueInDb == null)
+            if (column.default_value == null)
                 return null;
 
-            var defaultValue = defaultValueInDb.Replace("'", "").Trim('(', ')');
+            var defaultValue = column.default_value.Replace("'", "").Trim('(', ')');
             columnType = Nullable.GetUnderlyingType(columnType) ?? columnType;
 
             if (columnType == typeof (string) || columnType == typeof (Enum))
@@ -163,12 +150,41 @@ namespace HybridDb
             return Convert.ChangeType(defaultValue, columnType);
         }
 
+        public class TableInfo
+        {
+            public string table_name { get; set; }
+            public string full_table_name { get; set; }
+
+            protected bool Equals(TableInfo other)
+            {
+                return string.Equals(table_name, other.table_name) && string.Equals(full_table_name, other.full_table_name);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((TableInfo)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((table_name != null ? table_name.GetHashCode() : 0) * 397) ^ (full_table_name != null ? full_table_name.GetHashCode() : 0);
+                }
+            }
+        }
+
         protected class QueryColumn
         {
-            public string Name { get; set; }
-            public int system_type_id { get; set; }
+            public string column_name { get; set; }
+            public string type_name { get; set; }
             public int max_length { get; set; }
             public bool is_nullable { get; set; }
+            public string default_value { get; set; }
+            public bool is_primary_key { get; set; }
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
+using Dapper;
 using HybridDb.Config;
 using Serilog;
 
@@ -60,19 +61,45 @@ namespace HybridDb
         {
             var schema = new Dictionary<string, Table>();
 
-            var tables = RawQuery<string>($"select table_name from information_schema.tables where table_type='BASE TABLE' and table_name LIKE '{store.Configuration.TableNamePrefix}%'")
-                .ToList();
-            
-            foreach (var tableName in tables)
+            using (var managedConnection = Connect())
             {
-                var columns = RawQuery<QueryColumn>($"select * from sys.columns where Object_ID = Object_ID(N'{tableName}')");
+                var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
+SELECT 
+   table_name = t.table_name,
+   full_table_name = t.table_name,
+   column_name = c.name,
+   type_name = (select name from sys.types where user_type_id = c.user_type_id),
+   max_length = c.max_length,
+   is_nullable = c.is_nullable,
+   default_value = (select column_default from information_schema.columns where table_name=t.table_name and column_name=c.name),
+   is_primary_key = (
+        select 1 
+        from information_schema.table_constraints as ct
+        join information_schema.key_column_usage as k
+        on ct.table_name = k.table_name
+        and ct.constraint_catalog = k.constraint_catalog
+        and ct.constraint_schema = k.constraint_schema 
+        and ct.constraint_name = k.constraint_name
+        where ct.constraint_type = 'primary key'
+        and k.table_name = t.table_name
+        and k.column_name = c.name)
+FROM information_schema.tables AS t
+INNER JOIN sys.columns AS c
+ON OBJECT_ID(t.table_name) = c.[object_id]
+WHERE t.table_type='BASE TABLE' and t.table_name LIKE '{store.Configuration.TableNamePrefix}%'
+OPTION (FORCE ORDER);",
 
-                var formattedTableName = tableName.Remove(0, store.Configuration.TableNamePrefix.Length);
+                    Tuple.Create, splitOn: "column_name");
 
-                schema.Add(formattedTableName, new Table(formattedTableName, columns.Select(column => Map(tableName, column, isTempTable: false))));
+                foreach (var columnByTable in columns.GroupBy(x => x.Item1))
+                {
+                    var tableName = columnByTable.Key.table_name.Remove(0, store.Configuration.TableNamePrefix.Length);
+                    schema.Add(tableName, new Table(tableName, columnByTable.Select(column =>
+                        Map(columnByTable.Key.full_table_name, column.Item2))));
+                }
+
+                return schema;
             }
-
-            return schema;
         }
         
         public override void Dispose()

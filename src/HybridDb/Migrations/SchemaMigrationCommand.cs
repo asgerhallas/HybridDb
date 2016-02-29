@@ -22,7 +22,7 @@ namespace HybridDb.Migrations
         protected string GetTableExistsSql(IDatabase db, string tablename)
         {
             return string.Format(db is SqlServerUsingRealTables || db is SqlServerUsingTempDb
-                ? "exists (select * from information_schema.tables where table_catalog = db_name() and table_name = '{0}')"
+                ? "object_id('{0}', 'U') is not null"
                 : "OBJECT_ID('tempdb..{0}') is not null",
                 db.FormatTableName(tablename));
         }
@@ -30,7 +30,7 @@ namespace HybridDb.Migrations
         protected SqlBuilder GetColumnSqlType(Column column, string defaultValuePostfix = "")
         {
             if (column.Type == null)
-                throw new ArgumentException(string.Format("Column {0} must have a type", column.Name));
+                throw new ArgumentException($"Column {column.Name} must have a type");
 
             var sql = new SqlBuilder();
 

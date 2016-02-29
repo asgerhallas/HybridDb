@@ -76,6 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\DeadlockIssueOnMigrations.cs" />
     <Compile Include="Bugs\DecimalTruncated.cs" />
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
     <Compile Include="Bugs\IdentityMapThinksIdsAreGlobal.cs" />
