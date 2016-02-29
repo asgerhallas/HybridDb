@@ -1,23 +1,19 @@
-﻿using System;
-using Xunit;
+﻿using Xunit;
 
 namespace HybridDb.Tests.Bugs
 {
     public class IdentityMapThinksIdsAreGlobal : HybridDbTests
     {
-        readonly LambdaHybridDbConfigurator configurator = new LambdaHybridDbConfigurator(config =>
-        {
-            config.Document<Doc1>().Key(x => x.Id);
-            config.Document<Doc2>().Key(x => x.Id);
-        });
-
         readonly IDocumentStore documentStore;
 
         const string ThisIsAKnownId = "this is a known ID";
 
         public IdentityMapThinksIdsAreGlobal()
         {
-            documentStore = Using(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString, configurator));
+            documentStore = Using(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString));
+            documentStore.Configuration.Document<Doc1>().Key(x => x.Id);
+            documentStore.Configuration.Document<Doc2>().Key(x => x.Id);
+            documentStore.Initialize();
         }
 
         [Fact]

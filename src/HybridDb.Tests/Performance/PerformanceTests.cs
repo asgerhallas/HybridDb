@@ -127,11 +127,12 @@ namespace HybridDb.Tests.Performance
                 using (var store = DocumentStore.ForTesting(
                     TableMode.UseTempTables,
                     connectionString,
-                    new LambdaHybridDbConfigurator(c =>
-                        c.Document<LocalEntity>()
-                            .With(x => x.SomeData)
-                            .With(x => x.SomeNumber))))
+                    c => c.Document<LocalEntity>()
+                        .With(x => x.SomeData)
+                        .With(x => x.SomeNumber)))
                 {
+                    store.Initialize();
+
                     var commands = new List<DatabaseCommand>();
                     for (var i = 0; i < 10; i++)
                     {

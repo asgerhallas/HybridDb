@@ -13,7 +13,7 @@ namespace HybridDb
         int numberOfManagedConnections;
         SqlConnection ambientConnectionForTesting;
 
-        public SqlServerUsingTempTables(ILogger logger, string connectionString) : base(logger, connectionString) {}
+        public SqlServerUsingTempTables(DocumentStore store, string connectionString) : base(store, connectionString) {}
 
         public override string FormatTableName(string tablename)
         {
@@ -83,7 +83,7 @@ namespace HybridDb
         public override void Dispose()
         {
             if (numberOfManagedConnections > 0)
-                logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+                this.store.Logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
 
             if (ambientConnectionForTesting != null)
                 ambientConnectionForTesting.Dispose();

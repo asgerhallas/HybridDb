@@ -27,7 +27,7 @@ namespace HybridDb.Tests.Migrations
             runner.Run();
 
             configuration.Tables.ShouldContainKey("HybridDb");
-            database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Single().ShouldBe(0);
+            documentStore.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Single().ShouldBe(0);
         }
 
         [Fact]
@@ -41,7 +41,7 @@ namespace HybridDb.Tests.Migrations
             runner.Run();
 
             configuration.Tables.ShouldNotContainKey("HybridDb");
-            database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Any().ShouldBe(false);
+            documentStore.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Any().ShouldBe(false);
         }
 
         [Fact]
@@ -53,7 +53,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            var schema = database.QuerySchema();
+            var schema = documentStore.Database.QuerySchema();
             schema.Count.ShouldBe(2);
             schema.ShouldContainKey("HybridDb"); // the metadata table and nothing else
             schema.ShouldContainKey("Documents"); // the metadata table and nothing else
@@ -71,7 +71,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            var tables = database.QuerySchema();
+            var tables = documentStore.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
             tables["Testing"]["Id"].ShouldNotBe(null);
             tables["Testing"]["Noget"].ShouldNotBe(null);
@@ -84,6 +84,7 @@ namespace HybridDb.Tests.Migrations
         {
             Use(mode);
 
+            UseTableNamePrefix(Guid.NewGuid().ToString());
             CreateMetadataTable();
 
             UseMigrations(new InlineMigration(1,
@@ -94,7 +95,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            var tables = database.QuerySchema();
+            var tables = documentStore.Database.QuerySchema();
             tables.ShouldNotContainKey("Testing");
         }
 
@@ -110,7 +111,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            var tables = database.QuerySchema();
+            var tables = documentStore.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
             tables["Testing"]["Id"].ShouldNotBe(null);
             tables["Testing"]["Noget"].ShouldNotBe(null);
@@ -132,7 +133,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            var tables = database.QuerySchema();
+            var tables = documentStore.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
             tables["Testing"]["Id"].ShouldNotBe(null);
             tables["Testing"]["NogetNyt"].ShouldNotBe(null);
@@ -222,7 +223,7 @@ namespace HybridDb.Tests.Migrations
             {
             }
 
-            database.QuerySchema().ShouldNotContainKey("Testing");
+            documentStore.Database.QuerySchema().ShouldNotContainKey("Testing");
         }
 
         [Fact]
@@ -251,9 +252,9 @@ namespace HybridDb.Tests.Migrations
             
             runner.Run();
 
-            database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x);
-            database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x);
-            database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => !x);
+            documentStore.Database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x);
+            documentStore.Database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x);
+            documentStore.Database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => !x);
         }
 
         [Fact]
@@ -275,7 +276,7 @@ namespace HybridDb.Tests.Migrations
                 new SlowCommand(),
                 countingCommand));
 
-            new CreateTable(new DocumentTable("Other")).Execute(database);
+            new CreateTable(new DocumentTable("Other")).Execute(documentStore.Database);
 
             Parallel.For(1, 10, x =>
             {
@@ -288,7 +289,7 @@ namespace HybridDb.Tests.Migrations
 
         void CreateMetadataTable()
         {
-            new CreateTable(new Table("HybridDb", new Column("SchemaVersion", typeof(int)))).Execute(database);
+            new CreateTable(new Table("HybridDb", new Column("SchemaVersion", typeof(int)))).Execute(documentStore.Database);
         }
 
         public class FakeSchemaDiffer : ISchemaDiffer

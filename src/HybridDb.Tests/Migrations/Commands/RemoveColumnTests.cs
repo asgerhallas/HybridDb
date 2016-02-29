@@ -14,12 +14,12 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(TableMode.UseRealTables);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
-            new CreateTable(table).Execute(database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(database);
+            new CreateTable(table).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(documentStore.Database);
 
-            new RemoveColumn(table, "SomeColumn").Execute(database);
+            new RemoveColumn(table, "SomeColumn").Execute(documentStore.Database);
 
-            database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            documentStore.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
         [Theory(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
@@ -30,12 +30,12 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(mode);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
-            new CreateTable(table).Execute(database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(database);
+            new CreateTable(table).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(documentStore.Database);
 
-            new RemoveColumn(table, "SomeColumn").Execute(database);
+            new RemoveColumn(table, "SomeColumn").Execute(documentStore.Database);
 
-            database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            documentStore.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
         [Theory]

@@ -13,7 +13,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class DocumentMigrationRunnerTests  : HybridDbStoreTests
+    public class DocumentMigrationRunnerTests : HybridDbStoreTests
     {
         [Theory]
         [InlineData(true, 42)]
@@ -32,7 +32,7 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
-            new DocumentMigrationRunner(store).RunSynchronously();
+            new DocumentMigrationRunner().Run(store).Wait();
 
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
@@ -62,8 +62,8 @@ namespace HybridDb.Tests.Migrations
             });
 
             var counter = new TracingDocumentStoreDecorator(store);
-            
-            new DocumentMigrationRunner(counter).RunSynchronously();
+
+            new DocumentMigrationRunner().Run(counter).Wait();
 
             var row = store.Get(table, id);
             counter.Gets.ShouldBeEmpty();
@@ -90,7 +90,7 @@ namespace HybridDb.Tests.Migrations
 
             var counter = new TracingDocumentStoreDecorator(store);
 
-            new DocumentMigrationRunner(counter).RunSynchronously();
+            new DocumentMigrationRunner().Run(counter).Wait();
 
             // 1+2: Entities table => 100 rows
             // 3: Entities table => 0 rows
@@ -128,8 +128,8 @@ namespace HybridDb.Tests.Migrations
 
             bool? failed = null;
 
-            new DocumentMigrationRunner(store)
-                .RunInBackground()
+            new DocumentMigrationRunner()
+                .Run(store)
                 .ContinueWith(x =>
                 {
                     failed = x.IsFaulted;
@@ -151,7 +151,7 @@ namespace HybridDb.Tests.Migrations
             DisableDocumentMigrationsInBackground();
             Document<Entity>().With(x => x.Number);
             
-            new DocumentMigrationRunner(store).RunInBackground().Wait();
+            new DocumentMigrationRunner().Run(store).Wait();
 
             store.NumberOfRequests.ShouldBe(0);
         }
@@ -162,7 +162,7 @@ namespace HybridDb.Tests.Migrations
             DisableMigrations();
             Document<Entity>().With(x => x.Number);
 
-            new DocumentMigrationRunner(store).RunInBackground().Wait();
+            new DocumentMigrationRunner().Run(store).Wait();
 
             store.NumberOfRequests.ShouldBe(0);
         }
@@ -194,10 +194,10 @@ namespace HybridDb.Tests.Migrations
 
             Should.NotThrow(() =>
             {
-                new DocumentMigrationRunner(store).RunInBackground().Wait(1000);
+                new DocumentMigrationRunner().Run(store).Wait(1000);
             });
 
-            var numberOfRetries = logEventSink.Captures.Count(x => x == string.Format("Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{0}\".", id));
+            var numberOfRetries = logEventSink.Captures.Count(x => x == $"Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{id}\".");
             
             // it has a back off of 100ms
             numberOfRetries.ShouldBeLessThan(11);
@@ -226,7 +226,7 @@ namespace HybridDb.Tests.Migrations
             InitializeStore();
 
             backupWriter.Files.Count.ShouldBe(1);
-            backupWriter.Files[string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_0.bak", id)]
+            backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                 .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
         }
 

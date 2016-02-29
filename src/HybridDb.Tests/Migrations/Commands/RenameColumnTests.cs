@@ -1,3 +1,4 @@
+using System;
 using HybridDb.Config;
 using HybridDb.Migrations.Commands;
 using Shouldly;
@@ -15,16 +16,17 @@ namespace HybridDb.Tests.Migrations.Commands
         public void RenamesColumn(TableMode mode)
         {
             Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
 
             var table = new Table("Entities", new Column("Col1", typeof(int)));
 
-            new CreateTable(table).Execute(database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(database);
+            new CreateTable(table).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(documentStore.Database);
 
-            new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(database);
+            new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(documentStore.Database);
 
-            database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
-            database.QuerySchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
+            documentStore.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            documentStore.Database.QuerySchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
         }
 
         [Theory]

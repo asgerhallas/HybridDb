@@ -12,7 +12,12 @@ namespace HybridDb.Config
             DocumentType = documentType;
             Table = table;
             Discriminator = discriminator;
-            
+
+            if (discriminator.Length > Table.DiscriminatorColumn.Length)
+            {
+                throw new InvalidOperationException($"Discriminator '{discriminator}' is too long for column. Maximum length is {Table.DiscriminatorColumn.Length}.");
+            }
+
             decendentsAndSelf = new Dictionary<string, DocumentDesign>
             {
                 { Discriminator, this }

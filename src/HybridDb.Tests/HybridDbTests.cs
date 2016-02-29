@@ -17,9 +17,8 @@ namespace HybridDb.Tests
         readonly List<Action> disposables;
 
         protected readonly ILogger logger;
-        
         protected string connectionString;
-        protected IDatabase database;
+        protected DocumentStore documentStore;
 
         protected HybridDbTests()
         {
@@ -38,13 +37,13 @@ namespace HybridDb.Tests
             switch (mode)
             {
                 case TableMode.UseRealTables:
-                    UseRealTables(prefix);
+                    UseRealTables();
                     break;
                 case TableMode.UseTempTables:
                     UseTempTables();
                     break;
                 case TableMode.UseTempDb:
-                    UseTempDb(prefix);
+                    UseTempDb();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("mode");
@@ -54,16 +53,16 @@ namespace HybridDb.Tests
         protected void UseTempTables()
         {
             connectionString = GetConnectionString();
-            database = Using(new SqlServerUsingTempTables(logger, connectionString));
+            documentStore = Using(new DocumentStore(configuration, TableMode.UseTempTables, connectionString, true));
         }
 
-        protected void UseTempDb(string sessionKey = null)
+        protected void UseTempDb()
         {
             connectionString = GetConnectionString();
-            database = Using(new SqlServerUsingTempDb(logger, connectionString, sessionKey));
+            documentStore = Using(new DocumentStore(configuration, TableMode.UseTempDb, connectionString, true));
         }
 
-        protected void UseRealTables(string prefix = null)
+        protected void UseRealTables()
         {
             var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
 
@@ -80,7 +79,7 @@ namespace HybridDb.Tests
 
             connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
 
-            database = Using(new SqlServerUsingRealTables(logger, connectionString, prefix));
+            documentStore = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
 
             disposables.Add(() =>
             {

@@ -16,10 +16,11 @@ namespace HybridDb.Tests.Migrations.Commands
         public void CreatesTable(TableMode mode)
         {
             Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(documentStore.Database);
 
-            database.QuerySchema().ShouldContainKey("Entities");
+            documentStore.Database.QuerySchema().ShouldContainKey("Entities");
         }
 
         [Theory]
@@ -29,11 +30,12 @@ namespace HybridDb.Tests.Migrations.Commands
         public void CreatesColumns(TableMode mode)
         {
             Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
 
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(documentStore.Database);
 
-            database.QuerySchema().ShouldContainKey("Entities");
-            database.QuerySchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
+            documentStore.Database.QuerySchema().ShouldContainKey("Entities");
+            documentStore.Database.QuerySchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
         }
 
         [Theory]
@@ -46,10 +48,11 @@ namespace HybridDb.Tests.Migrations.Commands
         public void CreatesPrimaryKeyColumn(TableMode mode, Type type, int? length)
         {
             Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
 
-            new CreateTable(new Table("Entities", new Column("Col1", type, length, isPrimaryKey: true))).Execute(database);
+            new CreateTable(new Table("Entities", new Column("Col1", type, length, isPrimaryKey: true))).Execute(documentStore.Database);
 
-            database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
+            documentStore.Database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }
 
         [Fact]
@@ -65,15 +68,16 @@ namespace HybridDb.Tests.Migrations.Commands
         public void CanCreateColumnWithDefaultValue(TableMode mode)
         {
             Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
 
             new CreateTable(new Table("Entities1",
                 new Column("SomeNullableInt", typeof(int?), defaultValue: null),
                 new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42),
                 new Column("SomeString", typeof(string),  defaultValue: "peter"),
                 new Column("SomeInt", typeof(int),  defaultValue: 666),
-                new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24)))).Execute(database);
+                new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24)))).Execute(documentStore.Database);
 
-            var schema = database.QuerySchema();
+            var schema = documentStore.Database.QuerySchema();
 
             schema["Entities1"]["SomeNullableInt"].DefaultValue.ShouldBe(null);
             schema["Entities1"]["SomeOtherNullableInt"].DefaultValue.ShouldBe(42);

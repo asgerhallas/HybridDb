@@ -24,7 +24,7 @@ namespace HybridDb.Config
             MetadataColumn = new Column("Metadata", typeof(byte[]), int.MaxValue);
             Register(MetadataColumn);
 
-            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 255);
+            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 1024);
             Register(DiscriminatorColumn);
 
             AwaitsReprojectionColumn = new Column("AwaitsReprojection", typeof(bool));

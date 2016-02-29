@@ -16,12 +16,13 @@ namespace HybridDb.Tests.Migrations.Commands
         public void AddsColumn(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(database);
-            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(database);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(documentStore.Database);
 
             new SqlMigrationCommand("add some index", (sql, db) => sql
                 .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int"))
-                .Execute(database);
+                .Execute(documentStore.Database);
         }
 
         [Fact]

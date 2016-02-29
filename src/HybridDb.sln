@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HybridDb", "HybridDb\HybridDb.csproj", "{97E49DA1-C846-4900-BA32-E17C0163A331}"
 EndProject
@@ -10,6 +10,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HybridDb.Studio", "HybridDb.Studio\HybridDb.Studio.csproj", "{B2D23338-C8E8-4740-B525-8199E80CCBF6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HybridDb.NewtonsoftJson", "HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.csproj", "{1671A056-76A1-4FCD-98A4-ACEDB0FEA56C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CA706B26-C9BD-4863-8B52-783FAE692CF2}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

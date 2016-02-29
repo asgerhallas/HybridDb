@@ -42,14 +42,14 @@ namespace HybridDb.Migrations
                 new CreateTable(metadata).Execute(database);
 
                 var currentSchemaVersion = database.RawQuery<int>(
-                    string.Format("select top 1 SchemaVersion from {0} with (tablockx, holdlock)", 
-                        database.FormatTableNameAndEscape("HybridDb"))).SingleOrDefault();
+                    $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")} with (tablockx, holdlock)")
+                    .SingleOrDefault();
 
                 if (currentSchemaVersion > store.Configuration.ConfiguredVersion)
                 {
-                    throw new InvalidOperationException(string.Format(
-                        "Database schema is ahead of configuration. Schema is version {0}, but configuration is version {1}.", 
-                        currentSchemaVersion, store.Configuration.ConfiguredVersion));
+                    throw new InvalidOperationException(
+                        $"Database schema is ahead of configuration. Schema is version {currentSchemaVersion}, " +
+                        $"but configuration is version {store.Configuration.ConfiguredVersion}.");
                 }
 
                 if (database is SqlServerUsingRealTables)
@@ -95,8 +95,9 @@ namespace HybridDb.Migrations
                     var design = configuration.DocumentDesigns.FirstOrDefault(x => x.Table.Name == tablename);
                     if (design == null) continue;
 
-                    database.RawExecute(string.Format("update {0} set AwaitsReprojection=@AwaitsReprojection",
-                        database.FormatTableNameAndEscape(tablename)), new { AwaitsReprojection = true });
+                    database.RawExecute(
+                        $"update {database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection", 
+                        new { AwaitsReprojection = true });
                 }
 
                 database.RawExecute(string.Format(@"

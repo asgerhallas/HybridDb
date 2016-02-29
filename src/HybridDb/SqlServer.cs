@@ -4,18 +4,17 @@ using System.Data.SqlClient;
 using System.Linq;
 using Dapper;
 using HybridDb.Config;
-using Serilog;
 
 namespace HybridDb
 {
     public abstract class SqlServer : IDatabase
     {
-        protected readonly ILogger logger;
+        protected readonly DocumentStore store;
         protected readonly string connectionString;
 
-        protected SqlServer(ILogger logger, string connectionString)
+        protected SqlServer(DocumentStore store, string connectionString)
         {
-            this.logger = logger;
+            this.store = store;
             this.connectionString = connectionString;
 
             OnMessage = message => { };
@@ -44,7 +43,7 @@ namespace HybridDb
             if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
-            logger.Debug(sql);
+            store.Logger.Debug(sql);
 
             using (var connection = Connect())
             {
@@ -59,7 +58,7 @@ namespace HybridDb
             if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
-            logger.Debug(sql);
+            store.Logger.Debug(sql);
 
             using (var connection = Connect())
             {
@@ -84,7 +83,7 @@ namespace HybridDb
         {
             var id = column.system_type_id;
             //https://msdn.microsoft.com/en-us/library/cc716729.aspx
-            var rawQuery = RawQuery<string>("select name from sys.types where system_type_id = @id", new { id });
+            var rawQuery = RawQuery<string>("select name from sys.types where system_type_id = @id", new {id});
 
             var shortName = rawQuery.FirstOrDefault();
             if (shortName == null)
@@ -105,7 +104,7 @@ namespace HybridDb
                 return type;
 
             return type.IsValueType
-                ? typeof(Nullable<>).MakeGenericType(type)
+                ? typeof (Nullable<>).MakeGenericType(type)
                 : type;
         }
 
@@ -143,17 +142,17 @@ namespace HybridDb
             var defaultValue = defaultValueInDb.Replace("'", "").Trim('(', ')');
             columnType = Nullable.GetUnderlyingType(columnType) ?? columnType;
 
-            if (columnType == typeof(string) || columnType == typeof(Enum))
+            if (columnType == typeof (string) || columnType == typeof (Enum))
                 return defaultValue;
 
-            if (columnType == typeof(DateTimeOffset))
+            if (columnType == typeof (DateTimeOffset))
                 return DateTimeOffset.Parse(defaultValue);
 
-            if (columnType == typeof(Guid))
+            if (columnType == typeof (Guid))
                 return Guid.Parse(defaultValue);
 
             //For legacy support of default boolean values persisted as 0/1
-            if (columnType == typeof(bool))
+            if (columnType == typeof (bool))
             {
                 if (defaultValue == "0")
                     return false;
@@ -171,6 +170,5 @@ namespace HybridDb
             public int max_length { get; set; }
             public bool is_nullable { get; set; }
         }
-
     }
 }

@@ -10,18 +10,18 @@ namespace HybridDb
 {
     public class SqlServerUsingTempDb : SqlServer
     {
-        readonly string prefix;
-
         int numberOfManagedConnections;
 
-        public SqlServerUsingTempDb(ILogger logger, string connectionString, string sessionKey) : base(logger, connectionString)
+        public SqlServerUsingTempDb(DocumentStore store, string connectionString) : base(store, connectionString)
         {
-            prefix = "HybridDb_" + (sessionKey ?? Guid.NewGuid().ToString()) + "_";
         }
 
         public override string FormatTableName(string tablename)
         {
-            return prefix + tablename;
+            if (string.IsNullOrEmpty(store.Configuration.TableNamePrefix))
+                throw new InvalidOperationException("SqlServerUsingTempDb requires a table name prefix. Please call UseTableNamePrefix() in your configuration.");
+
+            return $"HybridDb_{store.Configuration.TableNamePrefix}_{tablename}";
         }
 
         public override ManagedConnection Connect()
@@ -66,17 +66,18 @@ namespace HybridDb
         {
             var schema = new Dictionary<string, Table>();
 
-            var tables = RawQuery<string>(string.Format(
-                "select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '{0}%'", 
-                prefix));
+            var prefix = $"HybridDb_{store.Configuration.TableNamePrefix}_";
+
+            var tables = RawQuery<string>($"select * from tempdb.sys.objects where object_id('tempdb.dbo.' + name, 'U') is not null AND name LIKE '{prefix}%'");
 
             foreach (var tableName in tables)
             {
                 var columns = RawQuery<QueryColumn>(
-                    string.Format("select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{0}')", tableName));
+                    $"select * from tempdb.sys.columns where Object_ID = Object_ID(N'tempdb..{tableName}')");
 
                 var formattedTableName = tableName.Remove(0, prefix.Length);
-                
+
+
                 schema.Add(
                     formattedTableName,
                     new Table(formattedTableName, columns.Select(column => Map(tableName, column, isTempTable: true))));
@@ -88,7 +89,7 @@ namespace HybridDb
         public override void Dispose()
         {
             if (numberOfManagedConnections > 0)
-                logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+                this.store.Logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
         }
     }
 }

@@ -11,6 +11,7 @@ namespace HybridDb
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
 
+        void Initialize();
         IDocumentSession OpenSession();
         Guid Execute(IEnumerable<DatabaseCommand> commands);
         IDictionary<string, object> Get(DocumentTable table, string key);

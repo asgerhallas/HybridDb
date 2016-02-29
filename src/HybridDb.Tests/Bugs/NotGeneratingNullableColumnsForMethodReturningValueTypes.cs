@@ -10,10 +10,8 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void Fails()
         {
-            var store = DocumentStore.ForTesting(
-                TableMode.UseTempTables,
-                connectionString,
-                new LambdaHybridDbConfigurator(config => config.Document<Entity>().With(x => x.SomeEnumerable.Count())));
+            var store = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
+            store.Configuration.Document<Entity>().With(x => x.SomeEnumerable.Count());
 
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerableCount"];
             column.Nullable.ShouldBe(true);

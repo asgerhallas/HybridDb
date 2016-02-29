@@ -34,9 +34,9 @@ namespace HybridDb.Studio.ViewModels
 
         void CreateStore()
         {
-            store = DocumentStore.Create(
-                settings.ConnectionString, 
-                new LambdaHybridDbConfigurator(x => x.DisableMigrationsOnStartup()));
+            store = DocumentStore.Create(settings.ConnectionString);
+            store.Configuration.DisableMigrationsOnStartup();
+            store.Initialize();
         }
 
         protected override void OnViewLoaded(object view)

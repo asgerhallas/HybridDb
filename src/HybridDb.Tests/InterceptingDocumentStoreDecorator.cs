@@ -18,19 +18,13 @@ namespace HybridDb.Tests
 
         public Func<IDocumentStore, IEnumerable<DatabaseCommand>, Guid> OverrideExecute { get; set; } 
 
-        public Configuration Configuration
-        {
-            get { return store.Configuration; }
-        }
+        public Configuration Configuration => store.Configuration;
+        public long NumberOfRequests => store.NumberOfRequests;
+        public Guid LastWrittenEtag => store.LastWrittenEtag;
 
-        public long NumberOfRequests
+        public void Initialize()
         {
-            get { return store.NumberOfRequests; }
-        }
-
-        public Guid LastWrittenEtag
-        {
-            get { return store.LastWrittenEtag; }
+            store.Initialize();
         }
 
         public IDocumentSession OpenSession()

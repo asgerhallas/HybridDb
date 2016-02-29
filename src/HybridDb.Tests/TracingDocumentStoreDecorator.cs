@@ -27,6 +27,11 @@ namespace HybridDb.Tests
         public long NumberOfRequests => store.NumberOfRequests;
         public Guid LastWrittenEtag => store.LastWrittenEtag;
 
+        public void Initialize()
+        {
+            store.Initialize();
+        }
+
         public IDocumentSession OpenSession()
         {
             return new DocumentSession(this);

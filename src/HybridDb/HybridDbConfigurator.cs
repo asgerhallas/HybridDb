@@ -7,22 +7,11 @@ using Serilog;
 
 namespace HybridDb
 {
-    public abstract class HybridDbConfigurator : IHybridDbConfigurator
+    public abstract class HybridDbConfigurator
     {
         internal Configuration configuration;
 
         protected HybridDbConfigurator()
-        {
-            configuration = new Configuration();
-        }
-        
-        public Configuration Configure()
-        {
-            configuration.Initialize();
-            return configuration;
-        }
-
-        protected virtual void Reset()
         {
             configuration = new Configuration();
         }
@@ -67,6 +56,11 @@ namespace HybridDb
         protected void UseBackupWriter(IBackupWriter writer)
         {
             configuration.UseBackupWriter(writer);
+        }
+
+        protected void UseTableNamePrefix(string prefix)
+        {
+            configuration.UseTableNamePrefix(prefix);
         }
 
         internal void DisableMigrations()

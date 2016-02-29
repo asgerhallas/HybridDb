@@ -1,3 +1,4 @@
+using System;
 using HybridDb.Config;
 using HybridDb.Migrations.Commands;
 using Shouldly;
@@ -15,11 +16,12 @@ namespace HybridDb.Tests.Migrations.Commands
         public void RemovesTable(TableMode mode)
         {
             Use(mode);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(database);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(documentStore.Database);
 
-            new RemoveTable("Entities").Execute(database);
-            
-            database.QuerySchema().ShouldNotContainKey("Entities");
+            new RemoveTable("Entities").Execute(documentStore.Database);
+
+            documentStore.Database.QuerySchema().ShouldNotContainKey("Entities");
         }
 
         [Fact]

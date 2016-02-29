@@ -14,70 +14,81 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
+        readonly bool testing;
+
         Guid lastWrittenEtag;
         long numberOfRequests;
 
-        DocumentStore(IDatabase database, Configuration configuration)
+        internal DocumentStore(Configuration configuration, TableMode mode, string connectionString, bool testing)
         {
-            Logger = configuration.Logger;
-            Database = database;
             Configuration = configuration;
-        }
+            Logger = configuration.Logger;
 
-        internal DocumentStore(DocumentStore store, Configuration configuration) : this(store.Database, configuration) {         }
-
-        public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
-        {
-            configurator = configurator ?? new NullHybridDbConfigurator();
-            var configuration = configurator.Configure();
-            var database = new SqlServerUsingRealTables(configuration.Logger, connectionString, configuration.TableNamePrefix);
-            var store = new DocumentStore(database, configuration);
-            new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
-            new DocumentMigrationRunner(store).RunInBackground();
-            return store;
-        }
-
-        public static IDocumentStore ForTesting(TableMode mode, IHybridDbConfigurator configurator = null)
-        {
-            return ForTesting(mode, null, configurator);
-        }
-
-        public static IDocumentStore ForTesting(TableMode mode, string connectionString, IHybridDbConfigurator configurator = null)
-        {
-            configurator = configurator ?? new NullHybridDbConfigurator();
-            var configuration = configurator.Configure();
-            var resultingConnectionString = connectionString ?? "data source=.;Integrated Security=True";
-
-            IDatabase database;
             switch (mode)
             {
                 case TableMode.UseRealTables:
-                    database = new SqlServerUsingRealTables(configuration.Logger, resultingConnectionString, configuration.TableNamePrefix);
+                    Database = new SqlServerUsingRealTables(this, connectionString);
                     break;
                 case TableMode.UseTempTables:
-                    database = new SqlServerUsingTempTables(configuration.Logger, resultingConnectionString);
+                    Database = new SqlServerUsingTempTables(this, connectionString);
                     break;
                 case TableMode.UseTempDb:
-                    database = new SqlServerUsingTempDb(configuration.Logger, resultingConnectionString, configuration.TableNamePrefix);
+                    Database = new SqlServerUsingTempDb(this, connectionString);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("mode", mode, null);
             }
 
-            return ForTesting(database, configuration);
+            this.testing = testing;
         }
 
-        public static IDocumentStore ForTesting(IDatabase database, Configuration configuration)
+        internal DocumentStore(Configuration configuration, IDatabase database, bool testing)
         {
-            var store = new DocumentStore(database, configuration);
-            new SchemaMigrationRunner(store, new SchemaDiffer()).Run();
-            new DocumentMigrationRunner(store).RunSynchronously();
-            return store;
+            Configuration = configuration;
+            Database = database;
+            Logger = configuration.Logger;
+
+            this.testing = testing;
+        }
+
+        public static IDocumentStore Create(string connectionString)
+        {
+            return new DocumentStore(new Configuration(), TableMode.UseRealTables, connectionString, false);
+        }
+
+        public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null)
+        {
+            return ForTesting(mode, null, configure);
+        }
+
+        public static IDocumentStore ForTesting(TableMode mode, string connectionString, Action<Configuration> configure = null)
+        {
+            configure = configure ?? (x => { });
+            var configuration = new Configuration();
+            configure(configuration);
+            return new DocumentStore(configuration, mode, connectionString ?? "data source=.;Integrated Security=True", true);
         }
 
         public IDatabase Database { get; private set; }
         public ILogger Logger { get; private set; }
-        public Configuration Configuration { get; private set; }
+        public Configuration Configuration { get; }
+        public bool IsInitalized { get; private set; }
+
+        public void Initialize()
+        {
+            if (IsInitalized)
+                return;
+
+            Configuration.Initialize();
+
+            Logger = Configuration.Logger;
+
+            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
+            var documentMigration = new DocumentMigrationRunner().Run(this);
+            if (testing) documentMigration.Wait();
+
+            IsInitalized = true;
+        }
 
         public IDocumentSession OpenSession()
         {

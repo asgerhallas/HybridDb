@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using HybridDb.Commands;
 using HybridDb.Config;
 using Serilog;
 
@@ -12,103 +10,93 @@ namespace HybridDb.Migrations
 {
     public class DocumentMigrationRunner
     {
-        readonly ILogger logger;
-        readonly IDocumentStore store;
-        readonly Configuration configuration;
-
-        public DocumentMigrationRunner(IDocumentStore store)
+        public Task Run(IDocumentStore store)
         {
-            this.store = store;
+            var logger = store.Configuration.Logger;
+            var configuration = store.Configuration;
 
-            logger = store.Configuration.Logger;
-            configuration = store.Configuration;
-        }
+            if (!configuration.RunDocumentMigrationsOnStartup)
+                return Task.FromResult(0);
 
-        public Task RunInBackground()
-        {
-            return Task.Factory.StartNew(RunSynchronously, TaskCreationOptions.LongRunning);
-        }
-
-        public void RunSynchronously()
-        {
-            if (!store.Configuration.RunDocumentMigrationsOnStartup)
-                return;
-                
-            var migrator = new DocumentMigrator(store.Configuration);
-
-            foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
+            return Task.Factory.StartNew(() =>
             {
-                var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
+                var migrator = new DocumentMigrator(configuration);
 
-                while (true)
+                foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    QueryStats stats;
+                    var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
 
-                    var rows = store
-                        .Query(table, out stats,
-                            @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
-                            @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
-                            take: 100,
-                            @orderby: "newid()",
-                            parameters: new {AwaitsReprojection = true, version = configuration.ConfiguredVersion})
-                        .ToList();
-
-                    if (stats.TotalResults == 0) break;
-
-                    logger.Information("Found {0} document that must be migrated.", stats.TotalResults);
-
-                    foreach (var row in rows)
+                    while (true)
                     {
-                        var key = (string)row[table.IdColumn];
-                        var currentDocumentVersion = (int)row[table.VersionColumn];
-                        var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-                        var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(baseDesign, discriminator, key);
+                        QueryStats stats;
 
-                        var shouldUpdate = false;
+                        var rows = store
+                            .Query(table, out stats,
+                                @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
+                                @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
+                                take: 100,
+                                @orderby: "newid()",
+                                parameters: new { AwaitsReprojection = true, version = configuration.ConfiguredVersion })
+                            .ToList();
 
-                        if ((bool)row[table.AwaitsReprojectionColumn])
+                        if (stats.TotalResults == 0) break;
+
+                        logger.Information("Found {0} document that must be migrated.", stats.TotalResults);
+
+                        foreach (var row in rows)
                         {
-                            shouldUpdate = true;
-                            logger.Information("Reprojection document {0}/{1}.", 
-                                concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
-                        }
+                            var key = (string)row[table.IdColumn];
+                            var currentDocumentVersion = (int)row[table.VersionColumn];
+                            var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
+                            var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(baseDesign, discriminator, key);
 
-                        if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
-                        {
-                            shouldUpdate = true;
-                        }
+                            var shouldUpdate = false;
 
-                        if (shouldUpdate)
-                        {
-                            try
+                            if ((bool)row[table.AwaitsReprojectionColumn])
                             {
-                                using (var session = store.OpenSession())
+                                shouldUpdate = true;
+                                logger.Information("Reprojection document {0}/{1}.",
+                                    concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
+                            }
+
+                            if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
+                            {
+                                shouldUpdate = true;
+                            }
+
+                            if (shouldUpdate)
+                            {
+                                try
                                 {
-                                    session.Load(concreteDesign, key);
-                                    session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                    using (var session = store.OpenSession())
+                                    {
+                                        session.Load(concreteDesign, key);
+                                        session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                    }
+                                }
+                                catch (ConcurrencyException) { }
+                                catch (Exception exception)
+                                {
+                                    logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, key);
+                                    Thread.Sleep(100);
                                 }
                             }
-                            catch (ConcurrencyException) {}
-                            catch (Exception exception)
+                            else
                             {
-                                logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, key);
-                                Thread.Sleep(100);
-                            }
-                        }
-                        else
-                        {
-                            logger.Information("Document did not change.");
+                                logger.Information("Document did not change.");
 
-                            var projection = new Dictionary<string, object>
+                                var projection = new Dictionary<string, object>
                             {
                                 {table.VersionColumn, configuration.ConfiguredVersion}
                             };
 
-                            store.Update(table, key, (Guid)row[table.EtagColumn], projection);
+                                store.Update(table, key, (Guid)row[table.EtagColumn], projection);
+                            }
                         }
                     }
                 }
-            }
+
+            }, TaskCreationOptions.LongRunning);
         }
     }
 }

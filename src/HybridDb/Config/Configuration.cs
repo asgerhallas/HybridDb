@@ -31,6 +31,7 @@ namespace HybridDb.Config
             BackupWriter = new NullBackupWriter();
             RunSchemaMigrationsOnStartup = true;
             RunDocumentMigrationsOnStartup = true;
+            TableNamePrefix = "";
         }
 
         public ILogger Logger { get; private set; }
@@ -189,9 +190,6 @@ namespace HybridDb.Config
 
         public void UseTableNamePrefix(string prefix)
         {
-            if (prefix == "")
-                throw new ArgumentException("Prefix must not be empty string.");
-
             TableNamePrefix = prefix;
         }
 

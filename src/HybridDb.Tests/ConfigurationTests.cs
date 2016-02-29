@@ -211,6 +211,14 @@ namespace HybridDb.Tests
             Should.Throw<HybridDbException>(() => configuration.GetDesignFor<int>());
         }
 
+        [Fact]
+        public void FailIfDiscriminatorIsTooLong()
+        {
+            configuration.UseTypeMapper(new OtherTypeMapper(string.Join("", Enumerable.Repeat("A", 1025))));
+
+            Should.Throw<InvalidOperationException>(() => configuration.Document<Entity>());
+        }
+
         public class OtherTypeMapper : ITypeMapper
         {
             readonly string discriminator;

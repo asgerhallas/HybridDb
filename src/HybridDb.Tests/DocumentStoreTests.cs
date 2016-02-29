@@ -29,7 +29,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
 
-            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = documentStore.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -44,7 +44,7 @@ namespace HybridDb.Tests
             var id = NewId();
             store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = documentStore.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -58,7 +58,7 @@ namespace HybridDb.Tests
 
             store.Insert(new DynamicDocumentTable("Entities"), NewId(), new Dictionary<string, object> {{"Field", null}});
 
-            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = documentStore.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
         }
 
@@ -98,10 +98,10 @@ namespace HybridDb.Tests
                     }
                 });
 
-            var mainrow = database.RawQuery<dynamic>("select * from #Entities").Single();
+            var mainrow = documentStore.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string)mainrow.Id).ShouldBe(id);
 
-            var utilrows = database.RawQuery<dynamic>("select * from #Entities_Children").ToList();
+            var utilrows = documentStore.Database.RawQuery<dynamic>("select * from #Entities_Children").ToList();
             utilrows.Count.ShouldBe(2);
             
             var utilrow = utilrows.First();
@@ -120,7 +120,7 @@ namespace HybridDb.Tests
 
             store.Update(table.Table, id, etag, new {Field = "Lars"});
 
-            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = documentStore.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
         }
@@ -138,7 +138,7 @@ namespace HybridDb.Tests
             // If we do not do that, why do we have document as part of the projection? Either or.
             store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "Property", "Lars" } });
 
-            var row = database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = documentStore.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe(null);
             ((string) row.Property).ShouldBe("Lars");
@@ -328,7 +328,7 @@ namespace HybridDb.Tests
 
             store.Delete(table.Table, id, etag);
 
-            database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            documentStore.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -378,7 +378,7 @@ namespace HybridDb.Tests
             var etag = store.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }),
                                      new InsertCommand(table.Table, id2, new { Field = "B" }));
 
-            var rows = database.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
+            var rows = documentStore.Database.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
             rows.Count.ShouldBe(2);
             rows[0].ShouldBe(etag);
             rows[1].ShouldBe(etag);
@@ -402,7 +402,7 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            documentStore.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
@@ -769,29 +769,33 @@ namespace HybridDb.Tests
                 // No tx complete here
             }
 
-            database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            documentStore.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
         [Fact]
         public void CanUseTempDb()
         {
-            var sessionkey = Guid.NewGuid().ToString();
+            var prefix = Guid.NewGuid().ToString();
 
-            UseTempDb(sessionkey);
+            UseTempDb();
 
-            var configurator = new LambdaHybridDbConfigurator(x =>
+            Action<Configuration> configurator = x =>
             {
-                x.UseTableNamePrefix(sessionkey);
+                x.UseTableNamePrefix(prefix);
                 x.Document<Case>();
-            });
+            };
 
             using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
             {
+                globalStore1.Initialize();
+
                 var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
                 using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
                 {
+                    globalStore2.Initialize();
+
                     var result = globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
 
                     result.ShouldNotBe(null);
@@ -832,6 +836,7 @@ namespace HybridDb.Tests
         {
             UseTempDb();
 
+            UseTableNamePrefix(Guid.NewGuid().ToString());
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
