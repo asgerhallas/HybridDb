@@ -67,6 +67,10 @@ Changelog
 - Added support for persisting non-configured types in an always present Document table 
 - Added TypeMapper instead of requiring configuration for all concrete type manually
 
+#### 0.9.0
+
+- Changed the configuration api to accomodate ad hoc document setup. Now you need to call store.Initialize() after configuration to run the migrations.
+
 Acknowledgements
 ================
 
