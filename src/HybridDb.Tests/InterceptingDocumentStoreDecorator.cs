@@ -21,6 +21,7 @@ namespace HybridDb.Tests
         public Configuration Configuration => store.Configuration;
         public long NumberOfRequests => store.NumberOfRequests;
         public Guid LastWrittenEtag => store.LastWrittenEtag;
+        public bool IsInitialized => store.IsInitialized;
 
         public void Initialize()
         {

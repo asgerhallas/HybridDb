@@ -4,7 +4,9 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Transactions;
 using Dapper;
+using HybridDb.Config;
 using HybridDb.Migrations;
+using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
@@ -18,7 +20,6 @@ namespace HybridDb.Tests
 
         protected readonly ILogger logger;
         protected string connectionString;
-        protected DocumentStore documentStore;
 
         protected HybridDbTests()
         {
@@ -31,6 +32,8 @@ namespace HybridDb.Tests
 
             UseTempTables();
         }
+
+        protected virtual DocumentStore store { get; set; }
 
         protected static string GetConnectionString()
         {
@@ -62,13 +65,13 @@ namespace HybridDb.Tests
         protected void UseTempTables()
         {
             connectionString = GetConnectionString();
-            documentStore = Using(new DocumentStore(configuration, TableMode.UseTempTables, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.UseTempTables, connectionString, true));
         }
 
         protected void UseTempDb()
         {
             connectionString = GetConnectionString();
-            documentStore = Using(new DocumentStore(configuration, TableMode.UseTempDb, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.UseTempDb, connectionString, true));
         }
 
         protected void UseRealTables()
@@ -88,7 +91,7 @@ namespace HybridDb.Tests
 
             connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
 
-            documentStore = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
 
             disposables.Add(() =>
             {
@@ -102,10 +105,22 @@ namespace HybridDb.Tests
             });
         }
 
+        protected void Reset()
+        {
+            configuration = new Configuration();
+            //UseSerializer(new DefaultSerializer());
+            store = Using(new DocumentStore(store, configuration, true));
+        }
+
         protected T Using<T>(T disposable) where T : IDisposable
         {
             disposables.Add(disposable.Dispose);
             return disposable;
+        }
+
+        protected string NewId()
+        {
+            return Guid.NewGuid().ToString();
         }
 
         public void Dispose()

@@ -17,12 +17,12 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("col1", typeof(int)))).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities", new Column("col1", typeof(int)))).Execute(store.Database);
 
-            new RenameTable("Entities", "OtherEntities").Execute(documentStore.Database);
+            new RenameTable("Entities", "OtherEntities").Execute(store.Database);
 
-            documentStore.Database.QuerySchema().ShouldNotContainKey("Entities");
-            documentStore.Database.QuerySchema().ShouldContainKey("OtherEntities");
+            store.Database.QuerySchema().ShouldNotContainKey("Entities");
+            store.Database.QuerySchema().ShouldContainKey("OtherEntities");
         }
 
 

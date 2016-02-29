@@ -7,7 +7,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
-    public class AddColumnTests : HybridDbStoreTests
+    public class AddColumnTests : HybridDbTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
@@ -17,11 +17,11 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
 
-            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(store.Database);
 
-            documentStore.Database.QuerySchema()["Entities"]["Col2"].ShouldNotBe(null);
+            store.Database.QuerySchema()["Entities"]["Col2"].ShouldNotBe(null);
         }
 
         [Theory]
@@ -40,12 +40,12 @@ namespace HybridDb.Tests.Migrations.Commands
         public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
             Use(TableMode.UseRealTables);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
 
-            new AddColumn("Entities", new Column("Col2", type)).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("Col2", type)).Execute(store.Database);
 
-            documentStore.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(type);
-            documentStore.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
+            store.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(type);
+            store.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
         }
 
         [Theory]
@@ -56,12 +56,12 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
 
-            new AddColumn("Entities", new Column("Col2", typeof(int?))).Execute(documentStore.Database);
+            new AddColumn("Entities", new Column("Col2", typeof(int?))).Execute(store.Database);
 
-            documentStore.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
-            documentStore.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(true);
+            store.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
+            store.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(true);
         }
 
         [Theory]
@@ -73,10 +73,10 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
 
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(documentStore.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)).Execute(store.Database);
 
-            documentStore.Database.QuerySchema()["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
+            store.Database.QuerySchema()["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
         }
 
         [Theory]
@@ -87,15 +87,15 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
 
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)).Execute(documentStore.Database);
-            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)).Execute(documentStore.Database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(documentStore.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(documentStore.Database);
-            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(documentStore.Database);
+            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(store.Database);
 
-            var schema = documentStore.Database.QuerySchema();
+            var schema = store.Database.QuerySchema();
 
             schema["Entities1"]["SomeNullableInt"].DefaultValue.ShouldBe(null);
             schema["Entities1"]["SomeOtherNullableInt"].DefaultValue.ShouldBe(42);
@@ -107,10 +107,10 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact(Skip = "Not solved yet")]
         public void ShouldNotAllowSqlInjection()
         {
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(documentStore.Database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(store.Database);
 
-            documentStore.Database.QuerySchema().ShouldContainKey("Entities1");
+            store.Database.QuerySchema().ShouldContainKey("Entities1");
         }
 
         [Fact]

@@ -10,6 +10,7 @@ namespace HybridDb
         Configuration Configuration { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
+        bool IsInitialized { get; }
 
         void Initialize();
         IDocumentSession OpenSession();

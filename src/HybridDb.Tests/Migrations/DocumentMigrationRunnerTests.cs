@@ -13,7 +13,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class DocumentMigrationRunnerTests : HybridDbStoreTests
+    public class DocumentMigrationRunnerTests : HybridDbTests
     {
         [Theory]
         [InlineData(true, 42)]
@@ -21,6 +21,8 @@ namespace HybridDb.Tests.Migrations
         public void ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
         {
             Document<Entity>().With(x => x.Number);
+
+            store.Initialize();
 
             var id = NewId();
             var table = new DocumentTable("Entities");
@@ -51,6 +53,8 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
                 new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
 
+            store.Initialize();
+
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
             store.Insert(table, id, new
@@ -74,6 +78,8 @@ namespace HybridDb.Tests.Migrations
         public void QueriesInSetsAndUpdatesOneByOne()
         {
             Document<Entity>().With(x => x.Number);
+
+            store.Initialize();
 
             for (int i = 0; i < 200; i++)
             {
@@ -106,6 +112,8 @@ namespace HybridDb.Tests.Migrations
             UseRealTables();
 
             Document<Entity>().With(x => x.Number);
+
+            store.Initialize();
 
             var id = NewId();
             var table = new DocumentTable("Entities");
@@ -150,7 +158,9 @@ namespace HybridDb.Tests.Migrations
         {
             DisableDocumentMigrationsInBackground();
             Document<Entity>().With(x => x.Number);
-            
+
+            store.Initialize();
+
             new DocumentMigrationRunner().Run(store).Wait();
 
             store.NumberOfRequests.ShouldBe(0);
@@ -162,6 +172,8 @@ namespace HybridDb.Tests.Migrations
             DisableMigrations();
             Document<Entity>().With(x => x.Number);
 
+            store.Initialize();
+
             new DocumentMigrationRunner().Run(store).Wait();
 
             store.NumberOfRequests.ShouldBe(0);
@@ -171,6 +183,8 @@ namespace HybridDb.Tests.Migrations
         public void ContinuesIfMigrationFails()
         {
             Document<Entity>().With(x => x.Number);
+
+            store.Initialize();
 
             var id = NewId();
             using (var session = store.OpenSession())
@@ -185,7 +199,7 @@ namespace HybridDb.Tests.Migrations
             var logEventSink = new ListSink();
             UseLogger(new LoggerConfiguration().WriteTo.Sink(logEventSink).CreateLogger());
 
-            InitializeStore();
+            store.Initialize();
 
             UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((x, y) =>
             {
@@ -210,6 +224,8 @@ namespace HybridDb.Tests.Migrations
             var id = NewId();
             Document<Entity>();
 
+            store.Initialize();
+
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
@@ -223,7 +239,7 @@ namespace HybridDb.Tests.Migrations
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
 
-            InitializeStore();
+            store.Initialize();
 
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]

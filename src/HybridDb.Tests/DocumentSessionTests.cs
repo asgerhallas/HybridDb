@@ -5,13 +5,12 @@ using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
-using Newtonsoft.Json;
 using Shouldly;
 using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTests : HybridDbStoreTests
+    public class DocumentSessionTests : HybridDbAutoInitializeTests
     {
         [Fact]
         public void CanEvictEntity()
@@ -66,7 +65,7 @@ namespace HybridDb.Tests
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
-            var entity = documentStore.Database.RawQuery<dynamic>(string.Format("select * from #Entities where Id = '{0}'", id)).SingleOrDefault();
+            var entity = store.Database.RawQuery<dynamic>($"select * from #Entities where Id = '{id}'").SingleOrDefault();
             Assert.NotNull(entity);
         }
 
@@ -87,7 +86,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = documentStore.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);
@@ -107,7 +106,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = documentStore.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.Null(entity.TheChildNestedProperty);
         }
 
@@ -138,7 +137,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var retrivedId = documentStore.Database.RawQuery<string>("select Id from #Entities").SingleOrDefault();
+            var retrivedId = store.Database.RawQuery<string>("select Id from #Entities").SingleOrDefault();
             retrivedId.ShouldBe(id);
         }
 

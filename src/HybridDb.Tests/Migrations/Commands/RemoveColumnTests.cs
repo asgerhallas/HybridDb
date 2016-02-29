@@ -6,7 +6,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
-    public class RemoveColumnTests : HybridDbStoreTests
+    public class RemoveColumnTests : HybridDbTests
     {
         [Fact]
         public void RemovesColumn()
@@ -14,12 +14,12 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(TableMode.UseRealTables);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
-            new CreateTable(table).Execute(documentStore.Database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(documentStore.Database);
+            new CreateTable(table).Execute(store.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
 
-            new RemoveColumn(table, "SomeColumn").Execute(documentStore.Database);
+            new RemoveColumn(table, "SomeColumn").Execute(store.Database);
 
-            documentStore.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
         [Theory(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
@@ -30,12 +30,12 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(mode);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
-            new CreateTable(table).Execute(documentStore.Database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(documentStore.Database);
+            new CreateTable(table).Execute(store.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
 
-            new RemoveColumn(table, "SomeColumn").Execute(documentStore.Database);
+            new RemoveColumn(table, "SomeColumn").Execute(store.Database);
 
-            documentStore.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
+            store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
         [Theory]

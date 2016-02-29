@@ -42,10 +42,10 @@ namespace HybridDb
             this.testing = testing;
         }
 
-        internal DocumentStore(Configuration configuration, IDatabase database, bool testing)
+        internal DocumentStore(DocumentStore store, Configuration configuration, bool testing)
         {
             Configuration = configuration;
-            Database = database;
+            Database = store.Database;
             Logger = configuration.Logger;
 
             this.testing = testing;
@@ -69,14 +69,14 @@ namespace HybridDb
             return new DocumentStore(configuration, mode, connectionString ?? "data source=.;Integrated Security=True", true);
         }
 
-        public IDatabase Database { get; private set; }
+        public IDatabase Database { get; }
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; }
-        public bool IsInitalized { get; private set; }
+        public bool IsInitialized { get; private set; }
 
         public void Initialize()
         {
-            if (IsInitalized)
+            if (IsInitialized)
                 return;
 
             Configuration.Initialize();
@@ -87,7 +87,7 @@ namespace HybridDb
             var documentMigration = new DocumentMigrationRunner().Run(this);
             if (testing) documentMigration.Wait();
 
-            IsInitalized = true;
+            IsInitialized = true;
         }
 
         public IDocumentSession OpenSession()

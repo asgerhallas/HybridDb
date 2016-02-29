@@ -5,7 +5,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentMigratorTests : HybridDbStoreTests
+    public class DocumentMigratorTests : HybridDbTests
     {
         [Fact]
         public void ThrowsIfADocumentIsNewerThanExpected()
@@ -15,7 +15,7 @@ namespace HybridDb.Tests
             var id = NewId();
             var design = configuration.GetDesignFor<Entity>();
             Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, new byte[0], 1))
-                .Message.ShouldBe(string.Format("Document HybridDb.Tests.HybridDbTests+Entity/{0} version is ahead of configuration. Document is version 1, but configuration is version 0.", id));
+                .Message.ShouldBe($"Document HybridDb.Tests.HybridDbTests+Entity/{id} version is ahead of configuration. Document is version 1, but configuration is version 0.");
         }
 
         [Fact]

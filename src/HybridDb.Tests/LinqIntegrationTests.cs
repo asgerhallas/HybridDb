@@ -7,7 +7,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class LinqIntegrationTests : HybridDbStoreTests
+    public class LinqIntegrationTests : HybridDbTests
     {
         readonly IDocumentSession session;
 
@@ -19,6 +19,8 @@ namespace HybridDb.Tests
                 .With(x => x.TheChild.NestedProperty);
             
             store.Configuration.UseSerializer(new DefaultSerializer());
+
+            store.Initialize();
 
             session = Using(store.OpenSession());
             session.Store(new Entity { Id = NewId(), Property = 1, StringProp = "Asger" });

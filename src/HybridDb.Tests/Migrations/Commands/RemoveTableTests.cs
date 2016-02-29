@@ -7,7 +7,7 @@ using Xunit.Extensions;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
-    public class RemoveTableTests : HybridDbStoreTests
+    public class RemoveTableTests : HybridDbTests
     {
         [Theory]
         [InlineData(TableMode.UseTempTables)]
@@ -17,11 +17,11 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(documentStore.Database);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store.Database);
 
-            new RemoveTable("Entities").Execute(documentStore.Database);
+            new RemoveTable("Entities").Execute(store.Database);
 
-            documentStore.Database.QuerySchema().ShouldNotContainKey("Entities");
+            store.Database.QuerySchema().ShouldNotContainKey("Entities");
         }
 
         [Fact]
