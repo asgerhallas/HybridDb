@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using HybridDb.Config;
 using Xunit;
 
 namespace HybridDb.Tests.Bugs
@@ -7,7 +8,7 @@ namespace HybridDb.Tests.Bugs
     public class DeadlockIssueOnMigrations : HybridDbTests
     {
         [Fact]
-        public void ShouldTryNotToDeadlockOnSchemaMigations()
+        public void ShouldTryNotToDeadlockOnSchemaMigationsForTempTables()
         {
             Parallel.For(0, 100, i =>
             {
@@ -29,14 +30,14 @@ namespace HybridDb.Tests.Bugs
             });
         }
 
-        [Fact(Skip = "not fully functional")]
+        [Fact]
         public void ShouldTryNotToDeadlockOnSchemaMigationsForRealTables()
         {
             UseRealTables();
 
             Parallel.For(0, 100, i =>
             {
-                var realstore = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
+                var realstore = Using(new DocumentStore(new Configuration(), TableMode.UseRealTables, connectionString, true));
                 realstore.Configuration.Document<Entity>();
                 realstore.Initialize();
             });

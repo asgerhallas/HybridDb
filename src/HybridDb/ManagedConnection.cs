@@ -6,21 +6,17 @@ namespace HybridDb
 {
     public class ManagedConnection : IDisposable
     {
-        readonly SqlConnection connection;
         readonly Action complete;
         readonly Action dispose;
 
         public ManagedConnection(SqlConnection connection, Action complete, Action dispose)
         {
-            this.connection = connection;
+            this.Connection = connection;
             this.complete = complete;
             this.dispose = dispose;
         }
 
-        public SqlConnection Connection
-        {
-            get { return connection; }
-        }
+        public SqlConnection Connection { get; }
 
         public void Complete()
         {

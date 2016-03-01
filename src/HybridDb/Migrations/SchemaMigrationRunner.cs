@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Transactions;
+using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.Commands;
 using Serilog;
+using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migrations
 {
@@ -34,18 +37,37 @@ namespace HybridDb.Migrations
             var database = ((DocumentStore)store).Database;
             var configuration = store.Configuration;
 
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
-            {
-                var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
-                configuration.Tables.TryAdd(metadata.Name, metadata);
-
-                new CreateTable(metadata).Execute(database);
-
-                tx.Complete();
-            }
-
             using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
             {
+                // lock other migrators out while executing
+                using (var connection = database.Connect())
+                {
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@Resource", "HybridDb");
+                    parameters.Add("@DbPrincipal", "public");
+                    parameters.Add("@LockMode", "Exclusive");
+                    parameters.Add("@LockOwner", "Transaction");
+                    parameters.Add("@LockTimeout", TimeSpan.FromMinutes(1).TotalMilliseconds);
+                    parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
+
+                    connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+
+                    var result = parameters.Get<int>("@Result");
+
+                    if (result < 0)
+                    {
+                        throw new InvalidOperationException($"sp_getapplock failed with code {result}");
+                    }
+
+                    connection.Complete();
+                }
+
+                // create metadata table if it does not exist
+                var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
+                configuration.Tables.TryAdd(metadata.Name, metadata);
+                new CreateTable(metadata).Execute(database);
+
+                // get schema version
                 var currentSchemaVersion = database.RawQuery<int>(
                     $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}")
                     .SingleOrDefault();
@@ -57,6 +79,7 @@ namespace HybridDb.Migrations
                         $"but configuration is version {store.Configuration.ConfiguredVersion}.");
                 }
 
+                // run provided migrations only if we are using real tables
                 if (database is SqlServerUsingRealTables)
                 {
                     if (currentSchemaVersion < configuration.ConfiguredVersion)
@@ -81,6 +104,7 @@ namespace HybridDb.Migrations
                     logger.Information("Skips provided migrations when not using real tables.");
                 }
 
+                // get the diff and run commands to get to configured schema
                 var schema = database.QuerySchema().Values.ToList(); // demeter go home!
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
 
@@ -94,6 +118,7 @@ namespace HybridDb.Migrations
                     }
                 }
 
+                // flag each document of tables that need to run a re-projection
                 foreach (var tablename in requiresReprojection)
                 {
                     // TODO: Only set RequireReprojection on command if it is documenttable - can it be done?
@@ -105,6 +130,7 @@ namespace HybridDb.Migrations
                         new { AwaitsReprojection = true });
                 }
 
+                // update the schema version
                 database.RawExecute(string.Format(@"
 if not exists (select * from {0}) 
     insert into {0} (SchemaVersion) values (@version); 

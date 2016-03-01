@@ -37,7 +37,7 @@ namespace HybridDb
             return string.Format("[{0}]", identifier);
         }
 
-        public void RawExecute(string sql, object parameters = null)
+        public int RawExecute(string sql, object parameters = null)
         {
             var hdbParams = parameters as IEnumerable<Parameter>;
             if (hdbParams != null)
@@ -47,8 +47,10 @@ namespace HybridDb
 
             using (var connection = Connect())
             {
-                connection.Connection.Execute(sql, parameters);
+                var result = connection.Connection.Execute(sql, parameters);
                 connection.Complete();
+
+                return result;
             }
         }
 

@@ -290,7 +290,9 @@ namespace HybridDb.Tests.Migrations
 
         void CreateMetadataTable()
         {
-            new CreateTable(new Table("HybridDb", new Column("SchemaVersion", typeof(int)))).Execute(store.Database);
+            new CreateTable(new Table("HybridDb", 
+                new Column("SchemaVersion", typeof(int))))
+                .Execute(store.Database);
         }
 
         public class FakeSchemaDiffer : ISchemaDiffer

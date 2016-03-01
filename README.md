@@ -78,6 +78,7 @@ Changelog
 #### 0.9.2
 
 - Fixed issue with deadlocks while migrating schema in parallel test executing using temp tables
+- Made deadlocks less likely for real tables too
 
 
 Acknowledgements
