@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -16,7 +17,7 @@ namespace HybridDb.Tests
 {
     public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
     {
-        readonly List<Action> disposables;
+        readonly ConcurrentStack<Action> disposables;
 
         protected readonly ILogger logger;
         protected string connectionString;
@@ -28,7 +29,7 @@ namespace HybridDb.Tests
                 .WriteTo.ColoredConsole()
                 .CreateLogger();
             
-            disposables = new List<Action>();
+            disposables = new ConcurrentStack<Action>();
 
             UseTempTables();
         }
@@ -93,7 +94,7 @@ namespace HybridDb.Tests
 
             store = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
 
-            disposables.Add(() =>
+            disposables.Push(() =>
             {
                 SqlConnection.ClearAllPools();
 
@@ -114,7 +115,7 @@ namespace HybridDb.Tests
 
         protected T Using<T>(T disposable) where T : IDisposable
         {
-            disposables.Add(disposable.Dispose);
+            disposables.Push(disposable.Dispose);
             return disposable;
         }
 
@@ -125,7 +126,8 @@ namespace HybridDb.Tests
 
         public void Dispose()
         {
-            foreach (var dispose in disposables)
+            Action dispose;
+            while (disposables.TryPop(out dispose))
             {
                 dispose();
             }

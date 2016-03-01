@@ -12,7 +12,7 @@ namespace HybridDb.Tests.Bugs
         {
             Parallel.For(0, 100, i =>
             {
-                var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempTables));
+                var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString));
                 realstore.Configuration.Document<Entity>();
                 realstore.Initialize();
             });
@@ -23,7 +23,7 @@ namespace HybridDb.Tests.Bugs
         {
             Parallel.For(0, 100, i =>
             {
-                var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempDb));
+                var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempDb, connectionString));
                 realstore.Configuration.UseTableNamePrefix(Guid.NewGuid().ToString());
                 realstore.Configuration.Document<Entity>();
                 realstore.Initialize();
