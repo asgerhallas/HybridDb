@@ -1,4 +1,5 @@
 using System;
+using HybridDb.Config;
 
 namespace HybridDb
 {
@@ -7,18 +8,18 @@ namespace HybridDb
     /// </summary>
     class EntityKey
     {
-        public EntityKey(Type type, string id)
+        public EntityKey(Table table, string id)
         {
-            Type = type;
+            Table = table;
             Id = id;
         }
 
-        public Type Type { get; private set; }
+        public Table Table { get; private set; }
         public string Id { get; private set; }
 
         protected bool Equals(EntityKey other)
         {
-            return Equals(Type, other.Type) && string.Equals(Id, other.Id);
+            return Equals(Table.Name, other.Table.Name) && string.Equals(Id, other.Id);
         }
 
         public override bool Equals(object obj)
@@ -33,7 +34,7 @@ namespace HybridDb
         {
             unchecked
             {
-                return ((Type != null ? Type.GetHashCode() : 0)*397) ^ (Id != null ? Id.GetHashCode() : 0);
+                return ((Table != null ? Table.GetHashCode() : 0)*397) ^ (Id != null ? Id.GetHashCode() : 0);
             }
         }
     }

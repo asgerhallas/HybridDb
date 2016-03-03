@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HybridDb.Config;
 
 namespace HybridDb
 {
@@ -13,5 +14,6 @@ namespace HybridDb
         public Guid Etag { get; set; }
         public int Version { get; set; }
         public EntityState State { get; set; }
+        public Table Table { get; set; }
     }
 }

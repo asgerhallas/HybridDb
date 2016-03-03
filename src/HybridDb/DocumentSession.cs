@@ -37,6 +37,7 @@ namespace HybridDb
                 State = x.Value.State,
                 Version = x.Value.Version,
                 Document = x.Value.Document,
+                Table = x.Value.Table
             });
 
         public T Load<T>(string key) where T : class
@@ -52,7 +53,7 @@ namespace HybridDb
         public object Load(DocumentDesign design, string key)
         {
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(new EntityKey(design.DocumentType, key), out managedEntity))
+            if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -87,11 +88,11 @@ namespace HybridDb
 
         public void Evict(object entity)
         {
-            var cachedInstance = TryGetManagedEntity(entity);
+            var managedEntity = TryGetManagedEntity(entity);
 
-            if (cachedInstance == null) return;
+            if (managedEntity == null) return;
 
-            entities.Remove(new EntityKey(entity.GetType(), cachedInstance.Key));
+            entities.Remove(new EntityKey(managedEntity.Table, managedEntity.Key));
         }
 
         public Guid? GetEtagFor(object entity)
@@ -119,7 +120,7 @@ namespace HybridDb
 
             key = key ?? design.GetKey(entity);
 
-            var entityKey = new EntityKey(entity.GetType(), key);
+            var entityKey = new EntityKey(design.Table, key);
 
             if (entities.ContainsKey(entityKey))
                 return;
@@ -129,6 +130,7 @@ namespace HybridDb
                 Key = key,
                 Entity = entity,
                 State = EntityState.Transient,
+                Table = design.Table
             });
         }
 
@@ -142,7 +144,7 @@ namespace HybridDb
             var managedEntity = TryGetManagedEntity(entity);
             if (managedEntity == null) return;
 
-            var entityKey = new EntityKey(entity.GetType(), managedEntity.Key);
+            var entityKey = new EntityKey(managedEntity.Table, managedEntity.Key);
 
             if (managedEntity.State == EntityState.Transient)
             {
@@ -207,7 +209,7 @@ namespace HybridDb
                         break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, managedEntity.Etag, lastWriteWins));
-                        entities.Remove(new EntityKey(design.DocumentType, managedEntity.Key));
+                        entities.Remove(new EntityKey(design.Table, managedEntity.Key));
                         break;
                 }
             }
@@ -232,7 +234,7 @@ namespace HybridDb
             var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(design, discriminator, key);
 
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(new EntityKey(design.DocumentType, key), out managedEntity))
+            if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -258,9 +260,10 @@ namespace HybridDb
                 Etag = (Guid) row[table.EtagColumn],
                 Version = currentDocumentVersion,
                 State = EntityState.Loaded,
+                Table = table
             };
 
-            entities.Add(new EntityKey(design.DocumentType, key), managedEntity);
+            entities.Add(new EntityKey(design.Table, key), managedEntity);
             return entity;
         }
 
@@ -271,7 +274,7 @@ namespace HybridDb
 
         public bool IsLoaded<T>(string key)
         {
-            return entities.ContainsKey(new EntityKey(typeof(T), key));
+            return entities.ContainsKey(new EntityKey(store.Configuration.TryGetExactDesignFor(typeof(T)).Table, key));
         }
 
         public IDocumentStore DocumentStore => store;

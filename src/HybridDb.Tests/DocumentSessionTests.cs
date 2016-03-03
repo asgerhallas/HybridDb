@@ -713,6 +713,37 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void StoreOneTypeAndLoadAnotherFromSameTableAndKeyResultsInOneManagedEntity()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store("key", new OtherEntity());
+                session.SaveChanges();
+
+                session.Load<object>("key").ShouldNotBe(null);
+
+                session.Advanced.ManagedEntities.Count().ShouldBe(1);
+            }
+        }
+
+        [Fact]
+        public void StoreTwoInstancesToSameTableWithSameIdIsIgnored()
+        {
+            // this may not be desired behavior, but it's been this way for a while
+
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store("key", new MoreDerivedEntity1());
+                session.Store("key", new DerivedEntity());
+
+                session.Advanced.ManagedEntities.Count().ShouldBe(1);
+            }
+        }
+
+        [Fact]
         public void LoadingDerivedEntityBySiblingTypeThrows()
         {
             Document<AbstractEntity>();
