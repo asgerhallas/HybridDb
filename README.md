@@ -79,7 +79,7 @@ Changelog
 
 - Fixed issue with deadlocks while migrating schema in parallel test executing using temp tables
 - Made deadlocks less likely for real tables too
-
+- Changed id uniqueness in session to be table+key instead of type+key.
 
 Acknowledgements
 ================
