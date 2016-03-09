@@ -22,7 +22,9 @@ namespace HybridDb.Config
             {
                 { Discriminator, this }
             };
-            
+
+            GetKey = configuration.DefaultKeyResolver;
+
             Projections = new Dictionary<string, Projection>
             {
                 {Table.DiscriminatorColumn, Projection.From<string>(_ => Discriminator)},
@@ -49,16 +51,16 @@ namespace HybridDb.Config
             Parent.AddChild(this);
         }
 
-        public DocumentDesign Parent { get; private set; }
-        public Type DocumentType { get; private set; }
-        public DocumentTable Table { get; private set; }
-        public string Discriminator { get; private set; }
+        public DocumentDesign Parent { get; }
+        public Type DocumentType { get; }
+        public DocumentTable Table { get; }
+        public string Discriminator { get; }
 
-        public Dictionary<string, Projection> Projections { get; private set; }
+        public Dictionary<string, Projection> Projections { get; }
 
         public IReadOnlyDictionary<string, DocumentDesign> DecendentsAndSelf => decendentsAndSelf;
 
-        public Func<object, string> GetKey { get; internal set; } = entity => (string) (((dynamic) entity).Id ?? Guid.NewGuid().ToString());
+        public Func<object, string> GetKey { get; internal set; } 
 
         void AddChild(DocumentDesign design)
         {

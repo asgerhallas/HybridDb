@@ -1459,7 +1459,39 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void UsesIdToStringAsDefaultKeyResolver()
+        {
+            using (var session = store.OpenSession())
+            {
+                var id = Guid.NewGuid();
+                session.Store(new EntityWithFunnyKey
+                {
+                    Id = id
+                });
 
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                session.Load<EntityWithFunnyKey>(id.ToString()).Id.ShouldBe(id);
+            }
+        }
+
+        [Fact]
+        public void CanSetDefaultKeyResolver()
+        {
+            store.Configuration.UseKeyResolver(x => "asger");
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new object());
+
+                session.SaveChanges();
+                session.Advanced.Clear();
+
+                session.Load<object>("asger").ShouldNotBe(null);
+            }
+        }
 
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
@@ -1479,6 +1511,11 @@ namespace HybridDb.Tests
 
                 session.Store(entity1);
             }
+        }
+
+        public class EntityWithFunnyKey
+        {
+            public Guid Id { get; set; }
         }
 
         public class FailingTypeMapper : ITypeMapper

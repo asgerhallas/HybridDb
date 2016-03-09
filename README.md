@@ -85,6 +85,11 @@ Changelog
 
 - Added overload for DocumentStore.Create with configuration action
 
+#### 0.9.4
+
+- Added configuration option to set the default key resolver, which is used when trying to obtain an id from an entity in store.
+- The default key resolver (if non other is set) now calls ToString() by default on the automatically resolved id from the stored entity. So if you use a Guid it will ToString it for you when you store.
+
 Acknowledgements
 ================
 

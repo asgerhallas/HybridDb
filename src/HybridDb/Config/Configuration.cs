@@ -10,15 +10,12 @@ namespace HybridDb.Config
 {
     public class Configuration
     {
-        readonly ConcurrentDictionary<Type, DocumentDesign> documentDesignsCache;
-
         bool initialized = false;
 
         internal Configuration()
         {
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new List<DocumentDesign>();
-            documentDesignsCache = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -32,6 +29,7 @@ namespace HybridDb.Config
             RunSchemaMigrationsOnStartup = true;
             RunDocumentMigrationsOnStartup = true;
             TableNamePrefix = "";
+            DefaultKeyResolver = entity => (string)(((dynamic)entity).Id.ToString() ?? Guid.NewGuid().ToString());
         }
 
         public ILogger Logger { get; private set; }
@@ -43,6 +41,7 @@ namespace HybridDb.Config
         public bool RunDocumentMigrationsOnStartup { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
+        public Func<object, string> DefaultKeyResolver { get; private set; }
 
         internal ConcurrentDictionary<string, Table> Tables { get; }
         internal List<DocumentDesign> DocumentDesigns { get; }
@@ -191,6 +190,11 @@ namespace HybridDb.Config
         public void UseTableNamePrefix(string prefix)
         {
             TableNamePrefix = prefix;
+        }
+
+        public void UseKeyResolver(Func<object, string> resolver)
+        {
+            DefaultKeyResolver = resolver;
         }
 
         internal void DisableMigrationsOnStartup()
