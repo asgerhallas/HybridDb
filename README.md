@@ -81,6 +81,10 @@ Changelog
 - Made deadlocks less likely for real tables too
 - Changed id uniqueness in session to be table+key instead of type+key.
 
+#### 0.9.3
+
+- Added overload for DocumentStore.Create with configuration action
+
 Acknowledgements
 ================
 

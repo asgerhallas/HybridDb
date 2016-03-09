@@ -51,9 +51,12 @@ namespace HybridDb
             this.testing = testing;
         }
 
-        public static IDocumentStore Create(string connectionString)
+        public static IDocumentStore Create(string connectionString, Action<Configuration> configure = null)
         {
-            return new DocumentStore(new Configuration(), TableMode.UseRealTables, connectionString, false);
+            configure = configure ?? (x => { });
+            var configuration = new Configuration();
+            configure(configuration);
+            return new DocumentStore(configuration, TableMode.UseRealTables, connectionString, false);
         }
 
         public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null)
