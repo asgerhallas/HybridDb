@@ -1480,7 +1480,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSetDefaultKeyResolver()
         {
-            store.Configuration.UseKeyResolver(x => "asger");
+            UseKeyResolver(x => "asger");
 
             using (var session = store.OpenSession())
             {

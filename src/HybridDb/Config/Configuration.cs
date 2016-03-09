@@ -29,7 +29,7 @@ namespace HybridDb.Config
             RunSchemaMigrationsOnStartup = true;
             RunDocumentMigrationsOnStartup = true;
             TableNamePrefix = "";
-            DefaultKeyResolver = entity => (string)(((dynamic)entity).Id.ToString() ?? Guid.NewGuid().ToString());
+            DefaultKeyResolver = KeyResolver;
         }
 
         public ILogger Logger { get; private set; }
@@ -206,6 +206,12 @@ namespace HybridDb.Config
         public void DisableDocumentMigrationsOnStartup()
         {
             RunDocumentMigrationsOnStartup = false;
+        }
+
+        static string KeyResolver(object entity)
+        {
+            var id = ((dynamic)entity).Id;
+            return id != null ? id.ToString() : Guid.NewGuid().ToString();
         }
 
         DocumentTable AddTable(string tablename)

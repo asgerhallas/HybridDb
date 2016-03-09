@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
@@ -61,6 +62,11 @@ namespace HybridDb
         protected void UseTableNamePrefix(string prefix)
         {
             configuration.UseTableNamePrefix(prefix);
+        }
+
+        public void UseKeyResolver(Func<object, string> resolver)
+        {
+            configuration.UseKeyResolver(resolver);
         }
 
         internal void DisableMigrations()
