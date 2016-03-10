@@ -95,6 +95,11 @@ namespace HybridDb
 
         public IDocumentSession OpenSession()
         {
+            if (!IsInitialized)
+            {
+                throw new InvalidOperationException("You must call Initialize() on the store before opening a session.");
+            }
+
             return new DocumentSession(this);
         }
 
@@ -259,6 +264,9 @@ namespace HybridDb
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
+            if (simpleTypes.Contains(typeof(TProjection)))
+                return select;
+
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns = 
                 from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
@@ -268,7 +276,7 @@ namespace HybridDb
                 where neededColumns.Contains(alias)
                 select new { column, alias = alias ?? column };
 
-            var missingColumns =
+            var missingColumns = 
                 from column in neededColumns
                 where !selectedColumns.Select(x => x.alias).Contains(column)
                 select new {column, alias = column};
@@ -331,5 +339,46 @@ namespace HybridDb
         {
             Database.Dispose();
         }
-    }
+
+        static readonly HashSet<Type> simpleTypes = new HashSet<Type>
+        {
+            typeof (byte),
+            typeof (sbyte),
+            typeof (short),
+            typeof (ushort),
+            typeof (int),
+            typeof (uint),
+            typeof (long),
+            typeof (ulong),
+            typeof (float),
+            typeof (double),
+            typeof (decimal),
+            typeof (bool),
+            typeof (string),
+            typeof (char),
+            typeof (Guid),
+            typeof (DateTime),
+            typeof (DateTimeOffset),
+            typeof (TimeSpan),
+            typeof (byte[]),
+            typeof (byte?),
+            typeof (sbyte?),
+            typeof (short?),
+            typeof (ushort?),
+            typeof (int?),
+            typeof (uint?),
+            typeof (long?),
+            typeof (ulong?),
+            typeof (float?),
+            typeof (double?),
+            typeof (decimal?),
+            typeof (bool?),
+            typeof (char?),
+            typeof (Guid?),
+            typeof (DateTime?),
+            typeof (DateTimeOffset?),
+            typeof (TimeSpan?),
+            typeof (object)
+        };
+}
 }

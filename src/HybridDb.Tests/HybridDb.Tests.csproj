@@ -81,6 +81,7 @@
     <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
     <Compile Include="Bugs\IdentityMapThinksIdsAreGlobal.cs" />
     <Compile Include="Bugs\NotGeneratingNullableColumnsForMethodReturningValueTypes.cs" />
+    <Compile Include="Bugs\SelectPrimitiveValueInQuery.cs" />
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
     <Compile Include="Config\ColumnTests.cs" />
@@ -88,6 +89,7 @@
     <Compile Include="DefaultSerializerTests.cs" />
     <Compile Include="DocumentDesignerTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
+    <Compile Include="DocumentSessionTests2.cs" />
     <Compile Include="FakeBackupWriter.cs" />
     <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />

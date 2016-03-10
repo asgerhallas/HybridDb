@@ -90,6 +90,11 @@ Changelog
 - Added configuration option to set the default key resolver, which is used when trying to obtain an id from an entity in store.
 - The default key resolver (if non other is set) now calls ToString() by default on the automatically resolved id from the stored entity. So if you use a Guid it will ToString it for you when you store.
 
+#### 0.9.5
+
+- fixes issue #24
+- enforce store initialization before first session is opened
+
 Acknowledgements
 ================
 

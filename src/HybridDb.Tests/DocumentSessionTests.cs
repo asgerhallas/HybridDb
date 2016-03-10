@@ -940,6 +940,7 @@ namespace HybridDb.Tests
             Reset();
 
             Document<Entity>();
+            DisableDocumentMigrationsInBackground();
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
             using (var session = store.OpenSession())

@@ -17,7 +17,7 @@ namespace HybridDb
         readonly DocumentMigrator migrator;
         bool saving = false;
 
-        public DocumentSession(IDocumentStore store)
+        internal DocumentSession(IDocumentStore store)
         {
             deferredCommands = new List<DatabaseCommand>();
             entities = new Dictionary<EntityKey, ManagedEntity>();

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using Xunit;
