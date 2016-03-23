@@ -9,20 +9,20 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class ChangeColumnTypeTests : HybridDbTests
     {
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void ChangeType(TableMode mode)
-        {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(Guid)))).Execute(store.Database);
+        //[Theory]
+        //[InlineData(TableMode.UseTempTables)]
+        //[InlineData(TableMode.UseTempDb)]
+        //[InlineData(TableMode.UseRealTables)]
+        //public void ChangeType(TableMode mode)
+        //{
+        //    Use(mode);
+        //    UseTableNamePrefix(Guid.NewGuid().ToString());
+        //    new CreateTable(new Table("Entities", new Column("Col1", typeof(Guid)))).Execute(store.Database);
 
-            new ChangeColumnType("Entities", new Column("Col1", typeof(string))).Execute(store.Database);
+        //    new ChangeColumnType("Entities", new Column("Col1", typeof(string))).Execute(store.Database);
 
-            store.Database.QuerySchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
-        }
+        //    store.Database.QuerySchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
+        //}
 
         //[Theory]
         //[InlineData(TableMode.UseTempTables, typeof(int), false)]
@@ -116,13 +116,13 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(true);
+            new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(false);
         }
 
         [Fact]
         public void RequiresReprojection()
         {
-            new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
+            new ChangeColumnType("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
         }
     }
 }
