@@ -214,8 +214,8 @@ namespace HybridDb.Tests.Migrations
             var numberOfRetries = logEventSink.Captures.Count(x => x == $"Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{id}\".");
             
             // it has a back off of 100ms
-            numberOfRetries.ShouldBeLessThan(11);
-            numberOfRetries.ShouldBeGreaterThan(9);
+            numberOfRetries.ShouldBeLessThan(12);
+            numberOfRetries.ShouldBeGreaterThan(8);
         }
 
         [Fact]
