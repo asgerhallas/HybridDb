@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Bugs
 {
     public class QueryWithIdTypeMismatch : HybridDbTests
     {
-        [Fact]
+        [Fact(Skip="Skipped until chnage col type migration is done")]
         public void FactMethodName()
         {
             new CreateTable(new Table("Entities", new Column("Id", typeof (Guid), isPrimaryKey: true))).Execute(store.Database);

@@ -125,25 +125,25 @@ namespace HybridDb.Tests.Migrations.Commands
             schema["Entities1"]["SomeDateTime"].DefaultValue.ShouldBe(new DateTime(1999, 12, 24));
         }
 
-        //[Fact(Skip = "Not solved yet")]
-        //public void ShouldNotAllowSqlInjection()
-        //{
-        //    new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-        //    new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(store.Database);
+        [Fact(Skip = "Not solved yet")]
+        public void ShouldNotAllowSqlInjection()
+        {
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(store.Database);
 
-        //    store.Database.QuerySchema().ShouldContainKey("Entities1");
-        //}
+            store.Database.QuerySchema().ShouldContainKey("Entities1");
+        }
 
-        //[Fact]
-        //public void IsSafe()
-        //{
-        //    new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(true);
-        //}
+        [Fact]
+        public void IsSafe()
+        {
+            new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(false);
+        }
 
-        //[Fact]
-        //public void RequiresReprojection()
-        //{
-        //    new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
-        //}
+        [Fact]
+        public void RequiresReprojection()
+        {
+            new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
+        }
     }
 }
