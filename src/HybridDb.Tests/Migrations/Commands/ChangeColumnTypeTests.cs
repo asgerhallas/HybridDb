@@ -140,7 +140,7 @@ namespace HybridDb.Tests.Migrations.Commands
             new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(false);
         }
 
-        [Fact]
+        [Fact(Skip = "What is this test for?")]
         public void RequiresReprojection()
         {
             new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
