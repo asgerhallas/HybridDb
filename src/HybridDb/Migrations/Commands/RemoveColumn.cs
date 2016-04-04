@@ -7,7 +7,7 @@ namespace HybridDb.Migrations.Commands
     {
         public RemoveColumn(Table table, string name)
         {
-            Unsafe = name == "Document" || name == "Id";
+            Unsafe = true;
 
             Table = table;
             Name = name;

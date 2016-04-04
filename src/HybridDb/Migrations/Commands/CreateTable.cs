@@ -11,7 +11,7 @@ namespace HybridDb.Migrations.Commands
             Table = table;
         }
 
-        public Table Table { get; private set; }
+        public Table Table { get; }
 
         public override void Execute(IDatabase database)
         {
@@ -45,7 +45,7 @@ namespace HybridDb.Migrations.Commands
 
         public override string ToString()
         {
-            return string.Format("Create table {0} with columns {1}", Table, string.Join(", ", Table.Columns.Select(x => x.ToString())));
+            return $"Create table {Table} with columns {string.Join(", ", Table.Columns.Select(x => x.ToString()))}";
         }
     }
 }

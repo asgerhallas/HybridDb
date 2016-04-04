@@ -137,13 +137,13 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(false);
+            new ChangeColumnType("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(true);
         }
 
-        [Fact(Skip = "What is this test for?")]
+        [Fact]
         public void RequiresReprojection()
         {
-            new AddColumn("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
+            new ChangeColumnType("Entities", new Column("Col", typeof(int))).RequiresReprojectionOf.ShouldBe(null);
         }
     }
 }

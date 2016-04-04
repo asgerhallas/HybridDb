@@ -53,6 +53,7 @@ namespace HybridDb.Migrations.Commands
 
         public ChangeColumnType(string tableName, Column column)
         {
+            Unsafe = true;
             TableName = tableName;
             Column = column;
         }
