@@ -41,8 +41,8 @@ namespace HybridDb.Tests.Migrations.Commands
         [Theory]
         [InlineData("Document", true)]
         [InlineData("Id", true)]
-        [InlineData("OtherName", false)]
-        public void IsSafeDependingOnColumnName(string columnName, bool isUnsafe)
+        [InlineData("OtherName", true)]
+        public void IsAlwaysUnsafe(string columnName, bool isUnsafe)
         {
             new RemoveColumn(new Table("Entities"), columnName).Unsafe.ShouldBe(isUnsafe);
         }
