@@ -95,6 +95,10 @@ Changelog
 - fixes issue #24
 - enforce store initialization before first session is opened
 
+#### 0.10.0
+
+- changes default nvarchar length to 1024 with support for overriding this default like `store.Configuration.Document<Doc>.With(x => x.StringProp, new MaxLength(2048));`. Fixes issue #20.
+
 Acknowledgements
 ================
 
