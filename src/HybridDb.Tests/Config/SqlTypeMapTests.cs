@@ -9,24 +9,24 @@ namespace HybridDb.Tests.Config
     public class SqlTypeMapTests
     {
         [Theory]
-        [InlineData(typeof(string), null, "MAX")]
-        [InlineData(typeof(SomeEnum), null, "255")]
-        [InlineData(typeof(byte[]), null, "MAX")]
-        [InlineData(typeof(double), null, null)]
-        [InlineData(typeof(decimal), null, "28, 14")]
-        [InlineData(typeof(bool), null, null)]
-        [InlineData(typeof(byte), null, null)]
-        [InlineData(typeof(long), null, null)]
-        [InlineData(typeof(int), null, null)]
-        [InlineData(typeof(short), null, null)]
-        [InlineData(typeof(Guid), null, null)]
-        [InlineData(typeof(DateTime), null, null)]
-        [InlineData(typeof(DateTimeOffset), null, null)]
-        [InlineData(typeof(Single), null, null)]
-        [InlineData(typeof(TimeSpan), null, null)]
-        public void ConvertGivesCorrectDefaultLength(Type columnType, int? length, string expectedLenght)
+        [InlineData(typeof(string), "1024")]
+        [InlineData(typeof(SomeEnum), "255")]
+        [InlineData(typeof(byte[]), "MAX")]
+        [InlineData(typeof(double), null)]
+        [InlineData(typeof(decimal), "28, 14")]
+        [InlineData(typeof(bool), null)]
+        [InlineData(typeof(byte), null)]
+        [InlineData(typeof(long), null)]
+        [InlineData(typeof(int), null)]
+        [InlineData(typeof(short), null)]
+        [InlineData(typeof(Guid), null)]
+        [InlineData(typeof(DateTime), null)]
+        [InlineData(typeof(DateTimeOffset), null)]
+        [InlineData(typeof(Single), null)]
+        [InlineData(typeof(TimeSpan), null)]
+        public void ConvertGivesCorrectDefaultLength(Type columnType, string expectedLenght)
         {
-            var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, length));
+            var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, null));
             sqlColumn.Length.ShouldBe(expectedLenght);
         }
 

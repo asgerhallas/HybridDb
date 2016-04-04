@@ -13,7 +13,7 @@ namespace HybridDb.Config
             Table = table;
             Discriminator = discriminator;
 
-            if (discriminator.Length > Table.DiscriminatorColumn.Length)
+            if (Table.DiscriminatorColumn.Length > -1 && discriminator.Length > Table.DiscriminatorColumn.Length)
             {
                 throw new InvalidOperationException($"Discriminator '{discriminator}' is too long for column. Maximum length is {Table.DiscriminatorColumn.Length}.");
             }
@@ -71,22 +71,5 @@ namespace HybridDb.Config
 
             decendentsAndSelf.Add(design.Discriminator, design);
         }
-    }
-
-    public class Projection
-    {
-        Projection(Type returnType, Func<ManagedEntity, object> projector)
-        {
-            ReturnType = returnType;
-            Projector = projector;
-        }
-
-        public static Projection From<TReturnType>(Func<ManagedEntity, object> projection)
-        {
-            return new Projection(typeof(TReturnType), projection);
-        }
-
-        public Type ReturnType { get; private set; }
-        public Func<ManagedEntity, object> Projector { get; private set; }
     }
 }

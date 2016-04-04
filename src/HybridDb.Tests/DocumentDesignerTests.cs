@@ -199,6 +199,19 @@ namespace HybridDb.Tests
             sqlColumn.Nullable.ShouldBe(false);
         }
 
+        [Fact]
+        public void MustSetLengthOnStringProjections()
+        {
+            configuration.Document<Entity>()
+                .With("first", x => x.String, new MaxLength(255))
+                .With("second", x => x.String, new MaxLength())
+                .With("third", x => x.String);
+
+            TableFor<Entity>()["first"].Length.ShouldBe(255);
+            TableFor<Entity>()["second"].Length.ShouldBe(-1);
+            TableFor<Entity>()["third"].Length.ShouldBe(1024);
+        }
+
         ManagedEntity MakeManaged(object entity) =>
             new ManagedEntity
             {

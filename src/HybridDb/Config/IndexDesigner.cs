@@ -12,10 +12,10 @@ namespace HybridDb.Config
             designer = new DocumentDesigner<TEntity>(design);
         }
 
-        public IndexDesigner<TIndex, TEntity> With<TMember>(Expression<Func<TIndex, TMember>> namer, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        public IndexDesigner<TIndex, TEntity> With<TMember>(Expression<Func<TIndex, TMember>> namer, Expression<Func<TEntity, TMember>> projector, params Option[] options)
         {
             var name = ColumnNameBuilder.GetColumnNameByConventionFor(namer);
-            designer.With(name, projector, makeNullSafe);
+            designer.With(name, projector, options);
             return this;
         }
     }

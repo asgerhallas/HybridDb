@@ -59,10 +59,10 @@ namespace HybridDb.Config
         static string GetLength(Column column)
         {
             if (column.Length != null)
-                return column.Length.ToString();
+                return column.Length == -1 ? "MAX" : column.Length.ToString();
 
             if (column.Type == typeof (string))
-                return "MAX";
+                return "1024";
             
             if (column.Type == typeof(Enum))
                 return "255";

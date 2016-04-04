@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using HybridDb.Commands;
@@ -113,7 +114,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AccessToNestedPropertyThrowsIfNotMadeNullSafe()
         {
-            Document<Entity>().With(x => x.TheChild.NestedProperty, makeNullSafe: false);
+            Document<Entity>().With(x => x.TheChild.NestedProperty, new DisableNullCheckInjection());
 
             using (var session = store.OpenSession())
             {
@@ -1491,6 +1492,22 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 session.Load<object>("asger").ShouldNotBe(null);
+            }
+        }
+
+        [Fact]
+        public void FailsIfStringProjectionIsTruncated()
+        {
+            Document<Entity>().With(x => x.Field, new MaxLength(10));
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity
+                {
+                    Field = "1234567890+"
+                });
+
+                Should.Throw<SqlException>(() => session.SaveChanges());
             }
         }
 

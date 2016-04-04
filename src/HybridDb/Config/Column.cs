@@ -14,7 +14,7 @@ namespace HybridDb.Config
                     throw new ArgumentException("Byte array column can not have default value.");
 
                 if (Type != defaultValue.GetType())
-                    throw new ArgumentException(string.Format("Default value ({0}) must be of same type as column ({1}).", type.Name, defaultValue.GetType().Name));
+                    throw new ArgumentException($"Default value ({type.Name}) must be of same type as column ({defaultValue.GetType().Name}).");
             }
 
             Name = name;

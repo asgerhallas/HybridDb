@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using HybridDb.Linq;
 
 namespace HybridDb.Config
 {
@@ -19,14 +21,18 @@ namespace HybridDb.Config
             return this;
         }
 
-        public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, params Option[] options)
         {
-            var name = ColumnNameBuilder.GetColumnNameByConventionFor(projector);
-            return With(name, projector, makeNullSafe);
+            return With(ColumnNameBuilder.GetColumnNameByConventionFor(projector), projector, options);
         }
 
-        public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, bool makeNullSafe = true)
+        public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, params Option[] options)
         {
+            if (typeof (TMember) == typeof (string))
+            {
+                options = options.Concat(new MaxLength(1024)).ToArray();
+            }
+
             var column = design.Table[name];
 
             if (design.Table.IdColumn.Equals(column))
@@ -36,12 +42,16 @@ namespace HybridDb.Config
 
             if (column == null)
             {
-                column = new Column(name, typeof(TMember));
+                var lengthOption = options
+                    .OfType<MaxLength>()
+                    .FirstOrDefault();
+
+                column = new Column(name, typeof(TMember), lengthOption?.Length);
                 design.Table.Register(column);
             }
 
             Func<object, object> compiledProjector;
-            if (makeNullSafe)
+            if (!options.OfType<DisableNullCheckInjection>().Any())
             {
                 var nullCheckInjector = new NullCheckInjector();
                 var nullCheckedProjector = (Expression<Func<TEntity, object>>)nullCheckInjector.Visit(projector);
@@ -62,9 +72,9 @@ namespace HybridDb.Config
 
             if (!newProjection.ReturnType.IsCastableTo(column.Type))
             {
-                throw new InvalidOperationException(string.Format(
-                    "Can not override projection for {0} of type {1} with a projection that returns {2} (on {3}).",
-                    name, column.Type, newProjection.ReturnType, typeof(TEntity)));
+                throw new InvalidOperationException(
+                    $"Can not override projection for {name} of type {column.Type} " +
+                    $"with a projection that returns {newProjection.ReturnType} (on {typeof (TEntity)}).");
             }
 
             Projection existingProjection;
