@@ -196,15 +196,15 @@ namespace HybridDb
             {
                 var sql = new SqlBuilder();
 
-                sql.Append("select count(*) as TotalResults")
-                   .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                   .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
-                   .Append(";");
-
                 var isWindowed = skip > 0 || take > 0;
 
                 if (isWindowed)
                 {
+                    sql.Append("select count(*) as TotalResults")
+                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
+                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                       .Append(";");
+
                     sql.Append(@"with temp as (select *")
                        .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
@@ -230,12 +230,12 @@ namespace HybridDb
                 if (projectToDictionary)
                 {
                     result = (IEnumerable<TProjection>)
-                        InternalQuery<object>(connection, sql, parameters, out stats)
+                        InternalQuery<object>(connection, sql, parameters, isWindowed, out stats)
                             .Cast<IDictionary<string, object>>();
                 }
                 else
                 {
-                    result = InternalQuery<TProjection>(connection, sql, parameters, out stats);
+                    result = InternalQuery<TProjection>(connection, sql, parameters, isWindowed, out stats);
                 }
 
                 stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
@@ -285,15 +285,28 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats stats)
+        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
         {
             var normalizedParameters = new FastDynamicParameters(
                 parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
 
+            if (hasTotalsQuery)
+            {
+                using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
+                {
+                    stats = reader.Read<QueryStats>(buffered: true).Single();
+                    return reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
+                }
+            }
+
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                stats = reader.Read<QueryStats>(buffered: true).Single();
-                return reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
+                List<T> rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true).ToList();
+                stats = new QueryStats
+                {
+                    TotalResults = rows.Count
+                };
+                return rows;
             }
         }
 
