@@ -99,6 +99,10 @@ Changelog
 
 - changes default nvarchar length to 1024 with support for overriding this default like `store.Configuration.Document<Doc>.With(x => x.StringProp, new MaxLength(2048));`. Fixes issue #20.
 
+#### 0.10.1
+
+- @chessydk optimized the sql for getting total rows of non-windowed queries (see #34).
+
 Acknowledgements
 ================
 
