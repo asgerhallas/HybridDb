@@ -180,7 +180,7 @@ namespace HybridDb
             {
                 var key = managedEntity.Key;
                 var design = store.Configuration.TryGetExactDesignFor(managedEntity.Entity.GetType());
-                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity));
+                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
                 var version = (int)projections[design.Table.VersionColumn];
                 var document = (byte[])projections[design.Table.DocumentColumn];

@@ -86,9 +86,9 @@ namespace HybridDb.Migrations
                                 logger.Information("Document did not change.");
 
                                 var projection = new Dictionary<string, object>
-                            {
-                                {table.VersionColumn, configuration.ConfiguredVersion}
-                            };
+                                {
+                                    {table.VersionColumn, configuration.ConfiguredVersion}
+                                };
 
                                 store.Update(table, key, (Guid)row[table.EtagColumn], projection);
                             }

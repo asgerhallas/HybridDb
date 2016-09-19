@@ -27,17 +27,14 @@ namespace HybridDb.Config
 
             Projections = new Dictionary<string, Projection>
             {
-                {Table.DiscriminatorColumn, Projection.From<string>(_ => Discriminator)},
-                {Table.DocumentColumn, Projection.From<byte[]>(managedEntity => configuration.Serializer.Serialize(managedEntity.Entity))},
-                {
-                    Table.MetadataColumn,
-                    Projection.From<byte[]>(managedEntity =>
-                        managedEntity.Metadata != null
-                            ? configuration.Serializer.Serialize(managedEntity.Metadata)
-                            : null)
-                },
-                {Table.VersionColumn, Projection.From<int>(_ => configuration.ConfiguredVersion)},
-                {Table.AwaitsReprojectionColumn, Projection.From<bool>(_ => false)}
+                [Table.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator),
+                [Table.DocumentColumn] = Projection.From<byte[]>(document => configuration.Serializer.Serialize(document)),
+                [Table.MetadataColumn] = Projection.From<byte[]>((document, metadata) =>
+                    metadata != null
+                        ? configuration.Serializer.Serialize(metadata)
+                        : null),
+                [Table.VersionColumn] = Projection.From<int>(_ => configuration.ConfiguredVersion),
+                [Table.AwaitsReprojectionColumn] = Projection.From<bool>(_ => false)
             };
         }
 
@@ -46,7 +43,7 @@ namespace HybridDb.Config
         {
             Parent = parent;
             Projections = parent.Projections.ToDictionary();
-            Projections[Table.DiscriminatorColumn] = Projection.From<string>(managedEntity => Discriminator);
+            Projections[Table.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator);
         
             Parent.AddChild(this);
         }

@@ -25,8 +25,7 @@ namespace HybridDb.Commands
 
         internal override PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier)
         {
-            var name = string.Format("{0}_{1}_{2}.bak", design.DocumentType.FullName, key, version);
-            writer.Write(name, document);
+            writer.Write($"{design.DocumentType.FullName}_{key}_{version}.bak", document);
 
             return command.Prepare(store, etag, uniqueParameterIdentifier);
         }

@@ -79,7 +79,7 @@ namespace HybridDb.Tests
             configuration.Document<DerivedEntity>()
                 .With("Number", x => 2);
 
-            ProjectionsFor<DerivedEntity>()["Number"].Projector(MakeManaged(new DerivedEntity())).ShouldBe(2);
+            ProjectionsFor<DerivedEntity>()["Number"].Projector(new DerivedEntity(), null).ShouldBe(2);
         }
 
         [Fact]
@@ -87,7 +87,7 @@ namespace HybridDb.Tests
         {
             configuration.Document<Entity>().With(x => x.String);
 
-            ProjectionsFor<Entity>()["String"].Projector(MakeManaged(new Entity { String = "Asger" })).ShouldBe("Asger");
+            ProjectionsFor<Entity>()["String"].Projector(new Entity { String = "Asger" }, null).ShouldBe("Asger");
         }
 
         [Fact]
@@ -98,8 +98,8 @@ namespace HybridDb.Tests
                 .Extend<Index>(e =>
                     e.With(x => x.Number, x => x.String.Length));
 
-            ProjectionsFor<OtherEntity>()["String"].Projector(MakeManaged(new OtherEntity { String = "Asger" })).ShouldBe("Asger");
-            ProjectionsFor<OtherEntity>()["Number"].Projector(MakeManaged(new OtherEntity { String = "Asger" })).ShouldBe(5);
+            ProjectionsFor<OtherEntity>()["String"].Projector(new OtherEntity { String = "Asger" }, null).ShouldBe("Asger");
+            ProjectionsFor<OtherEntity>()["Number"].Projector(new OtherEntity { String = "Asger" }, null).ShouldBe(5);
         }
 
         [Fact]
@@ -110,7 +110,7 @@ namespace HybridDb.Tests
                 .Extend<Index>(e =>
                     e.With(x => x.String, x => x.String.Replace("a", "b")));
 
-            ProjectionsFor<OtherEntity>()["String"].Projector(MakeManaged(new OtherEntity { String = "asger" })).ShouldBe("bsger");
+            ProjectionsFor<OtherEntity>()["String"].Projector(new OtherEntity { String = "asger" }, null).ShouldBe("bsger");
         }
 
         [Fact]
@@ -173,8 +173,8 @@ namespace HybridDb.Tests
             sqlColumn.Type.ShouldBe(typeof(long));
             sqlColumn.Nullable.ShouldBe(false);
 
-            ProjectionsFor<AbstractEntity>()["LongNumber"].Projector(MakeManaged(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 })).ShouldBe(1);
-            ProjectionsFor<MoreDerivedEntity1>()["LongNumber"].Projector(MakeManaged(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 })).ShouldBe(2);
+            ProjectionsFor<AbstractEntity>()["LongNumber"].Projector(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 }, null).ShouldBe(1);
+            ProjectionsFor<MoreDerivedEntity1>()["LongNumber"].Projector(new MoreDerivedEntity1 { LongNumber = 1, Number = 2 }, null).ShouldBe(2);
         }
 
         [Fact]
@@ -211,12 +211,6 @@ namespace HybridDb.Tests
             TableFor<Entity>()["second"].Length.ShouldBe(-1);
             TableFor<Entity>()["third"].Length.ShouldBe(1024);
         }
-
-        ManagedEntity MakeManaged(object entity) =>
-            new ManagedEntity
-            {
-                Entity = entity
-            };
 
         public class Entity
         {
