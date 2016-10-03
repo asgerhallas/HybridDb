@@ -13,10 +13,5 @@
         {
             get { return operand; }
         }
-
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.Not; }
-        }
     }
 }

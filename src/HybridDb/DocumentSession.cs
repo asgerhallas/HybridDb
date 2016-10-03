@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -199,10 +198,8 @@ namespace HybridDb
                             SafeSequenceEqual(managedEntity.Document, document) && 
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument)) 
                             break;
-                        
-                        commands.Add(managedEntity, new BackupCommand(
-                            new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins),
-                            store.Configuration.BackupWriter, design, key, managedEntity.Version, managedEntity.Document));
+
+                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins));
                         
                         managedEntity.Version = version;
                         managedEntity.Document = document;
@@ -214,7 +211,7 @@ namespace HybridDb
                 }
             }
 
-            var etag = store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
+            var etag = store.Execute(commands.Select(x => x.Value).Concat(deferredCommands).ToList());
 
             foreach (var managedEntity in commands.Keys)
             {

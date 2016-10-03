@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Linq2;
+using HybridDb.Linq2.Ast;
 
 namespace HybridDb.Tests
 {
@@ -16,7 +18,7 @@ namespace HybridDb.Tests
             OverrideExecute = (s, args) => s.Execute(args);
         }
 
-        public Func<IDocumentStore, IEnumerable<DatabaseCommand>, Guid> OverrideExecute { get; set; } 
+        public Func<IDocumentStore, IReadOnlyList<DatabaseCommand>, Guid> OverrideExecute { get; set; } 
 
         public Configuration Configuration => store.Configuration;
         public long NumberOfRequests => store.NumberOfRequests;
@@ -33,7 +35,7 @@ namespace HybridDb.Tests
             return new DocumentSession(this);
         }
 
-        public Guid Execute(IEnumerable<DatabaseCommand> commands)
+        public Guid Execute(IReadOnlyList<DatabaseCommand> commands)
         {
             return OverrideExecute(store, commands);
         }
@@ -47,6 +49,11 @@ namespace HybridDb.Tests
             DocumentTable table, out QueryStats stats, string @select = "", string @where = "", int skip = 0, int take = 0, string @orderby = "", object parameters = null)
         {
             return store.Query<TProjection>(table, out stats, select, where, skip, take, orderby, parameters);
+        }
+
+        public IEnumerable<TProjection> Query<TProjection>(SelectStatement @select, out QueryStats stats)
+        {
+            return store.Query<TProjection>(@select, out stats);
         }
 
         public void Dispose()

@@ -33,12 +33,12 @@ namespace HybridDb.Linq
             throw new NotSupportedException("Only for building LINQ expressions");
         }
         
-        internal static Translation Translate(this IQueryable query)
+        internal static SqlSelectStatement Translate(this IQueryable query)
         {
             return Translate(query.Expression);
         }
 
-        internal static Translation Translate(this Expression expression)
+        internal static SqlSelectStatement Translate(this Expression expression)
         {
             return new QueryTranslator().Translate(expression);
         }

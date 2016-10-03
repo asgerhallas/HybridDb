@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace HybridDb.Linq
 {
-    public class Translation
+    public class SqlSelectStatement
     {
         public string Select { get; set; }
         public string Where { get; set; }

@@ -1,29 +1,24 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq2;
 using HybridDb.Linq2.Ast;
+using HybridDb.Migrations;
 
-namespace HybridDb.Tests
+namespace HybridDb
 {
-    public class TracingDocumentStoreDecorator : IDocumentStore
+    public class DocumentStoreBackupDecorator : IDocumentStore
     {
         readonly IDocumentStore store;
+        readonly IBackupWriter writer;
 
-        public TracingDocumentStoreDecorator(IDocumentStore store)
+        public DocumentStoreBackupDecorator(IDocumentStore store, IBackupWriter writer)
         {
             this.store = store;
-
-            Gets = new List<Tuple<DocumentTable, string>>();
-            Queries = new List<DocumentTable>();
-            Updates = new List<UpdateCommand>();
+            this.writer = writer;
         }
-
-        public List<Tuple<DocumentTable, string>> Gets { get; private set; }
-        public List<DocumentTable> Queries { get; private set; }
-        public List<UpdateCommand> Updates { get; private set; }
 
         public Configuration Configuration => store.Configuration;
         public long NumberOfRequests => store.NumberOfRequests;
@@ -42,9 +37,10 @@ namespace HybridDb.Tests
 
         public Guid Execute(IReadOnlyList<DatabaseCommand> commands)
         {
-            foreach (var command in commands.OfType<UpdateCommand>())
+            //todo:
+            foreach (var command in commands.OfType<BackupCommand>())
             {
-                Updates.Add(command);
+                writer.Write($"{command.Design.DocumentType.FullName}_{command.Key}_{command.Version}.bak", command.OldDocument);
             }
 
             return store.Execute(commands);
@@ -52,14 +48,13 @@ namespace HybridDb.Tests
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {
-            Gets.Add(Tuple.Create(table, key));
             return store.Get(table, key);
         }
 
         public IEnumerable<TProjection> Query<TProjection>(
-            DocumentTable table, out QueryStats stats, string @select = "", string @where = "", int skip = 0, int take = 0, string @orderby = "", object parameters = null)
+            DocumentTable table, out QueryStats stats, string @select = "", string @where = "", 
+            int skip = 0, int take = 0, string @orderby = "", object parameters = null)
         {
-            Queries.Add(table);
             return store.Query<TProjection>(table, out stats, select, where, skip, take, orderby, parameters);
         }
 

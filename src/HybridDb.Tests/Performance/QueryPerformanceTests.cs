@@ -87,7 +87,7 @@ namespace HybridDb.Tests.Performance
                         new {SomeNumber = i, SomeData = "ABC"}));
                 }
 
-                store.Execute(commands.ToArray());
+                store.Execute(commands);
             }
         }
     }

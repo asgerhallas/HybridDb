@@ -31,7 +31,7 @@ namespace HybridDb.Linq.Parsers
         protected override Expression VisitConstant(ConstantExpression expression)
         {
             var type = expression.Value != null ? expression.Value.GetType() : typeof(object);
-            ast.Push(new SqlConstantExpression(type, expression.Value));
+            ast.Push(new Constant(type, expression.Value));
             return expression;
         }
 
@@ -74,19 +74,19 @@ namespace HybridDb.Linq.Parsers
             if (expression.Object == null)
             {
                 var arguments = ast.Pop(expression.Arguments.Count)
-                                   .Cast<SqlConstantExpression>()
+                                   .Cast<Constant>()
                                    .Select(x => x.Value);
 
-                ast.Push(new SqlConstantExpression(expression.Method.ReturnType, expression.Method.Invoke(null, arguments.ToArray())));
+                ast.Push(new Constant(expression.Method.ReturnType, expression.Method.Invoke(null, arguments.ToArray())));
             }
             else
             {
-                var receiver = ((SqlConstantExpression)ast.Pop()).Value;
+                var receiver = ((Constant)ast.Pop()).Value;
                 var arguments = ast.Pop(expression.Arguments.Count)
-                                   .Cast<SqlConstantExpression>()
+                                   .Cast<Constant>()
                                    .Select(x => x.Value);
 
-                ast.Push(new SqlConstantExpression(expression.Method.ReturnType, expression.Method.Invoke(receiver, arguments.ToArray())));
+                ast.Push(new Constant(expression.Method.ReturnType, expression.Method.Invoke(receiver, arguments.ToArray())));
             }
         }
 
@@ -103,7 +103,7 @@ namespace HybridDb.Linq.Parsers
                             string.Format("{0} method must be called on the lambda parameter.", expression));
                     }
 
-                    var constant = (SqlConstantExpression) ast.Pop();
+                    var constant = (Constant) ast.Pop();
                     var columnType = expression.Method.GetGenericArguments()[0];
                     var columnName = (string) constant.Value;
 
@@ -143,11 +143,11 @@ namespace HybridDb.Linq.Parsers
                 for (var i = 0; i < expression.Expressions.Count; i++)
                 {
                     Visit(expression.Expressions[i]);
-                    items[i] = ((SqlConstantExpression) ast.Pop()).Value;
+                    items[i] = ((Constant) ast.Pop()).Value;
                 }
             }
 
-            ast.Push(new SqlConstantExpression(typeof(object[]), items));
+            ast.Push(new Constant(typeof(object[]), items));
 
             return expression;
         }
@@ -156,7 +156,7 @@ namespace HybridDb.Linq.Parsers
         {
             if (expression.Expression == null)
             {
-                ast.Push(new SqlConstantExpression(expression.Member.GetMemberType(), expression.Member.GetValue(null)));
+                ast.Push(new Constant(expression.Member.GetMemberType(), expression.Member.GetValue(null)));
                 return expression;
             }
 
@@ -165,11 +165,11 @@ namespace HybridDb.Linq.Parsers
             switch (ast.Peek().NodeType)
             {
                 case SqlNodeType.Constant:
-                    var constant = (SqlConstantExpression) ast.Pop();
+                    var constant = (Constant) ast.Pop();
                     if (constant.Value == null)
                         throw new NullReferenceException();
 
-                    ast.Push(new SqlConstantExpression(expression.Member.GetMemberType(), expression.Member.GetValue(constant.Value)));
+                    ast.Push(new Constant(expression.Member.GetMemberType(), expression.Member.GetValue(constant.Value)));
                     break;
                 case SqlNodeType.ColumnPrefix:
                     //TODO: clean up this mess. 

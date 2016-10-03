@@ -13,11 +13,6 @@ namespace HybridDb.Linq.Ast
             this.columnName = columnName;
         }
             
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.Column; }
-        }
-
         public string ColumnName
         {
             get { return columnName; }

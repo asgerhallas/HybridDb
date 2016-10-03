@@ -49,7 +49,7 @@ namespace HybridDb.Linq
             return new SqlBinaryExpression(expression.NodeType, Visit(expression.Left), Visit(expression.Right));
         }
 
-        protected virtual SqlExpression Visit(SqlConstantExpression expression)
+        protected virtual SqlExpression Visit(Constant expression)
         {
             return expression;
         }

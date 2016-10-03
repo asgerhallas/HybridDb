@@ -10,10 +10,5 @@ namespace HybridDb.Linq.Ast
         }
 
         public IEnumerable<SqlProjectionExpression> Projections { get; private set; }
-
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.Select; }
-        }
     }
 }

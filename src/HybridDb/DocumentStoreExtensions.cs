@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Linq2;
+using HybridDb.Linq2.Ast;
 
 namespace HybridDb
 {
@@ -31,6 +33,11 @@ namespace HybridDb
             int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             return store.Query<IDictionary<string, object>>(table, out stats, @select, @where, skip, take, @orderby, parameters);
+        }
+
+        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, SelectStatement select, out QueryStats stats)
+        {
+            return store.Query<IDictionary<string, object>>(@select, out stats);
         }
     }
 }

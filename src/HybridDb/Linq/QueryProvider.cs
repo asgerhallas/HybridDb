@@ -56,7 +56,7 @@ namespace HybridDb.Linq
 
             switch (result.Translation.ExecutionMethod)
             {
-                case Translation.ExecutionSemantics.Single:
+                case SqlSelectStatement.ExecutionSemantics.Single:
                     if (lastQueryStats.TotalResults > 1)
                         throw new InvalidOperationException("Query returned more than one element");
 
@@ -64,7 +64,7 @@ namespace HybridDb.Linq
                         throw new InvalidOperationException("Query returned no elements");
 
                     return result.Results.Single();
-                case Translation.ExecutionSemantics.SingleOrDefault:
+                case SqlSelectStatement.ExecutionSemantics.SingleOrDefault:
                     if (lastQueryStats.TotalResults > 1)
                         throw new InvalidOperationException("Query returned more than one element");
 
@@ -72,12 +72,12 @@ namespace HybridDb.Linq
                         return default(T);
 
                     return result.Results.Single();
-                case Translation.ExecutionSemantics.First:
+                case SqlSelectStatement.ExecutionSemantics.First:
                     if (lastQueryStats.TotalResults < 1)
                         throw new InvalidOperationException("Query returned no elements");
 
                     return result.Results.First();
-                case Translation.ExecutionSemantics.FirstOrDefault:
+                case SqlSelectStatement.ExecutionSemantics.FirstOrDefault:
                     if (lastQueryStats.TotalResults < 1)
                         return default(T);
 
@@ -145,13 +145,13 @@ namespace HybridDb.Linq
 
         class TranslationAndResult<T>
         {
-            public TranslationAndResult(Translation translation, IEnumerable<T> results)
+            public TranslationAndResult(SqlSelectStatement translation, IEnumerable<T> results)
             {
                 Translation = translation;
                 Results = results;
             }
 
-            public Translation Translation { get; private set; }
+            public SqlSelectStatement Translation { get; private set; }
             public IEnumerable<T> Results { get; private set; }
         }
     }

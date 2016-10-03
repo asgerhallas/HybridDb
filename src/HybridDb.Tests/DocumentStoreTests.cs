@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Linq2;
+using HybridDb.Linq2.Ast;
 using Shouldly;
 using Xunit;
+using Column = HybridDb.Config.Column;
 
 namespace HybridDb.Tests
 {
@@ -49,17 +52,6 @@ namespace HybridDb.Tests
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
             ((string) row.Field).ShouldBe("Asger");
-        }
-
-        [Fact(Skip = "We will maybe not support this in the future. Just get the table from QuerySchema and use that, when it can return DocumentTable and not just Table.")]
-        public void CanInsertNullsDynamically()
-        {
-            Document<Entity>().With(x => x.Field);
-
-            store.Insert(new DynamicDocumentTable("Entities"), NewId(), new Dictionary<string, object> {{"Field", null}});
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string) row.Field).ShouldBe(null);
         }
 
         [Fact(Skip = "This will fail on first insert now, but we might want to check it at configuration time, but only if other stores do not support either.")]
@@ -125,25 +117,6 @@ namespace HybridDb.Tests
             ((string) row.Field).ShouldBe("Lars");
         }
 
-        [Fact(Skip ="We will maybe not support this in the future. Just get the table from QuerySchema and use that, when it can return DocumentTable and not just Table.")]
-        public void CanUpdateDynamically()
-        {
-            Document<Entity>().With(x => x.Field).With(x => x.Property);
-            
-            var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new {Field = "Asger"});
-
-            // Maybe it should not be required to be a DocumentTable. If we do that everything should part of the projection. 
-            // If we do not do that, why do we have document as part of the projection? Either or.
-            store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "Property", "Lars" } });
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid) row.Etag).ShouldNotBe(etag);
-            ((string) row.Field).ShouldBe(null);
-            ((string) row.Property).ShouldBe("Lars");
-        }
-
         [Fact]
         public void CanUpdatePessimistically()
         {
@@ -157,7 +130,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void UpdateFailsWhenEtagNotMatch()
+        public void UpdateFailsWhenEtagDoesNotMatch()
         {
             Document<Entity>().With(x => x.Field);
                         
@@ -215,21 +188,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryProjectToNestedProperty()
-        {
-            Document<Entity>().With(x => x.TheChild.NestedDouble);
-            
-            var id1 = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
-
-            QueryStats stats;
-            var rows = store.Query<ProjectionWithNestedProperty>(table.Table, out stats).ToList();
-
-            rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
-        }
-
-        [Fact]
         public void CanQueryAndReturnFullDocuments()
         {
             Document<Entity>().With(x => x.Field);
@@ -243,9 +201,17 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
 
             QueryStats stats;
-            var rows = store.Query(table.Table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
 
-            rows.Count().ShouldBe(2);
+            var rows = store.Query(
+                new SelectStatement(
+                new From(table.Table.Name), 
+                new Where(new Comparison(
+                    ComparisonOperator.NotEqual, 
+                    new ColumnIdentifier("Field"), 
+                    new Constant("Bjarne")))), 
+                out stats).ToList();
+
+            rows.Count.ShouldBe(2);
             var first = rows.Single(x => (string)x[table.Table.IdColumn] == id1);
             first[table.Table.EtagColumn].ShouldBe(etag1);
             first[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -256,6 +222,23 @@ namespace HybridDb.Tests
             second[table.Table.EtagColumn].ShouldBe(etag2);
             second[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
             second[table.Table["Field"]].ShouldBe("Hans");
+        }
+
+        [Fact]
+        public void CanQueryProjectToNestedProperty()
+        {
+            Document<Entity>().With(x => x.TheChild.NestedDouble);
+            
+            var id1 = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
+
+            QueryStats stats;
+            var rows = store.Query<ProjectionWithNestedProperty>(table.Table, out stats).ToList();
+
+            rows = store.Query<ProjectionWithNestedProperty>(new SelectStatement(new From(table.Table.Name)), out stats).ToList();
+
+            rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
         }
 
         [Fact]
@@ -421,12 +404,12 @@ namespace HybridDb.Tests
                 commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
             }
 
-            store.Execute(commands.ToArray());
+            store.Execute(commands);
             (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
         }
 
         [Fact]
-        public void CanStoreAndQueryEnumProjection()
+        public void CanStoreAndGetEnumProjection()
         {
             Document<Entity>().With(x => x.EnumProp);
             

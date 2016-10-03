@@ -7,7 +7,7 @@ namespace HybridDb.Linq.Parsers
 {
     public class QueryTranslator
     {
-        public Translation Translate(Expression expression)
+        public SqlSelectStatement Translate(Expression expression)
         {
             var queryVisitor = new QueryParser();
             
@@ -28,7 +28,7 @@ namespace HybridDb.Linq.Parsers
             if (queryVisitor.OrderBy != null)
                 new SqlCodeGenerator(orderBySql, parameters).Visit(queryVisitor.OrderBy);
 
-            return new Translation
+            return new SqlSelectStatement
             {
                 Select = selectSql.ToString(),
                 Where = whereSql.ToString(),

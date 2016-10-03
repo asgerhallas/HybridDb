@@ -14,10 +14,5 @@ namespace HybridDb.Linq.Ast
         {
             get { return predicate; }
         }
-
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.Where; }
-        }
     }
 }

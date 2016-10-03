@@ -11,7 +11,7 @@ namespace HybridDb.Linq.Parsers
         public SqlExpression Select { get; private set; }
         public SqlExpression Where { get; private set; }
         public SqlOrderByExpression OrderBy { get; private set; }
-        public Translation.ExecutionSemantics Execution { get; set; }
+        public SqlSelectStatement.ExecutionSemantics Execution { get; set; }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
@@ -23,16 +23,16 @@ namespace HybridDb.Linq.Parsers
                     Select = SelectParser.Translate(expression.Arguments[1]);
                     break;
                 case "SingleOrDefault":
-                    Execution = Translation.ExecutionSemantics.SingleOrDefault;
+                    Execution = SqlSelectStatement.ExecutionSemantics.SingleOrDefault;
                     goto Take1;
                 case "Single":
-                    Execution = Translation.ExecutionSemantics.Single;
+                    Execution = SqlSelectStatement.ExecutionSemantics.Single;
                     goto Take1;
                 case "FirstOrDefault":
-                    Execution = Translation.ExecutionSemantics.FirstOrDefault;
+                    Execution = SqlSelectStatement.ExecutionSemantics.FirstOrDefault;
                     goto Take1;
                 case "First":
-                    Execution = Translation.ExecutionSemantics.First;
+                    Execution = SqlSelectStatement.ExecutionSemantics.First;
                     goto Take1;
                 case "Take1":
                     Take1:

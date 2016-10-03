@@ -56,12 +56,15 @@
     <Reference Include="Serilog.FullNetFx">
       <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.FullNetFx.dll</HintPath>
     </Reference>
+    <Reference Include="ShinySwitch, Version=1.0.14.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ShinySwitch.1.0.14\lib\net35\ShinySwitch.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.Composition.Registration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Reflection.Context" />
-    <Reference Include="System.Runtime" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -75,6 +78,7 @@
     </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="DocumentStoreBackupDecorator.cs" />
     <Compile Include="Config\AssemblyQualifiedNameTypeMapper.cs" />
     <Compile Include="Config\DisableNullCheckInjection.cs" />
     <Compile Include="Config\DynamicDocumentTable.cs" />
@@ -90,6 +94,21 @@
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
     <Compile Include="IHybridDbExtension.cs" />
+    <Compile Include="InMemoryDocumentStore.cs" />
+    <Compile Include="Linq2\Ast\AstNode.cs" />
+    <Compile Include="Linq2\Ast\Clause.cs" />
+    <Compile Include="Linq2\Ast\ColumnIdentifier.cs" />
+    <Compile Include="Linq2\Ast\Comparison.cs" />
+    <Compile Include="Linq2\Ast\ComparisonOperator.cs" />
+    <Compile Include="Linq2\EmitHelper.cs" />
+    <Compile Include="Linq2\Ast\Expression.cs" />
+    <Compile Include="Linq2\Ast\From.cs" />
+    <Compile Include="Linq2\Ast\Predicate.cs" />
+    <Compile Include="Linq2\Ast\Projection.cs" />
+    <Compile Include="Linq2\Ast\Select.cs" />
+    <Compile Include="Linq2\Ast\SelectStatement.cs" />
+    <Compile Include="Linq2\SqlStatementEmitter.cs" />
+    <Compile Include="Linq2\Ast\Where.cs" />
     <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\ChangeDocument.cs" />
     <Compile Include="Migrations\Commands\ChangeColumnType.cs" />
@@ -125,12 +144,11 @@
     <Compile Include="Linq\Parsers\OrderByVisitor.cs" />
     <Compile Include="Linq\Parsers\ImplicitBooleanPredicatePropagator.cs" />
     <Compile Include="Linq\Parsers\QueryParser.cs" />
-    <Compile Include="Linq\Ast\PredicateExpression.cs" />
     <Compile Include="Linq\Parsers\QueryTranslator.cs" />
     <Compile Include="Linq\Parsers\SelectParser.cs" />
     <Compile Include="Linq\Ast\SqlBinaryExpression.cs" />
     <Compile Include="Linq\Ast\SqlColumnExpression.cs" />
-    <Compile Include="Linq\Ast\SqlConstantExpression.cs" />
+    <Compile Include="Linq\Ast\Constant.cs" />
     <Compile Include="Linq\Ast\SqlExpression.cs" />
     <Compile Include="Linq\SqlCodeGenerator.cs" />
     <Compile Include="Linq\SqlExpressionVisitor.cs" />
@@ -145,7 +163,7 @@
     <Compile Include="Linq\Query.cs" />
     <Compile Include="Linq\QueryableEx.cs" />
     <Compile Include="Linq\QueryProvider.cs" />
-    <Compile Include="Linq\Translation.cs" />
+    <Compile Include="Linq\SqlSelectStatement.cs" />
     <Compile Include="ManagedConnection.cs" />
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migrations\SchemaMigrationCommand.cs" />
@@ -199,7 +217,9 @@
     <None Include="Migrations\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Linq2\Parsers\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

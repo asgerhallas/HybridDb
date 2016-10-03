@@ -133,7 +133,7 @@ namespace HybridDb.Linq
             return string.Format("{0} AS {1}", expression.From.ColumnName, expression.To);
         }
 
-        protected override SqlExpression Visit(SqlConstantExpression expression)
+        protected override SqlExpression Visit(Constant expression)
         {
             sql.Append(FormatConstant(expression.Value));
             return expression;

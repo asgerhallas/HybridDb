@@ -10,10 +10,5 @@ namespace HybridDb.Linq.Ast
         }
 
         public IEnumerable<SqlOrderingExpression> Columns { get; private set; }
-
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.OrderBy; }
-        }
     }
 }

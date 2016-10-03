@@ -8,10 +8,5 @@
         }
 
         public string Prefix { get; private set; }
-
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.ColumnPrefix; }
-        }
     }
 }

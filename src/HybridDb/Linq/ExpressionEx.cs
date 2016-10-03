@@ -12,7 +12,7 @@ namespace HybridDb.Linq
 
             if (expression.NodeType == ExpressionType.MemberAccess)
             {
-                var memberExpression = ((MemberExpression)expression);
+                var memberExpression = (MemberExpression)expression;
                 var name = memberExpression.Expression.GetMemberExpressionInfo();
                 if (name == null)
                     return null;
