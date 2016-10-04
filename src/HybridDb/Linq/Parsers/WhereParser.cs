@@ -4,31 +4,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
+using HybridDb.Linq2.Ast;
+using ShinySwitch;
 
 namespace HybridDb.Linq.Parsers
 {
     internal class WhereParser : LambdaParser
     {
-        public WhereParser(Stack<SqlExpression> ast) : base(ast) { }
+        public WhereParser(Stack<AstNode> ast) : base(ast) { }
 
-        public SqlExpression Result
-        {
-            get { return ast.Peek(); }
-        }
+        public AstNode Result => ast.Peek();
 
-        public static SqlExpression Translate(Expression expression)
+        public static Where Translate(Expression expression)
         {
-            var ast = new Stack<SqlExpression>();
+            var ast = new Stack<AstNode>();
             new WhereParser(ast).Visit(expression);
 
             if (ast.Count == 0)
                 return null;
 
-            var sqlExpression = ast.Pop();
-            sqlExpression = new ImplicitBooleanPredicatePropagator().Visit(sqlExpression);
-            sqlExpression = new NullCheckPropagator().Visit(sqlExpression);
+            var sqlExpression = (Predicate)ast.Pop();
+            //TODO:
+            //sqlExpression = new ImplicitBooleanPredicatePropagator().Visit(sqlExpression);
+            //sqlExpression = new NullCheckPropagator().Visit(sqlExpression);
 
-            return sqlExpression;
+            return new Where(sqlExpression);
         }
 
         protected override Expression VisitBinary(BinaryExpression expression)
@@ -36,47 +36,19 @@ namespace HybridDb.Linq.Parsers
             Visit(expression.Left);
             Visit(expression.Right);
             
-            var right = ast.Pop();
-            var left = ast.Pop();
+            var right = (SqlExpression)ast.Pop();
+            var left = (SqlExpression)ast.Pop();
 
-            SqlNodeType nodeType;
-            switch (expression.NodeType)
-            {
-                case ExpressionType.And:
-                    nodeType = SqlNodeType.BitwiseAnd;
-                    break;
-                case ExpressionType.AndAlso:
-                    nodeType = SqlNodeType.And;
-                    break;
-                case ExpressionType.Or:
-                    nodeType = SqlNodeType.BitwiseOr;
-                    break;
-                case ExpressionType.OrElse:
-                    nodeType = SqlNodeType.Or;
-                    break;
-                case ExpressionType.LessThan:
-                    nodeType = SqlNodeType.LessThan;
-                    break;
-                case ExpressionType.LessThanOrEqual:
-                    nodeType = SqlNodeType.LessThanOrEqual;
-                    break;
-                case ExpressionType.GreaterThan:
-                    nodeType = SqlNodeType.GreaterThan;
-                    break;
-                case ExpressionType.GreaterThanOrEqual:
-                    nodeType = SqlNodeType.GreaterThanOrEqual;
-                    break;
-                case ExpressionType.Equal:
-                    nodeType = SqlNodeType.Equal;
-                    break;
-                case ExpressionType.NotEqual:
-                    nodeType = SqlNodeType.NotEqual;
-                    break;
-                default:
-                    throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", expression.NodeType));
-            }
-
-            ast.Push(new SqlBinaryExpression(nodeType, left, right));
+            ast.Push(Switch<SqlExpression>.On(expression.NodeType)
+                .Match(ExpressionType.AndAlso, x => new Logical(LogicalOperator.And, (Predicate) left, (Predicate) right))
+                .Match(ExpressionType.OrElse, x => new Logical(LogicalOperator.Or, (Predicate) left, (Predicate) right))
+                .Match(ExpressionType.LessThan, x => new Comparison(ComparisonOperator.LessThan, left, right))
+                .Match(ExpressionType.LessThanOrEqual, x => new Comparison(ComparisonOperator.LessThenOrEqualTo, left, right))
+                .Match(ExpressionType.GreaterThan, x => new Comparison(ComparisonOperator.GreaterThan, left, right))
+                .Match(ExpressionType.GreaterThanOrEqual, x => new Comparison(ComparisonOperator.GreaterThanOrEqualTo, left, right))
+                .Match(ExpressionType.Equal, x => new Comparison(ComparisonOperator.Equal, left, right))
+                .Match(ExpressionType.NotEqual, x => new Comparison(ComparisonOperator.NotEqual, left, right))
+                .OrThrow(new NotSupportedException($"The binary operator '{expression.NodeType}' is not supported")));
 
             return expression;
         }
@@ -87,7 +59,7 @@ namespace HybridDb.Linq.Parsers
             {
                 case ExpressionType.Not:
                     Visit(expression.Operand);
-                    ast.Push(new SqlNotExpression(ast.Pop()));
+                    ast.Push(new Not((SqlExpression)ast.Pop()));
                     break;
                 case ExpressionType.Quote:
                 case ExpressionType.Convert:
@@ -95,7 +67,7 @@ namespace HybridDb.Linq.Parsers
                     Visit(expression.Operand);
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The unary operator '{0}' is not supported", expression.NodeType));
+                    throw new NotSupportedException($"The unary operator '{expression.NodeType}' is not supported");
             }
 
             return expression;
@@ -106,10 +78,10 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "StartsWith":
-                    ast.Push(new SqlBinaryExpression(SqlNodeType.LikeStartsWith, ast.Pop(), ast.Pop()));
+                    ast.Push(new Like((SqlExpression) ast.Pop(), $"%{((Constant) ast.Pop()).Value}"));
                     break;
                 case "Contains":
-                    ast.Push(new SqlBinaryExpression(SqlNodeType.LikeContains, ast.Pop(), ast.Pop()));
+                    ast.Push(new Like((SqlExpression)ast.Pop(), $"%{((Constant) ast.Pop()).Value}%"));
                     break;
                 case "In":
                     var column = ast.Pop();
@@ -117,7 +89,10 @@ namespace HybridDb.Linq.Parsers
                     var set = (Constant)sqlExpression;
                     if (((IEnumerable) set.Value).Cast<object>().Any())
                     {
-                        ast.Push(new SqlBinaryExpression(SqlNodeType.In, column, set));
+                        var sqlExpressions = ((IEnumerable<object>)set.Value).Select(x => new Constant(x.GetType(), x)).ToArray();
+                        
+                        // ReSharper disable once CoVariantArrayConversion
+                        ast.Push(new In((SqlExpression) column, sqlExpressions));
                     }
                     else
                     {

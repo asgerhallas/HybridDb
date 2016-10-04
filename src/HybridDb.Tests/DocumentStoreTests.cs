@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Linq.Ast;
 using HybridDb.Linq2;
 using HybridDb.Linq2.Ast;
 using Shouldly;
@@ -204,11 +205,12 @@ namespace HybridDb.Tests
 
             var rows = store.Query(
                 new SelectStatement(
+                new Select(),
                 new From(table.Table.Name), 
                 new Where(new Comparison(
                     ComparisonOperator.NotEqual, 
-                    new ColumnIdentifier("Field"), 
-                    new Constant("Bjarne")))), 
+                    new ColumnIdentifier(typeof(string), "Field"), 
+                    new Constant(typeof(string), "Bjarne")))), 
                 out stats).ToList();
 
             rows.Count.ShouldBe(2);

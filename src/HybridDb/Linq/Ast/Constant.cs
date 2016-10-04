@@ -3,7 +3,7 @@ using HybridDb.Linq2.Ast;
 
 namespace HybridDb.Linq.Ast
 {
-    public class Constant : Expression
+    public class Constant : SqlExpression
     {
         public Constant(Type type, object value)
         {

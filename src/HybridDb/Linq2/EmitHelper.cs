@@ -4,7 +4,7 @@ namespace HybridDb.Linq2
 {
     public static class EmitHelper
     {
-        public static SqlStatementEmitter.Result Emit(this SqlStatementEmitter.Result result, Expression expression)
+        public static SqlStatementEmitter.Result Emit(this SqlStatementEmitter.Result result, SqlExpression expression)
         {
             return SqlStatementEmitter.Emit(result, expression);
         }

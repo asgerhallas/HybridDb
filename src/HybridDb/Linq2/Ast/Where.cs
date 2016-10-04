@@ -1,6 +1,6 @@
 namespace HybridDb.Linq2.Ast
 {
-    public class Where : Clause
+    public class Where : SqlClause
     {
         public Where(Predicate predicate)
         {

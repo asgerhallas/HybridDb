@@ -1,5 +1,6 @@
 ﻿namespace HybridDb.Linq.Ast
 {
+    //TODO:delete
     public enum SqlNodeType
     {
         Query,

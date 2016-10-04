@@ -6,6 +6,7 @@ using HybridDb.Linq;
 using HybridDb.Linq.Ast;
 using HybridDb.Linq2.Ast;
 using ShinySwitch;
+using SqlExpression = HybridDb.Linq2.Ast.SqlExpression;
 
 namespace HybridDb.Linq2
 {
@@ -36,21 +37,23 @@ namespace HybridDb.Linq2
             return Emit(new Result(), @where.Predicate);
         }
 
-        public static Result Emit(Result result, Expression expression)
+        public static Result Emit(Result result, SqlExpression expression)
         {
             var emit = Switch<Result>.On(expression)
-                .Match<ColumnIdentifier>(x => result.Append(x.Name))
-                .Match<Constant>(x => EmitConstant(result, x.Value))
+                .Match<ColumnIdentifier>(x => result.Append(x.ColumnName))
+                .Match<Constant>(x => result.Append(EmitConstant(result, x.Value)))
                 .Match<Comparison>(x => result
+                    .Append("(")
                     .Emit(x.Left)
                     .Append(Switch<string>.On(x.Operator)
-                        .Match(ComparisonOperator.Equal, "=")
-                        .Match(ComparisonOperator.NotEqual, "<>")
-                        .Match(ComparisonOperator.GreaterThan, "=")
-                        .Match(ComparisonOperator.GreaterThanOrEqualTo, "=")
-                        .Match(ComparisonOperator.LessThan, "=")
-                        .Match(ComparisonOperator.LessThenOrEqualTo, "="))
-                    .Emit(x.Right))
+                        .Match(ComparisonOperator.Equal, " = ")
+                        .Match(ComparisonOperator.NotEqual, " <> ")
+                        .Match(ComparisonOperator.GreaterThan, " > ")
+                        .Match(ComparisonOperator.GreaterThanOrEqualTo, " >= ")
+                        .Match(ComparisonOperator.LessThan, " < ")
+                        .Match(ComparisonOperator.LessThenOrEqualTo, " <= "))
+                    .Emit(x.Right)
+                    .Append(")"))
                 .OrThrow(new ArgumentException($"Unknown expresion type '{expression}'."));
             return emit;
         }
@@ -66,7 +69,7 @@ namespace HybridDb.Linq2
                     return listOfValues.Count != 0
                         ? listOfValues.Aggregate((Result) null,
                             (acc, next) => acc == null
-                                ? result.Append(EmitConstant(result, next))
+                                ? EmitConstant(result, next)
                                 : acc.Append(", ").Append(EmitConstant(acc, next)))
                         : new Result("NULL");
                 })

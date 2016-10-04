@@ -1,12 +1,16 @@
+using System;
+
 namespace HybridDb.Linq2.Ast
 {
-    public class ColumnIdentifier : Expression
+    public class ColumnIdentifier : SqlExpression
     {
-        public ColumnIdentifier(string name)
+        public ColumnIdentifier(Type type, string columnName)
         {
-            Name = name;
+            Type = type;
+            ColumnName = columnName;
         }
 
-        public string Name { get; }
+        public Type Type { get; }
+        public string ColumnName { get; }
     }
 }

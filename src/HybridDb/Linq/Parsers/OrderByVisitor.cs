@@ -1,18 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Linq.Expressions;
-using HybridDb.Linq.Ast;
+using HybridDb.Linq2.Ast;
 
 namespace HybridDb.Linq.Parsers
 {
     internal class OrderByVisitor : LambdaParser
     {
-        public OrderByVisitor(Stack<SqlExpression> ast) : base(ast) {}
+        public OrderByVisitor(Stack<AstNode> ast) : base(ast) {}
 
-        public static SqlColumnExpression Translate(Expression expression)
+        public static ColumnIdentifier Translate(Expression expression)
         {
-            var ast = new Stack<SqlExpression>();
+            var ast = new Stack<AstNode>();
             new OrderByVisitor(ast).Visit(expression);
-            return (SqlColumnExpression) ast.Pop();
+            return (ColumnIdentifier) ast.Pop();
         }
     }
 }

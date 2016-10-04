@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Parsers;
+using HybridDb.Linq2;
 
 namespace HybridDb.Linq
 {
@@ -40,7 +41,12 @@ namespace HybridDb.Linq
 
         internal static SqlSelectStatement Translate(this Expression expression)
         {
-            return new QueryTranslator().Translate(expression);
+            var parser = new QueryParser();
+            parser.Visit(expression);
+            var selectStatement = parser.Result;
+
+            var emitter = new SqlStatementEmitter();
+            return emitter.Emit(selectStatement);
         }
     }
 }

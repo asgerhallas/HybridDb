@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
+using HybridDb.Linq2.Ast;
+using ShinySwitch;
 
 namespace HybridDb.Linq.Parsers
 {
     public class LambdaParser : ExpressionVisitor
     {
-        protected readonly Stack<SqlExpression> ast;
+        protected readonly Stack<AstNode> ast;
 
-        public LambdaParser(Stack<SqlExpression> ast)
+        public LambdaParser(Stack<AstNode> ast)
         {
             this.ast = ast;
         }
@@ -30,14 +32,14 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitConstant(ConstantExpression expression)
         {
-            var type = expression.Value != null ? expression.Value.GetType() : typeof(object);
+            var type = expression.Value?.GetType() ?? typeof(object);
             ast.Push(new Constant(type, expression.Value));
             return expression;
         }
 
         protected override Expression VisitParameter(ParameterExpression expression)
         {
-            ast.Push(new SqlColumnExpression(expression.Type, ""));
+            ast.Push(new ColumnIdentifier(typeof(object), ""));
             return expression;
         }
 
@@ -54,17 +56,10 @@ namespace HybridDb.Linq.Parsers
                 Visit(expression.Object);
             }
 
-            switch (ast.Peek().NodeType)
-            {
-                case SqlNodeType.Constant:
-                    VisitConstantMethodCall(expression);
-                    break;
-                case SqlNodeType.Column:
-                    VisitColumnMethodCall(expression);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            Switch.On(ast.Peek())
+                .Match<Constant>(_ => VisitConstantMethodCall(expression))
+                .Match<ColumnIdentifier>(_ => VisitColumnMethodCall(expression))
+                .OrThrow(new ArgumentOutOfRangeException());
 
             return expression;
         }
@@ -96,38 +91,37 @@ namespace HybridDb.Linq.Parsers
             {
                 case "Column":
                 {
-                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+                    var column = ast.Pop() as ColumnIdentifier; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
-                        throw new NotSupportedException(
-                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                        throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
 
                     var constant = (Constant) ast.Pop();
                     var columnType = expression.Method.GetGenericArguments()[0];
                     var columnName = (string) constant.Value;
 
-                    ast.Push(new SqlColumnExpression(columnType, columnName));
+                    ast.Push(new ColumnIdentifier(columnType, columnName));
                     break;
                 }
                 case "Index":
                 {
-                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+                    var column = ast.Pop() as ColumnIdentifier; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
-                        throw new NotSupportedException(
-                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                        throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
 
                     var type = expression.Method.GetGenericArguments()[0];
 
-                    ast.Push(new SqlColumnPrefixExpression(type.Name));
+                    //TODO:
+                    //ast.Push(new SqlColumnPrefixExpression(type.Name));
                     break;
                 }
                 default:
                     ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
-                    ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
+                    ast.Push(new ColumnIdentifier(expression.Method.ReturnType, name));
                     break;
             }
         }
@@ -162,28 +156,30 @@ namespace HybridDb.Linq.Parsers
 
             Visit(expression.Expression);
 
-            switch (ast.Peek().NodeType)
-            {
-                case SqlNodeType.Constant:
+            Switch.On(ast.Peek())
+                .Match<Constant>(x =>
+                {
                     var constant = (Constant) ast.Pop();
                     if (constant.Value == null)
                         throw new NullReferenceException();
 
                     ast.Push(new Constant(expression.Member.GetMemberType(), expression.Member.GetValue(constant.Value)));
-                    break;
-                case SqlNodeType.ColumnPrefix:
-                    //TODO: clean up this mess. 
-                    var prefix = (SqlColumnPrefixExpression)ast.Pop();
-                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), expression.Member.Name));
-                    break;
-                case SqlNodeType.Column:
+                })
+                .Match<ColumnIdentifier>(x =>
+                {
                     ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
-                    ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+                    ast.Push(new ColumnIdentifier(expression.Member.GetMemberType(), name));
+                })
+                .OrThrow(new ArgumentOutOfRangeException());
+
+            //TODO:
+            //    case SqlNodeType.ColumnPrefix:
+            //        //TODO: clean up this mess. 
+            //        var prefix = (SqlColumnPrefixExpression)ast.Pop();
+            //ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), expression.Member.Name));
+            //break;
+            
 
             return expression;
         }

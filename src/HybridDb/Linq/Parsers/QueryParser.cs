@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
+using HybridDb.Linq2.Ast;
 
 namespace HybridDb.Linq.Parsers
 {
@@ -8,10 +9,12 @@ namespace HybridDb.Linq.Parsers
     {
         public int Skip { get; private set; }
         public int Take { get; private set; }
-        public SqlExpression Select { get; private set; }
-        public SqlExpression Where { get; private set; }
-        public SqlOrderByExpression OrderBy { get; private set; }
+        public Select Select { get; private set; }
+        public Where Where { get; private set; }
+        public OrderBy OrderBy { get; private set; }
         public SqlSelectStatement.ExecutionSemantics Execution { get; set; }
+
+        public SelectStatement Result => new SelectStatement(Select, new From("test"), Where);
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
@@ -46,8 +49,9 @@ namespace HybridDb.Linq.Parsers
                         break;
 
                     Where = Where != null
-                                ? new SqlBinaryExpression(SqlNodeType.And, Where, whereExpression)
-                                : whereExpression;
+                        ? new Where(new Logical(LogicalOperator.And, Where.Predicate, whereExpression.Predicate))
+                        : whereExpression;
+
                     break;
                 case "Skip":
                     Skip = (int) ((ConstantExpression) expression.Arguments[1]).Value;
@@ -63,14 +67,14 @@ namespace HybridDb.Linq.Parsers
                 case "OrderByDescending":
                 case "ThenByDescending":
                     var direction = expression.Method.Name.Contains("Descending")
-                                        ? SqlOrderingExpression.Directions.Descending
-                                        : SqlOrderingExpression.Directions.Ascending;
+                                        ? OrderByExpression.Directions.Descending
+                                        : OrderByExpression.Directions.Ascending;
 
                     var orderByColumnExpression = OrderByVisitor.Translate(expression.Arguments[1]);
-                    var orderingExpression = new SqlOrderingExpression(direction, orderByColumnExpression);
+                    var orderingExpression = new OrderByExpression(orderByColumnExpression, direction);
                     OrderBy = OrderBy != null
-                                  ? new SqlOrderByExpression(OrderBy.Columns.Concat(orderingExpression))
-                                  : new SqlOrderByExpression(orderingExpression.AsEnumerable());
+                                  ? new OrderBy(OrderBy.Columns.Concat(orderingExpression))
+                                  : new OrderBy(orderingExpression.AsEnumerable());
                     break;
                 default:
                     throw new NotSupportedException(string.Format("The method {0} is not supported", expression.Method.Name));

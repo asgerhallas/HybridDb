@@ -2,7 +2,7 @@ namespace HybridDb.Linq2.Ast
 {
     public class Comparison : Predicate
     {
-        public Comparison(ComparisonOperator @operator, Expression left, Expression right)
+        public Comparison(ComparisonOperator @operator, SqlExpression left, SqlExpression right)
         {
             Operator = @operator;
             Left = left;
@@ -10,7 +10,7 @@ namespace HybridDb.Linq2.Ast
         }
 
         public ComparisonOperator Operator { get; }
-        public Expression Left { get; }
-        public Expression Right { get; }
+        public SqlExpression Left { get; }
+        public SqlExpression Right { get; }
     }
 }

@@ -1,6 +1,6 @@
 namespace HybridDb.Linq2.Ast
 {
-    public abstract class Expression : AstNode
+    public abstract class SqlExpression : AstNode
     {
         
     }

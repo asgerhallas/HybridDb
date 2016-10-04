@@ -1,6 +1,6 @@
 namespace HybridDb.Linq2.Ast
 {
-    public class From : Clause
+    public class From : SqlClause
     {
         public From(string table)
         {
