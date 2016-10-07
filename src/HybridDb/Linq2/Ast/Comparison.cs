@@ -1,6 +1,6 @@
 namespace HybridDb.Linq2.Ast
 {
-    public class Comparison : Predicate
+    public class Comparison : Predicate, IBinaryOperator
     {
         public Comparison(ComparisonOperator @operator, SqlExpression left, SqlExpression right)
         {

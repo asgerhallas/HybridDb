@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using HybridDb.Config;
 using HybridDb.Linq.Parsers;
 using HybridDb.Linq2;
 
@@ -32,21 +33,6 @@ namespace HybridDb.Linq
         public static T Index<T>(this object parameter)
         {
             throw new NotSupportedException("Only for building LINQ expressions");
-        }
-        
-        internal static SqlSelectStatement Translate(this IQueryable query)
-        {
-            return Translate(query.Expression);
-        }
-
-        internal static SqlSelectStatement Translate(this Expression expression)
-        {
-            var parser = new QueryParser();
-            parser.Visit(expression);
-            var selectStatement = parser.Result;
-
-            var emitter = new SqlStatementEmitter();
-            return emitter.Emit(selectStatement);
         }
     }
 }

@@ -4,6 +4,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using HybridDb.Config;
+using HybridDb.Linq.Parsers;
+using HybridDb.Linq2;
+using HybridDb.Linq2.Ast;
+using HybridDb.Linq2.Emitter;
 
 namespace HybridDb.Linq
 {
@@ -37,7 +41,7 @@ namespace HybridDb.Linq
 
             try
             {
-                return (IQueryable) Activator.CreateInstance(typeof (Query<>).MakeGenericType(elementType), new object[] {this, expression});
+                return (IQueryable) Activator.CreateInstance(typeof (Query<>).MakeGenericType(elementType), this, expression);
             }
             catch (TargetInvocationException e)
             {
@@ -47,90 +51,84 @@ namespace HybridDb.Linq
 
         public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression)
         {
-            return ExecuteQuery<TProjection>(expression).Results;
+            var parser = new QueryParser();
+            var parseResult = parser.Parse(design, expression);
+
+            return ExecuteQuery<TProjection>(parseResult.Statement);
         }
 
-        T IQueryProvider.Execute<T>(Expression expression)
+        public T Execute<T>(Expression expression)
         {
-            var result = ExecuteQuery<T>(expression);
+            var parser = new QueryParser();
+            var parseResult = parser.Parse(design, expression);
 
-            switch (result.Translation.ExecutionMethod)
+            var result = ExecuteQuery<T>(parseResult.Statement);
+
+            switch (parseResult.Execution)
             {
-                case SqlSelectStatement.ExecutionSemantics.Single:
+                case Execution.Single:
                     if (lastQueryStats.TotalResults > 1)
-                        throw new InvalidOperationException("Query returned more than one element");
+                        throw new InvalidOperationException("Query returned more than one element.");
 
                     if (lastQueryStats.TotalResults < 1)
-                        throw new InvalidOperationException("Query returned no elements");
+                        throw new InvalidOperationException("Query returned no elements.");
 
-                    return result.Results.Single();
-                case SqlSelectStatement.ExecutionSemantics.SingleOrDefault:
+                    return result.Single();
+                case Execution.SingleOrDefault:
                     if (lastQueryStats.TotalResults > 1)
-                        throw new InvalidOperationException("Query returned more than one element");
+                        throw new InvalidOperationException("Query returned more than one element.");
 
                     if (lastQueryStats.TotalResults < 1)
                         return default(T);
 
-                    return result.Results.Single();
-                case SqlSelectStatement.ExecutionSemantics.First:
+                    return result.Single();
+                case Execution.First:
                     if (lastQueryStats.TotalResults < 1)
-                        throw new InvalidOperationException("Query returned no elements");
+                        throw new InvalidOperationException("Query returned no elements.");
 
-                    return result.Results.First();
-                case SqlSelectStatement.ExecutionSemantics.FirstOrDefault:
+                    return result.First();
+                case Execution.FirstOrDefault:
                     if (lastQueryStats.TotalResults < 1)
                         return default(T);
 
-                    return result.Results.First();
+                    return result.First();
                 default:
-                    throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
+                    throw new ArgumentOutOfRangeException("Does not support execution method " + parseResult.Execution);
             }
         }
 
-        TranslationAndResult<TProjection> ExecuteQuery<TProjection>(Expression expression)
+        public IEnumerable<TProjection> ExecuteQuery<TProjection>(SelectStatement statement)
         {
-            var translation = expression.Translate();
-
             if (typeof (TProjection).IsAssignableFrom(design.DocumentType))
             {
                 QueryStats storeStats;
-                var results = store.Query(
-                    design.Table, out storeStats,
-                    translation.Select,
-                    translation.Where,
-                    translation.Skip,
-                    translation.Take,
-                    translation.OrderBy,
-                    translation.Parameters)
+                var results = store.Query(statement, out storeStats)
                     .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
                     .Where(result => result != null)
                     .Cast<TProjection>();
   
                 storeStats.CopyTo(lastQueryStats);
-                return new TranslationAndResult<TProjection>(translation, results);
+                return results;
             }
             else
             {
-                var table = design.Table;
-
                 QueryStats storeStats;
-                var results = store.Query<TProjection>(
-                    table, out storeStats,
-                    translation.Select,
-                    translation.Where,
-                    translation.Skip,
-                    translation.Take,
-                    translation.OrderBy,
-                    translation.Parameters);
+                var results = store.Query<TProjection>(statement, out storeStats);
 
                 storeStats.CopyTo(lastQueryStats);
-                return new TranslationAndResult<TProjection>(translation, results);
+                return results;
             }
         }
 
-        public string GetQueryText(IQueryable query)
+        public SqlStatementFragments GetQueryText(Expression expression)
         {
-            return query.Translate().Where;
+            var parser = new QueryParser();
+            var result = parser.Parse(design, expression);
+
+            var emitter = new SqlStatementEmitter();
+            var sql = emitter.Emit(result.Statement);
+
+            return sql;
         }
 
         internal void WriteStatisticsTo(out QueryStats stats)
@@ -141,18 +139,6 @@ namespace HybridDb.Linq
         public object Execute(Expression expression)
         {
             throw new NotSupportedException();
-        }
-
-        class TranslationAndResult<T>
-        {
-            public TranslationAndResult(SqlSelectStatement translation, IEnumerable<T> results)
-            {
-                Translation = translation;
-                Results = results;
-            }
-
-            public SqlSelectStatement Translation { get; private set; }
-            public IEnumerable<T> Results { get; private set; }
         }
     }
 }

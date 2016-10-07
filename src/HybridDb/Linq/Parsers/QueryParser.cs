@@ -1,20 +1,25 @@
 ﻿using System;
 using System.Linq.Expressions;
+using HybridDb.Config;
 using HybridDb.Linq.Ast;
 using HybridDb.Linq2.Ast;
 
 namespace HybridDb.Linq.Parsers
 {
-    internal class QueryParser : ExpressionVisitor
+    public class QueryParser : ExpressionVisitor
     {
         public int Skip { get; private set; }
         public int Take { get; private set; }
         public Select Select { get; private set; }
         public Where Where { get; private set; }
         public OrderBy OrderBy { get; private set; }
-        public SqlSelectStatement.ExecutionSemantics Execution { get; set; }
+        public Execution Execution { get; private set; }
 
-        public SelectStatement Result => new SelectStatement(Select, new From("test"), Where);
+        public Result Parse(DocumentDesign design, Expression expression)
+        {
+            Visit(expression);
+            return new Result(new SelectStatement(Select, new From(design.Table.Name), Where), Execution);
+        }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
@@ -26,16 +31,16 @@ namespace HybridDb.Linq.Parsers
                     Select = SelectParser.Translate(expression.Arguments[1]);
                     break;
                 case "SingleOrDefault":
-                    Execution = SqlSelectStatement.ExecutionSemantics.SingleOrDefault;
+                    Execution = Execution.SingleOrDefault;
                     goto Take1;
                 case "Single":
-                    Execution = SqlSelectStatement.ExecutionSemantics.Single;
+                    Execution = Execution.Single;
                     goto Take1;
                 case "FirstOrDefault":
-                    Execution = SqlSelectStatement.ExecutionSemantics.FirstOrDefault;
+                    Execution = Execution.FirstOrDefault;
                     goto Take1;
                 case "First":
-                    Execution = SqlSelectStatement.ExecutionSemantics.First;
+                    Execution = Execution.First;
                     goto Take1;
                 case "Take1":
                     Take1:
@@ -77,9 +82,22 @@ namespace HybridDb.Linq.Parsers
                                   : new OrderBy(orderingExpression.AsEnumerable());
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The method {0} is not supported", expression.Method.Name));
+                    throw new NotSupportedException($"The method {expression.Method.Name} is not supported");
             }
+
             return expression;
+        }
+
+        public class Result
+        {
+            public Result(SelectStatement statement, Execution execution)
+            {
+                Statement = statement;
+                Execution = execution;
+            }
+
+            public SelectStatement Statement { get; }
+            public Execution Execution { get; }
         }
     }
 }

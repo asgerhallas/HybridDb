@@ -14,7 +14,7 @@ namespace HybridDb.Linq
         public Query(IHybridQueryProvider provider)
         {
             if (provider == null)
-                throw new ArgumentNullException("provider");
+                throw new ArgumentNullException(nameof(provider));
             
             this.provider = provider;
             expression = Expression.Constant(this);
@@ -23,32 +23,21 @@ namespace HybridDb.Linq
         public Query(IHybridQueryProvider provider, Expression expression)
         {
             if (provider == null)
-                throw new ArgumentNullException("provider");
+                throw new ArgumentNullException(nameof(provider));
             
             if (expression == null)
-                throw new ArgumentNullException("expression");
+                throw new ArgumentNullException(nameof(expression));
             
             if (!typeof (IQueryable<T>).IsAssignableFrom(expression.Type))
-                throw new ArgumentOutOfRangeException("expression");
+                throw new ArgumentOutOfRangeException(nameof(expression));
             
             this.provider = provider;
             this.expression = expression;
         }
 
-        Expression IQueryable.Expression
-        {
-            get { return expression; }
-        }
-
-        Type IQueryable.ElementType
-        {
-            get { return typeof (T); }
-        }
-
-        IQueryProvider IQueryable.Provider
-        {
-            get { return provider; }
-        }
+        Expression IQueryable.Expression => expression;
+        Type IQueryable.ElementType => typeof (T);
+        IQueryProvider IQueryable.Provider => provider;
 
         public IEnumerator<T> GetEnumerator()
         {
@@ -62,7 +51,7 @@ namespace HybridDb.Linq
 
         public override string ToString()
         {
-            return provider.GetQueryText(this);
+            return provider.GetQueryText(((IQueryable)this).Expression).ToString();
         }
     }
 }
