@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -20,5 +21,14 @@ namespace HybridDb.Linq
         {
             yield return item;
         }
+
+        internal static IEnumerable<T> Do<T>(this IEnumerable<T> items, Action<T> @doer)
+        {
+            foreach (var item in items)
+            {
+                @doer(item);
+                yield return item;
+            }
+        } 
     }
 }

@@ -1,15 +1,15 @@
 namespace HybridDb.Linq2.Ast
 {
-    public class Comparison : Predicate, IBinaryOperator
+    public class Bitwise : SqlExpression, IBinaryOperator
     {
-        public Comparison(ComparisonOperator @operator, SqlExpression left, SqlExpression right)
+        public Bitwise(BitwiseOperator @operator, SqlExpression left, SqlExpression right)
         {
             Operator = @operator;
             Left = left;
             Right = right;
         }
 
-        public ComparisonOperator Operator { get; }
+        public BitwiseOperator Operator { get; }
         public SqlExpression Left { get; }
         public SqlExpression Right { get; }
     }

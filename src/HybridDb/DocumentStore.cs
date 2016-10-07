@@ -10,6 +10,7 @@ using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq2;
 using HybridDb.Linq2.Ast;
+using HybridDb.Linq2.Emitter;
 using HybridDb.Migrations;
 using Serilog;
 using ShinySwitch;
@@ -336,12 +337,12 @@ namespace HybridDb
                 if (projectToDictionary)
                 {
                     result = (IEnumerable<TProjection>)
-                        InternalQuery<object>(connection, sql, sqlStatement.Parameters, isWindowed, out stats)
+                        InternalQuery<object>(connection, sql, sqlStatement.ParametersByValue, isWindowed, out stats)
                             .Cast<IDictionary<string, object>>();
                 }
                 else
                 {
-                    result = InternalQuery<TProjection>(connection, sql, sqlStatement.Parameters, isWindowed, out stats);
+                    result = InternalQuery<TProjection>(connection, sql, sqlStatement.ParametersByValue, isWindowed, out stats);
                 }
 
                 stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;

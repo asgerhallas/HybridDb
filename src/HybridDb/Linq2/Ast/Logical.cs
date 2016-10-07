@@ -1,6 +1,14 @@
+using System;
+
 namespace HybridDb.Linq2.Ast
 {
-    public class Logical : Predicate
+    public interface IBinaryOperator
+    {
+        SqlExpression Left { get; }
+        SqlExpression Right { get; }
+    }
+
+    public class Logical : Predicate, IBinaryOperator
     {
         public Logical(LogicalOperator @operator, Predicate left, Predicate right)
         {
@@ -12,5 +20,8 @@ namespace HybridDb.Linq2.Ast
         public LogicalOperator Operator { get; }
         public Predicate Left { get; }
         public Predicate Right { get; }
+
+        SqlExpression IBinaryOperator.Left => Left;
+        SqlExpression IBinaryOperator.Right => Right;
     }
 }

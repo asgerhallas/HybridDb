@@ -1,10 +1,10 @@
 using HybridDb.Linq2.Ast;
 
-namespace HybridDb.Linq2
+namespace HybridDb.Linq2.Emitter
 {
     public static class EmitHelper
     {
-        public static SqlStatementEmitter.Result Emit(this SqlStatementEmitter.Result result, SqlExpression expression)
+        public static EmitResult Emit(this EmitResult result, SqlExpression expression)
         {
             return SqlStatementEmitter.Emit(result, expression);
         }
