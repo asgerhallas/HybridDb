@@ -4,11 +4,11 @@ namespace HybridDb.Linq.Ast
 {
     public class Not : SqlExpression
     {
-        public Not(SqlExpression operand)
+        public Not(Predicate operand)
         {
             Operand = operand;
         }
 
-        public SqlExpression Operand { get; }
+        public Predicate Operand { get; }
     }
 }

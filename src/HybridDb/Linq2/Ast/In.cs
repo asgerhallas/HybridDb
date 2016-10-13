@@ -8,13 +8,13 @@ namespace HybridDb.Linq2.Ast
         public In(SqlExpression left, params SqlExpression[] expressions)
         {
             Left = left;
-            SubQueryOrExpressions = new Either<IReadOnlyList<SqlExpression>, SelectStatement>(expressions.ToList());
+            SubQueryOrExpressions = Either<IReadOnlyList<SqlExpression>, SelectStatement>.New(expressions.ToList());
         }
 
         public In(SqlExpression left, SelectStatement subquery)
         {
             Left = left;
-            SubQueryOrExpressions = new Either<IReadOnlyList<SqlExpression>, SelectStatement>(subquery);
+            SubQueryOrExpressions = Either<IReadOnlyList<SqlExpression>, SelectStatement>.New(subquery);
         }
 
         public SqlExpression Left { get; }

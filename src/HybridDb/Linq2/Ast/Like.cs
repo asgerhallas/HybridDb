@@ -1,15 +1,33 @@
+using System.Collections.Generic;
+using HybridDb.Linq.Ast;
+
 namespace HybridDb.Linq2.Ast
 {
     public class Like : Predicate
     {
-        //TODO: to be sql-agnostic pattern as a nested language could have an ast to to indicate what is supported
-        public Like(SqlExpression left, string pattern)
+        public Like(SqlExpression left, params Either<Constant, Wildcard>[] pattern)
         {
             Left = left;
             Pattern = pattern;
         }
 
         public SqlExpression Left { get; }
-        public string Pattern { get; }
+        public IReadOnlyList<Either<Constant, Wildcard>> Pattern { get; }
+    }
+
+    public class Wildcard
+    {
+        public Wildcard(WildcardOperator @operator)
+        {
+            Operator = @operator;
+        }
+
+        public WildcardOperator Operator { get; }
+    }
+
+    public enum WildcardOperator
+    {
+        OneOrMore,
+        ExactlyOne
     }
 }

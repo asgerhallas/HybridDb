@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Linq2;
 using HybridDb.Linq2.Ast;
 using Column = HybridDb.Config.Column;
 
@@ -51,7 +50,7 @@ namespace HybridDb
             throw new NotImplementedException();
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SelectStatement @select, out QueryStats stats)
+        public IEnumerable<TProjection> Query<TProjection>(SelectStatement statement, out QueryStats stats)
         {
             throw new NotImplementedException();
         }

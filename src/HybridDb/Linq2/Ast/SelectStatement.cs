@@ -1,32 +1,30 @@
 using System.Collections.Generic;
-using System.Linq;
-using HybridDb.Linq;
-using ShinySwitch;
 
 namespace HybridDb.Linq2.Ast
 {
     public class SelectStatement : SqlExpression
     {
-        public SelectStatement(From from) : this(ListOf(new Select(), @from)) {}
-        public SelectStatement(Select select, From from) : this(ListOf(select, @from)) {}
-        public SelectStatement(Select select, From from, Where where) : this(ListOf(select, @from, where)) {}
+        public SelectStatement(From from) : this(new Select(), from, new Where(new True())) {}
+        public SelectStatement(Select select, From from) : this(select, @from, new Where(new True())) {}
 
-        SelectStatement(IEnumerable<SqlClause> clauses)
+        public SelectStatement(Select select, From from, Where where)
         {
-            Clauses = clauses
-                .Where(clause => clause != null)
-                .Do(clause => Switch.On(clause)
-                    .Match<From>(@from => From = @from))
-                .ToList();
+            Select = select;
+            From = from;
+            Where = where;
+
+            Clauses = new List<SqlClause>
+            {
+                select,
+                from,
+                where
+            };
         }
 
+        public Select Select { get; private set; }
         public From From { get; private set; }
+        public Where Where { get; private set; }
 
         public IReadOnlyList<SqlClause> Clauses { get; }
-
-        static IEnumerable<SqlClause> ListOf(params SqlClause[] items)
-        {
-            return items.ToList();
-        }
     }
 }

@@ -1,6 +1,6 @@
 namespace HybridDb.Linq2.Ast
 {
-    public enum LogicalOperator
+    public enum LogicOperator
     {
         And,
         Or

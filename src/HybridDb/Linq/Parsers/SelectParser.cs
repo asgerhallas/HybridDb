@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 using HybridDb.Linq2.Ast;
@@ -7,22 +8,22 @@ namespace HybridDb.Linq.Parsers
 {
     internal class SelectParser : LambdaParser
     {
-        public SelectParser(Stack<AstNode> ast) : base(ast) { }
+        public SelectParser(Func<Type, string> getTableNameForType, Stack<AstNode> ast) : base(getTableNameForType, ast) { }
 
-        public static Select Translate(Expression expression)
+        public static Select Translate(Func<Type, string> getTableNameForType, Expression expression)
         {
             var operations = new Stack<AstNode>();
-            new SelectParser(operations).Visit(expression);
+            new SelectParser(getTableNameForType, operations).Visit(expression);
             return (Select)operations.Pop();
         }
         
         protected override Expression VisitNew(NewExpression expression)
         {
-            var projections = new SelectExpression[expression.Arguments.Count];
+            var projections = new SelectColumn[expression.Arguments.Count];
             for (int i = 0; i < expression.Arguments.Count; i++)
             {
                 Visit(expression.Arguments[i]);
-                projections[i] = new SelectExpression((ColumnIdentifier) ast.Pop(), expression.Members[i].Name);
+                projections[i] = new SelectColumn((ColumnName) ast.Pop(), expression.Members[i].Name);
             }
 
             ast.Push(new Select(projections));
@@ -31,7 +32,7 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitMemberInit(MemberInitExpression expression)
         {
-            var projections = new List<SelectExpression>();
+            var projections = new List<SelectColumn>();
             foreach (var memberBinding in expression.Bindings)
             {
                 var property = memberBinding as MemberAssignment;
@@ -39,7 +40,7 @@ namespace HybridDb.Linq.Parsers
                     continue;
 
                 Visit(property.Expression);
-                projections.Add(new SelectExpression((ColumnIdentifier)ast.Pop(), property.Member.Name));
+                projections.Add(new SelectColumn((ColumnName)ast.Pop(), property.Member.Name));
             }
 
             ast.Push(new Select(projections.ToArray()));

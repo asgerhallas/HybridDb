@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using HybridDb.Linq2.Ast;
 
@@ -6,13 +7,13 @@ namespace HybridDb.Linq.Parsers
 {
     internal class OrderByVisitor : LambdaParser
     {
-        public OrderByVisitor(Stack<AstNode> ast) : base(ast) {}
+        public OrderByVisitor(Func<Type, string> getTableNameForType, Stack<AstNode> ast) : base(getTableNameForType, ast) {}
 
-        public static ColumnIdentifier Translate(Expression expression)
+        public static ColumnName Translate(Func<Type, string> getTableNameForType, Expression expression)
         {
             var ast = new Stack<AstNode>();
-            new OrderByVisitor(ast).Visit(expression);
-            return (ColumnIdentifier) ast.Pop();
+            new OrderByVisitor(getTableNameForType, ast).Visit(expression);
+            return (ColumnName) ast.Pop();
         }
     }
 }

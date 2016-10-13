@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using HybridDb.Config;
 using HybridDb.Linq;
-using HybridDb.Linq2;
 using HybridDb.Linq2.Emitter;
 using Shouldly;
 using Xunit;
@@ -16,11 +14,12 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryUsingQueryComprehensionSyntax()
         {
-            var translation = Translate(from a in Query<Entity>()
-                                        where a.Property == 2
-                                        select a);
+            var translation = Translate(
+                from a in Query<Entity>()
+                where a.Property == 2
+                select a);
 
-            translation.Where.ShouldBe("(Property = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -29,7 +28,8 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>());
             translation.Select.ShouldBe("");
-            translation.Where.ShouldBe("");
+            translation.From.ShouldBe("[Entities]");
+            translation.Where.ShouldBe("(1=1)");
             translation.Take.ShouldBe(0);
             translation.Skip.ShouldBe(0);
         }
@@ -38,7 +38,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereEquals()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property == 2));
-            translation.Where.ShouldBe("(Property = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -161,7 +161,7 @@ namespace HybridDb.Tests
         public void CanQueryWithStartsWith()
         {
             var translation = Translate(Query<Entity>().Where(x => x.StringProp.StartsWith("L")));
-            translation.Where.ShouldBe("(StringProp LIKE @Value0 + '%')");
+            translation.Where.ShouldBe("(StringProp LIKE '' + @Value0 + '%')");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", "L");
         }
 
@@ -456,6 +456,14 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void WhereWithNestedUnaryBool()
+        {
+            var translation = Translate(Query<Entity>().Where(x => true && x.BoolProp));
+            translation.Where.ShouldBe("((1=1) AND (BoolProp = @Value0))");
+            translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
+        }
+
+        [Fact]
         public void CanQueryWhereWithBoolEquals()
         {
             var something = true;
@@ -613,8 +621,10 @@ namespace HybridDb.Tests
 
         Query<T> Query<T>() where T : class
         {
-            var session = new DocumentSession(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString));
-            return new Query<T>(new QueryProvider<T>(session, configuration.CreateDesignFor(typeof(T))));
+            var documentStore = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
+            var documentDesign = documentStore.Configuration.CreateDesignFor(typeof (T));
+            var session = new DocumentSession(documentStore);
+            return new Query<T>(new QueryProvider<T>(session, documentDesign));
         }
 
         static SqlStatementFragments Translate(IQueryable query)

@@ -58,9 +58,9 @@ namespace HybridDb
             return store.Query<TProjection>(table, out stats, select, where, skip, take, orderby, parameters);
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SelectStatement @select, out QueryStats stats)
+        public IEnumerable<TProjection> Query<TProjection>(SelectStatement statement, out QueryStats stats)
         {
-            return store.Query<TProjection>(@select, out stats);
+            return store.Query<TProjection>(statement, out stats);
         }
 
         public void Dispose()

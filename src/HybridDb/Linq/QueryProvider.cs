@@ -51,16 +51,16 @@ namespace HybridDb.Linq
 
         public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression)
         {
-            var parser = new QueryParser();
-            var parseResult = parser.Parse(design, expression);
+            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
+            var parseResult = parser.Parse(expression);
 
             return ExecuteQuery<TProjection>(parseResult.Statement);
         }
 
         public T Execute<T>(Expression expression)
         {
-            var parser = new QueryParser();
-            var parseResult = parser.Parse(design, expression);
+            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
+            var parseResult = parser.Parse(expression);
 
             var result = ExecuteQuery<T>(parseResult.Statement);
 
@@ -99,6 +99,9 @@ namespace HybridDb.Linq
 
         public IEnumerable<TProjection> ExecuteQuery<TProjection>(SelectStatement statement)
         {
+            // hvis select indeholder en column, der svarer til en parameter, så skal den antages som et dokument
+            // parameter ender nok med at blive et TableName, så det svarer til at selecte hele tabellen
+
             if (typeof (TProjection).IsAssignableFrom(design.DocumentType))
             {
                 QueryStats storeStats;
@@ -120,12 +123,13 @@ namespace HybridDb.Linq
             }
         }
 
+        //TODO: this is document store specific and should be moved... 
         public SqlStatementFragments GetQueryText(Expression expression)
         {
-            var parser = new QueryParser();
-            var result = parser.Parse(design, expression);
+            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
+            var result = parser.Parse(expression);
 
-            var emitter = new SqlStatementEmitter();
+            var emitter = new SqlStatementEmitter(x => $"[{x}]");
             var sql = emitter.Emit(result.Statement);
 
             return sql;

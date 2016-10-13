@@ -1,23 +1,15 @@
-using System;
-
 namespace HybridDb.Linq2.Ast
 {
-    public interface IBinaryOperator
+    public class Logic : Predicate, IBinaryOperator
     {
-        SqlExpression Left { get; }
-        SqlExpression Right { get; }
-    }
-
-    public class Logical : Predicate, IBinaryOperator
-    {
-        public Logical(LogicalOperator @operator, Predicate left, Predicate right)
+        public Logic(LogicOperator @operator, Predicate left, Predicate right)
         {
             Operator = @operator;
             Left = left;
             Right = right;
         }
 
-        public LogicalOperator Operator { get; }
+        public LogicOperator Operator { get; }
         public Predicate Left { get; }
         public Predicate Right { get; }
 

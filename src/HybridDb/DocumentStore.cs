@@ -8,6 +8,8 @@ using System.Threading;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Linq;
+using HybridDb.Linq.Ast;
 using HybridDb.Linq2;
 using HybridDb.Linq2.Ast;
 using HybridDb.Linq2.Emitter;
@@ -218,29 +220,29 @@ namespace HybridDb
                 if (isWindowed)
                 {
                     sql.Append("select count(*) as TotalResults")
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                       .Append(!string.IsNullOrEmpty(@where), $"where {@where}")
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                       .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)}) as RowNumber")
+                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                       .Append(!string.IsNullOrEmpty(@where), $"where {@where}")
                        .Append(")")
-                       .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
-                       .Append("where RowNumber >= {0}", skip + 1)
-                       .Append(take > 0, "and RowNumber <= {0}", skip + take)
+                       .Append($"select {(@select.IsNullOrEmpty() ? "*" : @select + ", RowNumber")} from temp")
+                       .Append($"where RowNumber >= {skip + 1}")
+                       .Append(take > 0, $"and RowNumber <= {skip + take}")
                        .Append("order by RowNumber");
                 }
                 else
                 {
                     sql.Append(@"with temp as (select *")
                        .Append(", 0 as RowNumber")
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                       .Append(!string.IsNullOrEmpty(@where), $"where {@where}")
                        .Append(")")
-                       .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
-                       .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
+                       .Append($"select {(@select.IsNullOrEmpty() ? "*" : @select + ", RowNumber")} from temp")
+                       .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 }
                 
                 IEnumerable<TProjection> result;
@@ -279,81 +281,78 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SelectStatement @select, out QueryStats stats)
+        public IEnumerable<TProjection> Query<TProjection>(SelectStatement statement, out QueryStats stats)
         {
-            Table table;
-            if (!Configuration.Tables.TryGetValue(@select.From.Table, out table))
-                throw new ArgumentException($"Table '{@select.From.Table}' was not found in configuration.");
-
             // semantics parse -> symbols and types
             // typecheck
 
-            // 
-            // emit sql
-
-            //make select get all properties of projection object type - and check if they are actually projections
+            // make select get all properties of projection object type - and check if they are actually projections
             var projectToDictionary = typeof(TProjection).IsA<IDictionary<string, object>>();
+
+            statement = AddDefaultSelectList(statement);
+
             //if (!projectToDictionary)
             //    select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
 
-            var sqlStatement = new SqlStatementEmitter().Emit(@select);
+            var emit = new SqlStatementEmitter(Database.FormatTableNameAndEscape).Emit(statement);
 
             var timer = Stopwatch.StartNew();
+
+            var mainTable = GetTableOrFail(statement.From.Table.Name);
             using (var connection = Database.Connect())
             {
                 var sql = new SqlBuilder();
 
-                var isWindowed = sqlStatement.Skip > 0 || sqlStatement.Take > 0;
+                var isWindowed = emit.Skip > 0 || emit.Take > 0;
 
                 if (isWindowed)
                 {
                     sql.Append("select count(*) as TotalResults")
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(sqlStatement.Where), "where {0}", sqlStatement.Where)
+                       .Append($"from {Database.FormatTableNameAndEscape(mainTable.Name)}")
+                       .Append(!string.IsNullOrEmpty(emit.Where), $"where {emit.Where}")
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(sqlStatement.OrderBy) ? "CURRENT_TIMESTAMP" : sqlStatement.OrderBy)
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(sqlStatement.Where), "where {0}", sqlStatement.Where)
+                       .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(emit.OrderBy) ? "CURRENT_TIMESTAMP" : emit.OrderBy)}) as RowNumber")
+                       .Append($"from {Database.FormatTableNameAndEscape(mainTable.Name)}")
+                       .Append(!string.IsNullOrEmpty(emit.Where), $"where {emit.Where}")
                        .Append(")")
-                       .Append("select {0} from temp", sqlStatement.Select.IsNullOrEmpty() ? "*" : sqlStatement.Select + ", RowNumber")
-                       .Append("where RowNumber >= {0}", sqlStatement.Skip + 1)
-                       .Append(sqlStatement.Take > 0, "and RowNumber <= {0}", sqlStatement.Skip + sqlStatement.Take)
+                       .Append($"select {(emit.Select.IsNullOrEmpty() ? "*" : emit.Select + ", RowNumber")} from temp")
+                       .Append($"where RowNumber >= {emit.Skip + 1}")
+                       .Append(emit.Take > 0, $"and RowNumber <= {emit.Skip + emit.Take}")
                        .Append("order by RowNumber");
                 }
                 else
                 {
-                    sql.Append(@"with temp as (select *")
-                       .Append(", 0 as RowNumber")
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(sqlStatement.Where), "where {0}", sqlStatement.Where)
+                    sql.Append($@"with temp as (select {emit.Select}, 0 as RowNumber")
+                       .Append($"from {emit.From}") //Todo:Database.FormatTableNameAndEscape(table.Name)
+                       .Append(!string.IsNullOrEmpty(emit.Where), $"where {emit.Where}")
                        .Append(")")
-                       .Append("select {0} from temp", sqlStatement.Select.IsNullOrEmpty() ? "*" : sqlStatement.Select + ", RowNumber")
-                       .Append(!string.IsNullOrEmpty(sqlStatement.OrderBy), "order by {0}", sqlStatement.OrderBy);
+                       .Append("select * from temp")
+                       .Append(!string.IsNullOrEmpty(emit.OrderBy), $"order by {emit.OrderBy}");
                 }
 
                 IEnumerable<TProjection> result;
                 if (projectToDictionary)
                 {
                     result = (IEnumerable<TProjection>)
-                        InternalQuery<object>(connection, sql, sqlStatement.ParametersByValue, isWindowed, out stats)
+                        InternalQuery<object>(connection, sql, emit.ParametersByName, isWindowed, out stats)
                             .Cast<IDictionary<string, object>>();
                 }
                 else
                 {
-                    result = InternalQuery<TProjection>(connection, sql, sqlStatement.ParametersByValue, isWindowed, out stats);
+                    result = InternalQuery<TProjection>(connection, sql, emit.ParametersByValue, isWindowed, out stats);
                 }
 
                 stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
 
                 if (isWindowed)
                 {
-                    var potential = stats.TotalResults - sqlStatement.Skip;
+                    var potential = stats.TotalResults - emit.Skip;
                     if (potential < 0)
                         potential = 0;
 
-                    stats.RetrievedResults = sqlStatement.Take > 0 && potential > sqlStatement.Take ? sqlStatement.Take : potential;
+                    stats.RetrievedResults = emit.Take > 0 && potential > emit.Take ? emit.Take : potential;
                 }
                 else
                 {
@@ -367,6 +366,39 @@ namespace HybridDb
                 connection.Complete();
                 return result;
             }
+        }
+
+        SelectStatement AddDefaultSelectList(SelectStatement statement)
+        {
+            if (statement.Select.SelectList.Any()) return statement;
+
+            var mainTable = GetTableOrFail(statement.From.Table.Name);
+            var joinTables = statement.From.Joins.Select(x => x.Table);
+
+            var mainColumns =
+                from column in mainTable.Columns
+                select new SelectColumn(
+                    new ColumnName(mainTable.Name, column.Name),
+                    column.Name);
+
+            var joinColumns =
+                from name in joinTables
+                let table = GetTableOrFail(name.Name)
+                from column in table.Columns
+                select new SelectColumn(
+                    new ColumnName(table.Name, column.Name),
+                    $"{table.Name}_{column.Name}");
+
+            return new SelectStatement(new Select(mainColumns.Concat(joinColumns)), statement.From, statement.Where);
+        }
+
+        Table GetTableOrFail(string tablename)
+        {
+            Table table;
+            if (!Configuration.Tables.TryGetValue(tablename, out table))
+                throw new ArgumentException($"Table '{tablename}' was not found in configuration.");
+
+            return table;
         }
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
@@ -408,7 +440,8 @@ namespace HybridDb
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                var rows = reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true).ToList();
+                // a buffered reader return a list
+                var rows = (List<T>)reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
                 stats = new QueryStats
                 {
                     TotalResults = rows.Count
@@ -484,14 +517,10 @@ namespace HybridDb
             values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
 
             var sql = new SqlBuilder()
-                .Append("update {0} set {1} where {2}=@Id{3}",
-                        Database.FormatTableNameAndEscape(command.Table.Name),
-                        string.Join(", ", from column in values.Keys select column.Name + "=@" + column.Name + uniqueParameterIdentifier),
-                        command.Table.IdColumn.Name,
-                        uniqueParameterIdentifier)
-                .Append(!command.LastWriteWins, "and {0}=@CurrentEtag{1}",
-                        command.Table.EtagColumn.Name,
-                        uniqueParameterIdentifier)
+                .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
+                .Append($"set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name + uniqueParameterIdentifier)}")
+                .Append($"where {command.Table.IdColumn.Name}=@Id{uniqueParameterIdentifier}")
+                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name}=@CurrentEtag{uniqueParameterIdentifier}")
                 .ToString();
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
@@ -513,14 +542,9 @@ namespace HybridDb
         SqlDatabaseCommand PrepareDeleteCommand(DeleteCommand command, int uniqueParameterIdentifier)
         {
             var sql = new SqlBuilder()
-                .Append("delete from {0} where {1} = @Id{2}",
-                    Database.FormatTableNameAndEscape(command.Table.Name),
-                    command.Table.IdColumn.Name,
-                    uniqueParameterIdentifier)
-                .Append(!command.LastWriteWins,
-                    "and {0} = @CurrentEtag{1}",
-                    command.Table.EtagColumn.Name,
-                    uniqueParameterIdentifier)
+                .Append($"delete from {Database.FormatTableNameAndEscape(command.Table.Name)})")
+                .Append($"where {command.Table.IdColumn.Name} = @Id{uniqueParameterIdentifier}")
+                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @CurrentEtag{uniqueParameterIdentifier}")
                 .ToString();
 
             var parameters = new Dictionary<string, Parameter>();

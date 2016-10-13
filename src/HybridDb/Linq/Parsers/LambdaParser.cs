@@ -12,8 +12,11 @@ namespace HybridDb.Linq.Parsers
     {
         protected readonly Stack<AstNode> ast;
 
-        public LambdaParser(Stack<AstNode> ast)
+        readonly Func<Type, string> getTableNameForType;
+
+        public LambdaParser(Func<Type, string> getTableNameForType, Stack<AstNode> ast)
         {
+            this.getTableNameForType = getTableNameForType;
             this.ast = ast;
         }
 
@@ -39,7 +42,7 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitParameter(ParameterExpression expression)
         {
-            ast.Push(new ColumnIdentifier(typeof(object), ""));
+            ast.Push(new TableName(getTableNameForType(expression.Type)));
             return expression;
         }
 
@@ -58,7 +61,7 @@ namespace HybridDb.Linq.Parsers
 
             Switch.On(ast.Peek())
                 .Match<Constant>(_ => VisitConstantMethodCall(expression))
-                .Match<ColumnIdentifier>(_ => VisitColumnMethodCall(expression))
+                .Match<ColumnName>(_ => VisitColumnMethodCall(expression))
                 .OrThrow(new ArgumentOutOfRangeException());
 
             return expression;
@@ -91,8 +94,8 @@ namespace HybridDb.Linq.Parsers
             {
                 case "Column":
                 {
-                    var column = ast.Pop() as ColumnIdentifier; // remove the current column expression
-                    if (column == null || column.ColumnName != "")
+                    var table = ast.Pop() as TableName; // remove the current column expression
+                    if (table == null)
                     {
                         throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
@@ -101,13 +104,13 @@ namespace HybridDb.Linq.Parsers
                     var columnType = expression.Method.GetGenericArguments()[0];
                     var columnName = (string) constant.Value;
 
-                    ast.Push(new ColumnIdentifier(columnType, columnName));
+                    ast.Push(new TypedColumnName(columnType, table.Name, columnName));
                     break;
                 }
                 case "Index":
                 {
-                    var column = ast.Pop() as ColumnIdentifier; // remove the current column expression
-                    if (column == null || column.ColumnName != "")
+                    var table = ast.Pop() as TableName; // remove the current column expression
+                    if (table == null)
                     {
                         throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
@@ -121,7 +124,7 @@ namespace HybridDb.Linq.Parsers
                 default:
                     ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
-                    ast.Push(new ColumnIdentifier(expression.Method.ReturnType, name));
+                    ast.Push(new TypedColumnName(expression.Method.ReturnType, "", name));
                     break;
             }
         }
@@ -165,11 +168,17 @@ namespace HybridDb.Linq.Parsers
 
                     ast.Push(new Constant(expression.Member.GetMemberType(), expression.Member.GetValue(constant.Value)));
                 })
-                .Match<ColumnIdentifier>(x =>
+                .Match<TableName>(x =>
                 {
-                    ast.Pop();
+                    var table = (TableName)ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
-                    ast.Push(new ColumnIdentifier(expression.Member.GetMemberType(), name));
+                    ast.Push(new TypedColumnName(expression.Member.GetMemberType(), table.Name, name));
+                })
+                .Match<ColumnName>(x =>
+                {
+                    var column = (ColumnName)ast.Pop();
+                    var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
+                    ast.Push(new TypedColumnName(expression.Member.GetMemberType(), column.TableName, name));
                 })
                 .OrThrow(new ArgumentOutOfRangeException());
 
@@ -182,6 +191,28 @@ namespace HybridDb.Linq.Parsers
             
 
             return expression;
+        }
+
+        public static Predicate ToPredicate(AstNode node)
+        {
+            return Switch<Predicate>.On(node)
+                .Match<Predicate>(x => x)
+                .Match<Constant>(x => x.Type == typeof(bool), constant =>
+                   (bool)constant.Value ? (Predicate)new True() : new False())
+                .Match<TypedColumnName>(x => x.Type == typeof(bool), column =>
+                   new Comparison(ComparisonOperator.Equal, column, new Constant(typeof(bool), true)));
+        }
+
+        // TypedColumnName is a column enriched with type of the expression it derives from.
+        // This is used to convert unary bool predicates (e.g. .Where(x => x.BoolIsTrue)) to binary predicates.
+        internal class TypedColumnName : ColumnName
+        {
+            public TypedColumnName(Type type, string tableName, string name) : base(tableName, name)
+            {
+                Type = type;
+            }
+
+            public Type Type { get; }
         }
     }
 }

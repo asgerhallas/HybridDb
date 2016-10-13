@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq.Expressions;
-using HybridDb.Config;
 using HybridDb.Linq.Ast;
 using HybridDb.Linq2.Ast;
 
@@ -8,17 +7,39 @@ namespace HybridDb.Linq.Parsers
 {
     public class QueryParser : ExpressionVisitor
     {
+        readonly Func<Type, string> getTableNameForType;
+
+        public QueryParser(Func<Type, string> getTableNameForType)
+        {
+            this.getTableNameForType = getTableNameForType;
+        }
+
         public int Skip { get; private set; }
         public int Take { get; private set; }
         public Select Select { get; private set; }
         public Where Where { get; private set; }
         public OrderBy OrderBy { get; private set; }
         public Execution Execution { get; private set; }
+        public Type TableType { get; private set; }
 
-        public Result Parse(DocumentDesign design, Expression expression)
+        public Result Parse(Expression expression)
         {
             Visit(expression);
-            return new Result(new SelectStatement(Select, new From(design.Table.Name), Where), Execution);
+
+            return new Result(new SelectStatement(
+                Select ?? new Select(),
+                new From(new TableName(getTableNameForType(TableType))), 
+                Where ?? new Where(new True())), Execution);
+        }
+
+        protected override Expression VisitConstant(ConstantExpression node)
+        {
+            if (node.Type.IsGenericType && typeof (Query<>) == node.Type.GetGenericTypeDefinition())
+            {
+                TableType = node.Type.GetGenericArguments()[0];
+            }
+
+            return base.VisitConstant(node);
         }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
@@ -28,7 +49,7 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Select":
-                    Select = SelectParser.Translate(expression.Arguments[1]);
+                    Select = SelectParser.Translate(getTableNameForType, expression.Arguments[1]);
                     break;
                 case "SingleOrDefault":
                     Execution = Execution.SingleOrDefault;
@@ -49,12 +70,12 @@ namespace HybridDb.Linq.Parsers
                     goto Where;
                 case "Where":
                     Where:
-                    var whereExpression = WhereParser.Translate(expression.Arguments[1]);
+                    var whereExpression = WhereParser.Translate(getTableNameForType, expression.Arguments[1]);
                     if (whereExpression == null)
                         break;
 
                     Where = Where != null
-                        ? new Where(new Logical(LogicalOperator.And, Where.Predicate, whereExpression.Predicate))
+                        ? new Where(new Logic(LogicOperator.And, Where.Condition, whereExpression.Condition))
                         : whereExpression;
 
                     break;
@@ -75,7 +96,7 @@ namespace HybridDb.Linq.Parsers
                                         ? OrderByExpression.Directions.Descending
                                         : OrderByExpression.Directions.Ascending;
 
-                    var orderByColumnExpression = OrderByVisitor.Translate(expression.Arguments[1]);
+                    var orderByColumnExpression = OrderByVisitor.Translate(getTableNameForType, expression.Arguments[1]);
                     var orderingExpression = new OrderByExpression(orderByColumnExpression, direction);
                     OrderBy = OrderBy != null
                                   ? new OrderBy(OrderBy.Columns.Concat(orderingExpression))

@@ -18,10 +18,12 @@ namespace HybridDb.Tests
     public class DocumentStoreTests : HybridDbAutoInitializeTests
     {
         readonly byte[] documentAsByteArray;
+        readonly byte[] otherDocumentAsByteArray;
 
         public DocumentStoreTests()
         {
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
+            otherDocumentAsByteArray = new[] {(byte) 'l', (byte) 'a', (byte) 'r', (byte) 's'};
         }
 
         [Fact]
@@ -206,10 +208,10 @@ namespace HybridDb.Tests
             var rows = store.Query(
                 new SelectStatement(
                 new Select(),
-                new From(table.Table.Name), 
+                new From(new TableName(table.Table.Name)),
                 new Where(new Comparison(
                     ComparisonOperator.NotEqual, 
-                    new ColumnIdentifier(typeof(string), "Field"), 
+                    new ColumnName(table.Table.Name, "Field"), 
                     new Constant(typeof(string), "Bjarne")))), 
                 out stats).ToList();
 
@@ -238,7 +240,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var rows = store.Query<ProjectionWithNestedProperty>(table.Table, out stats).ToList();
 
-            rows = store.Query<ProjectionWithNestedProperty>(new SelectStatement(new From(table.Table.Name)), out stats).ToList();
+            rows = store.Query<ProjectionWithNestedProperty>(new SelectStatement(new From(new TableName(table.Table.Name))), out stats).ToList();
 
             rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
         }
@@ -786,9 +788,6 @@ namespace HybridDb.Tests
                     result.ShouldNotBe(null);
                 }
             }
-
-            // the tempdb connection does not currently delete it's own tables
-            // database.QuerySchema().ShouldNotContainKey("Cases");
         }
 
         [Fact]
@@ -833,12 +832,97 @@ namespace HybridDb.Tests
             });
         }
 
+        [Fact]
+        public void CanJoinTablesOneToOne()
+        {
+            Document<Entity>();
+            Document<OtherEntity>().With(x => x.EntityId);
+
+            InitializeStore();
+
+            var table1 = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table1.Table, "a", new { Document = new byte[] { 1 } });
+            store.Insert(table1.Table, "b", new { Document = new byte[] { 2 } });
+            
+            var table2 = store.Configuration.GetDesignFor<OtherEntity>();
+            store.Insert(table2.Table, "x", new { EntityId = "a", Document = new byte[] { 3 } });
+            store.Insert(table2.Table, "y", new { EntityId = "b", Document = new byte[] { 4 } });
+
+            QueryStats stats;
+
+            var rows = store.Query(
+                new SelectStatement(
+                new Select(),
+                new From(new TableName(table1.Table.Name), 
+                    new Join(new TableName(table2.Table.Name), 
+                        new Comparison(ComparisonOperator.Equal, 
+                            new ColumnName(table1.Table.Name, "Id"),
+                            new ColumnName(table2.Table.Name, "EntityId"))))),
+                out stats).ToList();
+
+            rows.Count.ShouldBe(2);
+            rows[0]["Id"].ShouldBe("a");
+            rows[0]["Document"].ShouldBe(new byte[] { 1 });
+            rows[0]["OtherEntities_Id"].ShouldBe("x");
+            rows[0]["OtherEntities_EntityId"].ShouldBe("a");
+            rows[0]["OtherEntities_Document"].ShouldBe(new byte[] { 3 });
+
+            rows[1]["Id"].ShouldBe("b");
+            rows[1]["Document"].ShouldBe(new byte[] { 2 });
+            rows[1]["OtherEntities_Id"].ShouldBe("y");
+            rows[1]["OtherEntities_EntityId"].ShouldBe("b");
+            rows[1]["OtherEntities_Document"].ShouldBe(new byte[] { 4 });
+        }
+
+        [Fact]
+        public void CanJoinTablesOneToMany()
+        {
+            Document<Entity>();
+            Document<OtherEntity>().With(x => x.EntityId);
+
+            InitializeStore();
+
+            var table1 = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table1.Table, "a", new { Document = new byte[] { 1 } });
+            
+            var table2 = store.Configuration.GetDesignFor<OtherEntity>();
+            store.Insert(table2.Table, "x", new { EntityId = "a", Document = new byte[] { 3 } });
+            store.Insert(table2.Table, "y", new { EntityId = "a", Document = new byte[] { 4 } });
+
+            QueryStats stats;
+
+            var rows = store.Query(
+                new SelectStatement(
+                new Select(),
+                new From(new TableName(table1.Table.Name), 
+                    new Join(new TableName(table2.Table.Name), 
+                        new Comparison(ComparisonOperator.Equal, 
+                            new ColumnName(table1.Table.Name, "Id"),
+                            new ColumnName(table2.Table.Name, "EntityId"))))),
+                out stats).ToList();
+
+            rows.Count.ShouldBe(2);
+            rows[0]["Id"].ShouldBe("a");
+            rows[0]["Document"].ShouldBe(new byte[] { 1 });
+            rows[0]["OtherEntities_Id"].ShouldBe("x");
+            rows[0]["OtherEntities_EntityId"].ShouldBe("a");
+            rows[0]["OtherEntities_Document"].ShouldBe(new byte[] { 3 });
+
+            rows[1]["Id"].ShouldBe("a");
+            rows[1]["Document"].ShouldBe(new byte[] { 1 });
+            rows[1]["OtherEntities_Id"].ShouldBe("y");
+            rows[1]["OtherEntities_EntityId"].ShouldBe("a");
+            rows[1]["OtherEntities_Document"].ShouldBe(new byte[] { 4 });
+
+            //TODO: do we need this optimization?
+            //ReferenceEquals(rows[0]["Document"], rows[1]["Document"]).ShouldBe(true);
+        }
+
         public class Case
         {
             public Guid Id { get; private set; }
             public string By { get; set; }
         }
-
 
         public class OtherEntityWithSomeSimilarities
         {

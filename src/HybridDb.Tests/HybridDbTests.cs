@@ -185,6 +185,7 @@ namespace HybridDb.Tests
         {
             public string Id { get; set; }
             public int Number { get; set; }
+            public string EntityId { get; set; }
         }
 
         public abstract class AbstractEntity : ISomeInterface

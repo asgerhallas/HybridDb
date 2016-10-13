@@ -2,11 +2,11 @@ namespace HybridDb.Linq2.Ast
 {
     public class Where : SqlClause
     {
-        public Where(Predicate predicate)
+        public Where(Predicate condition)
         {
-            Predicate = predicate;
+            Condition = condition;
         }
 
-        public Predicate Predicate { get; }
+        public Predicate Condition { get; }
     }
 }

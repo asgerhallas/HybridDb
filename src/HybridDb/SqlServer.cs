@@ -34,7 +34,7 @@ namespace HybridDb
 
         public string Escape(string identifier)
         {
-            return string.Format("[{0}]", identifier);
+            return $"[{identifier}]";
         }
 
         public int RawExecute(string sql, object parameters = null)
