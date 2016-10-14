@@ -129,7 +129,7 @@ namespace HybridDb.Linq
             var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
             var result = parser.Parse(expression);
 
-            var emitter = new SqlStatementEmitter(x => $"[{x}]");
+            var emitter = new SqlStatementEmitter(x => $"[{x}]", x => x);
             var sql = emitter.Emit(result.Statement);
 
             return sql;

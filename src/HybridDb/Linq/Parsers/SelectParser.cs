@@ -1,22 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 using HybridDb.Linq2.Ast;
+using ShinySwitch;
 
 namespace HybridDb.Linq.Parsers
 {
     internal class SelectParser : LambdaParser
     {
-        public SelectParser(Func<Type, string> getTableNameForType, Stack<AstNode> ast) : base(getTableNameForType, ast) { }
+        readonly Select previousSelect;
 
-        public static Select Translate(Func<Type, string> getTableNameForType, Expression expression)
+        public SelectParser(Func<Type, string> getTableNameForType, Select previousSelect, Stack<AstNode> ast) : base(getTableNameForType, ast)
+        {
+            this.previousSelect = previousSelect;
+        }
+
+        public static Select Translate(Func<Type, string> getTableNameForType, Select previousSelect, Expression expression)
         {
             var operations = new Stack<AstNode>();
-            new SelectParser(getTableNameForType, operations).Visit(expression);
+            new SelectParser(getTableNameForType, previousSelect, operations).Visit(expression);
             return (Select)operations.Pop();
         }
-        
+
+        protected override Expression VisitParameter(ParameterExpression expression)
+        {
+            if (previousSelect != null)
+            {
+                ast.Push(new TableName("anon"));
+                return expression;
+            }
+
+            return base.VisitParameter(expression);
+        }
+
+        protected override Expression VisitMember(MemberExpression expression)
+        {
+            var ex = base.VisitMember(expression);
+
+            if (previousSelect != null)
+            {
+                Switch.On(ast.Peek())
+                    .Match<TypedColumnName>(x =>
+                    {
+                        var column = (TypedColumnName)ast.Pop();
+                        var origin = previousSelect.SelectList.Single(s => s.Alias == column.Identifier);
+                        ast.Push(new TypedColumnName(column.Type, origin.Column.TableName, origin.Column.Identifier));
+                    })
+                    .Else(x => { });
+
+            }
+
+            return ex;
+        }
+
         protected override Expression VisitNew(NewExpression expression)
         {
             var projections = new SelectColumn[expression.Arguments.Count];

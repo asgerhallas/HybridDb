@@ -36,6 +36,11 @@ namespace HybridDb.Linq2.Emitter
             return new EmitResult("", new Dictionary<object, string>(), aliases);
         }
 
+        public static EmitResult New(IReadOnlyDictionary<object, string> paramtersByValue, IReadOnlyDictionary<string, string> aliases)
+        {
+            return new EmitResult("", paramtersByValue, aliases);
+        }
+
         public EmitResult Append(string sql)
         {
             return new EmitResult(Sql + sql, Parameters, Aliases);

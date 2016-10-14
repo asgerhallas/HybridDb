@@ -12,11 +12,13 @@ namespace HybridDb.Linq2.Emitter
 
     public class SqlStatementEmitter
     {
-        readonly Func<string, string> formatAndEscapeTableName;
+        readonly Func<string, string> escapeIdentifier;
+        readonly Func<string, string> formatTableName;
 
-        public SqlStatementEmitter(Func<string, string> formatAndEscapeTableName)
+        public SqlStatementEmitter(Func<string, string> escapeIdentifier, Func<string, string> formatTableName)
         {
-            this.formatAndEscapeTableName = formatAndEscapeTableName;
+            this.escapeIdentifier = escapeIdentifier;
+            this.formatTableName = formatTableName;
         }
 
         public SqlStatementFragments Emit(SelectStatement query)
@@ -36,34 +38,38 @@ namespace HybridDb.Linq2.Emitter
         public EmitResult Emit(EmitResult result, AstNode expression)
         {
             var emit = Switch<EmitResult>.On(expression)
-                .Match<TableName>(x => result.Append(formatAndEscapeTableName(x.Name))) //TODO: Er tablename relevant at have som sin egen ast?
+                .Match<TableName>(x => result.Append(escapeIdentifier(formatTableName(x.Name)))) //TODO: Er tablename relevant at have som sin egen ast?
                 .Match<Join>(x => result
                     .Append(" JOIN ").Apply(Emit, x.Table)
                     .Append(" ON ").Apply(Emit, x.Condition))
                 .Match<Where>(x => result.Apply(Emit, x.Condition))
                 .Match<SelectColumn>(x =>
                 {
-                    var fullyQualifiedTableName = FullyQualifiedColumnName(x.Column);
+                    var fullyQualifiedTableName1 = FullyQualifiedColumnName(x.Column);
 
                     return result
-                        .Append(fullyQualifiedTableName)
+                        .Append(fullyQualifiedTableName1)
                         .Append(" AS ")
-                        .Append(x.Alias)
-                        .AddAlias(fullyQualifiedTableName, x.Alias);
+                        .Append(escapeIdentifier(x.Alias))
+                        .AddAlias(fullyQualifiedTableName1, escapeIdentifier(x.Alias));
                 })
                 .Match<ColumnName>(x =>
                 {
-                    var fullyQualifiedColumnName = FullyQualifiedColumnName(x);
+                    //TODO: Aliases made in the select statement is generally not used in where and join clauses (is used in having clause)
+                    //Right now I just don't pass the aliases on to the next clause, but maybe we should just remove this again
+                    //But what about table aliases? No I don't think that will be neccessary.
+                    var fullyQualifiedColumnName1 = FullyQualifiedColumnName(x);
 
                     string alias;
                     return result.Append(
-                        !result.Aliases.TryGetValue(fullyQualifiedColumnName, out alias)
-                            ? fullyQualifiedColumnName
-                            : alias);
+                        !result.Aliases.TryGetValue(fullyQualifiedColumnName1, out alias)
+                            ? fullyQualifiedColumnName1
+                            : x.TableName + "." + alias);
                 })
                 .Match<True>(x => result.Append("(1=1)"))
                 .Match<False>(x => result.Append("(1<>1)"))
                 .Match<Constant>(x => EmitConstant(result, x.Value))
+                .Match<Not>(x => result.Append(" NOT ").Apply(Emit, x.Operand))
                 .Match<IBinaryOperator>(x => result
                     .Append("(").Apply(Emit, x.Left)
                     .Append(Switch<string>.On(expression)
@@ -133,7 +139,7 @@ namespace HybridDb.Linq2.Emitter
 
         string FullyQualifiedColumnName(ColumnName column)
         {
-            return $"{formatAndEscapeTableName(column.TableName)}.[{column.Identifier}]";
+            return $"{escapeIdentifier(formatTableName(column.TableName))}.{escapeIdentifier(column.Identifier)}";
         }
 
         EmitResult JoinEmit(EmitResult result, string delimiter, IEnumerable<AstNode> columns)

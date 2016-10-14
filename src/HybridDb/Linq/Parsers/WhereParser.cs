@@ -36,10 +36,6 @@ namespace HybridDb.Linq.Parsers
 
             var predicate = ToPredicate(ast.Pop());
 
-            //TODO:
-            //sqlExpression = new ImplicitBooleanPredicatePropagator().Visit(sqlExpression);
-            //sqlExpression = new NullCheckPropagator().Visit(sqlExpression);
-
             return new Where(predicate);
         }
 
@@ -106,7 +102,7 @@ namespace HybridDb.Linq.Parsers
                     ast.Push(new Like((SqlExpression) ast.Pop(), (Constant) ast.Pop(), new Wildcard(WildcardOperator.OneOrMore)));
                     break;
                 case "Contains":
-                    ast.Push(new Like((SqlExpression)ast.Pop(), new Wildcard(WildcardOperator.OneOrMore), (Constant)ast.Pop(), new Wildcard(WildcardOperator.OneOrMore)));
+                    ast.Push(new Like((SqlExpression) ast.Pop(), new Wildcard(WildcardOperator.OneOrMore), (Constant)ast.Pop(), new Wildcard(WildcardOperator.OneOrMore)));
                     break;
                 case "In":
                     var column = ast.Pop();
@@ -114,14 +110,17 @@ namespace HybridDb.Linq.Parsers
                     var set = (Constant)sqlExpression;
                     if (((IEnumerable) set.Value).Cast<object>().Any())
                     {
-                        var sqlExpressions = ((IEnumerable<object>)set.Value).Select(x => new Constant(x.GetType(), x)).ToArray();
+                        var sqlExpressions = ((IEnumerable)set.Value)
+                            .Cast<object>()
+                            .Select(x => new Constant(x.GetType(), x))
+                            .ToArray();
                         
                         // ReSharper disable once CoVariantArrayConversion
                         ast.Push(new In((SqlExpression) column, sqlExpressions));
                     }
                     else
                     {
-                        ast.Push(new Constant(typeof(bool), false));
+                        ast.Push(new False());
                     }
                     break;
                 default:

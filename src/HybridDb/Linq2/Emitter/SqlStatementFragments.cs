@@ -32,22 +32,22 @@ namespace HybridDb.Linq2.Emitter
         public SqlStatementFragments WriteSelect(EmitResult result) => new SqlStatementFragments(this)
         {
             Select = result.Sql,
-            ParametersByValue = ParametersByValue.Concat(result.Parameters).ToDictionary(),
-            Aliases = Aliases.Concat(result.Aliases).ToDictionary()
+            ParametersByValue = result.Parameters.ToDictionary(),
+            Aliases = result.Aliases.ToDictionary()
         };
 
         public SqlStatementFragments WriteFrom(EmitResult result) => new SqlStatementFragments(this)
         {
             From = result.Sql,
-            ParametersByValue = ParametersByValue.Concat(result.Parameters).ToDictionary(),
-            Aliases = Aliases.Concat(result.Aliases).ToDictionary()
+            ParametersByValue = result.Parameters.ToDictionary(),
+            Aliases = result.Aliases.ToDictionary()
         };
 
         public SqlStatementFragments WriteWhere(EmitResult result) => new SqlStatementFragments(this)
         {
             Where = result.Sql,
-            ParametersByValue = ParametersByValue.Concat(result.Parameters).ToDictionary(),
-            Aliases = Aliases.Concat(result.Aliases).ToDictionary()
+            ParametersByValue = result.Parameters.ToDictionary(),
+            Aliases = result.Aliases.ToDictionary()
         };
     }
 }

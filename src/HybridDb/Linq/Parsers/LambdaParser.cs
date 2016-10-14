@@ -122,9 +122,9 @@ namespace HybridDb.Linq.Parsers
                     break;
                 }
                 default:
-                    ast.Pop();
+                    var column = (ColumnName)ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
-                    ast.Push(new TypedColumnName(expression.Method.ReturnType, "", name));
+                    ast.Push(new TypedColumnName(expression.Method.ReturnType, column.TableName, name));
                     break;
             }
         }

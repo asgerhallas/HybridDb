@@ -2,7 +2,7 @@
 
 namespace HybridDb.Linq.Ast
 {
-    public class Not : SqlExpression
+    public class Not : Predicate
     {
         public Not(Predicate operand)
         {

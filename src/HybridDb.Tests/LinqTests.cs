@@ -46,7 +46,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereGreaterThan()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property > 1));
-            translation.Where.ShouldBe("(Property > @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] > @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 1);
         }
 
@@ -54,7 +54,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereGreaterThanOrEqual()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property >= 2));
-            translation.Where.ShouldBe("(Property >= @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] >= @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -62,7 +62,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereLessThanOrEqual()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property <= 2));
-            translation.Where.ShouldBe("(Property <= @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] <= @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -70,7 +70,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereLessThan()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property < 2));
-            translation.Where.ShouldBe("(Property < @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] < @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -78,7 +78,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereNotEquals()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property != 2));
-            translation.Where.ShouldBe("(Property <> @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] <> @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -86,21 +86,21 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereNull()
         {
             var translation = Translate(Query<Entity>().Where(x => x.StringProp == null));
-            translation.Where.ShouldBe("(StringProp IS NULL)");
+            translation.Where.ShouldBe("([Entities].[StringProp] IS NULL)");
         }
 
         [Fact]
         public void CanQueryWithWhereNotNull()
         {
             var translation = Translate(Query<Entity>().Where(x => x.StringProp != null));
-            translation.Where.ShouldBe("(StringProp IS NOT NULL)");
+            translation.Where.ShouldBe("([Entities].[StringProp] IS NOT NULL)");
         }
 
         [Fact]
         public void CanQueryWithWhereAnd()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property == 2 && x.StringProp == "Lars"));
-            translation.Where.ShouldBe("((Property = @Value0) AND (StringProp = @Value1))");
+            translation.Where.ShouldBe("(([Entities].[Property] = @Value0) AND ([Entities].[StringProp] = @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", "Lars");
         }
@@ -109,7 +109,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereOr()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property == 2 || x.StringProp == "Lars"));
-            translation.Where.ShouldBe("((Property = @Value0) OR (StringProp = @Value1))");
+            translation.Where.ShouldBe("(([Entities].[Property] = @Value0) OR ([Entities].[StringProp] = @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", "Lars");
         }
@@ -118,7 +118,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereBitwiseAnd()
         {
             var translation = Translate(Query<Entity>().Where(x => (x.Property & 2) == 0));
-            translation.Where.ShouldBe("((Property & @Value0) = @Value1)");
+            translation.Where.ShouldBe("(([Entities].[Property] & @Value0) = @Value1)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", 0);
         }
@@ -127,7 +127,7 @@ namespace HybridDb.Tests
         public void CanQueryWithWhereBitwiseOr()
         {
             var translation = Translate(Query<Entity>().Where(x => (x.Property | 2) == 0));
-            translation.Where.ShouldBe("((Property | @Value0) = @Value1)");
+            translation.Where.ShouldBe("(([Entities].[Property] | @Value0) = @Value1)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", 0);
         }
@@ -136,7 +136,7 @@ namespace HybridDb.Tests
         public void CanQueryWithMultipleWhereClauses()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property == 0).Where(x => x.StringProp == "Lars"));
-            translation.Where.ShouldBe("((Property = @Value0) AND (StringProp = @Value1))");
+            translation.Where.ShouldBe("(([Entities].[Property] = @Value0) AND ([Entities].[StringProp] = @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 0);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", "Lars");
         }
@@ -145,14 +145,28 @@ namespace HybridDb.Tests
         public void CanQueryWithMultipleSelectClauses()
         {
             var translation = Translate(Query<Entity>().Select(x => new {x.Id, x.StringProp}).Select(x => new {x.Id}));
-            translation.Select.ShouldBe("Id AS Id");
+            translation.Select.ShouldBe("[Entities].[Id] AS [Id]");
+        }
+
+        [Fact]
+        public void CanQueryWithMultipleSelectClausesWithRenaming()
+        {
+            var translation = Translate(Query<Entity>().Select(x => new {Yksi = x.Id}).Select(x => new {x.Yksi}));
+            translation.Select.ShouldBe("[Entities].[Id] AS [Yksi]");
+        }
+
+        [Fact]
+        public void CanQueryWithMultipleSelectClausesWithRenamingAgain()
+        {
+            var translation = Translate(Query<Entity>().Select(x => new {Yksi = x.Id}).Select(x => new {Kaksi = x.Yksi}));
+            translation.Select.ShouldBe("[Entities].[Id] AS [Kaksi]");
         }
 
         [Fact]
         public void CanQueryWithParantheses()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Property == 0 || (x.StringProp == null && x.Property == 1)));
-            translation.Where.ShouldBe("((Property = @Value0) OR ((StringProp IS NULL) AND (Property = @Value1)))");
+            translation.Where.ShouldBe("(([Entities].[Property] = @Value0) OR (([Entities].[StringProp] IS NULL) AND ([Entities].[Property] = @Value1)))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 0);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", 1);
         }
@@ -161,7 +175,7 @@ namespace HybridDb.Tests
         public void CanQueryWithStartsWith()
         {
             var translation = Translate(Query<Entity>().Where(x => x.StringProp.StartsWith("L")));
-            translation.Where.ShouldBe("(StringProp LIKE '' + @Value0 + '%')");
+            translation.Where.ShouldBe("([Entities].[StringProp] LIKE '' + @Value0 + '%')");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", "L");
         }
 
@@ -169,7 +183,7 @@ namespace HybridDb.Tests
         public void CanQueryWithContains()
         {
             var translation = Translate(Query<Entity>().Where(x => x.StringProp.Contains("L")));
-            translation.Where.ShouldBe("(StringProp LIKE '%' + @Value0 + '%')");
+            translation.Where.ShouldBe("([Entities].[StringProp] LIKE '%' + @Value0 + '%')");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", "L");
         }
 
@@ -177,7 +191,7 @@ namespace HybridDb.Tests
         public void CanQueryWithTypeConversion()
         {
             var translation = Translate(Query<Entity>().Where(x => x.NullableProperty == 2));
-            translation.Where.ShouldBe("(NullableProperty = @Value0)");
+            translation.Where.ShouldBe("([Entities].[NullableProperty] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -186,7 +200,7 @@ namespace HybridDb.Tests
         {
             var prop = 2;
             var translation = Translate(Query<Entity>().Where(x => x.Property == prop));
-            translation.Where.ShouldBe("(Property = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -195,7 +209,7 @@ namespace HybridDb.Tests
         {
             var someObj = new {prop = 2};
             var translation = Translate(Query<Entity>().Where(x => x.Property == someObj.prop));
-            translation.Where.ShouldBe("(Property = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -204,7 +218,7 @@ namespace HybridDb.Tests
         {
             var someObj = new {prop = (int?) null};
             var translation = Translate(Query<Entity>().Where(x => x.Property == someObj.prop));
-            translation.Where.ShouldBe("(Property IS NULL)");
+            translation.Where.ShouldBe("([Entities].[Property] IS NULL)");
         }
 
         [Fact]
@@ -223,7 +237,7 @@ namespace HybridDb.Tests
             queryable.ShouldBeOfType<Query<ProjectedEntity>>();
             queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
             translation.Select.ShouldBe("");
-            translation.Where.ShouldBe("(Property = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
         }
 
@@ -239,7 +253,7 @@ namespace HybridDb.Tests
         public void CanQueryOnNestedProperties()
         {
             var translation = Translate(Query<Entity>().Where(x => x.TheChild.NestedProperty > 2));
-            translation.Where.ShouldBe("(TheChildNestedProperty > @Value0)");
+            translation.Where.ShouldBe("([Entities].[TheChildNestedProperty] > @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2.0);
         }
 
@@ -248,7 +262,7 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>()
                     .Where(x => x.Complex.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any()));
-            translation.Where.ShouldBe("(ComplexGetTypeGetPropertiesInstanceStaticAny = @Value0)");
+            translation.Where.ShouldBe("([Entities].[ComplexGetTypeGetPropertiesInstanceStaticAny] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
         }
 
@@ -259,7 +273,7 @@ namespace HybridDb.Tests
                     .Where(x => x.Children.Where(child => child.NestedProperty < 10)
                         .Count(child => child.NestedProperty > 1) == 1));
 
-            translation.Where.ShouldBe("(ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 = @Value0)");
+            translation.Where.ShouldBe("([Entities].[ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 1);
         }
 
@@ -268,7 +282,7 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>().Where(x => x.Column<int>("SomeColumn") == 1));
 
-            translation.Where.ShouldBe("(SomeColumn = @Value0)");
+            translation.Where.ShouldBe("([Entities].[SomeColumn] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 1);
         }
 
@@ -283,21 +297,22 @@ namespace HybridDb.Tests
         public void CanQueryWithSelectToAnonymous()
         {
             var translation = Translate(Query<Entity>().Select(x => new {x.Property}));
-            translation.Select.ShouldBe("Property AS Property");
+            translation.Select.ShouldBe("[Entities].[Property] AS Property");
         }
+
 
         [Fact]
         public void CanQueryWithSelectToAnonymousWithMultipleProperties()
         {
             var translation = Translate(Query<Entity>().Select(x => new {x.Property, x.StringProp}));
-            translation.Select.ShouldBe("Property AS Property, StringProp AS StringProp");
+            translation.Select.ShouldBe("[Entities].[Property] AS Property, [Entities].[StringProp] AS StringProp");
         }
 
         [Fact]
         public void CanQueryWithSelectToAnonymousWithNestedProperty()
         {
             var translation = Translate(Query<Entity>().Select(x => new {x.TheChild.NestedProperty}));
-            translation.Select.ShouldBe("TheChildNestedProperty AS NestedProperty");
+            translation.Select.ShouldBe("[Entities].[TheChildNestedProperty] AS NestedProperty");
         }
 
         [Fact]
@@ -309,7 +324,7 @@ namespace HybridDb.Tests
                         Projection = x.Children.Where(child => child.NestedProperty < 10)
                             .Count(child => child.NestedProperty > 1)
                     }));
-            translation.Select.ShouldBe("ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 AS Projection");
+            translation.Select.ShouldBe("[Entities].[ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1] AS Projection");
         }
 
         [Fact]
@@ -317,28 +332,38 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>()
                     .Select(x => new {Property = x.Column<int>("SomeProperty")}));
-            translation.Select.ShouldBe("SomeProperty AS Property");
+            translation.Select.ShouldBe("[Entities].[SomeProperty] AS Property");
         }
 
         [Fact]
         public void CanQueryWithSelectToAnonymousToOtherName()
         {
             var translation = Translate(Query<Entity>().Select(x => new {HansOgGrethe = x.Property}));
-            translation.Select.ShouldBe("Property AS HansOgGrethe");
+            translation.Select.ShouldBe("[Entities].[Property] AS HansOgGrethe");
         }
 
         [Fact]
         public void CanQueryWithSelectToNamed()
         {
             var translation = Translate(Query<Entity>().Select(x => new ProjectedEntity {Property = x.Property}));
-            translation.Select.ShouldBe("Property AS Property");
+            translation.Select.ShouldBe("[Entities].[Property] AS Property");
         }
+
+        [Fact]
+        public void SelectedAliasesShouldNotBeUsedInOtherClauses()
+        {
+            var translation = Translate(Query<Entity>().Where(x => x.Property == 1).Select(x => new { TheP = x.Property }));
+            translation.Select.ShouldBe("[Entities].[Property] AS [TheP]");
+            translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
+            translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
 
         [Fact]
         public void CanQueryWithSelectToNamedTypeWithNestedProperty()
         {
             var translation = Translate(Query<Entity>().Select(x => new ProjectedEntity {TheChildNestedProperty = x.TheChild.NestedProperty}));
-            translation.Select.ShouldBe("TheChildNestedProperty AS TheChildNestedProperty");
+            translation.Select.ShouldBe("[Entities].[TheChildNestedProperty] AS TheChildNestedProperty");
         }
 
         [Fact]
@@ -351,7 +376,7 @@ namespace HybridDb.Tests
                             x.Children.Where(child => child.NestedProperty < 10).Count(child => child.NestedProperty > 1)
                     }));
             translation.Select.ShouldBe(
-                "ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1 AS ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1");
+                "[Entities].[ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1] AS ChildrenWhereNestedPropertyLessThan10CountNestedPropertyGreaterThan1");
         }
 
         [Fact]
@@ -363,14 +388,14 @@ namespace HybridDb.Tests
                         Property = x.Column<int>("SomeProperty")
                     }));
 
-            translation.Select.ShouldBe("SomeProperty AS Property");
+            translation.Select.ShouldBe("[Entities].[SomeProperty] AS Property");
         }
 
         [Fact]
         public void CanQueryWithSelectToNamedWithOtherName()
         {
             var translation = Translate(Query<Entity>().Select(x => new ProjectedEntity {StringProp = x.Field}));
-            translation.Select.ShouldBe("Field AS StringProp");
+            translation.Select.ShouldBe("[Entities].[Field] AS StringProp");
         }
 
         [Fact]
@@ -378,21 +403,21 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>()
                     .Select(x => x.Column<int>("SomeProperty")));
-            translation.Select.ShouldBe("SomeProperty");
+            translation.Select.ShouldBe("[Entities].[SomeProperty]");
         }
 
         [Fact(Skip = "Feature tbd")]
         public void CanQueryWithTwoSelects()
         {
             var translation = Translate(Query<Entity>().Select(x => new {x.Field}).Select(x => x.Field));
-            translation.Select.ShouldBe("Field AS Field");
+            translation.Select.ShouldBe("[Entities].[Field[Entities].[ AS Field");
         }
 
         [Fact(Skip = "Feature tbd")]
         public void CanQueryWithTwoSelects2()
         {
             var translation = Translate(Query<Entity>().Select(x => new {Something = x.Column<string>("Field")}).Select(x => x.Something));
-            translation.Select.ShouldBe("Field AS Something");
+            translation.Select.ShouldBe("[Entities].[Field] AS Something");
         }
 
         [Fact]
@@ -407,35 +432,35 @@ namespace HybridDb.Tests
         public void CanOrderBy()
         {
             var translation = Translate(Query<Entity>().OrderBy(x => x.Property));
-            translation.OrderBy.ShouldBe("Property");
+            translation.OrderBy.ShouldBe("[Entities].[Property]");
         }
 
         [Fact]
         public void CanOrderByAndThenBy()
         {
             var translation = Translate(Query<Entity>().OrderBy(x => x.Property).ThenBy(x => x.StringProp));
-            translation.OrderBy.ShouldBe("Property, StringProp");
+            translation.OrderBy.ShouldBe("[Entities].[Property], [Entities].[StringProp]");
         }
 
         [Fact]
         public void CanOrderByDescending()
         {
             var translation = Translate(Query<Entity>().OrderByDescending(x => x.Property));
-            translation.OrderBy.ShouldBe("Property DESC");
+            translation.OrderBy.ShouldBe("[Entities].[Property] DESC");
         }
 
         [Fact]
         public void CanOrderByAndThenByDescending()
         {
             var translation = Translate(Query<Entity>().OrderBy(x => x.Property).ThenByDescending(x => x.StringProp));
-            translation.OrderBy.ShouldBe("Property, StringProp DESC");
+            translation.OrderBy.ShouldBe("[Entities].[Property], [Entities].[StringProp] DESC");
         }
 
         [Fact]
         public void CanWriteGuid()
         {
             var translation = Translate(Query<Entity>().Where(x => x.Id == Guid.Empty));
-            translation.Where.ShouldBe("(Id = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Id] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", Guid.Empty);
         }
 
@@ -443,7 +468,7 @@ namespace HybridDb.Tests
         public void CanQueryWhereWithBool()
         {
             var translation = Translate(Query<Entity>().Where(x => x.BoolProp));
-            translation.Where.ShouldBe("(BoolProp = @Value0)");
+            translation.Where.ShouldBe("([Entities].[BoolProp] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
         }
 
@@ -451,7 +476,7 @@ namespace HybridDb.Tests
         public void CanQueryWhereWithNotBool()
         {
             var translation = Translate(Query<Entity>().Where(x => !x.BoolProp));
-            translation.Where.ShouldBe(" NOT (BoolProp = @Value0)");
+            translation.Where.ShouldBe(" NOT ([Entities].[BoolProp] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
         }
 
@@ -459,7 +484,7 @@ namespace HybridDb.Tests
         public void WhereWithNestedUnaryBool()
         {
             var translation = Translate(Query<Entity>().Where(x => true && x.BoolProp));
-            translation.Where.ShouldBe("((1=1) AND (BoolProp = @Value0))");
+            translation.Where.ShouldBe("((1=1) AND ([Entities].[BoolProp] = @Value0))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
         }
 
@@ -468,7 +493,7 @@ namespace HybridDb.Tests
         {
             var something = true;
             var translation = Translate(Query<Entity>().Where(x => x.BoolProp == something));
-            translation.Where.ShouldBe("(BoolProp = @Value0)");
+            translation.Where.ShouldBe("([Entities].[BoolProp] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
         }
 
@@ -476,7 +501,7 @@ namespace HybridDb.Tests
         public void CanQueryWhereWithConstantMethodCall()
         {
             var translation = Translate(Query<Entity>().Where(x => x.BoolProp == WackyCustomEqualityCheck(1, 1)));
-            translation.Where.ShouldBe("(BoolProp = @Value0)");
+            translation.Where.ShouldBe("([Entities].[BoolProp] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", true);
         }
 
@@ -506,7 +531,7 @@ namespace HybridDb.Tests
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var list = new[] {guid1, guid2};
             var translation = Translate(Query<Entity>().Where(x => x.Id.In(list)));
-            translation.Where.ShouldBe("(Id IN (@Value0, @Value1))");
+            translation.Where.ShouldBe("([Entities].[Id] IN (@Value0, @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", guid1);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", guid2);
         }
@@ -517,7 +542,7 @@ namespace HybridDb.Tests
             var guid1 = new Guid("00000000-0000-0000-0000-000000000001");
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var translation = Translate(Query<Entity>().Where(x => x.Id.In(new[] {guid1, guid2})));
-            translation.Where.ShouldBe("(Id IN (@Value0, @Value1))");
+            translation.Where.ShouldBe("([Entities].[Id] IN (@Value0, @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", guid1);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", guid2);
         }
@@ -529,7 +554,7 @@ namespace HybridDb.Tests
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var list = new[] {guid1, guid2};
             var translation = Translate(Query<Entity>().Where(x => x.Id.In(list.ToArray())));
-            translation.Where.ShouldBe("(Id IN (@Value0, @Value1))");
+            translation.Where.ShouldBe("([Entities].[Id] IN (@Value0, @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", guid1);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", guid2);
         }
@@ -539,8 +564,8 @@ namespace HybridDb.Tests
         {
             // ReSharper disable once RedundantExplicitParamsArrayCreation
             var translation = Translate(Query<Entity>().Where(x => x.Id.In(new Guid[0])));
-            translation.Where.ShouldBe("(@Value0 <> @Value0)");
-            translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 1);
+            translation.Where.ShouldBe("(1<>1)");
+            translation.ParametersByName.ShouldBeEmpty();
         }
 
         [Fact]
@@ -548,8 +573,8 @@ namespace HybridDb.Tests
         {
             // ReSharper disable once RedundantExplicitParamsArrayCreation
             var translation = Translate(Query<Entity>().Where(x => !x.Id.In(new Guid[0])));
-            translation.Where.ShouldBe(" NOT (@Value0 <> @Value0)");
-            translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 1);
+            translation.Where.ShouldBe(" NOT (1<>1)");
+            translation.ParametersByName.ShouldBeEmpty();
         }
 
         [Fact]
@@ -559,7 +584,7 @@ namespace HybridDb.Tests
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var list = new[] {guid1, guid2};
             var translation = Translate(Query<Entity>().Where(x => !x.Id.In(list)));
-            translation.Where.ShouldBe(" NOT (Id IN (@Value0, @Value1))");
+            translation.Where.ShouldBe(" NOT ([Entities].[Id] IN (@Value0, @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", guid1);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", guid2);
         }
@@ -571,7 +596,7 @@ namespace HybridDb.Tests
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
             var list = new[] {guid1, guid2};
             var translation = Translate(Query<Entity>().Where(x => x.Column<Guid>("Id").In(list.ToArray())));
-            translation.Where.ShouldBe("(Id IN (@Value0, @Value1))");
+            translation.Where.ShouldBe("([Entities].[Id] IN (@Value0, @Value1))");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", guid1);
             translation.ParametersByName.ShouldContainKeyAndValue("@Value1", guid2);
         }
@@ -597,7 +622,7 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>().Where(x => x.Index<ExtIndex>().StringProp == "asger"));
 
-            translation.Where.ShouldBe("(StringProp = @Value0)");
+            translation.Where.ShouldBe("([Entities].[StringProp] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", "asger");
         }
 
@@ -606,7 +631,7 @@ namespace HybridDb.Tests
         {
             var translation = Translate(Query<Entity>().Where(x => x.Enum == Enumse.Second));
 
-            translation.Where.ShouldBe("(Enum = @Value0)");
+            translation.Where.ShouldBe("([Entities].[Enum] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", "Second");
         }
 
@@ -616,7 +641,7 @@ namespace HybridDb.Tests
             var somecolumn = new Entity {StringProp = "SomeColumn"};
             var translation = Translate(Query<Entity>().OrderBy(x => x.Column<string>(somecolumn.StringProp.ToString())));
 
-            translation.OrderBy.ShouldBe("SomeColumn");
+            translation.OrderBy.ShouldBe("[Entities].[SomeColumn]");
         }
 
         Query<T> Query<T>() where T : class

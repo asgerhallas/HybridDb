@@ -294,7 +294,7 @@ namespace HybridDb
             //if (!projectToDictionary)
             //    select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
 
-            var emit = new SqlStatementEmitter(Database.FormatTableNameAndEscape).Emit(statement);
+            var emit = new SqlStatementEmitter(Database.Escape, Database.FormatTableName).Emit(statement);
 
             var timer = Stopwatch.StartNew();
 

@@ -49,7 +49,7 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Select":
-                    Select = SelectParser.Translate(getTableNameForType, expression.Arguments[1]);
+                    Select = SelectParser.Translate(getTableNameForType, Select, expression.Arguments[1]);
                     break;
                 case "SingleOrDefault":
                     Execution = Execution.SingleOrDefault;

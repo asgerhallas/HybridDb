@@ -56,7 +56,7 @@ namespace HybridDb.Tests
             ProjectionsFor<Entity>().ShouldContainKey("StringsWhereEqualAsger");
         }
 
-        [Fact(Skip = "until we support multikey indices")]
+        [Fact()]
         public void CanGetColumnNameFromProjectionWithComplexLambda()
         {
             configuration.Document<Entity>().With(x => x.Strings.Where(y => y.PadLeft(2).Length > 10));
