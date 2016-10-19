@@ -107,6 +107,10 @@ Changelog
 
 - Internal change to metadata API
 
+#### 0.10.3
+
+- Fix for bug that prevented queries on anonymous types
+
 Acknowledgements
 ================
 
