@@ -1511,6 +1511,15 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void BugQueryUnknownConcreteType()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Query<Entity>().ToList();
+            }
+        }
+
         [Fact(Skip = "Feature on holds")]
         public void CanProjectCollection()
         {

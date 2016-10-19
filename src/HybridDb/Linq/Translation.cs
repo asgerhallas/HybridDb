@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace HybridDb.Linq
@@ -11,6 +12,7 @@ namespace HybridDb.Linq
         public string OrderBy { get; set; }
         public IDictionary<string, object> Parameters { get; set; }
         public ExecutionSemantics ExecutionMethod { get; set; }
+        public Type ProjectAs { get; set; }
 
         public enum ExecutionSemantics
         {

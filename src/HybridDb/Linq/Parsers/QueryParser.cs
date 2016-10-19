@@ -11,6 +11,7 @@ namespace HybridDb.Linq.Parsers
         public SqlExpression Select { get; private set; }
         public SqlExpression Where { get; private set; }
         public SqlOrderByExpression OrderBy { get; private set; }
+        public Type ProjectAs { get; private set; }
         public Translation.ExecutionSemantics Execution { get; set; }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
@@ -21,6 +22,8 @@ namespace HybridDb.Linq.Parsers
             {
                 case "Select":
                     Select = SelectParser.Translate(expression.Arguments[1]);
+                    // if it changes the return type make it known that this is a projection and should not be tracked in session
+                    ProjectAs = expression.Arguments[0].Type != expression.Method.ReturnType ?  expression.Method.ReturnType : null;
                     break;
                 case "SingleOrDefault":
                     Execution = Translation.ExecutionSemantics.SingleOrDefault;
@@ -56,7 +59,7 @@ namespace HybridDb.Linq.Parsers
                     Take = (int) ((ConstantExpression) expression.Arguments[1]).Value;
                     break;
                 case "OfType":
-                    // Change of type is done else where
+                    ProjectAs = expression.Method.GetGenericArguments()[0];
                     break;
                 case "OrderBy":
                 case "ThenBy":
