@@ -14,7 +14,7 @@ namespace HybridDb.Linq.Parsers
 
         readonly Func<Type, string> getTableNameForType;
 
-        public LambdaParser(Func<Type, string> getTableNameForType, Stack<AstNode> ast)
+        public LambdaParser(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Stack<AstNode> ast)
         {
             this.getTableNameForType = getTableNameForType;
             this.ast = ast;
@@ -170,6 +170,8 @@ namespace HybridDb.Linq.Parsers
                 })
                 .Match<TableName>(x =>
                 {
+                    // is there a col by the right name
+
                     var table = (TableName)ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new TypedColumnName(expression.Member.GetMemberType(), table.Name, name));

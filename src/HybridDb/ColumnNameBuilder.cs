@@ -7,8 +7,11 @@ namespace HybridDb
 {
     public class ColumnNameBuilder : ExpressionVisitor
     {
-        public ColumnNameBuilder()
+        readonly Expression projector;
+
+        public ColumnNameBuilder(Expression projector)
         {
+            this.projector = projector;
             ColumnName = "";
         }
 
@@ -16,49 +19,34 @@ namespace HybridDb
 
         public static string GetColumnNameByConventionFor(Expression projector)
         {
-            var columnNameBuilder = new ColumnNameBuilder();
+            var columnNameBuilder = new ColumnNameBuilder(projector);
             columnNameBuilder.Visit(projector);
             return columnNameBuilder.ColumnName;
         }
 
-        protected override Expression VisitBinary(BinaryExpression node)
-        {
-            Visit(node.Left);
-            ColumnName += node.NodeType;
-            Visit(node.Right);
-            return node;
-        }
-
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
-            // If it is an extension method, reverse the notation
-            if (node.Method.IsDefined(typeof (ExtensionAttribute), true))
+            if (node.Method.IsDefined(typeof(ExtensionAttribute), true))
             {
-                Visit(node.Arguments[0]);
-                ColumnName += node.Method.Name;
-                foreach (var args in node.Arguments.Skip(1))
+                if (node.Arguments.Skip(1).Any(x => !(x is ConstantExpression)))
                 {
-                    Visit(args);
+                    throw new HybridDbException($"Projection '{projector}' is to complex to name by convention. Please define a columnn name manually.");
                 }
+
+                Visit(node.Arguments[0]);
             }
             else
             {
-                if (node.Object != null)
+                if (node.Arguments.Any(x => !(x is ConstantExpression)))
                 {
-                    Visit(node.Object);
+                    throw new HybridDbException($"Projection '{projector}' is to complex to name by convention. Please define a columnn name manually.");
                 }
-                else
-                {
-                    ColumnName += node.Method.DeclaringType.Name;
-                }
-                
-                ColumnName += node.Method.Name;
-                foreach (var args in node.Arguments)
-                {
-                    Visit(args);
-                }
+
+                Visit(node.Object);
             }
-            
+
+            ColumnName += node.Method.Name;
+
             return node;
         }
 
@@ -67,10 +55,6 @@ namespace HybridDb
             if (node.Expression != null)
             {
                 Visit(node.Expression);
-            }
-            else
-            {
-                ColumnName += node.Member.DeclaringType.Name;
             }
 
             ColumnName += node.Member.Name;

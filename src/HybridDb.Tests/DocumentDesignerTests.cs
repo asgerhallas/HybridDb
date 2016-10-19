@@ -46,28 +46,28 @@ namespace HybridDb.Tests
         public void CanGetColumnNameFromProjectionWithMethodAndArgument()
         {
             configuration.Document<Entity>().With(x => x.String.ToUpper(CultureInfo.InvariantCulture));
-            ProjectionsFor<Entity>().ShouldContainKey("StringToUpperCultureInfoInvariantCulture");
+            ProjectionsFor<Entity>().ShouldContainKey("StringToUpper");
         }
 
-        [Fact(Skip = "until we support multikey indices")]
+        [Fact]
         public void CanGetColumnNameFromProjectionWithLambda()
         {
             configuration.Document<Entity>().With(x => x.Strings.Where(y => y == "Asger"));
-            ProjectionsFor<Entity>().ShouldContainKey("StringsWhereEqualAsger");
+            ProjectionsFor<Entity>().ShouldContainKey("Projection 'x => x.Strings.Where((y => y == \"Asger\"))' is to complex to name by convention. Please define a columnn name manually.");
         }
 
         [Fact()]
         public void CanGetColumnNameFromProjectionWithComplexLambda()
         {
-            configuration.Document<Entity>().With(x => x.Strings.Where(y => y.PadLeft(2).Length > 10));
-            ProjectionsFor<Entity>().ShouldContainKey("StringsWherePadLeft2LengthGreaterThan10");
+            Should.Throw<HybridDbException>(() => configuration.Document<Entity>().With(x => x.Strings.Where(y => y.PadLeft(2).Length > 10)))
+                .Message.ShouldBe("Projection 'x => x.Strings.Where(y => (y.PadLeft(2).Length > 10))' is to complex to name by convention. Please define a columnn name manually.");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithEnumFlags()
         {
             configuration.Document<Entity>().With(x => x.String.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any());
-            ProjectionsFor<Entity>().ShouldContainKey("StringGetTypeGetPropertiesInstanceStaticAny");
+            ProjectionsFor<Entity>().ShouldContainKey("StringGetTypeGetPropertiesAny");
         }
 
         [Fact]
