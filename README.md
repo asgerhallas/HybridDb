@@ -111,6 +111,11 @@ Changelog
 
 - Fix for bug that prevented queries on anonymous types
 
+#### 0.10.4
+
+- Fix for bug that prevented queries on unconfigured types
+
+
 Acknowledgements
 ================
 
