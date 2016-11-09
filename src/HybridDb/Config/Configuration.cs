@@ -5,6 +5,7 @@ using System.Linq;
 using HybridDb.Migrations;
 using HybridDb.Serialization;
 using Serilog;
+using Serilog.Core;
 
 namespace HybridDb.Config
 {
@@ -17,10 +18,11 @@ namespace HybridDb.Config
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new List<DocumentDesign>();
 
-            Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .WriteTo.ColoredConsole()
-                .CreateLogger();
+            Logger = Log.Logger;
+            //Logger = new LoggerConfiguration()
+            //    .MinimumLevel.Debug()
+            //    .WriteTo.ColoredConsole()
+            //    .CreateLogger();
 
             Serializer = new DefaultSerializer();
             TypeMapper = new AssemblyQualifiedNameTypeMapper();

@@ -15,10 +15,10 @@
     <tags></tags>
     <dependencies>
       <dependency id="HybridDb" version="{VERSION}" />
-      <dependency id="Newtonsoft.Json" version="6.0.8" />
+      <dependency id="Newtonsoft.Json" version="9.0.1" />
     </dependencies>
   </metadata>
   <files>
-    <file src="NewtonsoftJson\lib\*.*" target="lib\net40" />
+    <file src="NewtonsoftJson\lib\*.*" target="lib\net45" />
   </files>
 </package>

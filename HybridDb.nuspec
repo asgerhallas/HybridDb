@@ -14,11 +14,11 @@
     <copyright>Copyright 2013</copyright>
     <tags></tags>
     <dependencies>
-      <dependency id="Serilog" version="1.4" />
+      <dependency id="Serilog" version="2.3.0" />
     </dependencies>
   </metadata>
   <files>
-    <file src="HybridDb\lib\*.*" target="lib\net40" />
+    <file src="HybridDb\lib\*.*" target="lib\net45" />
     <file src="HybridDb\tools\*.*" target="tools" />
   </files>
 </package>
