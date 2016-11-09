@@ -143,7 +143,8 @@ namespace HybridDb.Config
 
             if (!@base.DocumentType.IsAssignableFrom(type))
             {
-                throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{@base.DocumentType.Name}'.");
+                return null;
+                
             }
 
             return CreateDesignFor(type);

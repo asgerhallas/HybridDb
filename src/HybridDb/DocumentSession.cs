@@ -64,7 +64,14 @@ namespace HybridDb
             
             if (row == null) return null;
 
-            return ConvertToEntityAndPutUnderManagement(design, row);
+            var entity = ConvertToEntityAndPutUnderManagement(design, row);
+
+            if (entity == null)
+            {
+                throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{design.DocumentType.Name}'.");
+            }
+
+            return entity;
         }
 
         public IQueryable<T> Query<T>() where T : class
@@ -73,10 +80,12 @@ namespace HybridDb
             
             var design = configuration.TryGetLeastSpecificDesignFor(typeof(T));
 
+//            configuration.TypeMapper.ToDiscriminator()
+
             var discriminators = design.DecendentsAndSelf.Keys.ToArray();
 
-            var query = new Query<T>(new QueryProvider<T>(this, design))
-                .Where(x => x.Column<string>("Discriminator").In(discriminators));
+            var query = new Query<T>(new QueryProvider<T>(this, design));
+                //.Where(x => x.Column<string>("Discriminator").In(discriminators));
 
             return query;
         }
@@ -232,6 +241,8 @@ namespace HybridDb
             var key = (string)row[table.IdColumn];
             var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
             var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(design, discriminator, key);
+
+            if (concreteDesign == null) return null;
 
             ManagedEntity managedEntity;
             if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))

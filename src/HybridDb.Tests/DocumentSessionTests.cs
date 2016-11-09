@@ -1442,6 +1442,25 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanStoreAndQueryWhenRegisteringNoTypes()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = "key" });
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            using (var session = store.OpenSession())
+            {
+                var list = session.Query<Entity>().ToList();
+                list.Count.ShouldBe(1);
+                list[0].Id.ShouldBe("key");
+            }
+        }
+
+        [Fact]
         public void FailsIfTypeMapperCantMapToConcreteType()
         {
             UseTypeMapper(new FailingTypeMapper());
