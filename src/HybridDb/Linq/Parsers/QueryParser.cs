@@ -23,7 +23,9 @@ namespace HybridDb.Linq.Parsers
                 case "Select":
                     Select = SelectParser.Translate(expression.Arguments[1]);
                     // if it changes the return type make it known that this is a projection and should not be tracked in session
-                    ProjectAs = expression.Arguments[0].Type != expression.Method.ReturnType ?  expression.Method.ReturnType : null;
+                    var inType = expression.Arguments[0].Type.GetGenericArguments()[0];
+                    var outType = expression.Method.ReturnType.GetGenericArguments()[0];
+                    ProjectAs = inType != outType ? outType : null;
                     break;
                 case "SingleOrDefault":
                     Execution = Translation.ExecutionSemantics.SingleOrDefault;
