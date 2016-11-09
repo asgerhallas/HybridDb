@@ -115,6 +115,10 @@ Changelog
 
 - Fix for bug that prevented queries on unconfigured types
 
+#### 0.10.5
+
+- Upgrade of Serilog and Newtonsoft.Json (thanks to @mookid8000 / https://github.com/asgerhallas/HybridDb/pull/36)
+
 
 Acknowledgements
 ================
