@@ -96,13 +96,10 @@ namespace HybridDb.Linq
                 QueryStats storeStats;
                 var results = store.Query(
                     design.Table, out storeStats,
-                    translation.Select,
-                    translation.Where,
-                    translation.Skip,
-                    translation.Take,
-                    translation.OrderBy,
-                    translation.Parameters)
-                    .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
+                    translation.Select, translation.Where, translation.Skip,
+                    translation.Take, translation.OrderBy, translation.Parameters)
+                    // if ProjectAs == null it's safe to use TSourceElement as the expected type
+                    .Select(result => session.ConvertToEntityAndPutUnderManagement(typeof(TSourceElement), design, result))
                     .Where(result => result != null)
                     .Cast<TProjection>();
   
@@ -116,12 +113,8 @@ namespace HybridDb.Linq
                 QueryStats storeStats;
                 var results = store.Query<TProjection>(
                     table, out storeStats,
-                    translation.Select,
-                    translation.Where,
-                    translation.Skip,
-                    translation.Take,
-                    translation.OrderBy,
-                    translation.Parameters);
+                    translation.Select, translation.Where, translation.Skip,
+                    translation.Take, translation.OrderBy, translation.Parameters);
 
                 storeStats.CopyTo(lastQueryStats);
                 return new TranslationAndResult<TProjection>(translation, results);

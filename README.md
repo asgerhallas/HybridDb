@@ -119,6 +119,9 @@ Changelog
 
 - Upgrade of Serilog and Newtonsoft.Json (thanks to @mookid8000 / https://github.com/asgerhallas/HybridDb/pull/36)
 
+#### 0.10.6
+
+- Better handling of queries on unconfigured types and ad-hoc configuring
 
 Acknowledgements
 ================

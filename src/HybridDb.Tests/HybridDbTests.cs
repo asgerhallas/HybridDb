@@ -141,6 +141,11 @@ namespace HybridDb.Tests
 
         public interface IOtherInterface
         {
+            string Property { get; }
+        }
+
+        public interface IUnusedInterface
+        {
         }
 
         public class Entity : ISomeInterface

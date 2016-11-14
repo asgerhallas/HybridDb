@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace HybridDb.Config
@@ -9,6 +10,7 @@ namespace HybridDb.Config
 
         public DocumentDesign(Configuration configuration, DocumentTable table, Type documentType, string discriminator)
         {
+            Base = this;
             DocumentType = documentType;
             Table = table;
             Discriminator = discriminator;
@@ -18,10 +20,8 @@ namespace HybridDb.Config
                 throw new InvalidOperationException($"Discriminator '{discriminator}' is too long for column. Maximum length is {Table.DiscriminatorColumn.Length}.");
             }
 
-            decendentsAndSelf = new Dictionary<string, DocumentDesign>
-            {
-                { Discriminator, this }
-            };
+            decendentsAndSelf = new Dictionary<string, DocumentDesign>();
+            decendentsAndSelf.Add(Discriminator, this);
 
             GetKey = configuration.DefaultKeyResolver;
 
@@ -41,6 +41,7 @@ namespace HybridDb.Config
         public DocumentDesign(Configuration configuration, DocumentDesign parent, Type documentType, string discriminator)
             : this(configuration, parent.Table, documentType, discriminator)
         {
+            Base = parent.Base;
             Parent = parent;
             Projections = parent.Projections.ToDictionary();
             Projections[Table.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator);
@@ -48,6 +49,7 @@ namespace HybridDb.Config
             Parent.AddChild(this);
         }
 
+        public DocumentDesign Base { get; }
         public DocumentDesign Parent { get; }
         public Type DocumentType { get; }
         public DocumentTable Table { get; }
@@ -64,7 +66,9 @@ namespace HybridDb.Config
             Parent?.AddChild(design);
 
             if (decendentsAndSelf.ContainsKey(design.Discriminator))
+            {
                 throw new InvalidOperationException($"Discriminator '{design.Discriminator}' is already in use.");
+            }
 
             decendentsAndSelf.Add(design.Discriminator, design);
         }

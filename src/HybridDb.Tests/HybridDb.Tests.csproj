@@ -92,6 +92,7 @@
     <Compile Include="DocumentDesignerTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
     <Compile Include="DocumentSessionTests2.cs" />
+    <Compile Include="DocumentSessionVarianceTests.cs" />
     <Compile Include="FakeBackupWriter.cs" />
     <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />

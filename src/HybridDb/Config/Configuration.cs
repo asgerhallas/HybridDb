@@ -5,13 +5,15 @@ using System.Linq;
 using HybridDb.Migrations;
 using HybridDb.Serialization;
 using Serilog;
-using Serilog.Core;
+using static Indentional.Indent;
 
 namespace HybridDb.Config
 {
     public class Configuration
     {
-        bool initialized = false;
+        readonly object gate = new object();
+
+        bool initialized;
 
         internal Configuration()
         {
@@ -19,10 +21,6 @@ namespace HybridDb.Config
             DocumentDesigns = new List<DocumentDesign>();
 
             Logger = Log.Logger;
-            //Logger = new LoggerConfiguration()
-            //    .MinimumLevel.Debug()
-            //    .WriteTo.ColoredConsole()
-            //    .CreateLogger();
 
             Serializer = new DefaultSerializer();
             TypeMapper = new AssemblyQualifiedNameTypeMapper();
@@ -55,48 +53,88 @@ namespace HybridDb.Config
 
         internal void Initialize()
         {
-            DocumentDesigns.Insert(0, new DocumentDesign(this, AddTable("Documents"), typeof(object), "object"));
-            initialized = true;
+            lock (gate)
+            {
+                DocumentDesigns.Insert(0, new DocumentDesign(this, GetOrAddTable("Documents"), typeof(object), "object"));
+
+                initialized = true;
+            }
         }
 
         public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
         {
-            return new DocumentDesigner<TEntity>(CreateDesignFor(typeof (TEntity), tablename));
+            return new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof (TEntity), tablename));
         }
 
-        public DocumentDesign CreateDesignFor(Type type, string tablename = null)
+        public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null)
         {
-            var discriminator = TypeMapper.ToDiscriminator(type);
-
-            var parent = TryGetDesignFor(type);
-
-            if (parent != null && tablename == null)
+            lock (gate)
             {
-                var design = new DocumentDesign(this, parent, type, discriminator);
+                // for interfaces we find the first design for a class that is assignable to the interface or fallback to the design for typeof(object)
+                if (type.IsInterface)
+                {
+                    return DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
+                }
 
-                var afterParent = DocumentDesigns.IndexOf(parent) + 1;
+                //TODO: Table equals base design... model it?
+                var existing = TryGetDesignFor(type);
+
+                // no design for type, nor a base design, add new table and base design
+                if (existing == null)
+                {
+                    return AddDesign(new DocumentDesign(
+                        this, GetOrAddTable(tablename ?? GetTableNameByConventionFor(type)), 
+                        type, TypeMapper.ToDiscriminator(type)));
+                }
+
+                // design already exists for type
+                if (existing.DocumentType == type)
+                {
+                    if (tablename == null || tablename == existing.Table.Name)
+                        return existing;
+
+                    throw new InvalidOperationException(_($@"
+                        Design already exists for type '{type}' but is not assigned to the specified tablename '{tablename}'.
+                        The existing design for '{type}' is assigned to table '{existing.Table.Name}'."));
+                }
+
+                // there is explicitly given a table name, so we add a new table for the type
+                if (tablename != null)
+                {
+                    return AddDesign(new DocumentDesign(
+                        this, GetOrAddTable(tablename),
+                        type, TypeMapper.ToDiscriminator(type)));
+                }
+
+                // a table and base design exists for type, append an exact design to it
+                var design = new DocumentDesign(this, existing, type, TypeMapper.ToDiscriminator(type));
+
+                var afterParent = DocumentDesigns.IndexOf(existing) + 1;
                 DocumentDesigns.Insert(afterParent, design);
 
                 return design;
             }
-            else
+        }
+
+        /// <summary>
+        /// The base design is not neccessarrily the root
+        /// </summary>
+        public DocumentDesign GetOrCreateDesignByDiscriminator(DocumentDesign baseDesign, string discriminator)
+        {
+            lock (gate)
             {
-                tablename = tablename ?? GetTableNameByConventionFor(type);
+                DocumentDesign concreteDesign;
+                if (baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                    return concreteDesign;
 
-                if (initialized)
+                var type = TypeMapper.ToType(discriminator);
+
+                if (type == null)
                 {
-                    throw new InvalidOperationException($"You can not register the table '{tablename}' after store has been initialized.");
+                    throw new InvalidOperationException($"No concrete type could be mapped from discriminator '{discriminator}'.");
                 }
 
-                var existingDesign = DocumentDesigns.FirstOrDefault(existing => type.IsAssignableFrom(existing.DocumentType));
-                if (existingDesign != null)
-                {
-                    throw new InvalidOperationException($"Document {type.Name} must be configured before its subtype {existingDesign.DocumentType}.");
-                }
-
-                var design = new DocumentDesign(this, AddTable(tablename), type, discriminator);
-                DocumentDesigns.Add(design);
-                return design;
+                return GetOrCreateDesignFor(type);
             }
         }
 
@@ -114,43 +152,20 @@ namespace HybridDb.Config
         public DocumentDesign TryGetDesignFor(Type type)
         {
             // get most specific type by searching backwards
-            return DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
+            lock (gate)
+            {
+                return DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
+            }
         }
 
         public DocumentDesign TryGetExactDesignFor(Type type)
         {
-            return DocumentDesigns.FirstOrDefault(x => x.DocumentType == type);
-        }
-
-        public DocumentDesign TryGetLeastSpecificDesignFor(Type type)
-        {
-            // get _least_ specific design that can be assigned to given type.
-            // e.g. Load<BaseType>() gets design for BaseType if registered, not DerivedType.
-            // from the BaseType we can use the discriminator from the loaded document to find the concrete design.
-            return DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
-        }
-
-        public DocumentDesign GetOrCreateConcreteDesign(DocumentDesign @base, string discriminator, string key)
-        {
-            DocumentDesign concreteDesign;
-            if (@base.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
-                return concreteDesign;
-
-            var type = TypeMapper.ToType(discriminator);
-
-            if (type == null)
+            lock (gate)
             {
-                throw new InvalidOperationException($"Document with id '{key}' exists, but no concrete type was found for discriminator '{discriminator}'.");
+                return DocumentDesigns.FirstOrDefault(x => x.DocumentType == type);
             }
-
-            if (!@base.DocumentType.IsAssignableFrom(type))
-            {
-                return null;
-                
-            }
-
-            return CreateDesignFor(type);
         }
+
 
         public void UseLogger(ILogger logger)
         {
@@ -217,12 +232,31 @@ namespace HybridDb.Config
             return id != null ? id.ToString() : Guid.NewGuid().ToString();
         }
 
-        DocumentTable AddTable(string tablename)
+        DocumentDesign AddDesign(DocumentDesign design)
         {
-            if (tablename == null)
-                throw new ArgumentException("Tablename must be provided.");
+            var existingDesign = DocumentDesigns.FirstOrDefault(x => design.DocumentType.IsAssignableFrom(x.DocumentType));
+            if (existingDesign != null)
+            {
+                throw new InvalidOperationException($"Document {design.DocumentType.Name} must be configured before its subtype {existingDesign.DocumentType}.");
+            }
 
-            return (DocumentTable)Tables.GetOrAdd(tablename, name => new DocumentTable(name));
+            DocumentDesigns.Add(design);
+            return design;
+        }
+
+        DocumentTable GetOrAddTable(string tablename)
+        {
+            if (tablename == null) throw new ArgumentNullException(nameof(tablename));
+
+            return (DocumentTable)Tables.GetOrAdd(tablename, name =>
+            {
+                if (initialized)
+                {
+                    throw new InvalidOperationException($"You can not register the table '{tablename}' after store has been initialized.");
+                }
+
+                return new DocumentTable(name);
+            });
         }
     }
 }

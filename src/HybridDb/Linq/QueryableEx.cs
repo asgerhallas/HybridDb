@@ -20,6 +20,8 @@ namespace HybridDb.Linq
 
         public static bool In<T>(this T property, params T[] list)
         {
+            // courtesy implementation - not really neccessary for linq provider
+            // but i repeatedly ended up using the method in linq-for-objects too.
             return list.Contains(property);
         }
         

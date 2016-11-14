@@ -48,7 +48,7 @@ namespace HybridDb.Migrations
                             var key = (string)row[table.IdColumn];
                             var currentDocumentVersion = (int)row[table.VersionColumn];
                             var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-                            var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(baseDesign, discriminator, key);
+                            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
 
                             var shouldUpdate = false;
 
