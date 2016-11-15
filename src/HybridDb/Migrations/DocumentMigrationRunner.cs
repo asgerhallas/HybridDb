@@ -24,7 +24,11 @@ namespace HybridDb.Migrations
 
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
+                    var baseDesign = configuration.TryGetDesignByTablename(table.Name);
+                    if (baseDesign == null)
+                    {
+                        throw new InvalidOperationException($"Design not found for table '{table.Name}'");
+                    }
 
                     while (true)
                     {

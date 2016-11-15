@@ -98,7 +98,8 @@ namespace HybridDb.Config
                         The existing design for '{type}' is assigned to table '{existing.Table.Name}'."));
                 }
 
-                // there is explicitly given a table name, so we add a new table for the type
+                // we now know that type is a subtype to existing
+                // there is explicitly given a table name, so we add a new table for the derived type
                 if (tablename != null)
                 {
                     return AddDesign(new DocumentDesign(
@@ -106,7 +107,7 @@ namespace HybridDb.Config
                         type, TypeMapper.ToDiscriminator(type)));
                 }
 
-                // a table and base design exists for type, append an exact design to it
+                // a table and base design exists for type, add the derived type as a child design
                 var design = new DocumentDesign(this, existing, type, TypeMapper.ToDiscriminator(type));
 
                 var afterParent = DocumentDesigns.IndexOf(existing) + 1;
@@ -158,14 +159,21 @@ namespace HybridDb.Config
             }
         }
 
-        public DocumentDesign TryGetExactDesignFor(Type type)
+        public DocumentDesign GetExactDesignFor(Type type)
         {
             lock (gate)
             {
-                return DocumentDesigns.FirstOrDefault(x => x.DocumentType == type);
+                return DocumentDesigns.First(x => x.DocumentType == type);
             }
         }
 
+        public DocumentDesign TryGetDesignByTablename(string tablename)
+        {
+            lock (gate)
+            {
+                return DocumentDesigns.FirstOrDefault(x => x.Table.Name == tablename);
+            }
+        }
 
         public void UseLogger(ILogger logger)
         {
@@ -179,10 +187,13 @@ namespace HybridDb.Config
 
         public void UseTypeMapper(ITypeMapper typeMapper)
         {
-            if (DocumentDesigns.Any())
-                throw new InvalidOperationException("Please call UseTypeMapper() before any documents are configured.");
+            lock (gate)
+            {
+                if (DocumentDesigns.Any())
+                    throw new InvalidOperationException("Please call UseTypeMapper() before any documents are configured.");
 
-            TypeMapper = typeMapper;
+                TypeMapper = typeMapper;
+            }
         }
 
         public void UseMigrations(IReadOnlyList<Migration> migrations)

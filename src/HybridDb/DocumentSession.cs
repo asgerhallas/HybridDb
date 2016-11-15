@@ -134,8 +134,7 @@ namespace HybridDb
 
         public void Store(string key, object entity)
         {
-            var design = store.Configuration.TryGetExactDesignFor(entity.GetType()) 
-                ?? store.Configuration.GetOrCreateDesignFor(entity.GetType());
+            var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
 
             key = key ?? design.GetKey(entity);
 
@@ -198,7 +197,7 @@ namespace HybridDb
             foreach (var managedEntity in entities.Values.ToList())
             {
                 var key = managedEntity.Key;
-                var design = store.Configuration.TryGetExactDesignFor(managedEntity.Entity.GetType());
+                var design = store.Configuration.GetExactDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
                 var version = (int)projections[design.Table.VersionColumn];
@@ -298,7 +297,7 @@ namespace HybridDb
 
         public bool IsLoaded<T>(string key)
         {
-            return entities.ContainsKey(new EntityKey(store.Configuration.TryGetExactDesignFor(typeof(T)).Table, key));
+            return entities.ContainsKey(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key));
         }
 
         public IDocumentStore DocumentStore => store;
