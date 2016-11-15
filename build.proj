@@ -60,6 +60,7 @@
 			<HybridDbFiles Include="Dapper.dll" />
 			<HybridDbFiles Include="Newtonsoft.Json.dll" />
 			<HybridDbFiles Include="Inflector.dll" />
+			<HybridDbFiles Include="Indentional.dll" />
 		</ItemGroup>
 		
     <Exec Command="$(IlMerge) /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:$(HybridDbOutputFolder)\HybridDb.dll @(HybridDbFiles -> '$(SrcFolder)\HybridDb\$(BinFolder)\%(Identity)', ' ')"/>

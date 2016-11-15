@@ -127,6 +127,10 @@ Changelog
 
 - Fixing handling of queries on unconfigured types and ad-hoc configuring for queries with projections
 
+#### 0.10.8
+
+- ILMerging the Indentional lib
+
 Acknowledgements
 ================
 
