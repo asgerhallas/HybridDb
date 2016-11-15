@@ -152,6 +152,7 @@
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migrations\SchemaMigrationCommand.cs" />
     <Compile Include="Migrations\ZipBackupDecorator.cs" />
+    <Compile Include="QueryResult.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />

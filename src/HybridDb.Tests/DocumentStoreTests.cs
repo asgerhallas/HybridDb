@@ -226,7 +226,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var rows = store.Query<ProjectionWithNestedProperty>(table.Table, out stats).ToList();
 
-            rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
+            rows.Single().Data.TheChildNestedDouble.ShouldBe(9.8d);
         }
 
         [Fact]
@@ -275,10 +275,10 @@ namespace HybridDb.Tests
                               where method.Name == "Query" && method.IsGenericMethod
                               select method).Single().MakeGenericMethod(t.GetType());
 
-            var rows = (IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}});
+            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}})).ToList();
 
-            rows.Count().ShouldBe(1);
-            Assert.Equal("Asger", rows.Single().Field);
+            rows.Count.ShouldBe(1);
+            Assert.Equal("Asger", rows.Single().Data.Field);
         }
 
         [Fact(Skip = "I believe this is issue #24")]
@@ -292,7 +292,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             QueryStats stats;
-            var rows = store.Query<string>(table.Table, out stats, select: "Field").ToList();
+            var rows = store.Query<string>(table.Table, out stats, select: "Field").Select(x => x.Data).ToList();
 
             Assert.Equal("Asger", rows.Single());
         }
@@ -449,7 +449,7 @@ namespace HybridDb.Tests
 
             QueryStats stats;
             var result = store.Query<ProjectionWithEnum>(table.Table, out stats).Single();
-            result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
+            result.Data.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
 
         [Fact]
@@ -820,8 +820,8 @@ namespace HybridDb.Tests
             result1.ContainsKey(new Column("TotalResults", typeof(int))).ShouldBe(false);
 
             var result2 = store.Query<object>(table, out stats, skip: 0, take: 2).Single();
-            ((IDictionary<string, object>)result2).ContainsKey("RowNumber").ShouldBe(false);
-            ((IDictionary<string, object>)result2).ContainsKey("TotalResults").ShouldBe(false);
+            ((IDictionary<string, object>)result2.Data).ContainsKey("RowNumber").ShouldBe(false);
+            ((IDictionary<string, object>)result2.Data).ContainsKey("TotalResults").ShouldBe(false);
         }
 
         [Fact]

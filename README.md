@@ -123,6 +123,10 @@ Changelog
 
 - Better handling of queries on unconfigured types and ad-hoc configuring
 
+#### 0.10.7
+
+- Fixing handling of queries on unconfigured types and ad-hoc configuring for queries with projections
+
 Acknowledgements
 ================
 

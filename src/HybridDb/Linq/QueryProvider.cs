@@ -7,7 +7,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Linq
 {
-    public class QueryProvider<TSourceElement> : IHybridQueryProvider where TSourceElement : class
+    public class QueryProvider<TSource> : IHybridQueryProvider where TSource : class
     {
         readonly IDocumentStore store;
         readonly DocumentSession session;
@@ -94,14 +94,19 @@ namespace HybridDb.Linq
             if (translation.ProjectAs == null)
             {
                 QueryStats storeStats;
-                var results = store.Query(
-                    design.Table, out storeStats,
-                    translation.Select, translation.Where, translation.Skip,
-                    translation.Take, translation.OrderBy, translation.Parameters)
-                    // if ProjectAs == null it's safe to use TSourceElement as the expected type
-                    .Select(result => session.ConvertToEntityAndPutUnderManagement(typeof(TSourceElement), design, result))
-                    .Where(result => result != null)
-                    .Cast<TProjection>();
+                var results =
+                    from row in store.Query<object>(
+                        design.Table, out storeStats,
+                        translation.Select, translation.Where, translation.Skip,
+                        translation.Take, translation.OrderBy, translation.Parameters)
+                    let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
+                    // TProjection is always an entity type (if ProjectAs == null).
+                    // Either it's the same as TSourceElement or it is filtered by OfType<TProjection>
+                    // but that is still just a filter, not a conversion
+                    where typeof (TProjection).IsAssignableFrom(concreteDesign.DocumentType)
+                    let entity = session.ConvertToEntityAndPutUnderManagement(concreteDesign, (IDictionary<string, object>) row.Data)
+                    where entity != null
+                    select (TProjection) entity;
   
                 storeStats.CopyTo(lastQueryStats);
                 return new TranslationAndResult<TProjection>(translation, results);
@@ -111,10 +116,15 @@ namespace HybridDb.Linq
                 var table = design.Table;
 
                 QueryStats storeStats;
-                var results = store.Query<TProjection>(
-                    table, out storeStats,
-                    translation.Select, translation.Where, translation.Skip,
-                    translation.Take, translation.OrderBy, translation.Parameters);
+                var results =
+                    from row in store.Query<TProjection>(
+                        table, out storeStats,
+                        translation.Select, translation.Where, translation.Skip,
+                        translation.Take, translation.OrderBy, translation.Parameters)
+                    let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
+                    //TODO: OfType won't work with this. Go figure it out later.
+                    where typeof (TSource).IsAssignableFrom(concreteDesign.DocumentType)
+                    select row.Data;
 
                 storeStats.CopyTo(lastQueryStats);
                 return new TranslationAndResult<TProjection>(translation, results);

@@ -340,7 +340,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load(store.Configuration.GetDesignFor<Entity>(), id);
+                var entity = session.Load(typeof(Entity), id);
 
                 entity.ShouldBeOfType<Entity>();
             }

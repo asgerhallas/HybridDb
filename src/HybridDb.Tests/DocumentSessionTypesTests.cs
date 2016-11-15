@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -8,7 +7,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionVarianceTests : HybridDbAutoInitializeTests
+    public class DocumentSessionTypesTests : HybridDbAutoInitializeTests
     {
         [Fact]
         public void CanLoadByInterface()
@@ -343,7 +342,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var load = session.Load(entity, "key");
+                var load = session.Load(entity.GetType(), "key");
                 load.ShouldBeOfType(entity.GetType());
             }
         }
@@ -422,6 +421,52 @@ namespace HybridDb.Tests
                 // second time around it should filter by discriminators
                 QueryStats stats;
                 session.Query<DerivedEntity>().Statistics(out stats).ToList().Count.ShouldBe(2);
+                stats.TotalResults.ShouldBe(2);
+            }
+        }
+
+        [Fact]
+        public void AutoRegistersSubTypesOnQueryForProjections()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new DerivedEntity { Id = "A" });
+                session.Store(new MoreDerivedEntity1 { Id = "B" });
+                session.Store(new OtherEntity { Id = "C" }); // unrelated type
+                session.SaveChanges();
+            }
+
+            Reset();
+
+            configuration.TryGetDesignFor(typeof(DerivedEntity)).ShouldBe(null);
+            configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldBe(null);
+            configuration.TryGetDesignFor(typeof(OtherEntity)).ShouldBe(null);
+
+            using (var session = store.OpenSession())
+            {
+                // filters out results that is not subtype of DerivedEntity
+                QueryStats stats;
+                session.Query<DerivedEntity>()
+                    .Statistics(out stats)
+                    .Select(x => new { x.Id }).ToList()
+                    .Count.ShouldBe(2);
+
+                stats.TotalResults.ShouldBe(3);
+            }
+
+            configuration.TryGetDesignFor(typeof(DerivedEntity)).ShouldNotBe(null);
+            configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldNotBe(null);
+            configuration.TryGetDesignFor(typeof(OtherEntity)).ShouldNotBe(null);
+
+            using (var session = store.OpenSession())
+            {
+                // second time around it should filter by discriminators
+                QueryStats stats;
+                session.Query<DerivedEntity>()
+                    .Statistics(out stats)
+                    .Select(x => new { x.Id }).ToList()
+                    .Count.ShouldBe(2);
+
                 stats.TotalResults.ShouldBe(2);
             }
         }

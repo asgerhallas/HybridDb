@@ -74,7 +74,7 @@ namespace HybridDb.Migrations
                                 {
                                     using (var session = new DocumentSession(store))
                                     {
-                                        session.Load(concreteDesign, key);
+                                        session.Load(concreteDesign.DocumentType, key);
                                         session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                     }
                                 }

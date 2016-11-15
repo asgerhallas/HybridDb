@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Config;
 
@@ -27,10 +28,11 @@ namespace HybridDb
             return store.Execute(commands);
         }
 
-        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
+        public static IEnumerable<IDictionary<string, object>> Query(
+            this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
             int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
-            return store.Query<IDictionary<string, object>>(table, out stats, @select, @where, skip, take, @orderby, parameters);
+            return store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, parameters).Select(x => (IDictionary<string, object>) x.Data);
         }
     }
 }

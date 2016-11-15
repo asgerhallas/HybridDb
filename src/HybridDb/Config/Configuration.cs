@@ -117,15 +117,12 @@ namespace HybridDb.Config
             }
         }
 
-        /// <summary>
-        /// The base design is not neccessarrily the root
-        /// </summary>
-        public DocumentDesign GetOrCreateDesignByDiscriminator(DocumentDesign baseDesign, string discriminator)
+        internal DocumentDesign GetOrCreateDesignByDiscriminator(DocumentDesign design, string discriminator)
         {
             lock (gate)
             {
                 DocumentDesign concreteDesign;
-                if (baseDesign.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                if (design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
                     return concreteDesign;
 
                 var type = TypeMapper.ToType(discriminator);

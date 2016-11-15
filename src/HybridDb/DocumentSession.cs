@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -45,11 +46,6 @@ namespace HybridDb
             return Load(typeof(T), key) as T;
         }
 
-        public T Load<T>(T prototype, string key) where T : class
-        {
-            return Load(prototype.GetType(), key) as T;
-        }
-
         public object Load(Type type, string key)
         {
             var design = store.Configuration.GetOrCreateDesignFor(type);
@@ -66,14 +62,15 @@ namespace HybridDb
             
             if (row == null) return null;
 
-            var entity = ConvertToEntityAndPutUnderManagement(type, design, row);
+            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[design.Table.DiscriminatorColumn]);
 
-            if (entity == null)
+            // The discriminator does map to a type that is assignable to the expected type.
+            if (!type.IsAssignableFrom(concreteDesign.DocumentType))
             {
                 throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{type.Name}'.");
             }
 
-            return entity;
+            return ConvertToEntityAndPutUnderManagement(concreteDesign, row);
         }
 
         /// <summary>
@@ -244,20 +241,13 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal object ConvertToEntityAndPutUnderManagement(Type expectedType, DocumentDesign design, IDictionary<string, object> row)
+        internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
-            var table = design.Table;
+            var table = concreteDesign.Table;
             var key = (string)row[table.IdColumn];
-            var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-
-            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, discriminator);
-
-            // The discriminator does map to a type that is assignable to the expected type.
-            if (!expectedType.IsAssignableFrom(concreteDesign.DocumentType))
-                return null;
 
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))
+            if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -286,7 +276,7 @@ namespace HybridDb
                 Table = table
             };
 
-            entities.Add(new EntityKey(design.Table, key), managedEntity);
+            entities.Add(new EntityKey(concreteDesign.Table, key), managedEntity);
             return entity;
         }
 
