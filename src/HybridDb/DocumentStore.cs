@@ -136,10 +136,14 @@ namespace HybridDb
                     var preparedCommand = command.Prepare(this, etag, i++);
                     var numberOfNewParameters = preparedCommand.Parameters.Count;
 
-                    if (numberOfNewParameters >= 2100)
-                        throw new InvalidOperationException("Cannot execute a query with more than 2100 parameters.");
+                    // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
+                    // params are added some where in the stack) so we cut it some slack and say 2000.
+                    if (numberOfNewParameters >= 2000)
+                    {
+                        throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
+                    }
 
-                    if (numberOfParameters + numberOfNewParameters >= 2100)
+                    if (numberOfParameters + numberOfNewParameters >= 2000)
                     {
                         InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
@@ -152,7 +156,7 @@ namespace HybridDb
                     expectedRowCount += preparedCommand.ExpectedRowCount;
                     numberOfParameters += numberOfNewParameters;
 
-                    sql += string.Format("{0};", preparedCommand.Sql);
+                    sql += $"{preparedCommand.Sql};";
                     parameters.AddRange(preparedCommand.Parameters);
                 }
 

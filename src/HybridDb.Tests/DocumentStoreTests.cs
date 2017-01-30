@@ -406,22 +406,40 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanSplitLargeCommandBatches()
+        public void DoesNotSplitBelow2000Params()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
 
             // the initial migrations might issue some requests
             var initialNumberOfRequest = store.NumberOfRequests;
 
             var commands = new List<DatabaseCommand>();
-            for (var i = 0; i < 2100/4 + 1; i++)
-            {
+            for (var i = 0; i < 333; i++) // each insert i 6 params so 333 commands equals 1998 params, threshold is at 2000
                 commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
-            }
 
             store.Execute(commands.ToArray());
+
+            (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(1);
+        }
+
+        [Fact]
+        public void SplitsAbove2000Params()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            // the initial migrations might issue some requests
+            var initialNumberOfRequest = store.NumberOfRequests;
+
+            var commands = new List<DatabaseCommand>();
+            for (var i = 0; i < 334; i++) // each insert i 6 params so 334 commands equals 2004 params, threshold is at 2000
+                commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
+
+            store.Execute(commands.ToArray());
+
             (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
         }
 
