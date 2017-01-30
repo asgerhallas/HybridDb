@@ -7,11 +7,11 @@ using HybridDb.Config;
 
 namespace HybridDb.Linq
 {
-    public class QueryProvider<TSource> : IHybridQueryProvider where TSource : class
+    public class QueryProvider : IHybridQueryProvider
     {
-        readonly IDocumentStore store;
         readonly DocumentSession session;
         readonly DocumentDesign design;
+        readonly IDocumentStore store;
         readonly QueryStats lastQueryStats;
 
         public QueryProvider(DocumentSession session, DocumentDesign design)
@@ -123,7 +123,7 @@ namespace HybridDb.Linq
                         translation.Take, translation.OrderBy, translation.Parameters)
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
                     //TODO: OfType won't work with this. Go figure it out later.
-                    where typeof (TSource).IsAssignableFrom(concreteDesign.DocumentType)
+                    where design.DocumentType.IsAssignableFrom(concreteDesign.DocumentType)
                     select row.Data;
 
                 storeStats.CopyTo(lastQueryStats);

@@ -14,7 +14,7 @@ namespace HybridDb.Linq
 
         public static IQueryable<T> Statistics<T>(this IQueryable<T> query, out QueryStats stats) where T : class
         {
-            ((QueryProvider<T>)query.Provider).WriteStatisticsTo(out stats);
+            ((QueryProvider)query.Provider).WriteStatisticsTo(out stats);
             return query;
         }
 

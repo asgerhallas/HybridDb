@@ -218,7 +218,8 @@ namespace HybridDb.Tests
             var translation = queryable.Translate();
 
             queryable.ShouldBeOfType<Query<ProjectedEntity>>();
-            queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
+            queryable.Provider.ShouldBeOfType<QueryProvider>();
+            queryable.Provider.ShouldBeOfType<QueryProvider>();
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("(Property = @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 2);
@@ -229,7 +230,7 @@ namespace HybridDb.Tests
         {
             var queryable = Query<Entity>().AsProjection<ProjectedEntity>();
             queryable.ShouldBeOfType<Query<ProjectedEntity>>();
-            queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
+            queryable.Provider.ShouldBeOfType<QueryProvider>();
         }
 
         [Fact]
@@ -619,7 +620,7 @@ namespace HybridDb.Tests
         {
             var store = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
             var session = new DocumentSession(store);
-            return new Query<T>(new QueryProvider<T>(session, null));
+            return new Query<T>(new QueryProvider(session, null));
         }
 
         public class Entity

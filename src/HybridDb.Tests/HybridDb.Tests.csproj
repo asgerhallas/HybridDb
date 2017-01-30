@@ -110,6 +110,7 @@
     <Compile Include="HybridDbAutoInitializeTests.cs" />
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
+    <Compile Include="QueryProviderTests.cs" />
     <Compile Include="TracingDocumentStoreDecorator.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />

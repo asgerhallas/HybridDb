@@ -90,7 +90,7 @@ namespace HybridDb
             // Include T and known subtybes, exclude known supertypes.
             // Unknown discriminators will be included and filtered result-side
             // but also be added to configuration so they are known on next query.
-            var query = new Query<T>(new QueryProvider<T>(this, design)).Where(x =>
+            var query = new Query<T>(new QueryProvider(this, design)).Where(x =>
                 x.Column<string>("Discriminator").In(include)
                 || !x.Column<string>("Discriminator").In(exclude));
 
