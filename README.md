@@ -131,6 +131,11 @@ Changelog
 
 - ILMerging the Indentional lib
 
+#### 0.10.9
+
+- Fixing bug that made SQL Server fail with a "too many parameters" error. The documented threshold i 2100 params, but it failed when given 2099 params.
+
+
 Acknowledgements
 ================
 
