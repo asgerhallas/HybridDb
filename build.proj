@@ -19,7 +19,7 @@
     <Exec Command="git status" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitStatus" />
     </Exec>
-    <Error Condition="!$(GitStatus.Contains('nothing to commit, working directory clean'))" Text="Please commit to git."/>
+    <Error Condition="!$(GitStatus.Contains('nothing to commit, working tree clean'))" Text="Please commit to git."/>
   </Target>
 
   <Target Name="ValidateVersion">
