@@ -139,6 +139,10 @@ Changelog
 
 - Some fixes for appveyor setup
 
+#### 0.10.11
+
+- Merged Indentional.dll 
+
 Acknowledgements
 ================
 
