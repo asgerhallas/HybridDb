@@ -135,9 +135,9 @@ Changelog
 
 - Fixing bug that made SQL Server fail with a "too many parameters" error. The documented threshold i 2100 params, but it failed when given 2099 params.
 
-#### 2.0.0
+#### 0.10.10
 
-
+- Some fixes for appveyor setup
 
 Acknowledgements
 ================
