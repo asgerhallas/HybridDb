@@ -208,10 +208,13 @@ namespace HybridDb.Tests.Migrations
 
             Should.NotThrow(() =>
             {
-                new DocumentMigrationRunner().Run(store).Wait(5000);
+                new DocumentMigrationRunner().Run(store).Wait(1000);
             });
 
-            var numberOfRetries = logEventSink.Captures.Count(x => x == $"Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{id}\".");
+            logEventSink.Stop();
+
+            var numberOfRetries = logEventSink.Captures
+                .Count(x => x == $"Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{id}\".");
             
             // it has a back off of 100ms
             numberOfRetries.ShouldBeLessThan(12);
@@ -249,6 +252,8 @@ namespace HybridDb.Tests.Migrations
 
         public class ListSink : ILogEventSink
         {
+            bool stopped = false;
+
             public ListSink()
             {
                 Captures = new List<string>();
@@ -256,8 +261,16 @@ namespace HybridDb.Tests.Migrations
 
             public List<string> Captures { get; set; }
 
+            // to avoid mutating the list while still adding to it.
+            public void Stop()
+            {
+                stopped = true;
+            }
+
             public void Emit(LogEvent logEvent)
             {
+                if (stopped) return;
+                
                 Captures.Add(logEvent.RenderMessage());
             }
         }
