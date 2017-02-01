@@ -18,7 +18,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="HybridDb\HybridDb.dll" target="lib\net45" />
-    <file src="HybridDb\HybridDb.pdb" target="lib\net45" />
+    <file src="HybridDb.dll" target="lib\net45" />
+    <file src="HybridDb.pdb" target="lib\net45" />
   </files>
 </package>

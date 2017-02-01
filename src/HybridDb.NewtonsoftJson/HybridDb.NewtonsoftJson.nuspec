@@ -19,7 +19,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.dll" target="lib\net45" />
-    <file src="HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.pdb" target="lib\net45" />
+    <file src="HybridDb.NewtonsoftJson.dll" target="lib\net45" />
+    <file src="HybridDb.NewtonsoftJson.pdb" target="lib\net45" />
   </files>
 </package>
