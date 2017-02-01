@@ -16,9 +16,9 @@ after_build:
 
     ILMerge\tools\ilmerge.exe /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:HybridDb.dll src\HybridDb\bin\Release\HybridDb.dll src\HybridDb\bin\Release\Dapper.dll src\HybridDb\bin\Release\Newtonsoft.Json.dll src\HybridDb\bin\Release\Inflector.dll
 
-    nuget pack HybridDb\HybridDb.nuspec -Version %APPVEYOR_BUILD_VERSION% -Symbols
+    nuget pack src\HybridDb\HybridDb.nuspec -Version %APPVEYOR_BUILD_VERSION% -Symbols
     
-    nuget pack HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.nuspec -Version %APPVEYOR_BUILD_VERSION% -Symbols
+    nuget pack src\HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.nuspec -Version %APPVEYOR_BUILD_VERSION% -Symbols
 artifacts:
 - path: '*.nupkg'
 deploy:
