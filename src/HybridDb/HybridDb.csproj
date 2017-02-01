@@ -199,6 +199,7 @@
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="HybridDb.nuspec" />
     <None Include="Migrations\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>
