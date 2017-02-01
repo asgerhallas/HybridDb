@@ -208,7 +208,7 @@ namespace HybridDb.Tests.Migrations
 
             Should.NotThrow(() =>
             {
-                new DocumentMigrationRunner().Run(store).Wait(1000);
+                new DocumentMigrationRunner().Run(store).Wait(5000);
             });
 
             var numberOfRetries = logEventSink.Captures.Count(x => x == $"Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{id}\".");
