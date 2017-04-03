@@ -703,6 +703,29 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryFail()
+        {
+            Document<Entity>()
+                .With(x => x.Property)
+                .With(x => x.Number);
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "asger", Number = 2 });
+                session.SaveChanges();
+
+                Should.NotThrow(() => session.Query<Entity>().Select(x => new A { Number = x.Number }).ToList());
+            }
+        }
+
+        public class A
+        {
+            public int Number { get; set; }
+            public int Property { get; set; }
+        }
+
+        [Fact]
         public void CanQueryIndex()
         {
             Document<AbstractEntity>()

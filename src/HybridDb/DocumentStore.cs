@@ -189,11 +189,13 @@ namespace HybridDb
             int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
+            {
                 select = "";
 
-            if (typeof (TProjection) != typeof (object))
-            {
-                select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
+                if (typeof(TProjection) != typeof(object))
+                {
+                    select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
+                }
             }
 
             var timer = Stopwatch.StartNew();

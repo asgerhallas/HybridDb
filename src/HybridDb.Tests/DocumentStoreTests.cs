@@ -281,7 +281,7 @@ namespace HybridDb.Tests
             Assert.Equal("Asger", rows.Single().Data.Field);
         }
 
-        [Fact(Skip = "I believe this is issue #24")]
+        [Fact]
         public void CanQueryAndReturnValueProjections()
         {
             Document<Entity>().With(x => x.Field);
@@ -824,7 +824,7 @@ namespace HybridDb.Tests
             // database.QuerySchema().ShouldNotContainKey("Cases");
         }
 
-        [Fact]
+        [Fact()]
         public void UtilityColsAreRemovedFromQueryResults()
         {
             Document<Entity>();
