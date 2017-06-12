@@ -14,11 +14,13 @@ namespace HybridDb.Config
         readonly object gate = new object();
 
         bool initialized;
+        readonly ConcurrentDictionary<string, Table> tables;
+        readonly List<DocumentDesign> documentDesigns;
 
         internal Configuration()
         {
-            Tables = new ConcurrentDictionary<string, Table>();
-            DocumentDesigns = new List<DocumentDesign>();
+            tables = new ConcurrentDictionary<string, Table>();
+            documentDesigns = new List<DocumentDesign>();
 
             Logger = Log.Logger;
 
@@ -42,9 +44,8 @@ namespace HybridDb.Config
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
-
-        internal ConcurrentDictionary<string, Table> Tables { get; }
-        internal List<DocumentDesign> DocumentDesigns { get; }
+        public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
+        public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
 
         static string GetTableNameByConventionFor(Type type)
         {
@@ -55,7 +56,7 @@ namespace HybridDb.Config
         {
             lock (gate)
             {
-                DocumentDesigns.Insert(0, new DocumentDesign(this, GetOrAddTable("Documents"), typeof(object), "object"));
+                documentDesigns.Insert(0, new DocumentDesign(this, GetOrAddTable("Documents"), typeof(object), "object"));
 
                 initialized = true;
             }
@@ -110,8 +111,8 @@ namespace HybridDb.Config
                 // a table and base design exists for type, add the derived type as a child design
                 var design = new DocumentDesign(this, existing, type, TypeMapper.ToDiscriminator(type));
 
-                var afterParent = DocumentDesigns.IndexOf(existing) + 1;
-                DocumentDesigns.Insert(afterParent, design);
+                var afterParent = documentDesigns.IndexOf(existing) + 1;
+                documentDesigns.Insert(afterParent, design);
 
                 return design;
             }
@@ -248,7 +249,7 @@ namespace HybridDb.Config
                 throw new InvalidOperationException($"Document {design.DocumentType.Name} must be configured before its subtype {existingDesign.DocumentType}.");
             }
 
-            DocumentDesigns.Add(design);
+            documentDesigns.Add(design);
             return design;
         }
 
@@ -256,7 +257,7 @@ namespace HybridDb.Config
         {
             if (tablename == null) throw new ArgumentNullException(nameof(tablename));
 
-            return (DocumentTable)Tables.GetOrAdd(tablename, name =>
+            return (DocumentTable)tables.GetOrAdd(tablename, name =>
             {
                 if (initialized)
                 {
