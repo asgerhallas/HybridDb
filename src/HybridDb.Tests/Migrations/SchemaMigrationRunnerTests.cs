@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            configuration.Tables.ShouldContainKey("HybridDb");
+            configuration.tables.ShouldContainKey("HybridDb");
             store.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Single().ShouldBe(0);
         }
 
@@ -40,7 +40,7 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            configuration.Tables.ShouldNotContainKey("HybridDb");
+            configuration.tables.ShouldNotContainKey("HybridDb");
             store.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Any().ShouldBe(false);
         }
 
