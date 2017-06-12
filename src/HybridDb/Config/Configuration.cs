@@ -14,7 +14,7 @@ namespace HybridDb.Config
         readonly object gate = new object();
 
         bool initialized;
-        readonly ConcurrentDictionary<string, Table> tables;
+        internal readonly ConcurrentDictionary<string, Table> tables;
         readonly List<DocumentDesign> documentDesigns;
 
         internal Configuration()
