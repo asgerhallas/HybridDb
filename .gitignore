@@ -2,7 +2,7 @@
 *.suo
 *.user
 *.sln.docstates
-/.vs/**/*.*
+src/.vs/**/*.*
 
 # Build results
 [Dd]ebug/
