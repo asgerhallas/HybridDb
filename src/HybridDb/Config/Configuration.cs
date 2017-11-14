@@ -209,20 +209,11 @@ namespace HybridDb.Config
             ConfiguredVersion = Migrations.Any() ? Migrations.Last().Version : 0;
         }
 
-        public void UseBackupWriter(IBackupWriter backupWriter)
-        {
-            BackupWriter = backupWriter;
-        }
+        public void UseBackupWriter(IBackupWriter backupWriter) => BackupWriter = backupWriter;
 
-        public void UseTableNamePrefix(string prefix)
-        {
-            TableNamePrefix = prefix;
-        }
+        public void UseTableNamePrefix(string prefix) => TableNamePrefix = prefix;
 
-        public void UseKeyResolver(Func<object, string> resolver)
-        {
-            DefaultKeyResolver = resolver;
-        }
+        public void UseKeyResolver(Func<object, string> resolver) => DefaultKeyResolver = resolver;
 
         internal void DisableMigrationsOnStartup()
         {
@@ -230,10 +221,7 @@ namespace HybridDb.Config
             RunDocumentMigrationsOnStartup = false;
         }
 
-        public void DisableDocumentMigrationsOnStartup()
-        {
-            RunDocumentMigrationsOnStartup = false;
-        }
+        public void DisableDocumentMigrationsOnStartup() => RunDocumentMigrationsOnStartup = false;
 
         static string KeyResolver(object entity)
         {

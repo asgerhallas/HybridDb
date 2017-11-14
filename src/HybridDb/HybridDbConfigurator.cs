@@ -17,20 +17,11 @@ namespace HybridDb
             configuration = new Configuration();
         }
 
-        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
-        {
-            return configuration.Document<TEntity>(tablename);
-        }
+        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) => configuration.Document<TEntity>(tablename);
 
-        protected void UseSerializer(ISerializer serializer)
-        {
-            configuration.UseSerializer(serializer);
-        }
+        protected void UseSerializer(ISerializer serializer) => configuration.UseSerializer(serializer);
 
-        protected void UseTypeMapper(ITypeMapper typeMapper)
-        {
-            configuration.UseTypeMapper(typeMapper);
-        }
+        protected void UseTypeMapper(ITypeMapper typeMapper) => configuration.UseTypeMapper(typeMapper);
 
         protected IDefaultSerializerConfigurator UseDefaultSerializer()
         {
@@ -39,44 +30,20 @@ namespace HybridDb
             return serializer;
         }
 
-        protected void UseLogger(ILogger logger)
-        {
-            configuration.UseLogger(logger);
-        }
+        protected void UseLogger(ILogger logger) => configuration.UseLogger(logger);
 
-        protected void UseMigrations(IReadOnlyList<Migration> migrations)
-        {
-            configuration.UseMigrations(migrations);
-        }
+        protected void UseMigrations(IReadOnlyList<Migration> migrations) => configuration.UseMigrations(migrations);
 
-        protected void UseMigrations(params Migration[] migrations)
-        {
-            configuration.UseMigrations(migrations.ToList());
-        }
+        protected void UseMigrations(params Migration[] migrations) => configuration.UseMigrations(migrations.ToList());
 
-        protected void UseBackupWriter(IBackupWriter writer)
-        {
-            configuration.UseBackupWriter(writer);
-        }
+        protected void UseBackupWriter(IBackupWriter writer) => configuration.UseBackupWriter(writer);
 
-        protected void UseTableNamePrefix(string prefix)
-        {
-            configuration.UseTableNamePrefix(prefix);
-        }
+        protected void UseTableNamePrefix(string prefix) => configuration.UseTableNamePrefix(prefix);
 
-        public void UseKeyResolver(Func<object, string> resolver)
-        {
-            configuration.UseKeyResolver(resolver);
-        }
+        public void UseKeyResolver(Func<object, string> resolver) => configuration.UseKeyResolver(resolver);
 
-        internal void DisableMigrations()
-        {
-            configuration.DisableMigrationsOnStartup();
-        }
+        internal void DisableMigrations() => configuration.DisableMigrationsOnStartup();
 
-        protected void DisableDocumentMigrationsInBackground()
-        {
-            configuration.DisableDocumentMigrationsOnStartup();
-        }
+        protected void DisableDocumentMigrationsInBackground() => configuration.DisableDocumentMigrationsOnStartup();
     }
 }

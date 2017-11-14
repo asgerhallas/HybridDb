@@ -920,7 +920,7 @@ namespace HybridDb.Tests
 
                 // backup on save
                 backupWriter.Files.Count.ShouldBe(1);
-                backupWriter.Files[string.Format("HybridDb.Tests.HybridDbTests+Entity_{0}_0.bak", id)]
+                backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                     .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
             }
         }

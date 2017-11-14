@@ -214,10 +214,10 @@ namespace HybridDb
                             SafeSequenceEqual(managedEntity.Document, document) && 
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument)) 
                             break;
-                        
-                        commands.Add(managedEntity, new BackupCommand(
-                            new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins),
-                            store.Configuration.BackupWriter, design, key, managedEntity.Version, managedEntity.Document));
+
+                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins));
+                        //store.Configuration.BackupWriter
+                        //commands.Add(managedEntity, new BackupCommand( design, key, managedEntity.Version, managedEntity.Document));
                         
                         managedEntity.Version = version;
                         managedEntity.Document = document;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -9,6 +10,7 @@ using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using Serilog;
+using ShinySwitch;
 
 namespace HybridDb
 {
@@ -124,16 +126,24 @@ namespace HybridDb
                 var numberOfDeleteCommands = 0;
                 foreach (var command in commands)
                 {
-                    if (command is InsertCommand)
-                        numberOfInsertCommands++;
-
-                    if (command is UpdateCommand)
-                        numberOfUpdateCommands++;
-
-                    if (command is DeleteCommand)
-                        numberOfDeleteCommands++;
-
-                    var preparedCommand = command.Prepare(this, etag, i++);
+                    var preparedCommand = Switch<SqlDatabaseCommand>.On(command)
+                        .Match<InsertCommand>(insert =>
+                        {
+                            numberOfInsertCommands++;
+                            return PrepareInsertCommand(insert, etag, i++);
+                        })
+                        .Match<UpdateCommand>(update =>
+                        {
+                            numberOfUpdateCommands++;
+                            return PrepareUpdateCommand(update, etag, i++);
+                        })
+                        .Match<DeleteCommand>(delete =>
+                        {
+                            numberOfDeleteCommands++;
+                            return PrepareDeleteCommand(delete, i++);
+                        })
+                        .OrThrow();
+    
                     var numberOfNewParameters = preparedCommand.Parameters.Count;
 
                     // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
@@ -208,29 +218,29 @@ namespace HybridDb
                 if (isWindowed)
                 {
                     sql.Append("select count(*) as TotalResults")
-                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                        .Append(!string.IsNullOrEmpty(@where), $"where {where}")
-                        .Append(";");
+                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                       .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                        .Append($", Discriminator as __Discriminator, row_number() over(ORDER BY {(string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)}) as RowNumber")
-                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                        .Append(!string.IsNullOrEmpty(@where), $"where {where}")
-                        .Append(")")
-                        .Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, __Discriminator, RowNumber from temp")
-                        .Append($"where RowNumber >= {skip + 1}")
-                        .Append(take > 0, $"and RowNumber <= {skip + take}")
-                        .Append("order by RowNumber");
+                       .Append($", Discriminator as __Discriminator, row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
+                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                       .Append(")")
+                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, RowNumber from temp")
+                       .Append($"where RowNumber >= {skip + 1}")
+                       .Append(take > 0, $"and RowNumber <= {skip + take}")
+                       .Append("order by RowNumber");
                 }
                 else
                 {
                     sql.Append(@"with temp as (select *")
-                        .Append(", Discriminator as __Discriminator, 0 as RowNumber")
-                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                        .Append(!string.IsNullOrEmpty(@where), $"where {where}")
-                        .Append(")")
-                        .Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, __Discriminator, RowNumber from temp")
-                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
+                       .Append(", Discriminator as __Discriminator, 0 as RowNumber")
+                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                       .Append(")")
+                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, RowNumber from temp")
+                       .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 }
 
                 var result = InternalQuery<TProjection>(connection, sql, parameters, isWindowed, out stats);
@@ -282,7 +292,7 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<QueryResult<T>> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
+        static IEnumerable<QueryResult<T>> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
         {
             var normalizedParameters = new FastDynamicParameters(
                 parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
@@ -294,15 +304,15 @@ namespace HybridDb
                     stats = reader.Read<QueryStats>(buffered: true).Single();
                     return reader.Read<T, string, object, QueryResult<T>>(
                         (obj, discriminator, rownumber) => new QueryResult<T>(obj, discriminator),
-                        "__Discriminator,RowNumber", buffered: true);
+                        "__Discriminator, RowNumber", buffered: true);
                 }
             }
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                var rows = reader.Read<T, string, object, QueryResult<T>>(
+                var rows = (List<QueryResult<T>>)reader.Read<T, string, object, QueryResult<T>>(
                     (obj, discriminator, rownumber) => new QueryResult<T>(obj, discriminator),
-                    "__Discriminator,RowNumber", buffered: true).ToList();
+                    "__Discriminator, RowNumber", buffered: true);
 
                 stats = new QueryStats
                 {
@@ -340,21 +350,110 @@ namespace HybridDb
             }
         }
 
-
-        public long NumberOfRequests
-        {
-            get { return numberOfRequests; }
-        }
-
-        public Guid LastWrittenEtag
-        {
-            get { return lastWrittenEtag; }
-        }
+        public long NumberOfRequests => numberOfRequests;
+        public Guid LastWrittenEtag => lastWrittenEtag;
 
         public void Dispose()
         {
             Database.Dispose();
         }
+
+        SqlDatabaseCommand PrepareInsertCommand(InsertCommand command, Guid etag, int uniqueParameterIdentifier)
+        {
+            var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
+
+            values[command.Table.IdColumn] = command.Id;
+            values[command.Table.EtagColumn] = etag;
+            values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
+            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
+
+            var sql = $@"
+                insert into {Database.FormatTableNameAndEscape(command.Table.Name)} 
+                ({string.Join(", ", from column in values.Keys select column.Name)}) 
+                values ({string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier)});";
+
+            var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
+
+            return new SqlDatabaseCommand
+            {
+                Sql = sql,
+                Parameters = parameters.Values.ToList(),
+                ExpectedRowCount = 1
+            };
+        }
+
+        SqlDatabaseCommand PrepareUpdateCommand(UpdateCommand command, Guid etag, int uniqueParameterIdentifier)
+        {
+            var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
+
+            values[command.Table.EtagColumn] = etag;
+            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
+
+            var sql = new SqlBuilder()
+                .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
+                .Append($"set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name + uniqueParameterIdentifier)}")
+                .Append($"where {command.Table.IdColumn.Name}=@Id{uniqueParameterIdentifier}")
+                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name}=@CurrentEtag{uniqueParameterIdentifier}")
+                .ToString();
+
+            var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Key, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+
+            if (!command.LastWriteWins)
+            {
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, command.CurrentEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
+            }
+
+            return new SqlDatabaseCommand
+            {
+                Sql = sql,
+                Parameters = parameters.Values.ToList(),
+                ExpectedRowCount = 1
+            };
+        }
+
+        SqlDatabaseCommand PrepareDeleteCommand(DeleteCommand command, int uniqueParameterIdentifier)
+        {
+            var sql = new SqlBuilder()
+                .Append($"delete from {Database.FormatTableNameAndEscape(command.Table.Name)}")
+                .Append($"where {command.Table.IdColumn.Name} = @Id{uniqueParameterIdentifier}")
+                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @CurrentEtag{uniqueParameterIdentifier}")
+                .ToString();
+
+            var parameters = new Dictionary<string, Parameter>();
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Key, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+
+            if (!command.LastWriteWins)
+            {
+                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, command.CurrentEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
+            }
+
+            return new SqlDatabaseCommand
+            {
+                Sql = sql,
+                Parameters = parameters.Values.ToList(),
+                ExpectedRowCount = 1
+            };
+        }
+
+        protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)
+        {
+            var parameters = new Dictionary<string, Parameter>();
+            foreach (var projection in projections)
+            {
+                var column = projection.Key;
+                var sqlColumn = SqlTypeMap.Convert(column);
+                AddTo(parameters, "@" + column.Name + i, projection.Value, sqlColumn.DbType, sqlColumn.Length);
+            }
+
+            return parameters;
+        }
+
+        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, DbType? dbType, string size)
+        {
+            parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType, Size = size };
+        }
+
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
         {
@@ -396,5 +495,12 @@ namespace HybridDb
             typeof (TimeSpan?),
             typeof (object)
         };
+
+        class SqlDatabaseCommand
+        {
+            public string Sql { get; set; }
+            public List<Parameter> Parameters { get; set; }
+            public int ExpectedRowCount { get; set; }
+        }
     }
 }
