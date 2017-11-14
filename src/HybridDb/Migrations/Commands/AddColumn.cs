@@ -18,7 +18,7 @@ namespace HybridDb.Migrations.Commands
         public override void Execute(IDatabase database)
         {
             var sql = new SqlBuilder();
-            sql.Append("alter table {0} add {1}", database.FormatTableNameAndEscape(Tablename), database.Escape(Column.Name));
+            sql.Append($"alter table {database.FormatTableNameAndEscape(Tablename)} add {database.Escape(Column.Name)}");
             sql.Append(GetColumnSqlType(Column));
 
             database.RawExecute(sql.ToString());

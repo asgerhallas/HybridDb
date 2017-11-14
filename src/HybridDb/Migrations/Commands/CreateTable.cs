@@ -21,10 +21,8 @@ namespace HybridDb.Migrations.Commands
             }
 
             var sql = new SqlBuilder();
-            sql.Append("if not ({0}) begin create table {1} (",
-                GetTableExistsSql(database, Table.Name),
-                database.FormatTableNameAndEscape(Table.Name));
-
+            sql.Append($"if not ({GetTableExistsSql(database, Table.Name)})")
+               .Append($"begin create table {database.FormatTableNameAndEscape(Table.Name)} (");
 
             var i = 0;
             foreach (var column in Table.Columns)

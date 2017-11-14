@@ -4,28 +4,15 @@ namespace HybridDb.Linq.Ast
 {
     public class SqlColumnExpression : SqlExpression
     {
-        readonly Type type;
-        readonly string columnName;
-
         public SqlColumnExpression(Type type, string columnName)
         {
-            this.type = type;
-            this.columnName = columnName;
-        }
-            
-        public override SqlNodeType NodeType
-        {
-            get { return SqlNodeType.Column; }
+            Type = type;
+            ColumnName = columnName;
         }
 
-        public string ColumnName
-        {
-            get { return columnName; }
-        }
+        public override SqlNodeType NodeType => SqlNodeType.Column;
 
-        public Type Type
-        {
-            get { return type; }
-        }
+        public string ColumnName { get; }
+        public Type Type { get; }
     }
 }

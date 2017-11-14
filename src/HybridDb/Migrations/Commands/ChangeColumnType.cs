@@ -73,7 +73,7 @@ namespace HybridDb.Migrations.Commands
                 .Select(x => x.SingleOrDefault())
                 .Where(x => x != null))
             {
-                builder.Append("ALTER TABLE {0} DROP CONSTRAINT {1};", formattedAndEscapedTableName, database.Escape(constraintName));
+                builder.Append($"ALTER TABLE {formattedAndEscapedTableName} DROP CONSTRAINT {database.Escape(constraintName)};");
             }
 
             
@@ -82,10 +82,10 @@ namespace HybridDb.Migrations.Commands
                 .Append(GetAlterTableStatement(formattedAndEscapedTableName, escapedColumnName))
 
                 //DEFAULT CONSTRAINT
-                .Append(Column.DefaultValue != null, "ALTER TABLE {0} ADD DEFAULT '{1}' FOR {2};", formattedAndEscapedTableName, Column.DefaultValue, escapedColumnName)
+                .Append(Column.DefaultValue != null, $"ALTER TABLE {formattedAndEscapedTableName} ADD DEFAULT '{Column.DefaultValue}' FOR {escapedColumnName};")
 
                 //PRIMAY KEY
-                .Append(Column.IsPrimaryKey, @"ALTER TABLE {0} ADD PRIMARY KEY ({1});", formattedAndEscapedTableName, escapedColumnName);
+                .Append(Column.IsPrimaryKey, $"ALTER TABLE {formattedAndEscapedTableName} ADD PRIMARY KEY ({escapedColumnName});");
 
             database.RawExecute(builder.ToString());
         }
@@ -96,7 +96,7 @@ namespace HybridDb.Migrations.Commands
             var sqlColumn = SqlTypeMap.Convert(Column);
 
             builder
-                .Append("ALTER TABLE {0} ALTER COLUMN {1}", formattedAndEscapedTableName, escapedColumnName)
+                .Append($"ALTER TABLE {formattedAndEscapedTableName} ALTER COLUMN {escapedColumnName}")
                 .Append(new SqlParameter {DbType = sqlColumn.DbType}.SqlDbType.ToString())
                 .Append(sqlColumn.Length != null, "(" + sqlColumn.Length + ")")
                 .Append(Column.Nullable, "NULL").Or("NOT NULL")

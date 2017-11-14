@@ -208,29 +208,29 @@ namespace HybridDb
                 if (isWindowed)
                 {
                     sql.Append("select count(*) as TotalResults")
-                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                        .Append(!string.IsNullOrEmpty(@where), $"where {where}")
                         .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                        .Append(", Discriminator as __Discriminator, row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
-                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                        .Append($", Discriminator as __Discriminator, row_number() over(ORDER BY {(string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)}) as RowNumber")
+                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                        .Append(!string.IsNullOrEmpty(@where), $"where {where}")
                         .Append(")")
-                        .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", __Discriminator, RowNumber")
-                        .Append("where RowNumber >= {0}", skip + 1)
-                        .Append(take > 0, "and RowNumber <= {0}", skip + take)
+                        .Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, __Discriminator, RowNumber from temp")
+                        .Append($"where RowNumber >= {skip + 1}")
+                        .Append(take > 0, $"and RowNumber <= {skip + take}")
                         .Append("order by RowNumber");
                 }
                 else
                 {
                     sql.Append(@"with temp as (select *")
                         .Append(", Discriminator as __Discriminator, 0 as RowNumber")
-                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                        .Append(!string.IsNullOrEmpty(@where), $"where {where}")
                         .Append(")")
-                        .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", __Discriminator, RowNumber")
-                        .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
+                        .Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, __Discriminator, RowNumber from temp")
+                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 }
 
                 var result = InternalQuery<TProjection>(connection, sql, parameters, isWindowed, out stats);
