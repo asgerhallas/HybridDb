@@ -12,15 +12,16 @@ namespace HybridDb.Linq.Parsers
     {
         readonly Select previousSelect;
 
-        public SelectParser(Func<Type, string> getTableNameForType, Select previousSelect, Stack<AstNode> ast) : base(getTableNameForType, ast)
+        public SelectParser(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Select previousSelect, Stack<AstNode> ast) 
+            : base(getTableNameForType, getColumnTypeByName, ast)
         {
             this.previousSelect = previousSelect;
         }
 
-        public static Select Translate(Func<Type, string> getTableNameForType, Select previousSelect, Expression expression)
+        public static Select Translate(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Select previousSelect, Expression expression)
         {
             var operations = new Stack<AstNode>();
-            new SelectParser(getTableNameForType, previousSelect, operations).Visit(expression);
+            new SelectParser(getTableNameForType, getColumnTypeByName, previousSelect, operations).Visit(expression);
             return (Select)operations.Pop();
         }
 

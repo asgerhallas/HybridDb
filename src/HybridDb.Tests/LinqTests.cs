@@ -235,7 +235,8 @@ namespace HybridDb.Tests
             var translation = Translate(queryable);
 
             queryable.ShouldBeOfType<Query<ProjectedEntity>>();
-            queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
+            queryable.Provider.ShouldBeOfType<QueryProvider>();
+            queryable.Provider.ShouldBeOfType<QueryProvider>();
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("([Entities].[Property] = @Value0)");
             translation.ParametersByName.ShouldContainKeyAndValue("@Value0", 2);
@@ -246,7 +247,7 @@ namespace HybridDb.Tests
         {
             var queryable = Query<Entity>().AsProjection<ProjectedEntity>();
             queryable.ShouldBeOfType<Query<ProjectedEntity>>();
-            queryable.Provider.ShouldBeOfType<QueryProvider<Entity>>();
+            queryable.Provider.ShouldBeOfType<QueryProvider>();
         }
 
         [Fact]
@@ -647,9 +648,9 @@ namespace HybridDb.Tests
         Query<T> Query<T>() where T : class
         {
             var documentStore = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
-            var documentDesign = documentStore.Configuration.CreateDesignFor(typeof (T));
+            var documentDesign = documentStore.Configuration.GetOrCreateDesignFor(typeof (T));
             var session = new DocumentSession(documentStore);
-            return new Query<T>(new QueryProvider<T>(session, documentDesign));
+            return new Query<T>(new QueryProvider(session, documentDesign));
         }
 
         static SqlStatementFragments Translate(IQueryable query)

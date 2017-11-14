@@ -11,11 +11,11 @@ using HybridDb.Linq2.Emitter;
 
 namespace HybridDb.Linq
 {
-    public class QueryProvider<TSourceElement> : IHybridQueryProvider where TSourceElement : class
+    public class QueryProvider : IHybridQueryProvider
     {
-        readonly IDocumentStore store;
         readonly DocumentSession session;
         readonly DocumentDesign design;
+        readonly IDocumentStore store;
         readonly QueryStats lastQueryStats;
 
         public QueryProvider(DocumentSession session, DocumentDesign design)
@@ -51,18 +51,18 @@ namespace HybridDb.Linq
 
         public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression)
         {
-            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
+            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name, name => null);
             var parseResult = parser.Parse(expression);
 
-            return ExecuteQuery<TProjection>(parseResult.Statement);
+            return ExecuteQuery<TProjection>(parseResult.ProjectAs == null, parseResult.Statement);
         }
 
         public T Execute<T>(Expression expression)
         {
-            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
+            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name, name => null);
             var parseResult = parser.Parse(expression);
 
-            var result = ExecuteQuery<T>(parseResult.Statement);
+            var result = ExecuteQuery<T>(parseResult.ProjectAs == null, parseResult.Statement);
 
             switch (parseResult.Execution)
             {
@@ -97,18 +97,24 @@ namespace HybridDb.Linq
             }
         }
 
-        public IEnumerable<TProjection> ExecuteQuery<TProjection>(SelectStatement statement)
+        public IEnumerable<TProjection> ExecuteQuery<TProjection>(bool manageAsEntity, SelectStatement statement)
         {
             // hvis select indeholder en column, der svarer til en parameter, så skal den antages som et dokument
             // parameter ender nok med at blive et TableName, så det svarer til at selecte hele tabellen
 
-            if (typeof (TProjection).IsAssignableFrom(design.DocumentType))
+            if (manageAsEntity)
             {
                 QueryStats storeStats;
-                var results = store.Query(statement, out storeStats)
-                    .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
-                    .Where(result => result != null)
-                    .Cast<TProjection>();
+                var results =
+                    from row in store.Query<object>(statement, out storeStats)
+                    let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
+                    // TProjection is always an entity type (if ProjectAs == null).
+                    // Either it's the same as TSourceElement or it is filtered by OfType<TProjection>
+                    // but that is still just a filter, not a conversion
+                    where typeof (TProjection).IsAssignableFrom(concreteDesign.DocumentType)
+                    let entity = session.ConvertToEntityAndPutUnderManagement(concreteDesign, (IDictionary<string, object>) row.Data)
+                    where entity != null
+                    select (TProjection) entity;
   
                 storeStats.CopyTo(lastQueryStats);
                 return results;
@@ -116,7 +122,12 @@ namespace HybridDb.Linq
             else
             {
                 QueryStats storeStats;
-                var results = store.Query<TProjection>(statement, out storeStats);
+                var results =
+                    from row in store.Query<TProjection>(statement, out storeStats)
+                    let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
+                    //TODO: OfType won't work with this. Go figure it out later.
+                    where design.DocumentType.IsAssignableFrom(concreteDesign.DocumentType)
+                    select row.Data;
 
                 storeStats.CopyTo(lastQueryStats);
                 return results;
@@ -126,7 +137,7 @@ namespace HybridDb.Linq
         //TODO: this is document store specific and should be moved... 
         public SqlStatementFragments GetQueryText(Expression expression)
         {
-            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name);
+            var parser = new QueryParser(type => session.DocumentStore.Configuration.TryGetDesignFor(type).Table.Name, name => null);
             var result = parser.Parse(expression);
 
             var emitter = new SqlStatementEmitter(x => $"[{x}]", x => x);

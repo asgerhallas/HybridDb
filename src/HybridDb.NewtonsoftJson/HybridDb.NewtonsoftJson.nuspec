@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>HybridDb.NewtonsoftJson</id>
+    <version>$version$</version>
+    <authors>Asger Hallas</authors>
+    <owners>Asger Hallas</owners>
+    <licenseUrl>http://github.com/asgerhallas/HybridDb</licenseUrl>
+    <projectUrl>http://github.com/asgerhallas/HybridDb</projectUrl>
+    <iconUrl>http://github.com/asgerhallas/HybridDb/assets/hybriddb.ico</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Json.NET serializer for HybridDb</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2013</copyright>
+    <tags></tags>
+    <dependencies>
+      <dependency id="HybridDb" version="$version$" />
+      <dependency id="Newtonsoft.Json" version="9.0.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\HybridDb.NewtonsoftJson.dll" target="lib\net45" />
+    <file src="bin\Release\HybridDb.NewtonsoftJson.pdb" target="lib\net45" />
+  </files>
+</package>

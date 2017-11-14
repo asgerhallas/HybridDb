@@ -64,7 +64,7 @@ namespace HybridDb.Migrations
 
                 // create metadata table if it does not exist
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
-                configuration.Tables.TryAdd(metadata.Name, metadata);
+                configuration.tables.TryAdd(metadata.Name, metadata);
                 new CreateTable(metadata).Execute(database);
 
                 // get schema version
@@ -122,7 +122,7 @@ namespace HybridDb.Migrations
                 foreach (var tablename in requiresReprojection)
                 {
                     // TODO: Only set RequireReprojection on command if it is documenttable - can it be done?
-                    var design = configuration.DocumentDesigns.FirstOrDefault(x => x.Table.Name == tablename);
+                    var design = configuration.TryGetDesignByTablename(tablename);
                     if (design == null) continue;
 
                     database.RawExecute(

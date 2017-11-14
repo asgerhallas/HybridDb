@@ -85,6 +85,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithSelectToTrackedType()
+        {
+            var result = session.Query<Entity>().Select(x => x).ToList();
+            result.Count.ShouldBe(3);
+        }
+
+        [Fact]
         public void CanQueryWithSelectToOtherName()
         {
             var result = session.Query<Entity>().Select(x => new { HansOgGrethe = x.Property }).ToList();

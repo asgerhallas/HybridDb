@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -41,16 +42,13 @@ namespace HybridDb
 
         public T Load<T>(string key) where T : class
         {
-            return Load(store.Configuration.TryGetLeastSpecificDesignFor(typeof(T)), key) as T;
+            return Load(typeof(T), key) as T;
         }
 
-        public T Load<T>(T prototype, string key) where T : class
+        public object Load(Type type, string key)
         {
-            return Load(store.Configuration.TryGetLeastSpecificDesignFor(prototype.GetType()), key) as T;
-        }
+            var design = store.Configuration.GetOrCreateDesignFor(type);
 
-        public object Load(DocumentDesign design, string key)
-        {
             ManagedEntity managedEntity;
             if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))
             {
@@ -63,19 +61,37 @@ namespace HybridDb
             
             if (row == null) return null;
 
-            return ConvertToEntityAndPutUnderManagement(design, row);
+            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[design.Table.DiscriminatorColumn]);
+
+            // The discriminator does map to a type that is assignable to the expected type.
+            if (!type.IsAssignableFrom(concreteDesign.DocumentType))
+            {
+                throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{type.Name}'.");
+            }
+
+            return ConvertToEntityAndPutUnderManagement(concreteDesign, row);
         }
 
+        /// <summary>
+        /// Query for document of type T and subtypes of T in the table assigned to T.
+        /// Note that if a subtype of T is specifically assigned to another table in store configuration,
+        /// it will not be included in the result of Query&lt;T&gt;().
+        /// </summary>
         public IQueryable<T> Query<T>() where T : class
         {
             var configuration = store.Configuration;
-            
-            var design = configuration.TryGetLeastSpecificDesignFor(typeof(T));
 
-            var discriminators = design.DecendentsAndSelf.Keys.ToArray();
+            var design = configuration.GetOrCreateDesignFor(typeof(T));
 
-            var query = new Query<T>(new QueryProvider<T>(this, design))
-                .Where(x => x.Column<string>("Discriminator").In(discriminators));
+            var include = design.DecendentsAndSelf.Keys.ToArray();
+            var exclude = design.Base.DecendentsAndSelf.Keys.Except(include).ToArray();
+
+            // Include T and known subtybes, exclude known supertypes.
+            // Unknown discriminators will be included and filtered result-side
+            // but also be added to configuration so they are known on next query.
+            var query = new Query<T>(new QueryProvider(this, design)).Where(x =>
+                x.Column<string>("Discriminator").In(include)
+                || !x.Column<string>("Discriminator").In(exclude));
 
             return query;
         }
@@ -114,8 +130,7 @@ namespace HybridDb
 
         public void Store(string key, object entity)
         {
-            var design = store.Configuration.TryGetExactDesignFor(entity.GetType()) 
-                ?? store.Configuration.CreateDesignFor(entity.GetType());
+            var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
 
             key = key ?? design.GetKey(entity);
 
@@ -178,7 +193,7 @@ namespace HybridDb
             foreach (var managedEntity in entities.Values.ToList())
             {
                 var key = managedEntity.Key;
-                var design = store.Configuration.TryGetExactDesignFor(managedEntity.Entity.GetType());
+                var design = store.Configuration.GetExactDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
                 var version = (int)projections[design.Table.VersionColumn];
@@ -223,15 +238,13 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal object ConvertToEntityAndPutUnderManagement(DocumentDesign design, IDictionary<string, object> row)
+        internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
-            var table = design.Table;
+            var table = concreteDesign.Table;
             var key = (string)row[table.IdColumn];
-            var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-            var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(design, discriminator, key);
 
             ManagedEntity managedEntity;
-            if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))
+            if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -260,7 +273,7 @@ namespace HybridDb
                 Table = table
             };
 
-            entities.Add(new EntityKey(design.Table, key), managedEntity);
+            entities.Add(new EntityKey(concreteDesign.Table, key), managedEntity);
             return entity;
         }
 
@@ -271,7 +284,7 @@ namespace HybridDb
 
         public bool IsLoaded<T>(string key)
         {
-            return entities.ContainsKey(new EntityKey(store.Configuration.TryGetExactDesignFor(typeof(T)).Table, key));
+            return entities.ContainsKey(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key));
         }
 
         public IDocumentStore DocumentStore => store;

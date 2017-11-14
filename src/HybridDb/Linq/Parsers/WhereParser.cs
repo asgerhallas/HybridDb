@@ -22,14 +22,14 @@ namespace HybridDb.Linq.Parsers
 
     internal class WhereParser : LambdaParser
     {
-        public WhereParser(Func<Type, string> getTableNameForType, Stack<AstNode> ast) : base(getTableNameForType, ast) { }
+        public WhereParser(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Stack<AstNode> ast) : base(getTableNameForType, getColumnTypeByName, ast) { }
 
         public AstNode Result => ast.Peek();
 
-        public static Where Translate(Func<Type, string> getTableNameForType, Expression expression)
+        public static Where Translate(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Expression expression)
         {
             var ast = new Stack<AstNode>();
-            new WhereParser(getTableNameForType, ast).Visit(expression);
+            new WhereParser(getTableNameForType, getColumnTypeByName, ast).Visit(expression);
 
             if (ast.Count == 0)
                 return null;

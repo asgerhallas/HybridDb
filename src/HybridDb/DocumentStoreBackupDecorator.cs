@@ -51,14 +51,14 @@ namespace HybridDb
             return store.Get(table, key);
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string @select = "", string @where = "", 
             int skip = 0, int take = 0, string @orderby = "", object parameters = null)
         {
             return store.Query<TProjection>(table, out stats, select, where, skip, take, orderby, parameters);
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SelectStatement statement, out QueryStats stats)
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(SelectStatement statement, out QueryStats stats)
         {
             return store.Query<TProjection>(statement, out stats);
         }

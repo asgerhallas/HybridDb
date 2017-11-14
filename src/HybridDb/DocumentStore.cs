@@ -154,10 +154,14 @@ namespace HybridDb
     
                     var numberOfNewParameters = preparedCommand.Parameters.Count;
 
-                    if (numberOfNewParameters >= 2100)
-                        throw new InvalidOperationException("Cannot execute a command with more than 2100 parameters.");
+                    // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
+                    // params are added some where in the stack) so we cut it some slack and say 2000.
+                    if (numberOfNewParameters >= 2000)
+                    {
+                        throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
+                    }
 
-                    if (numberOfParameters + numberOfNewParameters >= 2100)
+                    if (numberOfParameters + numberOfNewParameters >= 2000)
                     {
                         InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
@@ -179,10 +183,10 @@ namespace HybridDb
                 connectionManager.Complete();
 
                 Logger.Information("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
-                            numberOfInsertCommands,
-                            numberOfUpdateCommands,
-                            numberOfDeleteCommands,
-                            timer.ElapsedMilliseconds);
+                    numberOfInsertCommands,
+                    numberOfUpdateCommands,
+                    numberOfDeleteCommands,
+                    timer.ElapsedMilliseconds);
 
                 lastWrittenEtag = etag;
                 return etag;
@@ -199,16 +203,19 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = null, string where = "",
             int skip = 0, int take = 0, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
+            {
                 select = "";
 
-            var projectToDictionary = typeof (TProjection).IsA<IDictionary<string, object>>();
-            if (!projectToDictionary)
-                select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
+                if (typeof(TProjection) != typeof(object))
+                {
+                    select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
+                }
+            }
 
             var timer = Stopwatch.StartNew();
             using (var connection = Database.Connect())
@@ -221,15 +228,15 @@ namespace HybridDb
                 {
                     sql.Append("select count(*) as TotalResults")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(@where), $"where {@where}")
+                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)}) as RowNumber")
+                       .Append($", Discriminator as __Discriminator, row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(@where), $"where {@where}")
+                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(")")
-                       .Append($"select {(@select.IsNullOrEmpty() ? "*" : @select + ", RowNumber")} from temp")
+                       .Append($"select {(select.IsNullOrEmpty() ? "*" : select + ", __Discriminator, RowNumber")} from temp")
                        .Append($"where RowNumber >= {skip + 1}")
                        .Append(take > 0, $"and RowNumber <= {skip + take}")
                        .Append("order by RowNumber");
@@ -237,25 +244,15 @@ namespace HybridDb
                 else
                 {
                     sql.Append(@"with temp as (select *")
-                       .Append(", 0 as RowNumber")
+                       .Append(", Discriminator as __Discriminator, 0 as RowNumber")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(@where), $"where {@where}")
+                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(")")
-                       .Append($"select {(@select.IsNullOrEmpty() ? "*" : @select + ", RowNumber")} from temp")
+                       .Append($"select {(select.IsNullOrEmpty() ? "*" : select + ", __Discriminator, RowNumber")} from temp")
                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 }
-                
-                IEnumerable<TProjection> result;
-                if (projectToDictionary)
-                {
-                    result = (IEnumerable<TProjection>)
-                        InternalQuery<object>(connection, sql, parameters, isWindowed, out stats)
-                            .Cast<IDictionary<string, object>>();
-                }
-                else
-                {
-                    result = InternalQuery<TProjection>(connection, sql, parameters, isWindowed, out stats);
-                }
+
+                var result = InternalQuery<TProjection>(connection, sql, parameters, isWindowed, out stats);
 
                 stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
 
@@ -281,7 +278,7 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SelectStatement statement, out QueryStats stats)
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(SelectStatement statement, out QueryStats stats)
         {
             // semantics parse -> symbols and types
             // typecheck
@@ -332,10 +329,10 @@ namespace HybridDb
                        .Append(!string.IsNullOrEmpty(emit.OrderBy), $"order by {emit.OrderBy}");
                 }
 
-                IEnumerable<TProjection> result;
+                IEnumerable<QueryResult<TProjection>> result;
                 if (projectToDictionary)
                 {
-                    result = (IEnumerable<TProjection>)
+                    result = (IEnumerable<QueryResult<TProjection>>)
                         InternalQuery<object>(connection, sql, emit.ParametersByName, isWindowed, out stats)
                             .Cast<IDictionary<string, object>>();
                 }
@@ -403,19 +400,19 @@ namespace HybridDb
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
-            if (simpleTypes.Contains(typeof(TProjection)))
+            if (simpleTypes.Contains(typeof (TProjection)))
                 return select;
 
-            var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
-            var selectedColumns = 
-                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            var neededColumns = typeof (TProjection).GetProperties().Select(x => x.Name).ToList();
+            var selectedColumns =
+                from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
                 let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                 let column = split[0]
                 let alias = split.Length > 1 ? split[1] : null
                 where neededColumns.Contains(alias)
-                select new { column, alias = alias ?? column };
+                select new {column, alias = alias ?? column};
 
-            var missingColumns = 
+            var missingColumns =
                 from column in neededColumns
                 where !selectedColumns.Select(x => x.alias).Contains(column)
                 select new {column, alias = column};
@@ -424,7 +421,7 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
+        IEnumerable<QueryResult<T>> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
         {
             var normalizedParameters = new FastDynamicParameters(
                 parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
@@ -434,18 +431,24 @@ namespace HybridDb
                 using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
                 {
                     stats = reader.Read<QueryStats>(buffered: true).Single();
-                    return reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
+                    return reader.Read<T, string, object, QueryResult<T>>(
+                        (obj, discriminator, rownumber) => new QueryResult<T>(obj, discriminator),
+                        "__Discriminator,RowNumber", buffered: true);
                 }
             }
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
                 // a buffered reader return a list
-                var rows = (List<T>)reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
+                var rows = (List<QueryResult<T>>)reader.Read<T, string, object, QueryResult<T>>(
+                    (obj, discriminator, rownumber) => new QueryResult<T>(obj, discriminator),
+                    "__Discriminator, RowNumber", buffered: true);
+
                 stats = new QueryStats
                 {
                     TotalResults = rows.Count
                 };
+
                 return rows;
             }
         }
@@ -453,7 +456,7 @@ namespace HybridDb
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)
         {
             return from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
-                   select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
+                   select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
         }
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
@@ -465,7 +468,7 @@ namespace HybridDb
                     Database.FormatTableNameAndEscape(table.Name),
                     table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault());
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 

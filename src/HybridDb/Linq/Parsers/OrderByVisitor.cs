@@ -7,12 +7,13 @@ namespace HybridDb.Linq.Parsers
 {
     internal class OrderByVisitor : LambdaParser
     {
-        public OrderByVisitor(Func<Type, string> getTableNameForType, Stack<AstNode> ast) : base(getTableNameForType, ast) {}
+        public OrderByVisitor(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Stack<AstNode> ast) 
+            : base(getTableNameForType, getColumnTypeByName, ast) {}
 
-        public static ColumnName Translate(Func<Type, string> getTableNameForType, Expression expression)
+        public static ColumnName Translate(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName, Expression expression)
         {
             var ast = new Stack<AstNode>();
-            new OrderByVisitor(getTableNameForType, ast).Visit(expression);
+            new OrderByVisitor(getTableNameForType, getColumnTypeByName, ast).Visit(expression);
             return (ColumnName) ast.Pop();
         }
     }

@@ -216,16 +216,16 @@ namespace HybridDb.Tests
                 out stats).ToList();
 
             rows.Count.ShouldBe(2);
-            var first = rows.Single(x => (string)x[table.Table.IdColumn] == id1);
-            first[table.Table.EtagColumn].ShouldBe(etag1);
-            first[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
-            first[table.Table["Field"]].ShouldBe("Asger");
+            var first = rows.Single(x => (string)x.Data[table.Table.IdColumn] == id1);
+            first.Data[table.Table.EtagColumn].ShouldBe(etag1);
+            first.Data[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
+            first.Data[table.Table["Field"]].ShouldBe("Asger");
 
-            var second = rows.Single(x => (string)x[table.Table.IdColumn] == id2);
-            second[table.Table.IdColumn].ShouldBe(id2);
-            second[table.Table.EtagColumn].ShouldBe(etag2);
-            second[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
-            second[table.Table["Field"]].ShouldBe("Hans");
+            var second = rows.Single(x => (string)x.Data[table.Table.IdColumn] == id2);
+            second.Data[table.Table.IdColumn].ShouldBe(id2);
+            second.Data[table.Table.EtagColumn].ShouldBe(etag2);
+            second.Data[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
+            second.Data[table.Table["Field"]].ShouldBe("Hans");
         }
 
         [Fact]
@@ -242,7 +242,7 @@ namespace HybridDb.Tests
 
             rows = store.Query<ProjectionWithNestedProperty>(new SelectStatement(new From(new TableName(table.Table.Name))), out stats).ToList();
 
-            rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
+            rows.Single().Data.TheChildNestedDouble.ShouldBe(9.8d);
         }
 
         [Fact]
@@ -262,13 +262,13 @@ namespace HybridDb.Tests
                               where method.Name == "Query" && method.IsGenericMethod
                               select method).Single().MakeGenericMethod(t.GetType());
 
-            var rows = (IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}});
+            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}})).ToList();
 
-            rows.Count().ShouldBe(1);
-            Assert.Equal("Asger", rows.Single().Field);
+            rows.Count.ShouldBe(1);
+            Assert.Equal("Asger", rows.Single().Data.Field);
         }
 
-        [Fact(Skip = "I believe this is issue #24")]
+        [Fact]
         public void CanQueryAndReturnValueProjections()
         {
             Document<Entity>().With(x => x.Field);
@@ -279,7 +279,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             QueryStats stats;
-            var rows = store.Query<string>(table.Table, out stats, select: "Field").ToList();
+            var rows = store.Query<string>(table.Table, out stats, select: "Field").Select(x => x.Data).ToList();
 
             Assert.Equal("Asger", rows.Single());
         }
@@ -393,22 +393,39 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanSplitLargeCommandBatches()
+        public void DoesNotSplitBelow2000Params()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
 
             // the initial migrations might issue some requests
             var initialNumberOfRequest = store.NumberOfRequests;
 
             var commands = new List<DatabaseCommand>();
-            for (var i = 0; i < 2100/4 + 1; i++)
-            {
+            for (var i = 0; i < 333; i++) // each insert i 6 params so 333 commands equals 1998 params, threshold is at 2000
                 commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
-            }
 
-            store.Execute(commands);
+            store.Execute(commands.ToArray());
+
+            (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(1);
+        }
+
+        [Fact]
+        public void SplitsAbove2000Params()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            // the initial migrations might issue some requests
+            var initialNumberOfRequest = store.NumberOfRequests;
+
+            var commands = new List<DatabaseCommand>();
+            for (var i = 0; i < 334; i++) // each insert i 6 params so 334 commands equals 2004 params, threshold is at 2000
+                commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
+
+
             (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
         }
 
@@ -436,7 +453,7 @@ namespace HybridDb.Tests
 
             QueryStats stats;
             var result = store.Query<ProjectionWithEnum>(table.Table, out stats).Single();
-            result.EnumProp.ShouldBe(SomeFreakingEnum.Two);
+            result.Data.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
 
         [Fact]
@@ -790,7 +807,7 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact]
+        [Fact()]
         public void UtilityColsAreRemovedFromQueryResults()
         {
             Document<Entity>();
@@ -804,8 +821,8 @@ namespace HybridDb.Tests
             result1.ContainsKey(new Column("TotalResults", typeof(int))).ShouldBe(false);
 
             var result2 = store.Query<object>(table, out stats, skip: 0, take: 2).Single();
-            ((IDictionary<string, object>)result2).ContainsKey("RowNumber").ShouldBe(false);
-            ((IDictionary<string, object>)result2).ContainsKey("TotalResults").ShouldBe(false);
+            ((IDictionary<string, object>)result2.Data).ContainsKey("RowNumber").ShouldBe(false);
+            ((IDictionary<string, object>)result2.Data).ContainsKey("TotalResults").ShouldBe(false);
         }
 
         [Fact]
@@ -861,17 +878,17 @@ namespace HybridDb.Tests
                 out stats).ToList();
 
             rows.Count.ShouldBe(2);
-            rows[0]["Id"].ShouldBe("a");
-            rows[0]["Document"].ShouldBe(new byte[] { 1 });
-            rows[0]["OtherEntities_Id"].ShouldBe("x");
-            rows[0]["OtherEntities_EntityId"].ShouldBe("a");
-            rows[0]["OtherEntities_Document"].ShouldBe(new byte[] { 3 });
+            rows[0].Data["Id"].ShouldBe("a");
+            rows[0].Data["Document"].ShouldBe(new byte[] { 1 });
+            rows[0].Data["OtherEntities_Id"].ShouldBe("x");
+            rows[0].Data["OtherEntities_EntityId"].ShouldBe("a");
+            rows[0].Data["OtherEntities_Document"].ShouldBe(new byte[] { 3 });
 
-            rows[1]["Id"].ShouldBe("b");
-            rows[1]["Document"].ShouldBe(new byte[] { 2 });
-            rows[1]["OtherEntities_Id"].ShouldBe("y");
-            rows[1]["OtherEntities_EntityId"].ShouldBe("b");
-            rows[1]["OtherEntities_Document"].ShouldBe(new byte[] { 4 });
+            rows[1].Data["Id"].ShouldBe("b");
+            rows[1].Data["Document"].ShouldBe(new byte[] { 2 });
+            rows[1].Data["OtherEntities_Id"].ShouldBe("y");
+            rows[1].Data["OtherEntities_EntityId"].ShouldBe("b");
+            rows[1].Data["OtherEntities_Document"].ShouldBe(new byte[] { 4 });
         }
 
         [Fact]
@@ -902,17 +919,17 @@ namespace HybridDb.Tests
                 out stats).ToList();
 
             rows.Count.ShouldBe(2);
-            rows[0]["Id"].ShouldBe("a");
-            rows[0]["Document"].ShouldBe(new byte[] { 1 });
-            rows[0]["OtherEntities_Id"].ShouldBe("x");
-            rows[0]["OtherEntities_EntityId"].ShouldBe("a");
-            rows[0]["OtherEntities_Document"].ShouldBe(new byte[] { 3 });
+            rows[0].Data["Id"].ShouldBe("a");
+            rows[0].Data["Document"].ShouldBe(new byte[] { 1 });
+            rows[0].Data["OtherEntities_Id"].ShouldBe("x");
+            rows[0].Data["OtherEntities_EntityId"].ShouldBe("a");
+            rows[0].Data["OtherEntities_Document"].ShouldBe(new byte[] { 3 });
 
-            rows[1]["Id"].ShouldBe("a");
-            rows[1]["Document"].ShouldBe(new byte[] { 1 });
-            rows[1]["OtherEntities_Id"].ShouldBe("y");
-            rows[1]["OtherEntities_EntityId"].ShouldBe("a");
-            rows[1]["OtherEntities_Document"].ShouldBe(new byte[] { 4 });
+            rows[1].Data["Id"].ShouldBe("a");
+            rows[1].Data["Document"].ShouldBe(new byte[] { 1 });
+            rows[1].Data["OtherEntities_Id"].ShouldBe("y");
+            rows[1].Data["OtherEntities_EntityId"].ShouldBe("a");
+            rows[1].Data["OtherEntities_Document"].ShouldBe(new byte[] { 4 });
 
             //TODO: do we need this optimization?
             //ReferenceEquals(rows[0]["Document"], rows[1]["Document"]).ShouldBe(true);

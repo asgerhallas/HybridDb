@@ -8,10 +8,12 @@ namespace HybridDb.Linq.Parsers
     public class QueryParser : ExpressionVisitor
     {
         readonly Func<Type, string> getTableNameForType;
+        readonly Func<string, Type> getColumnTypeByName;
 
-        public QueryParser(Func<Type, string> getTableNameForType)
+        public QueryParser(Func<Type, string> getTableNameForType, Func<string, Type> getColumnTypeByName)
         {
             this.getTableNameForType = getTableNameForType;
+            this.getColumnTypeByName = getColumnTypeByName;
         }
 
         public int Skip { get; private set; }
@@ -20,16 +22,19 @@ namespace HybridDb.Linq.Parsers
         public Where Where { get; private set; }
         public OrderBy OrderBy { get; private set; }
         public Execution Execution { get; private set; }
+        public Type ProjectAs { get; private set; }
         public Type TableType { get; private set; }
 
         public Result Parse(Expression expression)
         {
             Visit(expression);
 
-            return new Result(new SelectStatement(
-                Select ?? new Select(),
-                new From(new TableName(getTableNameForType(TableType))), 
-                Where ?? new Where(new True())), Execution);
+            return new Result(
+                ProjectAs,
+                new SelectStatement(
+                    Select ?? new Select(),
+                    new From(new TableName(getTableNameForType(TableType))),
+                    Where ?? new Where(new True())), Execution);
         }
 
         protected override Expression VisitConstant(ConstantExpression node)
@@ -49,7 +54,11 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Select":
-                    Select = SelectParser.Translate(getTableNameForType, Select, expression.Arguments[1]);
+                    Select = SelectParser.Translate(getTableNameForType, getColumnTypeByName, Select, expression.Arguments[1]);
+                    // if it changes the return type make it known that this is a projection and should not be tracked in session
+                    var inType = expression.Arguments[0].Type.GetGenericArguments()[0];
+                    var outType = expression.Method.ReturnType.GetGenericArguments()[0];
+                    ProjectAs = inType != outType ? outType : null;
                     break;
                 case "SingleOrDefault":
                     Execution = Execution.SingleOrDefault;
@@ -70,7 +79,7 @@ namespace HybridDb.Linq.Parsers
                     goto Where;
                 case "Where":
                     Where:
-                    var whereExpression = WhereParser.Translate(getTableNameForType, expression.Arguments[1]);
+                    var whereExpression = WhereParser.Translate(getTableNameForType, getColumnTypeByName, expression.Arguments[1]);
                     if (whereExpression == null)
                         break;
 
@@ -86,7 +95,7 @@ namespace HybridDb.Linq.Parsers
                     Take = (int) ((ConstantExpression) expression.Arguments[1]).Value;
                     break;
                 case "OfType":
-                    // Change of type is done else where
+                    ProjectAs = expression.Method.GetGenericArguments()[0];
                     break;
                 case "OrderBy":
                 case "ThenBy":
@@ -96,7 +105,7 @@ namespace HybridDb.Linq.Parsers
                                         ? OrderByExpression.Directions.Descending
                                         : OrderByExpression.Directions.Ascending;
 
-                    var orderByColumnExpression = OrderByVisitor.Translate(getTableNameForType, expression.Arguments[1]);
+                    var orderByColumnExpression = OrderByVisitor.Translate(getTableNameForType, getColumnTypeByName, expression.Arguments[1]);
                     var orderingExpression = new OrderByExpression(orderByColumnExpression, direction);
                     OrderBy = OrderBy != null
                                   ? new OrderBy(OrderBy.Columns.Concat(orderingExpression))
@@ -111,12 +120,14 @@ namespace HybridDb.Linq.Parsers
 
         public class Result
         {
-            public Result(SelectStatement statement, Execution execution)
+            public Result(Type projectAs, SelectStatement statement, Execution execution)
             {
+                ProjectAs = projectAs;
                 Statement = statement;
                 Execution = execution;
             }
 
+            public Type ProjectAs { get; }
             public SelectStatement Statement { get; }
             public Execution Execution { get; }
         }

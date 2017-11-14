@@ -34,6 +34,7 @@ namespace HybridDb.Linq.Parsers
     //        {
     //            Select = selectSql.ToString(),
     //            Where = whereSql.ToString(),
+    //            ProjectAs = queryVisitor.ProjectAs,
     //            OrderBy = orderBySql.ToString(),
     //            Skip = queryVisitor.Skip,
     //            Take = queryVisitor.Take,

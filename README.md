@@ -107,6 +107,42 @@ Changelog
 
 - Internal change to metadata API
 
+#### 0.10.3
+
+- Fix for bug that prevented queries on anonymous types
+
+#### 0.10.4
+
+- Fix for bug that prevented queries on unconfigured types
+
+#### 0.10.5
+
+- Upgrade of Serilog and Newtonsoft.Json (thanks to @mookid8000 / https://github.com/asgerhallas/HybridDb/pull/36)
+
+#### 0.10.6
+
+- Better handling of queries on unconfigured types and ad-hoc configuring
+
+#### 0.10.7
+
+- Fixing handling of queries on unconfigured types and ad-hoc configuring for queries with projections
+
+#### 0.10.8
+
+- ILMerging the Indentional lib
+
+#### 0.10.9
+
+- Fixing bug that made SQL Server fail with a "too many parameters" error. The documented threshold i 2100 params, but it failed when given 2099 params.
+
+#### 0.10.10
+
+- Some fixes for appveyor setup
+
+#### 0.10.11
+
+- Merged Indentional.dll 
+
 Acknowledgements
 ================
 

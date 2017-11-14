@@ -111,7 +111,7 @@ namespace HybridDb.Tests
         {
             configuration.Initialize(); 
 
-            Should.Throw<InvalidOperationException>(() => configuration.CreateDesignFor(typeof(OtherEntity), "allnewtable"));
+            Should.Throw<InvalidOperationException>(() => configuration.GetOrCreateDesignFor(typeof(OtherEntity), "allnewtable"));
         }
 
         [Fact]

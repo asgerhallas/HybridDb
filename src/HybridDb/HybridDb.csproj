@@ -42,19 +42,21 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Dapper.1.13\lib\net45\Dapper.dll</HintPath>
     </Reference>
+    <Reference Include="Indentional, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Indentional.1.0.3\lib\net45\Indentional.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Inflector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Inflector.1.0.0.0\lib\net45\Inflector.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Serilog">
-      <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.dll</HintPath>
-    </Reference>
-    <Reference Include="Serilog.FullNetFx">
-      <HintPath>..\packages\Serilog.1.4.204\lib\net45\Serilog.FullNetFx.dll</HintPath>
+    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.2.3.0\lib\net45\Serilog.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ShinySwitch, Version=1.0.22.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\ShinySwitch.1.0.22\lib\net40\ShinySwitch.dll</HintPath>
@@ -176,6 +178,7 @@
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migrations\SchemaMigrationCommand.cs" />
     <Compile Include="Migrations\ZipBackupDecorator.cs" />
+    <Compile Include="QueryResult.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="FastDynamicParameters.cs" />
@@ -222,6 +225,7 @@
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="HybridDb.nuspec" />
     <None Include="Migrations\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>

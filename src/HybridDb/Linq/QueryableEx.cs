@@ -16,12 +16,14 @@ namespace HybridDb.Linq
 
         public static IQueryable<T> Statistics<T>(this IQueryable<T> query, out QueryStats stats) where T : class
         {
-            ((QueryProvider<T>)query.Provider).WriteStatisticsTo(out stats);
+            ((QueryProvider)query.Provider).WriteStatisticsTo(out stats);
             return query;
         }
 
         public static bool In<T>(this T property, params T[] list)
         {
+            // courtesy implementation - not really neccessary for linq provider
+            // but i repeatedly ended up using the method in linq-for-objects too.
             return list.Contains(property);
         }
         

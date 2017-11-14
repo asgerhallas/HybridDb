@@ -24,7 +24,11 @@ namespace HybridDb.Migrations
 
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    var baseDesign = configuration.DocumentDesigns.First(x => x.Table.Name == table.Name);
+                    var baseDesign = configuration.TryGetDesignByTablename(table.Name);
+                    if (baseDesign == null)
+                    {
+                        throw new InvalidOperationException($"Design not found for table '{table.Name}'");
+                    }
 
                     while (true)
                     {
@@ -48,7 +52,7 @@ namespace HybridDb.Migrations
                             var key = (string)row[table.IdColumn];
                             var currentDocumentVersion = (int)row[table.VersionColumn];
                             var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-                            var concreteDesign = store.Configuration.GetOrCreateConcreteDesign(baseDesign, discriminator, key);
+                            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
 
                             var shouldUpdate = false;
 
@@ -70,7 +74,7 @@ namespace HybridDb.Migrations
                                 {
                                     using (var session = new DocumentSession(store))
                                     {
-                                        session.Load(concreteDesign, key);
+                                        session.Load(concreteDesign.DocumentType, key);
                                         session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                     }
                                 }

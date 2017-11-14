@@ -44,13 +44,13 @@ namespace HybridDb
             throw new NotImplementedException();
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(DocumentTable table, out QueryStats stats, string @select = "", string @where = "", int skip = 0, int take = 0, string @orderby = "",
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(DocumentTable table, out QueryStats stats, string @select = "", string @where = "", int skip = 0, int take = 0, string @orderby = "",
             object parameters = null)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SelectStatement statement, out QueryStats stats)
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(SelectStatement statement, out QueryStats stats)
         {
             throw new NotImplementedException();
         }

@@ -7,7 +7,6 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations;
-using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
@@ -141,6 +140,11 @@ namespace HybridDb.Tests
         }
 
         public interface IOtherInterface
+        {
+            string Property { get; }
+        }
+
+        public interface IUnusedInterface
         {
         }
 
