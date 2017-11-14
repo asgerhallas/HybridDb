@@ -30,7 +30,7 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitConstant(ConstantExpression expression)
         {
-            var type = expression.Value != null ? expression.Value.GetType() : typeof(object);
+            var type = expression.Value?.GetType() ?? typeof(object);
             ast.Push(new SqlConstantExpression(type, expression.Value));
             return expression;
         }
@@ -99,8 +99,7 @@ namespace HybridDb.Linq.Parsers
                     var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
-                        throw new NotSupportedException(
-                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                        throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
 
                     var constant = (SqlConstantExpression) ast.Pop();
@@ -115,8 +114,7 @@ namespace HybridDb.Linq.Parsers
                     var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
-                        throw new NotSupportedException(
-                            string.Format("{0} method must be called on the lambda parameter.", expression));
+                        throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
 
                     var type = expression.Method.GetGenericArguments()[0];
