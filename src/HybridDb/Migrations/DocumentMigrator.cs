@@ -35,9 +35,9 @@ namespace HybridDb.Migrations
 
             if (configuredVersion < currentDocumentVersion)
             {
-                throw new InvalidOperationException(string.Format(
-                    "Document {0}/{1} version is ahead of configuration. Document is version {2}, but configuration is version {3}.",
-                    design.DocumentType.FullName, id, currentDocumentVersion, configuredVersion));
+                throw new InvalidOperationException(
+                    $"Document {design.DocumentType.FullName}/{id} version is ahead of configuration. " +
+                    $"Document is version {currentDocumentVersion}, but configuration is version {configuredVersion}.");
             }
 
             logger.Information("Migrating document {0}/{1} from version {2} to {3}.", 

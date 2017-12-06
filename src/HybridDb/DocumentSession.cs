@@ -216,9 +216,9 @@ namespace HybridDb
                             break;
 
                         commands.Add(managedEntity, new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins));
-                        //store.Configuration.BackupWriter
-                        //commands.Add(managedEntity, new BackupCommand( design, key, managedEntity.Version, managedEntity.Document));
-                        
+
+                        store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", managedEntity.Document);
+
                         managedEntity.Version = version;
                         managedEntity.Document = document;
                         break;

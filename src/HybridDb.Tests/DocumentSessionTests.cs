@@ -898,16 +898,15 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
+            var backupWriter = new FakeBackupWriter();
+
             Reset();
 
+            UseBackupWriter(backupWriter);
             Document<Entity>();
             DisableDocumentMigrationsInBackground();
             UseMigrations(
-                new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })),
-                new InlineMigration(2, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "2"; })));
-
-            var backupWriter = new FakeBackupWriter();
-            UseBackupWriter(backupWriter);
+                new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
             using (var session = store.OpenSession())
             {
@@ -922,6 +921,31 @@ namespace HybridDb.Tests
                 backupWriter.Files.Count.ShouldBe(1);
                 backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                     .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
+            }
+
+            // try it again (todo: move to seperate test)
+            Reset();
+
+            UseBackupWriter(backupWriter);
+            Document<Entity>();
+            DisableDocumentMigrationsInBackground();
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })),
+                new InlineMigration(2, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "2"; })));
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Entity>(id);
+
+                // no backup on load
+                backupWriter.Files.Count.ShouldBe(1);
+
+                session.SaveChanges();
+
+                // backup on save
+                backupWriter.Files.Count.ShouldBe(2);
+                backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_1.bak"]
+                    .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger1" }));
             }
         }
 
