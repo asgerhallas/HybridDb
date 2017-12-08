@@ -45,7 +45,40 @@ namespace HybridDb.Tests.Bugs
             Parallel.For(0, 100, i =>
             {
                 var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString));
-                realstore.Configuration.Document<Entity>();
+
+                realstore.Configuration.Document<Entity>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityB>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityC>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityD>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+
                 realstore.Initialize();
             });
         }
@@ -75,9 +108,74 @@ namespace HybridDb.Tests.Bugs
             });
         }
 
-        public class Entity
+        public class EntityB : ISomeInterface
         {
-            
+            public string Id { get; set; }
+            public string ProjectedProperty { get; set; }
+            public string Field;
+            public string Property { get; set; }
+            public int Number { get; set; }
+            public DateTime DateTimeProp { get; set; }
+            public SomeFreakingEnum EnumProp { get; set; }
+            public ComplexType Complex { get; set; }
+
+            public class ComplexType
+            {
+                public string A { get; set; }
+                public int B { get; set; }
+
+                public override string ToString()
+                {
+                    return A + B;
+                }
+            }
         }
+
+        public class EntityC : ISomeInterface
+        {
+            public string Id { get; set; }
+            public string ProjectedProperty { get; set; }
+            public string Field;
+            public string Property { get; set; }
+            public int Number { get; set; }
+            public DateTime DateTimeProp { get; set; }
+            public SomeFreakingEnum EnumProp { get; set; }
+            public ComplexType Complex { get; set; }
+
+            public class ComplexType
+            {
+                public string A { get; set; }
+                public int B { get; set; }
+
+                public override string ToString()
+                {
+                    return A + B;
+                }
+            }
+        }
+
+        public class EntityD : ISomeInterface
+        {
+            public string Id { get; set; }
+            public string ProjectedProperty { get; set; }
+            public string Field;
+            public string Property { get; set; }
+            public int Number { get; set; }
+            public DateTime DateTimeProp { get; set; }
+            public SomeFreakingEnum EnumProp { get; set; }
+            public ComplexType Complex { get; set; }
+
+            public class ComplexType
+            {
+                public string A { get; set; }
+                public int B { get; set; }
+
+                public override string ToString()
+                {
+                    return A + B;
+                }
+            }
+        }
+
     }
 }

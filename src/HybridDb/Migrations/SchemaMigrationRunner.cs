@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -14,11 +15,11 @@ namespace HybridDb.Migrations
     public class SchemaMigrationRunner
     {
         readonly ILogger logger;
-        readonly IDocumentStore store;
+        readonly DocumentStore store;
         readonly IReadOnlyList<Migration> migrations;
         readonly ISchemaDiffer differ;
 
-        public SchemaMigrationRunner(IDocumentStore store, ISchemaDiffer differ)
+        public SchemaMigrationRunner(DocumentStore store, ISchemaDiffer differ)
         {
             this.store = store;
             this.differ = differ;
@@ -34,7 +35,7 @@ namespace HybridDb.Migrations
 
             var requiresReprojection = new List<string>();
 
-            var database = ((DocumentStore)store).Database;
+            var database = store.Database;
             var configuration = store.Configuration;
 
             using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))

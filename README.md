@@ -143,6 +143,16 @@ Changelog
 
 - Merged Indentional.dll 
 
+#### 0.10.23
+
+- Upgraded Dapper
+- Fixed pre-migration backups
+
+#### 0.10.24
+
+- Upgraded Newtonsoft.Json to 10.0.3
+
+
 Acknowledgements
 ================
 

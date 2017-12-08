@@ -161,13 +161,13 @@ namespace HybridDb.Serialization
 
         public class HybridDbContractResolver : DefaultContractResolver
         {
-            readonly static Regex matchesBackingFieldForAutoProperty = new Regex(@"\<(?<name>.*?)\>k__BackingField");
-            readonly static Regex matchesFieldNameForAnonymousType = new Regex(@"\<(?<name>.*?)\>i__Field");
+            static readonly Regex matchesBackingFieldForAutoProperty = new Regex(@"\<(?<name>.*?)\>k__BackingField");
+            static readonly Regex matchesFieldNameForAnonymousType = new Regex(@"\<(?<name>.*?)\>i__Field");
 
             readonly ConcurrentDictionary<Type, JsonContract> contracts = new ConcurrentDictionary<Type, JsonContract>();
             readonly DefaultSerializer serializer;
 
-            public HybridDbContractResolver(DefaultSerializer serializer) : base(shareCache: false)
+            public HybridDbContractResolver(DefaultSerializer serializer)
             {
                 this.serializer = serializer;
             }
