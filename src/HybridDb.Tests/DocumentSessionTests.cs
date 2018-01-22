@@ -956,6 +956,7 @@ namespace HybridDb.Tests
 
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
+            DisableDocumentMigrationsInBackground();
 
             var id = NewId();
             using (var session = store.OpenSession())
@@ -966,7 +967,10 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(id);
+                var entity = session.Load<Entity>(id);
+
+                entity.Property = "Jacob";
+
                 session.SaveChanges();
 
                 // no migrations, means no backup

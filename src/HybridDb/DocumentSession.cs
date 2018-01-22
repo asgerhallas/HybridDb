@@ -197,7 +197,7 @@ namespace HybridDb
                 var design = store.Configuration.GetExactDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
-                var version = (int)projections[design.Table.VersionColumn];
+                var configuredVersion = (int)projections[design.Table.VersionColumn];
                 var document = (byte[])projections[design.Table.DocumentColumn];
                 var metadataDocument = (byte[])projections[design.Table.MetadataColumn];
 
@@ -206,7 +206,7 @@ namespace HybridDb
                     case EntityState.Transient:
                         commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));
                         managedEntity.State = EntityState.Loaded;
-                        managedEntity.Version = version;
+                        managedEntity.Version = configuredVersion;
                         managedEntity.Document = document;
                         break;
                     case EntityState.Loaded:
@@ -217,10 +217,14 @@ namespace HybridDb
 
                         commands.Add(managedEntity, new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins));
 
-                        store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", managedEntity.Document);
+                        if (configuredVersion != managedEntity.Version)
+                        {
+                            store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", managedEntity.Document);
+                        }
 
-                        managedEntity.Version = version;
+                        managedEntity.Version = configuredVersion;
                         managedEntity.Document = document;
+
                         break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, managedEntity.Etag, lastWriteWins));

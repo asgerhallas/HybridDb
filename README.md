@@ -22,7 +22,7 @@ So if all you need is to put some JSON to rest - on a single server, in simple m
 Why?
 ====
 
-We have been happy users of the [awesome RavenDB](http://ravendb.net/) for a quite a while, 
+We have been happy users of the [awesome RavenDB](http://ravendb.net/) for a quite a while,
 but we ran into some performance issues that we were not able to dodge ([read more here](https://groups.google.com/d/topic/ravendb/6NjiJpzYxyI/discussion)).
 
 With no solution to the problem in sight - and in the lucky situation that we did not rely on any of RavenDB's more advanced features - we decided to write a drop-in replacement to run on top of SQL Server.
@@ -36,13 +36,13 @@ Like this:
 
     var store = DocumentStore.ForTesting(TableMode.TempTables);
     store.Document<Entity>().With(x => x.Property);
-    
+
     using (var session = store.OpenSession())
     {
         session.Store(new Entity { Id = Guid.NewGuid(), Property = 2001, Field = "Hello" });
         session.SaveChanges();
     }
-    
+
     using (var session = store.OpenSession())
     {
         var entity = session.Query<Entity>().Single(x => x.Property > 2000);
@@ -64,7 +64,7 @@ Changelog
 #### 0.8.5
 
 - Added support for persisting anonynomous types
-- Added support for persisting non-configured types in an always present Document table 
+- Added support for persisting non-configured types in an always present Document table
 - Added TypeMapper instead of requiring configuration for all concrete type manually
 
 #### 0.9.0
@@ -141,7 +141,7 @@ Changelog
 
 #### 0.10.11
 
-- Merged Indentional.dll 
+- Merged Indentional.dll
 
 #### 0.10.23
 
@@ -151,6 +151,11 @@ Changelog
 #### 0.10.24
 
 - Upgraded Newtonsoft.Json to 10.0.3
+
+#### 0.10.25
+
+- Fixed pre-migration backup, such that it only backups when there's an acutal migration
+- Bumped logging of some informations down to debug levels
 
 
 Acknowledgements

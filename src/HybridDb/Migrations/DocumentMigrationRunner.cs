@@ -59,7 +59,7 @@ namespace HybridDb.Migrations
                             if ((bool)row[table.AwaitsReprojectionColumn])
                             {
                                 shouldUpdate = true;
-                                logger.Information("Reprojection document {0}/{1}.",
+                                logger.Debug("Reprojection document {0}/{1}.",
                                     concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
                             }
 
@@ -87,7 +87,7 @@ namespace HybridDb.Migrations
                             }
                             else
                             {
-                                logger.Information("Document did not change.");
+                                logger.Debug("Document did not change.");
 
                                 var projection = new Dictionary<string, object>
                                 {

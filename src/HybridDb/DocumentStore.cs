@@ -174,7 +174,7 @@ namespace HybridDb
 
                 connectionManager.Complete();
 
-                Logger.Information("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
+                Logger.Debug("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                     numberOfInsertCommands,
                     numberOfUpdateCommands,
                     numberOfDeleteCommands,
@@ -262,7 +262,7 @@ namespace HybridDb
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Information("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
+                Logger.Debug("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
 
                 connection.Complete();
                 return result;
@@ -342,7 +342,7 @@ namespace HybridDb
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Information("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
+                Logger.Debug("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 connection.Complete();
 

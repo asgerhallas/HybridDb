@@ -40,7 +40,7 @@ namespace HybridDb.Migrations
                     $"Document is version {currentDocumentVersion}, but configuration is version {configuredVersion}.");
             }
 
-            logger.Information("Migrating document {0}/{1} from version {2} to {3}.", 
+            logger.Debug("Migrating document {0}/{1} from version {2} to {3}.", 
                 design.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
 
             document = ApplicableCommands(design, currentDocumentVersion)
