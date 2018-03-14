@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Diagnostics;
 using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 using System.Linq;
+using Serilog;
 
 namespace HybridDb.Tests.Performance
 {

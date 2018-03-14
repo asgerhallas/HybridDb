@@ -332,19 +332,18 @@ namespace HybridDb
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {
             var timer = Stopwatch.StartNew();
+
             using (var connection = Database.Connect())
             {
-                var sql = string.Format("select * from {0} where {1} = @Id",
-                    Database.FormatTableNameAndEscape(table.Name),
-                    table.IdColumn.Name);
+                var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id";
 
-                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
+                var row = (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault();
 
                 Interlocked.Increment(ref numberOfRequests);
 
-                Logger.Debug("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
-
                 connection.Complete();
+
+                Logger.Debug("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
                 return row;
             }

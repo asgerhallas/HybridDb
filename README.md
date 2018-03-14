@@ -157,6 +157,10 @@ Changelog
 - Fixed pre-migration backup, such that it only backups when there's an acutal migration
 - Bumped logging of some informations down to debug levels
 
+#### 0.10.26
+
+- Fixed missing disposal of connections that did not open correctly.
+
 
 Acknowledgements
 ================

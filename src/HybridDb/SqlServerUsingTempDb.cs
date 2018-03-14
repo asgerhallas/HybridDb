@@ -32,6 +32,8 @@ namespace HybridDb
 
             try
             {
+                numberOfManagedConnections++;
+
                 if (Transaction.Current == null)
                 {
                     var tx = new TransactionScope(
@@ -43,16 +45,15 @@ namespace HybridDb
                 }
 
                 var connection = new SqlConnection(connectionString);
-                connection.InfoMessage += (obj, args) => OnMessage(args);
-                connection.Open();
-                connection.ChangeDatabase("tempdb");
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
 
-                connection.EnlistTransaction(Transaction.Current);
+                connection.InfoMessage += (obj, args) => OnMessage(args);
+                connection.Open();
+                connection.ChangeDatabase("tempdb");
 
-                numberOfManagedConnections++;
+                connection.EnlistTransaction(Transaction.Current);
 
                 return new ManagedConnection(connection, complete, dispose);
             }

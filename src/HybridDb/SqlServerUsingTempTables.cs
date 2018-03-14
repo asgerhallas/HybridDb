@@ -16,10 +16,7 @@ namespace HybridDb
 
         public SqlServerUsingTempTables(DocumentStore store, string connectionString) : base(store, connectionString) {}
 
-        public override string FormatTableName(string tablename)
-        {
-            return "#" + tablename;
-        }
+        public override string FormatTableName(string tablename) => "#" + tablename;
 
         public override ManagedConnection Connect()
         {
@@ -28,6 +25,8 @@ namespace HybridDb
 
             try
             {
+                numberOfManagedConnections++;
+
                 if (Transaction.Current == null)
                 {
                     var tx = new TransactionScope(
@@ -50,13 +49,14 @@ namespace HybridDb
                 // Calling EnlistTransaction on a connection that is already enlisted is a no-op.
                 ambientConnectionForTesting.EnlistTransaction(Transaction.Current);
 
-                numberOfManagedConnections++;
-
                 return new ManagedConnection(ambientConnectionForTesting, complete, dispose);
             }
             catch (Exception)
             {
                 dispose();
+
+                ambientConnectionForTesting.Dispose();
+
                 throw;
             }
         }
