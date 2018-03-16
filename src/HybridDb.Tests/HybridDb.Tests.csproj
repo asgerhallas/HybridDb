@@ -218,7 +218,6 @@
     <Compile Include="LinqTests.cs" />
     <Compile Include="Performance\BinaryComparisonPerformance.cs" />
     <Compile Include="Performance\PerformanceTests.cs" />
-    <Compile Include="Performance\Entity.cs" />
     <Compile Include="Performance\QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DatabaseQuerySchemaTests.cs" />

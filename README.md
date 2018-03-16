@@ -161,6 +161,10 @@ Changelog
 
 - Fixed missing disposal of connections that did not open correctly.
 
+#### 0.10.27
+
+- Stop using CTE for non-windowed queries to gain performance.
+
 
 Acknowledgements
 ================

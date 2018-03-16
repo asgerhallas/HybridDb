@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Diagnostics;
 using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 using System.Linq;
-using Serilog;
 
 namespace HybridDb.Tests.Performance
 {
@@ -18,42 +15,42 @@ namespace HybridDb.Tests.Performance
         public void SimpleQueryWithoutMaterialization()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats))
-                .DbTimeLowest.ShouldBeLessThan(40);
+                .DbTime.ShouldBeLessThan(3600);
         }
 
         [Fact]
         public void SimpleQueryWithMaterializationToDictionary()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats).ToList())
-                .CodeTimeLowest.ShouldBeLessThan(40);
+                .CodeTime.ShouldBeLessThan(160);
         }
 
         [Fact]
         public void SimpleQueryWithMaterializationToProjection()
         {
             Time((out QueryStats stats) => store.Query<LocalEntity>(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats).ToList())
-                .CodeTimeLowest.ShouldBeLessThan(5);
+                .CodeTime.ShouldBeLessThan(16);
         }
 
         [Fact]
         public void QueryWithWindow()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500))
-                .DbTimeLowest.ShouldBeLessThan(3);
+                .DbTime.ShouldBeLessThan(160);
         }
 
         [Fact]
         public void QueryWithLateWindow()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 9500, take: 500))
-                .DbTimeLowest.ShouldBeLessThan(4);
+                .DbTime.ShouldBeLessThan(320);
         }
 
         [Fact]
         public void QueryWithWindowMaterializedToProjection()
         {
             Time((out QueryStats stats) => store.Query<LocalEntity>(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500).ToList())
-                .TotalTimeLowest.ShouldBeLessThan(20);
+                .TotalTime.ShouldBeLessThan(160);
         }
 
         public void SetFixture(Fixture data)
@@ -63,21 +60,17 @@ namespace HybridDb.Tests.Performance
 
         public class Fixture : HybridDbTests
         {
-            readonly IDocumentStore store;
-
-            public IDocumentStore Store
-            {
-                get { return store; }
-            }
+            public IDocumentStore Store => store;
 
             public Fixture()
             {
-                store = Using(DocumentStore.ForTesting(
-                    TableMode.UseTempTables,
-                    connectionString,
-                    c => c.Document<LocalEntity>()
-                        .With(x => x.SomeData)
-                        .With(x => x.SomeNumber)));
+                store = (DocumentStore) Using(
+                    DocumentStore.ForTesting(
+                        TableMode.UseTempTables,
+                        connectionString,
+                        c => c.Document<LocalEntity>()
+                            .With(x => x.SomeData)
+                            .With(x => x.SomeNumber)));
 
                 store.Initialize();
 

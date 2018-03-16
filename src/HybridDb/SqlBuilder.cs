@@ -59,10 +59,7 @@ namespace HybridDb
             return this;
         }
 
-        public override string ToString()
-        {
-            return string.Join(" ", strings);
-        }
+        public override string ToString() => string.Join(" ", strings);
 
         public string ToDynamicSql()
         {

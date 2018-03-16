@@ -29,51 +29,37 @@ namespace HybridDb.Tests.Performance
 
         public delegate void HybridAction(out QueryStats stats);
 
-        protected Timings Time(HybridAction action, int iterations = 100)
-        {
-            return Time(action, systemModifier, iterations);
-        }
+        protected Timings Time(HybridAction action, int iterations = 100) => Time(action, systemModifier, iterations);
 
         protected static Timings Time(HybridAction action, decimal modifier, int iterations = 100)
         {
             var watch = new Stopwatch();
 
-            QueryStats stats;
-
             // warmup
-            action(out stats);
+            action(out var stats);
 
             var timings = new Timings
             {
-                DbTimeLowest = long.MaxValue,
-                CodeTimeLowest = long.MaxValue
+                DbTime = 0,
+                CodeTime = 0
             };
 
             for (var i = 0; i < iterations; i++)
             {
                 watch.Restart();
                 action(out stats);
-                timings.DbTimeLowest = Math.Min(
-                    timings.DbTimeLowest,
-                    stats.QueryDurationInMilliseconds);
+                timings.DbTime += stats.QueryDurationInMilliseconds;
 
-                timings.CodeTimeLowest = Math.Min(
-                    timings.CodeTimeLowest,
-                    watch.ElapsedMilliseconds - stats.QueryDurationInMilliseconds);
+                timings.CodeTime += watch.ElapsedMilliseconds - stats.QueryDurationInMilliseconds;
             }
 
-            timings.DbTimeLowest = (long)(timings.DbTimeLowest / modifier);
-            timings.CodeTimeLowest = (long)(timings.CodeTimeLowest / modifier);
+            timings.DbTime = (long)(timings.DbTime / modifier);
+            timings.CodeTime = (long)(timings.CodeTime / modifier);
 
-            Console.WriteLine("Lowest db time was " + timings.DbTimeLowest);
-            Console.WriteLine("Lowest code time was " + timings.CodeTimeLowest);
+            Console.WriteLine($"Total db time over {iterations} iterations was {timings.DbTime}.");
+            Console.WriteLine($"Total code time over {iterations} iterations was {timings.CodeTime}.");
 
             return timings;
-        }
-
-        protected decimal Time(Action action, int iterations = 100)
-        {
-            return Time(action, systemModifier, iterations);
         }
 
         protected static decimal Time(Action action, decimal modifier, int iterations = 100)
@@ -102,9 +88,10 @@ namespace HybridDb.Tests.Performance
 
         public class Timings
         {
-            public long DbTimeLowest { get; set; }
-            public long CodeTimeLowest { get; set; }
-            public long TotalTimeLowest { get { return DbTimeLowest + CodeTimeLowest; } }
+            public long DbTime { get; set; }
+            public long CodeTime { get; set; }
+
+            public long TotalTime => DbTime + CodeTime;
         }
 
         public void SetFixture(SystemModifierFixture data)
