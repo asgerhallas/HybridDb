@@ -2,6 +2,7 @@ version: 0.10.{build}
 configuration: Release
 platform: Any CPU
 image: Visual Studio 2017
+services: mssql2012sp1
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
@@ -26,5 +27,3 @@ deploy:
 - provider: NuGet
   api_key:
     secure: rTAOxhsBekNlEb9IN6Iyy5mayYbiTTIWidYKB4f1ZyRbwiIeqjFr0x6qDZQM6RYP
-services:
-  - mssql2012sp1
