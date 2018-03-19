@@ -2,7 +2,7 @@ version: 0.10.{build}
 configuration: Release
 platform: Any CPU
 image: Visual Studio 2017
-services: mssql2012sp1
+services: mssql2014
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
