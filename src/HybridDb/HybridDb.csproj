@@ -173,6 +173,7 @@
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="ColumnNameBuilder.cs" />
+    <Compile Include="Commands\UpsertCommand.cs" />
     <Compile Include="Config\AssemblyQualifiedNameTypeMapper.cs" />
     <Compile Include="Config\DisableNullCheckInjection.cs" />
     <Compile Include="Config\DynamicDocumentTable.cs" />

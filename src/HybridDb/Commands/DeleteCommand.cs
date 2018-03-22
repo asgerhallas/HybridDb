@@ -7,14 +7,14 @@ namespace HybridDb.Commands
     {
         public DocumentTable Table { get; }
         public string Key { get; }
-        public Guid CurrentEtag { get; }
+        public Guid ExpectedEtag { get; }
         public bool LastWriteWins { get; }
 
         public DeleteCommand(DocumentTable table, string key, Guid etag, bool lastWriteWins)
         {
             Table = table;
             Key = key;
-            CurrentEtag = etag;
+            ExpectedEtag = etag;
             LastWriteWins = lastWriteWins;
         }
     }

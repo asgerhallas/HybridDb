@@ -182,6 +182,56 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanUpsert()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            var etag1 = store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new { Field = "Asger", Document = documentAsByteArray }));
+            var etag2 = store.Execute(new UpsertCommand(table.Table, id, etag1, new { Field = "Bob" }));
+
+            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            ((string)row.Id).ShouldBe(id);
+            ((Guid)row.Etag).ShouldBe(etag2);
+            Encoding.ASCII.GetString((byte[])row.Document).ShouldBe("asger");
+            ((string)row.Field).ShouldBe("Bob");
+        }
+
+        [Fact]
+        public void UpsertFailsOnOutdatedEtag()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new { Field = "Asger", Document = documentAsByteArray }));
+
+            Should.Throw<ConcurrencyException>(() => store.Execute(new UpsertCommand(table.Table, id, Guid.NewGuid(), new { Field = "Bob" })));
+        }
+
+        [Fact]
+        public void UpsertIgnoresEmptyEtags()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new { Field = "Asger", Document = documentAsByteArray }));
+
+            var etag = store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new {Field = "Bob"}));
+
+            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            ((string)row.Id).ShouldBe(id);
+            ((Guid)row.Etag).ShouldBe(etag);
+            Encoding.ASCII.GetString((byte[])row.Document).ShouldBe("asger");
+            ((string)row.Field).ShouldBe("Bob");
+        }
+
+        [Fact]
         public void CanGet()
         {
             Document<Entity>().With(x => x.Field).With(x => x.Complex.ToString());

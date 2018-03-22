@@ -61,10 +61,7 @@ namespace HybridDb
             return new DocumentStore(configuration, TableMode.UseRealTables, connectionString, false);
         }
 
-        public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null)
-        {
-            return ForTesting(mode, null, configure);
-        }
+        public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null) => ForTesting(mode, null, configure);
 
         public static IDocumentStore ForTesting(TableMode mode, string connectionString, Action<Configuration> configure = null)
         {
@@ -73,6 +70,8 @@ namespace HybridDb
             configure(configuration);
             return new DocumentStore(configuration, mode, connectionString ?? "data source=.;Integrated Security=True", true);
         }
+
+        public void Dispose() => Database.Dispose();
 
         public IDatabase Database { get; }
         public ILogger Logger { get; private set; }
@@ -123,6 +122,7 @@ namespace HybridDb
                 var expectedRowCount = 0;
                 var numberOfInsertCommands = 0;
                 var numberOfUpdateCommands = 0;
+                var numberOfUpsertCommands = 0;
                 var numberOfDeleteCommands = 0;
                 foreach (var command in commands)
                 {
@@ -136,6 +136,11 @@ namespace HybridDb
                         {
                             numberOfUpdateCommands++;
                             return PrepareUpdateCommand(update, etag, i++);
+                        })
+                        .Match<UpsertCommand>(upsert =>
+                        {
+                            numberOfUpsertCommands++;
+                            return PrepareUpsertCommand(upsert, etag, i++);
                         })
                         .Match<DeleteCommand>(delete =>
                         {
@@ -321,11 +326,9 @@ namespace HybridDb
             }
         }
 
-        static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)
-        {
-            return from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
-                   select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
-        }
+        static IEnumerable<Parameter> ConvertToParameters<T>(object parameters) =>
+            from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
+            select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {
@@ -350,17 +353,12 @@ namespace HybridDb
         public long NumberOfRequests => numberOfRequests;
         public Guid LastWrittenEtag => lastWrittenEtag;
 
-        public void Dispose()
-        {
-            Database.Dispose();
-        }
-
-        SqlDatabaseCommand PrepareInsertCommand(InsertCommand command, Guid etag, int uniqueParameterIdentifier)
+        SqlDatabaseCommand PrepareInsertCommand(InsertCommand command, Guid nextEtag, int uniqueParameterIdentifier)
         {
             var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
 
             values[command.Table.IdColumn] = command.Id;
-            values[command.Table.EtagColumn] = etag;
+            values[command.Table.EtagColumn] = nextEtag;
             values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
             values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
 
@@ -379,27 +377,63 @@ namespace HybridDb
             };
         }
 
-        SqlDatabaseCommand PrepareUpdateCommand(UpdateCommand command, Guid etag, int uniqueParameterIdentifier)
+        SqlDatabaseCommand PrepareUpdateCommand(UpdateCommand command, Guid nextEtag, int uniqueParameterIdentifier)
         {
             var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
 
-            values[command.Table.EtagColumn] = etag;
+            values[command.Table.EtagColumn] = nextEtag;
             values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
 
             var sql = new SqlBuilder()
                 .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
                 .Append($"set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name + uniqueParameterIdentifier)}")
                 .Append($"where {command.Table.IdColumn.Name}=@Id{uniqueParameterIdentifier}")
-                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name}=@CurrentEtag{uniqueParameterIdentifier}")
+                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name}=@ExpectedEtag{uniqueParameterIdentifier}")
                 .ToString();
 
             var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
-            AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Key, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Id, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
 
             if (!command.LastWriteWins)
             {
-                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, command.CurrentEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
+                AddTo(parameters, "@ExpectedEtag" + uniqueParameterIdentifier, command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
             }
+
+            return new SqlDatabaseCommand
+            {
+                Sql = sql,
+                Parameters = parameters.Values.ToList(),
+                ExpectedRowCount = 1
+            };
+        }
+
+        SqlDatabaseCommand PrepareUpsertCommand(UpsertCommand command, Guid nextEtag, int uniqueParameterIdentifier)
+        {
+            var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
+
+            values[command.Table.IdColumn] = command.Id;
+            values[command.Table.EtagColumn] = nextEtag;
+            values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
+            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
+
+            var andMaybeCheckEtag = command.ExpectedEtag != Guid.Empty 
+                ? $"and [target].{command.Table.EtagColumn.Name} = @ExpectedEtag{uniqueParameterIdentifier}" 
+                : "";
+
+            var sql = $@"
+                merge {Database.FormatTableNameAndEscape(command.Table.Name)} as [target]
+                using (select @Id{uniqueParameterIdentifier} as x) as [source] 
+                on [target].{command.Table.IdColumn.Name} = [source].x
+                when matched {andMaybeCheckEtag} then 
+                    update set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name + uniqueParameterIdentifier)}
+                when not matched then 
+                    insert ({string.Join(", ", from column in values.Keys select column.Name)})
+                    values ({string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier)});";
+
+            var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
+
+            AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Id, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+            AddTo(parameters, "@ExpectedEtag" + uniqueParameterIdentifier, command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
 
             return new SqlDatabaseCommand
             {
@@ -411,10 +445,13 @@ namespace HybridDb
 
         SqlDatabaseCommand PrepareDeleteCommand(DeleteCommand command, int uniqueParameterIdentifier)
         {
+            // Note that last write wins can actually still produce a ConcurrencyException if the 
+            // row was already deleted, which would result in 
+
             var sql = new SqlBuilder()
                 .Append($"delete from {Database.FormatTableNameAndEscape(command.Table.Name)}")
                 .Append($"where {command.Table.IdColumn.Name} = @Id{uniqueParameterIdentifier}")
-                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @CurrentEtag{uniqueParameterIdentifier}")
+                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @ExpectedEtag{uniqueParameterIdentifier}")
                 .ToString();
 
             var parameters = new Dictionary<string, Parameter>();
@@ -422,7 +459,7 @@ namespace HybridDb
 
             if (!command.LastWriteWins)
             {
-                AddTo(parameters, "@CurrentEtag" + uniqueParameterIdentifier, command.CurrentEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
+                AddTo(parameters, "@ExpectedEtag" + uniqueParameterIdentifier, command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
             }
 
             return new SqlDatabaseCommand

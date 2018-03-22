@@ -201,6 +201,8 @@ namespace HybridDb
                 var document = (byte[])projections[design.Table.DocumentColumn];
                 var metadataDocument = (byte[])projections[design.Table.MetadataColumn];
 
+                var expectedEtag = managedEntity.Etag;
+
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
@@ -215,7 +217,7 @@ namespace HybridDb
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument)) 
                             break;
 
-                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, managedEntity.Etag, projections, lastWriteWins));
+                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections, lastWriteWins));
 
                         if (configuredVersion != managedEntity.Version)
                         {
@@ -227,7 +229,7 @@ namespace HybridDb
 
                         break;
                     case EntityState.Deleted:
-                        commands.Add(managedEntity, new DeleteCommand(design.Table, key, managedEntity.Etag, lastWriteWins));
+                        commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag, lastWriteWins));
                         entities.Remove(new EntityKey(design.Table, managedEntity.Key));
                         break;
                 }
