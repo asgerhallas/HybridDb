@@ -22,7 +22,7 @@ namespace HybridDb.Tests.Performance
         public void SimpleQueryWithMaterializationToDictionary()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats).ToList())
-                .CodeTime.ShouldBeLessThan(160);
+                .CodeTime.ShouldBeLessThan(200);
         }
 
         [Fact]
@@ -36,21 +36,21 @@ namespace HybridDb.Tests.Performance
         public void QueryWithWindow()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500))
-                .DbTime.ShouldBeLessThan(160);
+                .DbTime.ShouldBeLessThan(200);
         }
 
         [Fact]
         public void QueryWithLateWindow()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 9500, take: 500))
-                .DbTime.ShouldBeLessThan(320);
+                .DbTime.ShouldBeLessThan(350);
         }
 
         [Fact]
         public void QueryWithWindowMaterializedToProjection()
         {
             Time((out QueryStats stats) => store.Query<LocalEntity>(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500).ToList())
-                .TotalTime.ShouldBeLessThan(160);
+                .TotalTime.ShouldBeLessThan(200);
         }
 
         public void SetFixture(Fixture data)
