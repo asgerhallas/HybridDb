@@ -13,7 +13,6 @@ HybridDb gives you:
 - A LINQ provider for mentioned queries
 - All the consistency and transactionality of a relational database
 - Migration tools for document changes and index changes
-- A nifty little document viewer
 
 HybridDb aims to be a small and focused library with no magic and no surprises.
 
@@ -154,7 +153,7 @@ Changelog
 
 #### 0.10.25
 
-- Fixed pre-migration backup, such that it only backups when there's an acutal migration
+- Fixed pre-migration backup, such that it only backups when there's an actual migration
 - Bumped logging of some informations down to debug levels
 
 #### 0.10.26
@@ -165,6 +164,9 @@ Changelog
 
 - Stop using CTE for non-windowed queries to gain performance.
 
+#### 0.10.35
+
+- Add Upsert command to DocumentStore
 
 Acknowledgements
 ================
