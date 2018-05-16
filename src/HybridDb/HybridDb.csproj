@@ -62,9 +62,8 @@
       <HintPath>..\packages\Serilog.2.3.0\lib\net46\Serilog.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="ShinySwitch, Version=1.0.67.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ShinySwitch.1.0.67\lib\netstandard1.1\ShinySwitch.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="ShinySwitch, Version=1.0.73.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ShinySwitch.1.0.73\lib\net45\ShinySwitch.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.AppContext, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">

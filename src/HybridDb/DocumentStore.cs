@@ -446,7 +446,7 @@ namespace HybridDb
         SqlDatabaseCommand PrepareDeleteCommand(DeleteCommand command, int uniqueParameterIdentifier)
         {
             // Note that last write wins can actually still produce a ConcurrencyException if the 
-            // row was already deleted, which would result in 
+            // row was already deleted, which would result in 0 resulting rows changed
 
             var sql = new SqlBuilder()
                 .Append($"delete from {Database.FormatTableNameAndEscape(command.Table.Name)}")

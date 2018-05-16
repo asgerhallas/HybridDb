@@ -59,9 +59,8 @@
       <HintPath>..\packages\Serilog.Sinks.ColoredConsole.2.0.0\lib\net45\Serilog.Sinks.ColoredConsole.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="ShinySwitch, Version=1.0.67.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ShinySwitch.1.0.67\lib\netstandard1.1\ShinySwitch.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="ShinySwitch, Version=1.0.73.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ShinySwitch.1.0.73\lib\net45\ShinySwitch.dll</HintPath>
     </Reference>
     <Reference Include="Shouldly, Version=2.4.0.0, Culture=neutral, PublicKeyToken=6042cbcb05cbc941, processorArchitecture=MSIL">
       <HintPath>..\packages\Shouldly.2.4.0\lib\net40\Shouldly.dll</HintPath>
@@ -236,6 +235,9 @@
       <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
       <Name>HybridDb</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
