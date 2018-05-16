@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
+using System.Transactions;
 using HybridDb.Config;
 using HybridDb.Migrations.Commands;
 using Shouldly;
@@ -144,9 +145,43 @@ namespace HybridDb.Tests.Bugs
 
             Parallel.For(0, 100, i =>
             {
-                var realstore = Using(new DocumentStore(new Configuration(), TableMode.UseRealTables, connectionString, true));
-                realstore.Configuration.Document<Entity>();
+                var realstore = new DocumentStore(new Configuration(), TableMode.UseRealTables, connectionString, true);
+
+                realstore.Configuration.Document<Entity>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityB>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityC>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityD>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+
                 realstore.Initialize();
+                realstore.Dispose();
             });
         }
 

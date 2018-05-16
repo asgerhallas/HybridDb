@@ -42,26 +42,30 @@ namespace HybridDb.Migrations
             var configuration = store.Configuration;
 
             using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
-            using (var connection = database.Connect())
             {
-                var parameters = new DynamicParameters();
-                parameters.Add("@Resource", "HybridDb");
-                parameters.Add("@DbPrincipal", "public");
-                parameters.Add("@LockMode", "Exclusive");
-                parameters.Add("@LockOwner", "Transaction");
-                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
-                parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
-
-                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
-
-                var result = parameters.Get<int>("@Result");
-
-                if (result < 0)
+                using (var connection = database.Connect())
                 {
-                    throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
-                }
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@Resource", "HybridDb");
+                    parameters.Add("@DbPrincipal", "public");
+                    parameters.Add("@LockMode", "Exclusive");
+                    parameters.Add("@LockOwner", "Transaction");
+                    parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
+                    parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
 
-                // For test ShouldTryNotToDeadlockOnSchemaMigationsForTempTables: Console.Write($"Got lock: {Thread.CurrentThread.ManagedThreadId} with result {result}... ");
+                    connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+
+                    var result = parameters.Get<int>("@Result");
+
+                    if (result < 0)
+                    {
+                        throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
+                    }
+
+                    // For test ShouldTryNotToDeadlockOnSchemaMigationsForTempTables: Console.Write($"Got lock: {Thread.CurrentThread.ManagedThreadId} with result {result}... ");
+
+                    connection.Complete();
+                }
 
                 // create metadata table if it does not exist
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
