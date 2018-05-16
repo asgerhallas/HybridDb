@@ -93,7 +93,7 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void ShouldTryNotToDeadlockOnSchemaMigationsForTempDb()
         {
-            Parallel.For(0, 100, i =>
+            Parallel.For(0, 10, i =>
             {
                 var realstore = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString);
 
@@ -143,7 +143,7 @@ namespace HybridDb.Tests.Bugs
         {
             UseRealTables();
 
-            Parallel.For(0, 100, i =>
+            Parallel.For(0, 10, i =>
             {
                 var realstore = new DocumentStore(new Configuration(), TableMode.UseRealTables, connectionString, true);
 
