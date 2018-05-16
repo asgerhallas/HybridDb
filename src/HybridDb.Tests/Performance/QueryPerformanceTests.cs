@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Performance
         public void SimpleQueryWithMaterializationToProjection()
         {
             Time((out QueryStats stats) => store.Query<LocalEntity>(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats).ToList())
-                .CodeTime.ShouldBeLessThan(16);
+                .CodeTime.ShouldBeLessThan(20);
         }
 
         [Fact]
