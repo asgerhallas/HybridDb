@@ -168,6 +168,10 @@ Changelog
 
 - Add Upsert command to DocumentStore
 
+#### 0.10.36
+
+- Fixing deadlock for schema migrations of temp tables (conccurent tests failed)
+
 Acknowledgements
 ================
 
