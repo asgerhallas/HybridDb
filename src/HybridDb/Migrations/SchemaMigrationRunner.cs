@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace HybridDb.Migrations
 {
     public class SchemaMigrationRunner
     {
+        public static readonly ConcurrentDictionary<object, int> objects = new ConcurrentDictionary<object, int>();
+
         readonly ILogger logger;
         readonly DocumentStore store;
         readonly IReadOnlyList<Migration> migrations;
@@ -23,7 +26,7 @@ namespace HybridDb.Migrations
         {
             this.store = store;
             this.differ = differ;
-            
+
             logger = store.Configuration.Logger;
             migrations = store.Configuration.Migrations;
         }
@@ -38,30 +41,27 @@ namespace HybridDb.Migrations
             var database = store.Database;
             var configuration = store.Configuration;
 
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.Serializable }))
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
+            using (var connection = database.Connect())
             {
-                // lock other migrators out while executing
-                using (var connection = database.Connect())
+                var parameters = new DynamicParameters();
+                parameters.Add("@Resource", "HybridDb");
+                parameters.Add("@DbPrincipal", "public");
+                parameters.Add("@LockMode", "Exclusive");
+                parameters.Add("@LockOwner", "Transaction");
+                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
+                parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
+
+                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+
+                var result = parameters.Get<int>("@Result");
+
+                if (result < 0)
                 {
-                    var parameters = new DynamicParameters();
-                    parameters.Add("@Resource", "HybridDb");
-                    parameters.Add("@DbPrincipal", "public");
-                    parameters.Add("@LockMode", "Exclusive");
-                    parameters.Add("@LockOwner", "Transaction");
-                    parameters.Add("@LockTimeout", TimeSpan.FromMinutes(1).TotalMilliseconds);
-                    parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
-
-                    connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
-
-                    var result = parameters.Get<int>("@Result");
-
-                    if (result < 0)
-                    {
-                        throw new InvalidOperationException($"sp_getapplock failed with code {result}");
-                    }
-
-                    connection.Complete();
+                    throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
                 }
+
+                // For test ShouldTryNotToDeadlockOnSchemaMigationsForTempTables: Console.Write($"Got lock: {Thread.CurrentThread.ManagedThreadId} with result {result}... ");
 
                 // create metadata table if it does not exist
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
@@ -70,7 +70,7 @@ namespace HybridDb.Migrations
 
                 // get schema version
                 var currentSchemaVersion = database.RawQuery<int>(
-                    $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}")
+                        $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}")
                     .SingleOrDefault();
 
                 if (currentSchemaVersion > store.Configuration.ConfiguredVersion)
@@ -106,7 +106,10 @@ namespace HybridDb.Migrations
                 }
 
                 // get the diff and run commands to get to configured schema
-                var schema = database.QuerySchema().Values.ToList(); // demeter go home!
+                var schema = database is SqlServerUsingTempTables
+                    ? new List<Table>()
+                    : database.QuerySchema().Values.ToList(); // demeter go home!
+
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
 
                 if (commands.Any())
@@ -127,8 +130,8 @@ namespace HybridDb.Migrations
                     if (design == null) continue;
 
                     database.RawExecute(
-                        $"update {database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection", 
-                        new { AwaitsReprojection = true });
+                        $"update {database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection",
+                        new {AwaitsReprojection = true});
                 }
 
                 // update the schema version
@@ -137,10 +140,12 @@ if not exists (select * from {0})
     insert into {0} (SchemaVersion) values (@version); 
 else
     update {0} set SchemaVersion=@version",
-                    database.FormatTableNameAndEscape("HybridDb")),
-                    new { version = currentSchemaVersion });
+                        database.FormatTableNameAndEscape("HybridDb")),
+                    new {version = currentSchemaVersion});
 
                 tx.Complete();
+
+                // For test ShouldTryNotToDeadlockOnSchemaMigationsForTempTables: Console.WriteLine($"Released lock: {Thread.CurrentThread.ManagedThreadId}.");
             }
         }
 

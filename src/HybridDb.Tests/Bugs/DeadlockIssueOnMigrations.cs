@@ -42,9 +42,13 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void ShouldTryNotToDeadlockOnSchemaMigationsForTempTables()
         {
+            // We've fixed this by not calling QuerySchema for TempTables. 
+            // To get the error again - as you would if you were to find out why sp_getapplock
+            // does not behave as expected - then reinstate the call to QuerySchema.
+
             Parallel.For(0, 100, i =>
             {
-                var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempTables, connectionString));
+                var realstore = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
 
                 realstore.Configuration.Document<Entity>()
                     .With(x => x.DateTimeProp)
@@ -80,6 +84,8 @@ namespace HybridDb.Tests.Bugs
                     .With(x => x.Complex.A);
 
                 realstore.Initialize();
+
+                realstore.Dispose();
             });
         }
 
@@ -88,10 +94,46 @@ namespace HybridDb.Tests.Bugs
         {
             Parallel.For(0, 100, i =>
             {
-                var realstore = Using(DocumentStore.ForTesting(TableMode.UseTempDb, connectionString));
+                var realstore = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString);
+
                 realstore.Configuration.UseTableNamePrefix(Guid.NewGuid().ToString());
-                realstore.Configuration.Document<Entity>();
+
+                realstore.Configuration.Document<Entity>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityB>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityC>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+                realstore.Configuration.Document<EntityD>()
+                    .With(x => x.DateTimeProp)
+                    .With(x => x.EnumProp)
+                    .With(x => x.Field)
+                    .With(x => x.Number)
+                    .With(x => x.ProjectedProperty)
+                    .With(x => x.Property)
+                    .With(x => x.Complex.A);
+
                 realstore.Initialize();
+
+                realstore.Dispose();
             });
         }
 
