@@ -203,7 +203,10 @@ namespace HybridDb
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(DocumentTable table, byte[] since, string select = null)
         {
-            return Query<TProjection>(table, out _, select, where: $"{table.RowVersionColumn.Name} > @Since", parameters: new { Since = since });
+            return Query<TProjection>(table, out _, select, 
+                where: $"{table.RowVersionColumn.Name} > @Since", 
+                orderby: $"{table.RowVersionColumn.Name} ASC", 
+                parameters: new { Since = since });
         }
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
