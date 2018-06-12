@@ -10,12 +10,12 @@ namespace HybridDb.Tests.Migrations
 {
     public class SchemaDifferTests : HybridDbTests
     {
-        readonly List<Table> schema;
+        readonly Dictionary<string, List<string>> schema;
         readonly SchemaDiffer migrator;
 
         public SchemaDifferTests()
         {
-            schema = new List<Table>();
+            schema = new Dictionary<string, List<string>>();
             migrator = new SchemaDiffer();
         }
 
@@ -32,7 +32,9 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void FindNewTablesWhenOthersExists()
         {
-            schema.Add(new DocumentTable("Entities"));
+            var table = new DocumentTable("Entities");
+
+            schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
             configuration.Document<Entity>();
             configuration.Document<OtherEntity>();
@@ -59,7 +61,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void FindMissingTables()
         {
-            schema.Add(new Table("Entities"));
+            schema.Add("Entities", new List<string>());
 
             var command = (RemoveTable)migrator.CalculateSchemaChanges(schema, configuration).Single();
 
@@ -70,7 +72,9 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void FindNewColumn()
         {
-            schema.Add(new DocumentTable("Entities"));
+            var table = new DocumentTable("Entities");
+
+            schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
             configuration.Document<Entity>()
                 .With(x => x.Number);
@@ -86,7 +90,8 @@ namespace HybridDb.Tests.Migrations
         {
             var table = new DocumentTable("Entities");
             table.Register(new Column("Number", typeof(int)));
-            schema.Add(table);
+
+            schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
             configuration.Document<Entity>();
 
@@ -101,7 +106,8 @@ namespace HybridDb.Tests.Migrations
         {
             var table = new DocumentTable("Entities");
             table.Register(new Column("Number", typeof(int)));
-            schema.Add(table);
+
+            schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
             configuration.Document<Entity>().With("Number", x => x.String);
 

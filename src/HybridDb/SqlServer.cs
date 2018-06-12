@@ -23,7 +23,7 @@ namespace HybridDb
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
 
         public abstract ManagedConnection Connect();
-        public abstract Dictionary<string, Table> QuerySchema();
+        public abstract Dictionary<string, List<string>> QuerySchema();
         public abstract string FormatTableName(string tablename);
         public abstract void Dispose();
 

@@ -58,6 +58,7 @@ namespace HybridDb.Tests.Migrations
             schema.ShouldContainKey("HybridDb"); // the metadata table and nothing else
         }
 
+        [Fact]
         public void RunsProvidedSchemaMigrations()
         {
             CreateMetadataTable();
@@ -72,8 +73,8 @@ namespace HybridDb.Tests.Migrations
 
             var tables = store.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
-            tables["Testing"]["Id"].ShouldNotBe(null);
-            tables["Testing"]["Noget"].ShouldNotBe(null);
+            tables["Testing"].ShouldContain("Id");
+            tables["Testing"].ShouldContain("Noget");
         }
 
         [Theory]
@@ -112,8 +113,8 @@ namespace HybridDb.Tests.Migrations
 
             var tables = store.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
-            tables["Testing"]["Id"].ShouldNotBe(null);
-            tables["Testing"]["Noget"].ShouldNotBe(null);
+            tables["Testing"].ShouldContain("Id");
+            tables["Testing"].ShouldContain("Noget");
         }
 
         [Fact]
@@ -134,8 +135,8 @@ namespace HybridDb.Tests.Migrations
 
             var tables = store.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
-            tables["Testing"]["Id"].ShouldNotBe(null);
-            tables["Testing"]["NogetNyt"].ShouldNotBe(null);
+            tables["Testing"].ShouldContain("Id");
+            tables["Testing"].ShouldContain("NogetNyt");
         }
         
 
@@ -304,7 +305,7 @@ namespace HybridDb.Tests.Migrations
                 this.commands = commands;
             }
 
-            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyList<Table> schema, Configuration configuration)
+            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration)
             {
                 return commands.ToList();
             }

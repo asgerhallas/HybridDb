@@ -111,8 +111,8 @@ namespace HybridDb.Migrations
 
                 // get the diff and run commands to get to configured schema
                 var schema = database is SqlServerUsingTempTables
-                    ? new List<Table>()
-                    : database.QuerySchema().Values.ToList(); // demeter go home!
+                    ? new Dictionary<string, List<string>>()
+                    : database.QuerySchema();
 
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
 

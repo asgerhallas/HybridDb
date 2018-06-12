@@ -25,8 +25,8 @@ namespace HybridDb.Tests.Migrations.Commands
 
             new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(store.Database);
 
-            store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
-            store.Database.QuerySchema()["Entities"]["SomeNewColumn"].ShouldNotBe(null);
+            store.Database.QuerySchema()["Entities"].ShouldNotContain("SomeColumn");
+            store.Database.QuerySchema()["Entities"].ShouldContain("SomeNewColumn");
         }
 
         [Theory]

@@ -203,7 +203,7 @@ namespace HybridDb
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(DocumentTable table, byte[] since, string select = null)
         {
-            return Query<TProjection>(table, out _, select, where: "{table.RowVersionColumn.Name} > @Since", parameters: new { Since = since });
+            return Query<TProjection>(table, out _, select, where: $"{table.RowVersionColumn.Name} > @Since", parameters: new { Since = since });
         }
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
@@ -235,7 +235,7 @@ namespace HybridDb
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append($", {table.DiscriminatorColumn} as __Discriminator, {table.RowVersionColumn} AS __RowVersion")
+                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion")
                        .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
@@ -249,7 +249,7 @@ namespace HybridDb
                 else
                 {
                     sql.Append(select.IsNullOrEmpty(), "select *").Or($"select {select}")
-                       .Append($", {table.DiscriminatorColumn} as __Discriminator, {table.RowVersionColumn} AS __RowVersion")
+                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");

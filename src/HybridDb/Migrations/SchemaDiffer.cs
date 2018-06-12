@@ -7,15 +7,13 @@ namespace HybridDb.Migrations
 {
     public class SchemaDiffer : ISchemaDiffer
     {
-        public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyList<Table> schema, Configuration configuration)
+        public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration)
         {
             var commands = new List<SchemaMigrationCommand>();
 
             foreach (var table in configuration.Tables.Values)
             {
-                var existingTable = schema.SingleOrDefault(x => x.Name == table.Name);
-
-                if (existingTable == null)
+                if (!schema.TryGetValue(table.Name, out var existingTable))
                 {
                     commands.Add(new CreateTable(table));
                     continue;
@@ -23,28 +21,28 @@ namespace HybridDb.Migrations
 
                 foreach (var column in table.Columns)
                 {
-                    var existingColumn = existingTable.Columns.SingleOrDefault(x => Equals(x.Name, column.Name));
+                    var existingColumn = existingTable.SingleOrDefault(x => Equals(x, column.Name));
                     if (existingColumn == null)
                     {
                         commands.Add(new AddColumn(table.Name, column));
                     }
                 }
 
-                foreach (var column in existingTable.Columns)
+                foreach (var column in existingTable)
                 {
-                    if (table.Columns.Any(x => Equals(x.Name, column.Name)))
+                    if (table.Columns.Any(x => Equals(x.Name, column)))
                         continue;
 
                     commands.Add(new RemoveColumn(table, column));
                 }
             }
 
-            foreach (var table in schema)
+            foreach (var table in schema.Keys)
             {
-                if (configuration.Tables.ContainsKey(table.Name))
+                if (configuration.Tables.ContainsKey(table))
                     continue;
 
-                commands.Add(new RemoveTable(table.Name));
+                commands.Add(new RemoveTable(table));
             }
 
             return commands;

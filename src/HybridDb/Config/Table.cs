@@ -23,38 +23,16 @@ namespace HybridDb.Config
             this.columns = columns.ToDictionary(x => x.Name, x => x);
         }
 
-        public Column this[string name]
-        {
-            get
-            {
-                Column value;
-                if (columns.TryGetValue(name, out value))
-                    return value;
+        public Column this[string name] => columns.TryGetValue(name, out var value) ? value : null;
 
-                return null;
-            }
-        }
+        public virtual Column this[KeyValuePair<string, object> namedValue] => this[namedValue.Key];
 
-        public virtual Column this[KeyValuePair<string, object> namedValue]
-        {
-            get { return this[namedValue.Key]; }
-        }
+        public string Name { get; }
 
-        public string Name { get; private set; }
+        public IEnumerable<Column> Columns => columns.Values;
 
-        public IEnumerable<Column> Columns
-        {
-            get { return columns.Values; }
-        }
+        public void Register(Column column) => columns.Add(column.Name, column);
 
-        public void Register(Column column)
-        {
-            columns.Add(column.Name, column);
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
+        public override string ToString() => Name;
     }
 }

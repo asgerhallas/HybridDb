@@ -64,9 +64,9 @@ namespace HybridDb
             }
         }
 
-        public override Dictionary<string, Table> QuerySchema()
+        public override Dictionary<string, List<string>> QuerySchema()
         {
-            var schema = new Dictionary<string, Table>();
+            var schema = new Dictionary<string, List<string>>();
 
             var prefix = $"HybridDb_{store.Configuration.TableNamePrefix}_";
 
@@ -103,8 +103,8 @@ OPTION (FORCE ORDER);",
                 foreach (var columnByTable in columns.GroupBy(x => x.Item1))
                 {
                     var tableName = columnByTable.Key.table_name.Remove(0, prefix.Length);
-                    schema.Add(tableName, new Table(tableName, columnByTable.Select(column =>
-                        Map(columnByTable.Key.full_table_name, column.Item2))));
+
+                    schema.Add(tableName, columnByTable.Select(column => column.Item2.column_name).ToList());
                 }
 
                 return schema;

@@ -7,7 +7,7 @@ namespace HybridDb
     public interface IDatabase : IDisposable
     {
         ManagedConnection Connect();
-        Dictionary<string, Table> QuerySchema();
+        Dictionary<string, List<string>> QuerySchema();
         string FormatTableNameAndEscape(string tablename);
         string Escape(string identifier);
         string FormatTableName(string tablename);

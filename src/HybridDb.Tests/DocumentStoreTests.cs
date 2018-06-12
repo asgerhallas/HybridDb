@@ -273,7 +273,7 @@ namespace HybridDb.Tests
 
             QueryStats stats = null;
             var methodInfo = (from method in store.GetType().GetMethods()
-                              where method.Name == "Query" && method.IsGenericMethod
+                              where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 8
                               select method).Single().MakeGenericMethod(t.GetType());
 
             var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}})).ToList();
@@ -880,7 +880,7 @@ namespace HybridDb.Tests
             var etag1 = store.Insert(table, NewId(), new { Property = "first" });
             store.Insert(table, NewId(), new { Property = "second" });
 
-            var results1 = store.Query<Entity>(table, new byte[8]).ToList();
+            var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
             var results = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
 
