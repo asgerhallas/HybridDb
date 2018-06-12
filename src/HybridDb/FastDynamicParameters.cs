@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using Dapper;
 
 namespace HybridDb
@@ -16,9 +17,11 @@ namespace HybridDb
 
         void SqlMapper.IDynamicParameters.AddParameters(IDbCommand command, SqlMapper.Identity identity)
         {
+            if (!(command is SqlCommand sqlCommand)) throw new ArgumentException("HybridDb only supports Sql Server.");
+
             foreach (var parameter in parameters)
             {
-                var dbDataParameter = command.CreateParameter();
+                var dbDataParameter = sqlCommand.CreateParameter();
                 dbDataParameter.ParameterName = Clean(parameter.Name);
                 dbDataParameter.Value = parameter.Value ?? DBNull.Value;
                 dbDataParameter.Direction = ParameterDirection.Input;
@@ -27,7 +30,7 @@ namespace HybridDb
                 // DbType is inferred too, but can be overriden for some columns
                 if (parameter.DbType.HasValue)
                 {
-                    dbDataParameter.DbType = parameter.DbType.Value;
+                    dbDataParameter.SqlDbType = parameter.DbType.Value;
                 }
 
                 command.Parameters.Add(dbDataParameter);

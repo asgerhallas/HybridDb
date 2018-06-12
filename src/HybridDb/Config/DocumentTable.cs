@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 
 namespace HybridDb.Config
 {
@@ -6,16 +7,16 @@ namespace HybridDb.Config
     {
         public DocumentTable(string name) : base(name)
         {
-            IdColumn = new SystemColumn("Id", typeof(string), length: 1024, isPrimaryKey: true);
+            IdColumn = new Column("Id", typeof(string), length: 1024, isPrimaryKey: true);
             Register(IdColumn);
 
-            EtagColumn = new SystemColumn("Etag", typeof(Guid));
+            EtagColumn = new Column("Etag", typeof(Guid));
             Register(EtagColumn);
 
-            CreatedAtColumn = new SystemColumn("CreatedAt", typeof(DateTimeOffset));
+            CreatedAtColumn = new Column("CreatedAt", typeof(DateTimeOffset));
             Register(CreatedAtColumn);
 
-            ModifiedAtColumn = new SystemColumn("ModifiedAt", typeof(DateTimeOffset));
+            ModifiedAtColumn = new Column("ModifiedAt", typeof(DateTimeOffset));
             Register(ModifiedAtColumn);
 
             DocumentColumn = new Column("Document", typeof(byte[]));
@@ -32,16 +33,24 @@ namespace HybridDb.Config
 
             VersionColumn = new Column("Version", typeof(int));
             Register(VersionColumn);
+
+            RowVersionColumn = new Column("VirtualTime", SqlDbType.Timestamp, typeof(int));
+            Register(RowVersionColumn);
+
+            LastOperationColumn = new Column("LastOperation", SqlDbType.TinyInt, typeof(byte));
+            Register(LastOperationColumn);
         }
 
-        public SystemColumn IdColumn { get; private set; }
-        public SystemColumn EtagColumn { get; private set; }
-        public SystemColumn CreatedAtColumn { get; private set; }
-        public SystemColumn ModifiedAtColumn { get; private set; }
-        public Column DocumentColumn { get; private set; }
-        public Column MetadataColumn { get; private set; }
-        public Column DiscriminatorColumn { get; private set; }
-        public Column AwaitsReprojectionColumn { get; private set; }
-        public Column VersionColumn { get; private set; }
+        public Column IdColumn { get; }
+        public Column EtagColumn { get; }
+        public Column CreatedAtColumn { get; }
+        public Column ModifiedAtColumn { get; }
+        public Column DocumentColumn { get; }
+        public Column MetadataColumn { get; }
+        public Column DiscriminatorColumn { get; }
+        public Column AwaitsReprojectionColumn { get; }
+        public Column VersionColumn { get; }
+        public Column RowVersionColumn { get; }
+        public Column LastOperationColumn { get; }
     }
 }

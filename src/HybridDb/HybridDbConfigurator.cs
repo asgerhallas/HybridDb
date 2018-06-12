@@ -12,10 +12,7 @@ namespace HybridDb
     {
         internal Configuration configuration;
 
-        protected HybridDbConfigurator()
-        {
-            configuration = new Configuration();
-        }
+        protected HybridDbConfigurator() => configuration = new Configuration();
 
         protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) => configuration.Document<TEntity>(tablename);
 
@@ -40,7 +37,9 @@ namespace HybridDb
 
         protected void UseTableNamePrefix(string prefix) => configuration.UseTableNamePrefix(prefix);
 
-        public void UseKeyResolver(Func<object, string> resolver) => configuration.UseKeyResolver(resolver);
+        protected void UseKeyResolver(Func<object, string> resolver) => configuration.UseKeyResolver(resolver);
+
+        protected void UseQueues() => configuration.UseQueues();
 
         internal void DisableMigrations() => configuration.DisableMigrationsOnStartup();
 

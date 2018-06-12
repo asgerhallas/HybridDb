@@ -84,7 +84,7 @@ namespace HybridDb
 
         Type GetType(string sqlName, bool isNullable)
         {
-            var firstMatchingType = SqlTypeMap.ForSqlType(sqlName).FirstOrDefault();
+            var firstMatchingType = SqlTypeMap.ForSqlType(sqlName);
             if (firstMatchingType == null)
                 throw new ArgumentOutOfRangeException($"Found no matching .NET type for typeName type '{sqlName}'.");
 

@@ -97,7 +97,7 @@ namespace HybridDb.Migrations.Commands
 
             builder
                 .Append($"ALTER TABLE {formattedAndEscapedTableName} ALTER COLUMN {escapedColumnName}")
-                .Append(new SqlParameter {DbType = sqlColumn.DbType}.SqlDbType.ToString())
+                .Append(sqlColumn.DbType.ToString())
                 .Append(sqlColumn.Length != null, "(" + sqlColumn.Length + ")")
                 .Append(Column.Nullable, "NULL").Or("NOT NULL")
                 .Append(";");
@@ -105,9 +105,6 @@ namespace HybridDb.Migrations.Commands
             return builder.ToString();
         }
 
-        public override string ToString()
-        {
-            return $"Change type of column {Column} on table {TableName} to {Column.Type}.";
-        }
+        public override string ToString() => $"Change type of column {Column} on table {TableName} to {Column.Type}.";
     }
 }

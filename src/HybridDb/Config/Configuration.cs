@@ -32,6 +32,7 @@ namespace HybridDb.Config
             RunDocumentMigrationsOnStartup = true;
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
+            Queued = false;
         }
 
         public ILogger Logger { get; private set; }
@@ -44,6 +45,7 @@ namespace HybridDb.Config
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
+        public bool Queued { get; private set; }
         public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
 
@@ -122,8 +124,7 @@ namespace HybridDb.Config
         {
             lock (gate)
             {
-                DocumentDesign concreteDesign;
-                if (design.DecendentsAndSelf.TryGetValue(discriminator, out concreteDesign))
+                if (design.DecendentsAndSelf.TryGetValue(discriminator, out var concreteDesign))
                     return concreteDesign;
 
                 var type = TypeMapper.ToType(discriminator);
@@ -214,6 +215,8 @@ namespace HybridDb.Config
         public void UseTableNamePrefix(string prefix) => TableNamePrefix = prefix;
 
         public void UseKeyResolver(Func<object, string> resolver) => DefaultKeyResolver = resolver;
+
+        public void UseQueues() => Queued = true;
 
         internal void DisableMigrationsOnStartup()
         {

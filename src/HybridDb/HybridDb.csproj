@@ -211,7 +211,6 @@
     <Compile Include="Migrations\Commands\RemoveTable.cs" />
     <Compile Include="Migrations\Commands\RenameColumn.cs" />
     <Compile Include="Migrations\Commands\RenameTable.cs" />
-    <Compile Include="Migrations\ISchemaMigrator.cs" />
     <Compile Include="Linq\Ast\SqlOrderByExpression.cs" />
     <Compile Include="Linq\Ast\SqlOrderingExpression.cs" />
     <Compile Include="Linq\Ast\SqlProjectionExpression.cs" />
@@ -258,7 +257,6 @@
     <Compile Include="Config\DocumentDesigner.cs" />
     <Compile Include="Config\DocumentTable.cs" />
     <Compile Include="Config\IndexDesigner.cs" />
-    <Compile Include="Config\IndexTable.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
     <Compile Include="IAdvancedDocumentSessionCommands.cs" />
@@ -278,7 +276,6 @@
     <Compile Include="Serialization\SerializationContext.cs" />
     <Compile Include="SqlBuilder.cs" />
     <Compile Include="Config\Table.cs" />
-    <Compile Include="Config\SystemColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="Config\Configuration.cs" />

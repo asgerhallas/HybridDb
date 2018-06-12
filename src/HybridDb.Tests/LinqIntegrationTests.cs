@@ -65,6 +65,7 @@ namespace HybridDb.Tests
                 CaseName = x.StringProp,
             }).ToList());
         }
+
         [Fact]
         public void CanQueryWithSelectToNamedTypeWithNestedProperty()
         {

@@ -4,13 +4,13 @@ namespace HybridDb.Config
 {
     public class SqlColumn
     {
-        public SqlColumn(DbType dbType, string length)
+        public SqlColumn(SqlDbType dbType, string length)
         {
             DbType = dbType;
             Length = length;
         }
 
-        public DbType DbType { get; private set; }
+        public SqlDbType DbType { get; private set; }
         public string Length { get; private set; }
     }
 }

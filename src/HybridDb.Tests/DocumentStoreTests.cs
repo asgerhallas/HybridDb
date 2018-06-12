@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
@@ -179,56 +180,6 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new {Field = "Lars"}));
-        }
-
-        [Fact]
-        public void CanUpsert()
-        {
-            Document<Entity>().With(x => x.Field);
-
-            var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-
-            var etag1 = store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new { Field = "Asger", Document = documentAsByteArray }));
-            var etag2 = store.Execute(new UpsertCommand(table.Table, id, etag1, new { Field = "Bob" }));
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string)row.Id).ShouldBe(id);
-            ((Guid)row.Etag).ShouldBe(etag2);
-            Encoding.ASCII.GetString((byte[])row.Document).ShouldBe("asger");
-            ((string)row.Field).ShouldBe("Bob");
-        }
-
-        [Fact]
-        public void UpsertFailsOnOutdatedEtag()
-        {
-            Document<Entity>().With(x => x.Field);
-
-            var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-
-            store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new { Field = "Asger", Document = documentAsByteArray }));
-
-            Should.Throw<ConcurrencyException>(() => store.Execute(new UpsertCommand(table.Table, id, Guid.NewGuid(), new { Field = "Bob" })));
-        }
-
-        [Fact]
-        public void UpsertIgnoresEmptyEtags()
-        {
-            Document<Entity>().With(x => x.Field);
-
-            var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-
-            store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new { Field = "Asger", Document = documentAsByteArray }));
-
-            var etag = store.Execute(new UpsertCommand(table.Table, id, Guid.Empty, new {Field = "Bob"}));
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string)row.Id).ShouldBe(id);
-            ((Guid)row.Etag).ShouldBe(etag);
-            Encoding.ASCII.GetString((byte[])row.Document).ShouldBe("asger");
-            ((string)row.Field).ShouldBe("Bob");
         }
 
         [Fact]
@@ -914,6 +865,28 @@ namespace HybridDb.Tests
                 var table = new DocumentTable("Entities");
                 store.Insert(table, NewId(), new { Property = "Asger", Version = 1 });
             });
+        }
+
+        [Fact]
+        public void QueueInserts()
+        {
+            UseRealTables();
+            UseQueues();
+            Document<Entity>().With(x => x.Property);
+
+            InitializeStore();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var etag1 = store.Insert(table, NewId(), new { Property = "first" });
+            store.Insert(table, NewId(), new { Property = "second" });
+
+            var results1 = store.Query<Entity>(table, new byte[8]).ToList();
+
+            var results = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
+
+            results.Count.ShouldBe(1);
+            results[0].Data.ShouldBe("second");
+            results[0].LastOperation.ShouldBe(Operation.Inserted);
         }
 
         public class Case

@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Data;
+using System.Linq;
 
 namespace HybridDb.Config
 {
     public class Column
     {
-        public Column(string name, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false)
+        public Column(string name, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false) 
+            : this(name, null, type, length, defaultValue, isPrimaryKey) { }
+
+        public Column(string name, SqlDbType? dbType, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false)
         {
             Type = System.Nullable.GetUnderlyingType(type) ?? type;
 
@@ -28,7 +33,21 @@ namespace HybridDb.Config
                 Type = typeof(Enum);
             }
 
-            if (!Nullable && defaultValue == null)
+            if (dbType == null)
+            {
+                var sqlTypeMapping = SqlTypeMap.ForNetType(Type);
+
+                if (sqlTypeMapping == null)
+                    throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
+
+                DbType = sqlTypeMapping.DbType;
+            }
+            else
+            {
+                DbType = dbType.Value;
+            }
+
+            if (!Nullable && defaultValue == null && dbType != SqlDbType.Timestamp)
             {
                 DefaultValue = Type.IsA<string>() ? "" : Activator.CreateInstance(type);
             }
@@ -40,25 +59,21 @@ namespace HybridDb.Config
 
         public string Name { get; protected set; }
         public Type Type { get; protected set; }        
+        public SqlDbType DbType { get; protected set; }        
         public int? Length { get; protected set; }
         public bool Nullable { get; set; }
         public object DefaultValue { get; protected set; }
         public bool IsPrimaryKey { get; protected set; }
 
-        public override string ToString()
-        {
-            return string.Format("{0} ({1})", Name, Type);
-        }
+        public override string ToString() => $"{Name} ({Type})";
 
-        protected bool Equals(Column other)
-        {
-            return Name == other.Name &&
-                   Type == other.Type &&
-                   Length == other.Length &&
-                   Nullable == other.Nullable &&
-                   IsPrimaryKey == other.IsPrimaryKey &&
-                   Equals(DefaultValue, other.DefaultValue);
-        }
+        protected bool Equals(Column other) =>
+            Name == other.Name &&
+            Type == other.Type &&
+            Length == other.Length &&
+            Nullable == other.Nullable &&
+            IsPrimaryKey == other.IsPrimaryKey &&
+            Equals(DefaultValue, other.DefaultValue);
 
         public override bool Equals(object obj)
         {
@@ -82,9 +97,6 @@ namespace HybridDb.Config
             }
         }
 
-        public static implicit operator string(Column self)
-        {
-            return self.Name;
-        }
+        public static implicit operator string(Column self) => self.Name;
     }
 }

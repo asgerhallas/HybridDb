@@ -9,51 +9,42 @@ namespace HybridDb.Config
     {
         static readonly List<SqlTypeMapping> sqlTypeMappings;
 
-        static SqlTypeMap()
+        static SqlTypeMap() => sqlTypeMappings = new List<SqlTypeMapping>
         {
-            sqlTypeMappings = new List<SqlTypeMapping>
-            {
-                new SqlTypeMapping(typeof (long), DbType.Int64, "bigint"),
-                new SqlTypeMapping(typeof (byte[]), DbType.Binary, "varbinary"),
-                new SqlTypeMapping(typeof (bool), DbType.Boolean, "bit"),
-                new SqlTypeMapping(typeof (string), DbType.String, "nvarchar"),
-                new SqlTypeMapping(typeof (string), DbType.StringFixedLength, "nchar"), //fixed
-                new SqlTypeMapping(typeof (Enum), DbType.String, "nvarchar"),
-                new SqlTypeMapping(typeof (DateTime), DbType.DateTime2, "datetime2"),
-                new SqlTypeMapping(typeof (DateTimeOffset), DbType.DateTimeOffset, "datetimeoffset"),
-                new SqlTypeMapping(typeof (decimal), DbType.Decimal, "decimal"),
-                new SqlTypeMapping(typeof (int), DbType.Int32, "int"),
-                new SqlTypeMapping(typeof (double), DbType.Double, "float"),
-                new SqlTypeMapping(typeof (Single), DbType.Single, "real"),
-                new SqlTypeMapping(typeof (short), DbType.Int16, "smallint"),
-                new SqlTypeMapping(typeof (TimeSpan), DbType.Time, "time"),
-                new SqlTypeMapping(typeof (byte), DbType.Byte, "tinyint"),
-                new SqlTypeMapping(typeof (Guid), DbType.Guid, "uniqueidentifier"),
-                new SqlTypeMapping(typeof (string), DbType.Xml, "xml")
-            };          
-        }       
+            new SqlTypeMapping(typeof (long), SqlDbType.BigInt, "bigint"),
+            new SqlTypeMapping(typeof (byte[]), SqlDbType.VarBinary, "varbinary"),
+            new SqlTypeMapping(typeof (bool), SqlDbType.Bit, "bit"),
+            new SqlTypeMapping(typeof (string), SqlDbType.NVarChar, "nvarchar"),
+            new SqlTypeMapping(typeof (Enum), SqlDbType.NVarChar, "nvarchar"),
+            new SqlTypeMapping(typeof (DateTime), SqlDbType.DateTime2, "datetime2"),
+            new SqlTypeMapping(typeof (DateTimeOffset), SqlDbType.DateTimeOffset, "datetimeoffset"),
+            new SqlTypeMapping(typeof (decimal), SqlDbType.Decimal, "decimal"),
+            new SqlTypeMapping(typeof (int), SqlDbType.Int, "int"),
+            new SqlTypeMapping(typeof (double), SqlDbType.Float, "float"),
+            new SqlTypeMapping(typeof (float), SqlDbType.Real, "real"),
+            new SqlTypeMapping(typeof (short), SqlDbType.SmallInt, "smallint"),
+            new SqlTypeMapping(typeof (byte), SqlDbType.TinyInt, "tinyint"),
+            new SqlTypeMapping(typeof (Guid), SqlDbType.UniqueIdentifier, "uniqueidentifier")
+        };
 
-        public static IEnumerable<SqlTypeMapping> ForNetType(Type type)
+        public static SqlTypeMapping ForNetType(Type type)
         {
-            return sqlTypeMappings.Where(x => x.NetType == type);
+            return sqlTypeMappings.SingleOrDefault(x => x.NetType == type);
         }
 
-        public static IEnumerable<SqlTypeMapping> ForDbType(DbType type)
+        public static SqlTypeMapping ForSqlType(string type)
         {
-            return sqlTypeMappings.Where(x => x.DbType == type);
-        }
-
-        public static IEnumerable<SqlTypeMapping> ForSqlType(string type)
-        {
-            return sqlTypeMappings.Where(x => x.SqlType == type);
+            return sqlTypeMappings.FirstOrDefault(x => x.SqlType == type);
         }
 
         public static SqlColumn Convert(Column column)
         {
-            if (!ForNetType(column.Type).Any())
+            var sqlTypeMapping = ForNetType(column.Type);
+
+            if (sqlTypeMapping == null)
                 throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
             
-            return new SqlColumn(ForNetType(column.Type).First().DbType, GetLength(column));
+            return new SqlColumn(sqlTypeMapping.DbType, GetLength(column));
         }
 
         static string GetLength(Column column)
@@ -78,7 +69,7 @@ namespace HybridDb.Config
 
         public class SqlTypeMapping
         {
-            public SqlTypeMapping(Type netType, DbType dbType, string sqlType)
+            public SqlTypeMapping(Type netType, SqlDbType dbType, string sqlType)
             {
                 NetType = netType;
                 DbType = dbType;
@@ -86,7 +77,7 @@ namespace HybridDb.Config
             }
 
             public Type NetType { get; private set; }
-            public DbType DbType { get; private set; }
+            public SqlDbType DbType { get; private set; }
             public string SqlType { get; private set; }
         }
     }

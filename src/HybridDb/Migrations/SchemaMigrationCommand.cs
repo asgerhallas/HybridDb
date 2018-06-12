@@ -35,7 +35,7 @@ namespace HybridDb.Migrations
             var sql = new SqlBuilder();
 
             var sqlColumn = SqlTypeMap.Convert(column);
-            sql.Append(new SqlParameter { DbType = sqlColumn.DbType }.SqlDbType.ToString());
+            sql.Append(column.DbType.ToString());
             sql.Append(sqlColumn.Length != null, "(" + sqlColumn.Length + ")");
             sql.Append(column.Nullable, "NULL").Or("NOT NULL");
             sql.Append(column.DefaultValue != null, $"DEFAULT '{column.DefaultValue}'");

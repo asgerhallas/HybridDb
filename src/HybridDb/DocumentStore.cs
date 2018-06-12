@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
@@ -122,7 +123,6 @@ namespace HybridDb
                 var expectedRowCount = 0;
                 var numberOfInsertCommands = 0;
                 var numberOfUpdateCommands = 0;
-                var numberOfUpsertCommands = 0;
                 var numberOfDeleteCommands = 0;
                 foreach (var command in commands)
                 {
@@ -136,11 +136,6 @@ namespace HybridDb
                         {
                             numberOfUpdateCommands++;
                             return PrepareUpdateCommand(update, etag, i++);
-                        })
-                        .Match<UpsertCommand>(upsert =>
-                        {
-                            numberOfUpsertCommands++;
-                            return PrepareUpsertCommand(upsert, etag, i++);
                         })
                         .Match<DeleteCommand>(delete =>
                         {
@@ -193,10 +188,29 @@ namespace HybridDb
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             var fastParameters = new FastDynamicParameters(parameters);
+
             var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+
             Interlocked.Increment(ref numberOfRequests);
-            if (rowcount != expectedRowCount)
-                throw new ConcurrencyException();
+
+            if (rowcount != expectedRowCount) throw new ConcurrencyException();
+        }
+
+        static ulong BigEndianToUInt64_2(byte[] bigEndianBinary)
+        {
+            ulong result = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                result <<= 8;
+                result |= bigEndianBinary[i];
+            }
+
+            return result;
+        }
+
+        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(DocumentTable table, byte[] since, string select = null)
+        {
+            return Query<TProjection>(table, out var _, select, where: "{table.RowVersionColumn.Name} > @Since", parameters: new { Since = since });
         }
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
@@ -228,11 +242,11 @@ namespace HybridDb
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append($", Discriminator as __Discriminator, row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
+                       .Append($", Discriminator as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion, row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(")")
-                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator from temp")
+                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, __RowVersion from temp")
                        .Append($"where RowNumber >= {skip + 1}")
                        .Append(take > 0, $"and RowNumber <= {skip + take}")
                        .Append("order by RowNumber")
@@ -241,7 +255,7 @@ namespace HybridDb
                 else
                 {
                     sql.Append(select.IsNullOrEmpty(), "select *").Or($"select {select}")
-                       .Append(", Discriminator as __Discriminator")
+                       .Append(", Discriminator as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
@@ -308,14 +322,14 @@ namespace HybridDb
                     stats = reader.Read<QueryStats>(buffered: true).Single();
 
                     return reader.Read<T, string, QueryResult<T>>((obj, discriminator) =>
-                        new QueryResult<T>(obj, discriminator), splitOn: "__Discriminator", buffered: true);
+                        new QueryResult<T>(obj, discriminator), splitOn: "__Discriminator,__RowVersion", buffered: true);
                 }
             }
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                var rows = (List<QueryResult<T>>)reader.Read<T, string, QueryResult<T>>((obj, discriminator) =>
-                    new QueryResult<T>(obj, discriminator), splitOn: "__Discriminator", buffered: true);
+                var rows = (List<QueryResult<T>>)reader.Read<T, string, byte[], QueryResult<T>>((obj, discriminator, rowVersion) =>
+                    new QueryResult<T>(obj, discriminator, rowVersion), splitOn: "__Discriminator,__RowVersion", buffered: true);
 
                 stats = new QueryStats
                 {
@@ -407,42 +421,6 @@ namespace HybridDb
             };
         }
 
-        SqlDatabaseCommand PrepareUpsertCommand(UpsertCommand command, Guid nextEtag, int uniqueParameterIdentifier)
-        {
-            var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
-
-            values[command.Table.IdColumn] = command.Id;
-            values[command.Table.EtagColumn] = nextEtag;
-            values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
-
-            var andMaybeCheckEtag = command.ExpectedEtag != Guid.Empty 
-                ? $"and [target].{command.Table.EtagColumn.Name} = @ExpectedEtag{uniqueParameterIdentifier}" 
-                : "";
-
-            var sql = $@"
-                merge {Database.FormatTableNameAndEscape(command.Table.Name)} as [target]
-                using (select @Id{uniqueParameterIdentifier} as x) as [source] 
-                on [target].{command.Table.IdColumn.Name} = [source].x
-                when matched {andMaybeCheckEtag} then 
-                    update set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name + uniqueParameterIdentifier)}
-                when not matched then 
-                    insert ({string.Join(", ", from column in values.Keys select column.Name)})
-                    values ({string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier)});";
-
-            var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
-
-            AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Id, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
-            AddTo(parameters, "@ExpectedEtag" + uniqueParameterIdentifier, command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
-
-            return new SqlDatabaseCommand
-            {
-                Sql = sql,
-                Parameters = parameters.Values.ToList(),
-                ExpectedRowCount = 1
-            };
-        }
-
         SqlDatabaseCommand PrepareDeleteCommand(DeleteCommand command, int uniqueParameterIdentifier)
         {
             // Note that last write wins can actually still produce a ConcurrencyException if the 
@@ -483,7 +461,7 @@ namespace HybridDb
             return parameters;
         }
 
-        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, DbType? dbType, string size)
+        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
         {
             parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType, Size = size };
         }
