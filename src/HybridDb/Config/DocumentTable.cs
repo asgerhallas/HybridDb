@@ -7,7 +7,7 @@ namespace HybridDb.Config
     {
         public DocumentTable(string name) : base(name)
         {
-            IdColumn = new Column("Id", typeof(string), length: 1024, isPrimaryKey: true);
+            IdColumn = new Column("Id", typeof(string), length: 900, isPrimaryKey: true);
             Register(IdColumn);
 
             EtagColumn = new Column("Etag", typeof(Guid));
@@ -25,7 +25,7 @@ namespace HybridDb.Config
             MetadataColumn = new Column("Metadata", typeof(byte[]));
             Register(MetadataColumn);
 
-            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 1024);
+            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 900);
             Register(DiscriminatorColumn);
 
             AwaitsReprojectionColumn = new Column("AwaitsReprojection", typeof(bool));

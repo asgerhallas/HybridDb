@@ -193,24 +193,17 @@ namespace HybridDb
 
             Interlocked.Increment(ref numberOfRequests);
 
-            if (rowcount != expectedRowCount) throw new ConcurrencyException();
-        }
-
-        static ulong BigEndianToUInt64_2(byte[] bigEndianBinary)
-        {
-            ulong result = 0;
-            for (int i = 0; i < 8; i++)
+            if (rowcount != expectedRowCount)
             {
-                result <<= 8;
-                result |= bigEndianBinary[i];
+                throw new ConcurrencyException(
+                    $"Someone beat you to it. Expected {expectedRowCount} changes, but got {rowcount}. " + 
+                    $"The transaction is rolled back now, so no changes was actually made.");
             }
-
-            return result;
         }
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(DocumentTable table, byte[] since, string select = null)
         {
-            return Query<TProjection>(table, out var _, select, where: "{table.RowVersionColumn.Name} > @Since", parameters: new { Since = since });
+            return Query<TProjection>(table, out _, select, where: "{table.RowVersionColumn.Name} > @Since", parameters: new { Since = since });
         }
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
@@ -242,7 +235,8 @@ namespace HybridDb
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append($", Discriminator as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion, row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
+                       .Append($", {table.DiscriminatorColumn} as __Discriminator, {table.RowVersionColumn} AS __RowVersion")
+                       .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(")")
@@ -255,7 +249,7 @@ namespace HybridDb
                 else
                 {
                     sql.Append(select.IsNullOrEmpty(), "select *").Or($"select {select}")
-                       .Append(", Discriminator as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion")
+                       .Append($", {table.DiscriminatorColumn} as __Discriminator, {table.RowVersionColumn} AS __RowVersion")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
@@ -321,8 +315,8 @@ namespace HybridDb
                 {
                     stats = reader.Read<QueryStats>(buffered: true).Single();
 
-                    return reader.Read<T, string, QueryResult<T>>((obj, discriminator) =>
-                        new QueryResult<T>(obj, discriminator), splitOn: "__Discriminator,__RowVersion", buffered: true);
+                    return reader.Read<T, string, byte[], QueryResult<T>>((obj, discriminator, rowVersion) =>
+                        new QueryResult<T>(obj, discriminator, rowVersion), splitOn: "__Discriminator,__RowVersion", buffered: true);
                 }
             }
 
