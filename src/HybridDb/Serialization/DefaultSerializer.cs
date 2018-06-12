@@ -8,9 +8,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -142,20 +142,23 @@ namespace HybridDb.Serialization
 
         public virtual byte[] Serialize(object obj)
         {
-            using (var outStream = new MemoryStream())
-            using (var bsonWriter = new BsonWriter(outStream))
+            using (var stream = new MemoryStream())
+            using (var writer = new StreamWriter(stream, Encoding.UTF8))
             {
-                CreateSerializer().Serialize(bsonWriter, obj);
-                return outStream.ToArray();
+                CreateSerializer().Serialize(writer, obj);
+
+                writer.Flush();
+
+                return stream.ToArray();
             }
         }
 
         public virtual object Deserialize(byte[] data, Type type)
         {
-            using (var inStream = new MemoryStream(data))
-            using (var bsonReader = new BsonReader(inStream))
+            using (var stream = new MemoryStream(data))
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
-                return CreateSerializer().Deserialize(bsonReader, type);
+                return CreateSerializer().Deserialize(reader, type);
             }
         }
 
