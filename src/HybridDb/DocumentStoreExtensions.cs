@@ -22,6 +22,6 @@ namespace HybridDb
         public static IEnumerable<IDictionary<string, object>> Query(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
             int skip = 0, int take = 0, string orderby = "", object parameters = null) => 
-            store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, parameters).Select(x => (IDictionary<string, object>) x.Data);
+            store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, false, parameters).Select(x => (IDictionary<string, object>) x.Data);
     }
 }

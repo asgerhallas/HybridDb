@@ -1,12 +1,15 @@
+using System;
+
 namespace HybridDb
 {
     public class QueryResult<T>
     {
-        public QueryResult(T data, string discriminator, byte[] rowVersion)
+        public QueryResult(T data, string discriminator, Operation lastOperation, byte[] rowVersion)
         {
             Data = data;
             Discriminator = discriminator;
             RowVersion = rowVersion;
+            LastOperation = lastOperation;
         }
 
         public T Data { get; }
@@ -29,10 +32,11 @@ namespace HybridDb
         }
     }
 
+    [Flags]
     public enum Operation
     {
-        Inserted,
-        Updated,
-        Deleted
+        Inserted = 1,
+        Updated = 2,
+        Deleted = 4
     }
 }

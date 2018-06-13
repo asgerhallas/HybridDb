@@ -19,6 +19,6 @@ namespace HybridDb
         IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = "", 
             string where = "", int skip = 0, int take = 0, 
-            string orderby = "", object parameters = null);
+            string orderby = "", bool includeDeleted = false, object parameters = null);
     }
 }

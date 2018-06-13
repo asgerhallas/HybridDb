@@ -206,12 +206,13 @@ namespace HybridDb
             return Query<TProjection>(table, out _, select, 
                 where: $"{table.RowVersionColumn.Name} > @Since", 
                 orderby: $"{table.RowVersionColumn.Name} ASC", 
+                includeDeleted: true,
                 parameters: new { Since = since });
         }
 
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = null, string where = "",
-            int skip = 0, int take = 0, string orderby = "", object parameters = null)
+            int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
             {
@@ -221,6 +222,13 @@ namespace HybridDb
                 {
                     select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
                 }
+            }
+
+            if (!includeDeleted)
+            {
+                where = string.IsNullOrEmpty(where)
+                    ? $"{table.LastOperationColumn.Name} <> {Operation.Deleted:D}"
+                    : $"({where}) AND ({table.LastOperationColumn.Name} <> {Operation.Deleted:D})";
             }
 
             var timer = Stopwatch.StartNew();
@@ -238,12 +246,14 @@ namespace HybridDb
                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion")
+                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
+                       .Append($", {table.LastOperationColumn.Name} as __LastOperation")
+                       .Append($", {table.RowVersionColumn.Name} as __RowVersion")
                        .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
                        .Append(")")
-                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, __RowVersion from temp")
+                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
                        .Append($"where RowNumber >= {skip + 1}")
                        .Append(take > 0, $"and RowNumber <= {skip + take}")
                        .Append("order by RowNumber")
@@ -252,9 +262,11 @@ namespace HybridDb
                 else
                 {
                     sql.Append(select.IsNullOrEmpty(), "select *").Or($"select {select}")
-                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator, {table.RowVersionColumn.Name} AS __RowVersion")
+                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
+                       .Append($", {table.LastOperationColumn.Name} AS __LastOperation")
+                       .Append($", {table.RowVersionColumn.Name} AS __RowVersion")
                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                       .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 }
 
@@ -318,15 +330,15 @@ namespace HybridDb
                 {
                     stats = reader.Read<QueryStats>(buffered: true).Single();
 
-                    return reader.Read<T, string, byte[], QueryResult<T>>((obj, discriminator, rowVersion) =>
-                        new QueryResult<T>(obj, discriminator, rowVersion), splitOn: "__Discriminator,__RowVersion", buffered: true);
+                    return reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
+                        new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
                 }
             }
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                var rows = (List<QueryResult<T>>)reader.Read<T, string, byte[], QueryResult<T>>((obj, discriminator, rowVersion) =>
-                    new QueryResult<T>(obj, discriminator, rowVersion), splitOn: "__Discriminator,__RowVersion", buffered: true);
+                var rows = (List<QueryResult<T>>)reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
+                    new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
 
                 stats = new QueryStats
                 {
@@ -347,9 +359,9 @@ namespace HybridDb
 
             using (var connection = Database.Connect())
             {
-                var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id";
+                var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-                var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault();
+                var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key, Op = Operation.Deleted }).SingleOrDefault();
 
                 Interlocked.Increment(ref numberOfRequests);
 
@@ -372,6 +384,7 @@ namespace HybridDb
             values[command.Table.EtagColumn] = nextEtag;
             values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
             values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
+            values[command.Table.LastOperationColumn] = Operation.Inserted;
 
             var sql = $@"
                 insert into {Database.FormatTableNameAndEscape(command.Table.Name)} 
@@ -394,6 +407,7 @@ namespace HybridDb
 
             values[command.Table.EtagColumn] = nextEtag;
             values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
+            values[command.Table.LastOperationColumn] = Operation.Updated;
 
             var sql = new SqlBuilder()
                 .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
@@ -424,7 +438,8 @@ namespace HybridDb
             // row was already deleted, which would result in 0 resulting rows changed
 
             var sql = new SqlBuilder()
-                .Append($"delete from {Database.FormatTableNameAndEscape(command.Table.Name)}")
+                .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
+                .Append($"set {command.Table.LastOperationColumn.Name} = {(byte)Operation.Deleted}")
                 .Append($"where {command.Table.IdColumn.Name} = @Id{uniqueParameterIdentifier}")
                 .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @ExpectedEtag{uniqueParameterIdentifier}")
                 .ToString();
@@ -458,11 +473,10 @@ namespace HybridDb
             return parameters;
         }
 
-        public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
+        static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
         {
             parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType, Size = size };
         }
-
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
         {

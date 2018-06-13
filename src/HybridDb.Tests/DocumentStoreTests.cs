@@ -274,10 +274,10 @@ namespace HybridDb.Tests
 
             QueryStats stats = null;
             var methodInfo = (from method in store.GetType().GetMethods()
-                              where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 8
+                              where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 9
                               select method).Single().MakeGenericMethod(t.GetType());
 
-            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", new {name = "Asger"}})).ToList();
+            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", false, new {name = "Asger"}})).ToList();
 
             rows.Count.ShouldBe(1);
             Assert.Equal("Asger", rows.Single().Data.Field);
@@ -330,7 +330,7 @@ namespace HybridDb.Tests
 
             store.Delete(table.Table, id, etag);
 
-            store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            store.Query<object>(table.Table, out _).Count().ShouldBe(0);
         }
 
         [Fact]
@@ -418,7 +418,7 @@ namespace HybridDb.Tests
             var initialNumberOfRequest = store.NumberOfRequests;
 
             var commands = new List<DatabaseCommand>();
-            for (var i = 0; i < 333; i++) // each insert i 6 params so 333 commands equals 1998 params, threshold is at 2000
+            for (var i = 0; i < 285; i++) // each insert i 7 params so 285 commands equals 1995 params, threshold is at 2000
                 commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
 
             store.Execute(commands.ToArray());
@@ -437,7 +437,7 @@ namespace HybridDb.Tests
             var initialNumberOfRequest = store.NumberOfRequests;
 
             var commands = new List<DatabaseCommand>();
-            for (var i = 0; i < 334; i++) // each insert i 6 params so 334 commands equals 2004 params, threshold is at 2000
+            for (var i = 0; i < 286; i++) // each insert i 7 params so 286 commands equals 2002 params, threshold is at 2000
                 commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
 
             store.Execute(commands.ToArray());
@@ -872,22 +872,68 @@ namespace HybridDb.Tests
         public void QueueInserts()
         {
             UseRealTables();
-            UseQueues();
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            var etag1 = store.Insert(table, NewId(), new { Property = "first" });
-            store.Insert(table, NewId(), new { Property = "second" });
 
+            store.Insert(table, NewId(), new { Property = "first" });
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
-            var results = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
+            store.Insert(table, NewId(), new { Property = "second" });
+            var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
 
-            results.Count.ShouldBe(1);
-            results[0].Data.ShouldBe("second");
-            results[0].LastOperation.ShouldBe(Operation.Inserted);
+            results2.Count.ShouldBe(1);
+            results2[0].Data.ShouldBe("second");
+            results2[0].LastOperation.ShouldBe(Operation.Inserted);
+        }
+
+        [Fact]
+        public void QueueUpdates()
+        {
+            UseRealTables();
+            Document<Entity>().With(x => x.Property);
+
+            InitializeStore();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            var id = NewId();
+
+            var etag1 = store.Insert(table, id, new { Property = "first" });
+            var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
+
+            store.Update(table, id, etag1, new { Property = "second" });
+            var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
+
+            results2.Count.ShouldBe(1);
+            results2[0].Data.ShouldBe("second");
+            results2[0].LastOperation.ShouldBe(Operation.Updated);
+        }
+
+        [Fact]
+        public void QueueDeletes()
+        {
+            UseRealTables();
+            Document<Entity>().With(x => x.Property);
+
+            InitializeStore();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            var id = NewId();
+
+            var etag1 = store.Insert(table, id, new { Property = "first" });
+            var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
+
+            store.Delete(table, id, etag1);
+
+            var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
+
+            results2.Count.ShouldBe(1);
+            results2[0].Data.ShouldBe("first");
+            results2[0].LastOperation.ShouldBe(Operation.Deleted);
         }
 
         public class Case

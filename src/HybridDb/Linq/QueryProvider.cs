@@ -98,7 +98,7 @@ namespace HybridDb.Linq
                     from row in store.Query<object>(
                         design.Table, out storeStats,
                         translation.Select, translation.Where, translation.Skip,
-                        translation.Take, translation.OrderBy, translation.Parameters)
+                        translation.Take, translation.OrderBy, false, translation.Parameters)
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
                     // TProjection is always an entity type (if ProjectAs == null).
                     // Either it's the same as TSourceElement or it is filtered by OfType<TProjection>
@@ -120,7 +120,7 @@ namespace HybridDb.Linq
                     from row in store.Query<TProjection>(
                         table, out storeStats,
                         translation.Select, translation.Where, translation.Skip,
-                        translation.Take, translation.OrderBy, translation.Parameters)
+                        translation.Take, translation.OrderBy, false, translation.Parameters)
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
                     //TODO: OfType won't work with this. Go figure it out later.
                     where design.DocumentType.IsAssignableFrom(concreteDesign.DocumentType)
