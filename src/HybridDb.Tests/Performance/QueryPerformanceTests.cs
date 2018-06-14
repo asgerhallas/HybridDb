@@ -36,7 +36,7 @@ namespace HybridDb.Tests.Performance
         public void QueryWithWindow()
         {
             Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<LocalEntity>().Table, out stats, skip: 200, take: 500))
-                .DbTime.ShouldBeLessThan(200);
+                .DbTime.ShouldBeLessThan(250);
         }
 
         [Fact]

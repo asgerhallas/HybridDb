@@ -227,7 +227,7 @@ namespace HybridDb
             if (!includeDeleted)
             {
                 where = string.IsNullOrEmpty(where)
-                    ? $"{table.LastOperationColumn.Name} <> {Operation.Deleted:D}"
+                    ? $"{table.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters
                     : $"({where}) AND ({table.LastOperationColumn.Name} <> {Operation.Deleted:D})";
             }
 

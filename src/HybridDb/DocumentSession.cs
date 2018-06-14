@@ -67,7 +67,7 @@ namespace HybridDb
             // The discriminator does map to a type that is assignable to the expected type.
             if (!type.IsAssignableFrom(concreteDesign.DocumentType))
             {
-                throw new InvalidOperationException($"Document with id '{key}' exists, but is not assignable to the given type '{type.Name}'.");
+                throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{concreteDesign.DocumentType}', which is not assignable to '{type}'.");
             }
 
             return ConvertToEntityAndPutUnderManagement(concreteDesign, row);

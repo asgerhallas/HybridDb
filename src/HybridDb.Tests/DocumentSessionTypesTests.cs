@@ -65,7 +65,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 Should.Throw<InvalidOperationException>(() => session.Load<IOtherInterface>(id))
-                    .Message.ShouldBe($"Document with id '{id}' exists, but is not assignable to the given type '{typeof(IOtherInterface).Name}'.");
+                    .Message.ShouldBe($"Document with id '{id}' exists, but is of type 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity2', which is not assignable to 'HybridDb.Tests.HybridDbTests+IOtherInterface'.");
             }
         }
 
@@ -84,7 +84,7 @@ namespace HybridDb.Tests
                 session.Advanced.Clear();
 
                 Should.Throw<InvalidOperationException>(() => session.Load<MoreDerivedEntity2>(id))
-                    .Message.ShouldBe($"Document with id '{id}' exists, but is not assignable to the given type 'MoreDerivedEntity2'.");
+                    .Message.ShouldBe($"Document with id '{id}' exists, but is of type 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity1', which is not assignable to 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity2'.");
             }
         }
 
