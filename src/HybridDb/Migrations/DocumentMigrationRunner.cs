@@ -32,10 +32,8 @@ namespace HybridDb.Migrations
 
                     while (true)
                     {
-                        QueryStats stats;
-
                         var rows = store
-                            .Query(table, out stats,
+                            .Query(table, out var stats,
                                 @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
                                 @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
                                 take: 100,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -703,7 +704,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryFail()
+        public void Bug10_UsesProjectedTypeToSelectColumns()
         {
             Document<Entity>()
                 .With(x => x.Property)
@@ -715,15 +716,10 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id, Property = "asger", Number = 2 });
                 session.SaveChanges();
 
-                Should.NotThrow(() => session.Query<Entity>().Select(x => new A { Number = x.Number }).ToList());
+                Should.NotThrow(() => session.Query<Entity>().Select(x => new AProjection { Number = x.Number }).ToList());
             }
         }
 
-        public class A
-        {
-            public int Number { get; set; }
-            public int Property { get; set; }
-        }
 
         [Fact]
         public void CanQueryIndex()
@@ -981,17 +977,17 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsOnSaveChangesWhenPreviousSaveFailed()
         {
+            var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
+
+            A.CallTo(fakeStore)
+                .Where(x => x.Method.Name == nameof(IDocumentStore.Execute))
+                .Throws(() => new Exception());
+
             Document<Entity>();
 
-            var interceptor = new InterceptingDocumentStoreDecorator(store)
-            {
-                OverrideExecute = (documentStore, commands) =>
-                {
-                    throw new Exception();
-                }
-            };
-
-            using (var session = interceptor.OpenSession())
+            // The this reference inside OpenSession() is not referencing the fake store, but the wrapped store itself.
+            // Therefore we bypass the OpenSession factory.
+            using (var session = new DocumentSession(fakeStore))
             {
                 session.Store(new Entity());
 
@@ -1296,6 +1292,12 @@ namespace HybridDb.Tests
         public class EntityWithoutId
         {
             public string Data { get; set; }
+        }
+
+        public class AProjection
+        {
+            public int Number { get; set; }
+            public int Property { get; set; }
         }
     }
 }

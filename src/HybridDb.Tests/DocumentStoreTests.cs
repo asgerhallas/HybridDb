@@ -834,12 +834,11 @@ namespace HybridDb.Tests
             var table = new DocumentTable("Entities");
             store.Insert(table, NewId(), new { Version = 1 });
 
-            QueryStats stats;
-            var result1 = store.Query(table, out stats, skip: 0, take: 2).Single();
+            var result1 = store.Query(table, out _, skip: 0, take: 2).Single();
             result1.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
             result1.ContainsKey(new Column("TotalResults", typeof(int))).ShouldBe(false);
 
-            var result2 = store.Query<object>(table, out stats, skip: 0, take: 2).Single();
+            var result2 = store.Query<object>(table, out _, skip: 0, take: 2).Single();
             ((IDictionary<string, object>)result2.Data).ContainsKey("RowNumber").ShouldBe(false);
             ((IDictionary<string, object>)result2.Data).ContainsKey("TotalResults").ShouldBe(false);
         }
@@ -871,7 +870,6 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueInserts()
         {
-            UseRealTables();
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -892,7 +890,6 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueUpdates()
         {
-            UseRealTables();
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -915,7 +912,6 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueDeletes()
         {
-            UseRealTables();
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -936,12 +932,60 @@ namespace HybridDb.Tests
             results2[0].LastOperation.ShouldBe(Operation.Deleted);
         }
 
+        [Fact]
+        public void CanReinsertDeleted()
+        {
+            Document<Entity>().With(x => x.Property);
+
+            InitializeStore();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            var id = NewId();
+
+            var etag1 = store.Insert(table, id, new { Property = "first" });
+            store.Delete(table, id, etag1);
+            store.Insert(table, id, new { Property = "second" });
+
+            var results2 = store.Query<string>(table, new byte[8], "Property").ToList();
+
+            results2.Count.ShouldBe(2);
+            results2[0].Data.ShouldBe("first");
+            results2[0].LastOperation.ShouldBe(Operation.Deleted);
+            results2[1].Data.ShouldBe("second");
+            results2[1].LastOperation.ShouldBe(Operation.Inserted);
+        }
+
+        [Fact]
+        public void CanRedeleteReinserted()
+        {
+            Document<Entity>().With(x => x.Property);
+
+            InitializeStore();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            var id = NewId();
+
+            var etag1 = store.Insert(table, id, new { Property = "first" });
+            store.Delete(table, id, etag1);
+            var etag2 = store.Insert(table, id, new { Property = "second" });
+            store.Delete(table, id, etag2);
+
+            var results2 = store.Query<string>(table, new byte[8], "Property").ToList();
+
+            results2.Count.ShouldBe(2);
+            results2[0].Data.ShouldBe("first");
+            results2[0].LastOperation.ShouldBe(Operation.Deleted);
+            results2[1].Data.ShouldBe("second");
+            results2[1].LastOperation.ShouldBe(Operation.Deleted);
+        }
+
         public class Case
         {
             public Guid Id { get; private set; }
             public string By { get; set; }
         }
-
 
         public class OtherEntityWithSomeSimilarities
         {
@@ -959,49 +1003,5 @@ namespace HybridDb.Tests
         {
             public SomeFreakingEnum EnumProp { get; set; }
         }
-
-        public class ProjectionWithNonProjectedField
-        {
-            public string NonProjectedField { get; set; }
-        }
-
-        public class EntityIndex
-        {
-            public string StringProp { get; set; }
-        }
-
-        public class ThrowingHybridDbExtension : IHybridDbExtension
-        {
-            public void OnRead(Table table, IDictionary<string, object> projections)
-            {
-                throw new OperationException();
-            }
-
-            public class OperationException : Exception { }
-        }
-
-        public class CountingSerializer : ISerializer
-        {
-            readonly ISerializer serializer;
-
-            public CountingSerializer(ISerializer serializer)
-            {
-                this.serializer = serializer;
-            }
-
-            public int DeserializeCount { get; private set; }
-
-            public byte[] Serialize(object obj)
-            {
-                return serializer.Serialize(obj);
-            }
-
-            public object Deserialize(byte[] data, Type type)
-            {
-                DeserializeCount++;
-                return serializer.Deserialize(data, type);
-            }
-        }
     }
-
 }

@@ -39,9 +39,8 @@
       <HintPath>..\packages\Dapper.1.50.4\lib\net451\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FakeItEasy, Version=1.25.2.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
-      <HintPath>..\packages\FakeItEasy.1.25.2\lib\net40\FakeItEasy.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="FakeItEasy, Version=4.0.0.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
+      <HintPath>..\packages\FakeItEasy.4.6.0\lib\net45\FakeItEasy.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -115,7 +114,6 @@
     <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />
     <Compile Include="InlineMigration.cs" />
-    <Compile Include="InterceptingDocumentStoreDecorator.cs" />
     <Compile Include="Migrations\Commands\ChangeColumnTypeTests.cs" />
     <Compile Include="Migrations\Commands\SqlMigrationTests.cs" />
     <Compile Include="Migrations\Commands\AddColumnTests.cs" />
@@ -129,7 +127,6 @@
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
     <Compile Include="QueryProviderTests.cs" />
-    <Compile Include="TracingDocumentStoreDecorator.cs" />
     <Compile Include="NullCheckInjectorTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
     <Compile Include="DocumentStoreTests.cs" />

@@ -182,7 +182,7 @@
     <Compile Include="Config\Projection.cs" />
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
-    <Compile Include="DocumentStoreExtensions.cs" />
+    <Compile Include="DocumentStoreEx.cs" />
     <Compile Include="EntityKey.cs" />
     <Compile Include="EntityState.cs" />
     <Compile Include="HybridDbConfigurator.cs" />

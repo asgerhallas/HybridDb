@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -41,17 +39,13 @@ namespace HybridDb
                 Table = x.Value.Table
             });
 
-        public T Load<T>(string key) where T : class
-        {
-            return Load(typeof(T), key) as T;
-        }
+        public T Load<T>(string key) where T : class => Load(typeof(T), key) as T;
 
         public object Load(Type type, string key)
         {
             var design = store.Configuration.GetOrCreateDesignFor(type);
 
-            ManagedEntity managedEntity;
-            if (entities.TryGetValue(new EntityKey(design.Table, key), out managedEntity))
+            if (entities.TryGetValue(new EntityKey(design.Table, key), out var managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -111,15 +105,9 @@ namespace HybridDb
             entities.Remove(new EntityKey(managedEntity.Table, managedEntity.Key));
         }
 
-        public Guid? GetEtagFor(object entity)
-        {
-            return TryGetManagedEntity(entity)?.Etag;
-        }
+        public Guid? GetEtagFor(object entity) => TryGetManagedEntity(entity)?.Etag;
 
-        public Dictionary<string, List<string>> GetMetadataFor(object entity)
-        {
-            return TryGetManagedEntity(entity)?.Metadata;
-        }
+        public Dictionary<string, List<string>> GetMetadataFor(object entity) => TryGetManagedEntity(entity)?.Metadata;
 
         public void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata)
         {
@@ -252,8 +240,7 @@ namespace HybridDb
             var table = concreteDesign.Table;
             var key = (string)row[table.IdColumn];
 
-            ManagedEntity managedEntity;
-            if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out managedEntity))
+            if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out var managedEntity))
             {
                 return managedEntity.State != EntityState.Deleted
                     ? managedEntity.Entity
@@ -291,10 +278,7 @@ namespace HybridDb
             entities.Clear();
         }
 
-        public bool IsLoaded<T>(string key)
-        {
-            return entities.ContainsKey(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key));
-        }
+        public bool IsLoaded<T>(string key) => entities.ContainsKey(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key));
 
         public IDocumentStore DocumentStore => store;
 

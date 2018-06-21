@@ -201,15 +201,6 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(DocumentTable table, byte[] since, string select = null)
-        {
-            return Query<TProjection>(table, out _, select, 
-                where: $"{table.RowVersionColumn.Name} > @Since", 
-                orderby: $"{table.RowVersionColumn.Name} ASC", 
-                includeDeleted: true,
-                parameters: new { Since = since });
-        }
-
         public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = null, string where = "",
             int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null)
@@ -439,13 +430,15 @@ namespace HybridDb
 
             var sql = new SqlBuilder()
                 .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {command.Table.LastOperationColumn.Name} = {(byte)Operation.Deleted}")
+                .Append($"set {command.Table.IdColumn.Name} = @NewId{uniqueParameterIdentifier}")
+                .Append($", {command.Table.LastOperationColumn.Name} = {(byte)Operation.Deleted}")
                 .Append($"where {command.Table.IdColumn.Name} = @Id{uniqueParameterIdentifier}")
                 .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @ExpectedEtag{uniqueParameterIdentifier}")
                 .ToString();
 
             var parameters = new Dictionary<string, Parameter>();
             AddTo(parameters, "@Id" + uniqueParameterIdentifier, command.Key, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+            AddTo(parameters, "@NewId" + uniqueParameterIdentifier, $"{command.Key}/{Guid.NewGuid()}", SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
 
             if (!command.LastWriteWins)
             {

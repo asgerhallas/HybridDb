@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using FakeItEasy;
+using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using Serilog;
@@ -45,6 +47,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
         {
+            var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
+
             Document<Entity>().With(x => x.Number);
             Document<OtherEntity>().With(x => x.Number);
 
@@ -65,25 +69,28 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity())
             });
 
-            var counter = new TracingDocumentStoreDecorator(store);
+            new DocumentMigrationRunner().Run(fakeStore).Wait();
 
-            new DocumentMigrationRunner().Run(counter).Wait();
+            A.CallTo(() => fakeStore.Get(table, id)).MustNotHaveHappened();
 
             var row = store.Get(table, id);
-            counter.Gets.ShouldBeEmpty();
             row[table.VersionColumn].ShouldBe(2);
         }
 
         [Fact]
         public void QueriesInSetsAndUpdatesOneByOne()
         {
+            var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
+
             Document<Entity>().With(x => x.Number);
 
             store.Initialize();
 
+            var documentTable = new DocumentTable("Entities");
+
             for (int i = 0; i < 200; i++)
             {
-                store.Insert(new DocumentTable("Entities"), NewId(), new
+                store.Insert(documentTable, NewId(), new
                 {
                     Discriminator = typeof(Entity).AssemblyQualifiedName, 
                     Version = 0, 
@@ -94,16 +101,20 @@ namespace HybridDb.Tests.Migrations
             // bump the version of the configuration
             UseMigrations(new InlineMigration(1));
 
-            var counter = new TracingDocumentStoreDecorator(store);
-
-            new DocumentMigrationRunner().Run(counter).Wait();
+            new DocumentMigrationRunner().Run(fakeStore).Wait();
 
             // 1+2: Entities table => 100 rows
             // 3: Entities table => 0 rows
-            counter.Queries.Count(x => x.Name == "Entities").ShouldBe(3);
-            
+            A.CallTo(fakeStore)
+                .Where(x => x.Method.Name == "Query")
+                .WhenArgumentsMatch(x => x.Get<DocumentTable>(0).Name == "Entities")
+                .MustHaveHappened(3, Times.Exactly);
+
             // each document is being updated individually
-            counter.Updates.Count.ShouldBe(200);
+            A.CallTo(fakeStore)
+                .Where(x => x.Method.Name == "Execute")
+                .WhenArgumentsMatch(x => x.Get<DatabaseCommand[]>(0)[0] is UpdateCommand)
+                .MustHaveHappened(200, Times.Exactly);
         }
 
         [Fact]
