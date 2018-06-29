@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using HybridDb.Commands;
 using Shouldly;
 using Xunit;
@@ -56,11 +57,14 @@ namespace HybridDb.Tests.Performance
         public void SetFixture(Fixture data)
         {
             store = data.Store;
+            Console.WriteLine(data.I);
         }
 
         public class Fixture : HybridDbTests
         {
             public IDocumentStore Store => store;
+
+            public long I { get; private set; }
 
             public Fixture()
             {
@@ -83,7 +87,10 @@ namespace HybridDb.Tests.Performance
                         new {SomeNumber = i, SomeData = "ABC"}));
                 }
 
+                var startNew = Stopwatch.StartNew();
                 store.Execute(commands.ToArray());
+                startNew.Stop();
+                I = startNew.ElapsedMilliseconds;
             }
         }
     }

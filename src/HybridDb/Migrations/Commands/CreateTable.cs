@@ -6,8 +6,11 @@ namespace HybridDb.Migrations.Commands
 {
     public class CreateTable : SchemaMigrationCommand
     {
-        public CreateTable(Table table)
+        readonly bool inMem;
+
+        public CreateTable(Table table, bool inMem = false)
         {
+            this.inMem = inMem;
             Table = table;
         }
 
@@ -30,13 +33,13 @@ namespace HybridDb.Migrations.Commands
                 var sqlBuilder = new SqlBuilder()
                     .Append(i > 0, ",")
                     .Append(database.Escape(column.Name))
-                    .Append(GetColumnSqlType(column, i.ToString()));
+                    .Append(GetColumnSqlType(column, i.ToString(), inMem));
 
                 sql.Append(sqlBuilder);
                 i++;
             }
 
-            sql.Append("); end;");
+            sql.Append($") {(inMem ? " WITH (MEMORY_OPTIMIZED = ON, DURABILITY = SCHEMA_ONLY)" : "")}; end;");
 
             database.RawExecute(sql.ToString());
         }

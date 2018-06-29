@@ -152,25 +152,26 @@ namespace HybridDb
                     {
                         throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
                     }
-
-                    if (numberOfParameters + numberOfNewParameters >= 2000)
-                    {
-                        InternalExecute(connectionManager, sql, parameters, expectedRowCount);
-
-                        sql = "";
-                        parameters = new List<Parameter>();
-                        expectedRowCount = 0;
-                        numberOfParameters = 0;
-                    }
+                    sql += $"{preparedCommand.Sql};";
+                    parameters.AddRange(preparedCommand.Parameters);
 
                     expectedRowCount += preparedCommand.ExpectedRowCount;
                     numberOfParameters += numberOfNewParameters;
 
-                    sql += $"{preparedCommand.Sql};";
-                    parameters.AddRange(preparedCommand.Parameters);
+                    InternalExecute(connectionManager, sql, parameters, expectedRowCount);
+
+                    sql = "";
+                    parameters = new List<Parameter>();
+                    expectedRowCount = 0;
+                    numberOfParameters = 0;
+                    //if (numberOfParameters + numberOfNewParameters >= 2000)
+                    //{
+                    //}
+
+
                 }
 
-                InternalExecute(connectionManager, sql, parameters, expectedRowCount);
+                //InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
                 connectionManager.Complete();
 

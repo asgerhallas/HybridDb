@@ -407,43 +407,43 @@ namespace HybridDb.Tests
             store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
-        [Fact]
-        public void DoesNotSplitBelow2000Params()
-        {
-            Document<Entity>().With(x => x.Field);
+        //[Fact]
+        //public void DoesNotSplitBelow2000Params()
+        //{
+        //    Document<Entity>().With(x => x.Field);
 
-            var table = store.Configuration.GetDesignFor<Entity>();
+        //    var table = store.Configuration.GetDesignFor<Entity>();
 
-            // the initial migrations might issue some requests
-            var initialNumberOfRequest = store.NumberOfRequests;
+        //    // the initial migrations might issue some requests
+        //    var initialNumberOfRequest = store.NumberOfRequests;
 
-            var commands = new List<DatabaseCommand>();
-            for (var i = 0; i < 285; i++) // each insert i 7 params so 285 commands equals 1995 params, threshold is at 2000
-                commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
+        //    var commands = new List<DatabaseCommand>();
+        //    for (var i = 0; i < 285; i++) // each insert i 7 params so 285 commands equals 1995 params, threshold is at 2000
+        //        commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
 
-            store.Execute(commands.ToArray());
+        //    store.Execute(commands.ToArray());
 
-            (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(1);
-        }
+        //    (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(1);
+        ////}
 
-        [Fact]
-        public void SplitsAbove2000Params()
-        {
-            Document<Entity>().With(x => x.Field);
+        //[Fact]
+        //public void SplitsAbove2000Params()
+        //{
+        //    Document<Entity>().With(x => x.Field);
 
-            var table = store.Configuration.GetDesignFor<Entity>();
+        //    var table = store.Configuration.GetDesignFor<Entity>();
 
-            // the initial migrations might issue some requests
-            var initialNumberOfRequest = store.NumberOfRequests;
+        //    // the initial migrations might issue some requests
+        //    var initialNumberOfRequest = store.NumberOfRequests;
 
-            var commands = new List<DatabaseCommand>();
-            for (var i = 0; i < 286; i++) // each insert i 7 params so 286 commands equals 2002 params, threshold is at 2000
-                commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
+        //    var commands = new List<DatabaseCommand>();
+        //    for (var i = 0; i < 286; i++) // each insert i 7 params so 286 commands equals 2002 params, threshold is at 2000
+        //        commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
 
-            store.Execute(commands.ToArray());
+        //    store.Execute(commands.ToArray());
 
-            (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
-        }
+        //    (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
+        //}
 
         [Fact]
         public void CanStoreAndQueryEnumProjection()

@@ -27,7 +27,7 @@ namespace HybridDb.Migrations
                 db.FormatTableName(tablename));
         }
 
-        protected SqlBuilder GetColumnSqlType(Column column, string defaultValuePostfix = "")
+        protected SqlBuilder GetColumnSqlType(Column column, string defaultValuePostfix = "", bool inMem = false)
         {
             if (column.Type == null)
                 throw new ArgumentException($"Column {column.Name} must have a type");
@@ -39,7 +39,7 @@ namespace HybridDb.Migrations
             sql.Append(sqlColumn.Length != null, "(" + sqlColumn.Length + ")");
             sql.Append(column.Nullable, "NULL").Or("NOT NULL");
             sql.Append(column.DefaultValue != null, $"DEFAULT '{column.DefaultValue}'");
-            sql.Append(column.IsPrimaryKey, " PRIMARY KEY");
+            sql.Append(column.IsPrimaryKey, $" PRIMARY KEY {(inMem ? "NONCLUSTERED HASH WITH (BUCKET_COUNT = 100000)" : "")}");
 
             return sql;
         }

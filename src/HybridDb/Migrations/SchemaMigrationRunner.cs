@@ -70,7 +70,7 @@ namespace HybridDb.Migrations
                 // create metadata table if it does not exist
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
                 configuration.tables.TryAdd(metadata.Name, metadata);
-                new CreateTable(metadata).Execute(database);
+                new CreateTable(metadata, false).Execute(database);
 
                 // get schema version
                 var currentSchemaVersion = database.RawQuery<int>(
