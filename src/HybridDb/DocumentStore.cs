@@ -471,7 +471,7 @@ namespace HybridDb
 
         static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
         {
-            parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType, Size = size };
+            parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType };
         }
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
