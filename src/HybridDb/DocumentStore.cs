@@ -164,6 +164,8 @@ namespace HybridDb
                     parameters = new List<Parameter>();
                     expectedRowCount = 0;
                     numberOfParameters = 0;
+                    i = 0;
+
                     //if (numberOfParameters + numberOfNewParameters >= 2000)
                     //{
                     //}
