@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -105,7 +106,7 @@ namespace HybridDb
             return new DocumentSession(this);
         }
 
-        public Guid Execute(IEnumerable<DatabaseCommand> commands)
+        public async Task<Guid> Execute(IEnumerable<DatabaseCommand> commands)
         {
             commands = commands.ToList();
 
@@ -158,7 +159,7 @@ namespace HybridDb
                     expectedRowCount += preparedCommand.ExpectedRowCount;
                     numberOfParameters += numberOfNewParameters;
 
-                    InternalExecute(connectionManager, sql, parameters, expectedRowCount);
+                    await InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
                     sql = "";
                     parameters = new List<Parameter>();
@@ -188,11 +189,11 @@ namespace HybridDb
             }
         }
 
-        void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
+        async Task InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             var fastParameters = new FastDynamicParameters(parameters);
 
-            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+            var rowcount = await managedConnection.Connection.ExecuteAsync(sql, fastParameters);
 
             Interlocked.Increment(ref numberOfRequests);
 
@@ -347,7 +348,7 @@ namespace HybridDb
             from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
             select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
 
-        public IDictionary<string, object> Get(DocumentTable table, string key)
+        public async Task<IDictionary<string, object>> Get(DocumentTable table, string key)
         {
             var timer = Stopwatch.StartNew();
 
@@ -355,7 +356,7 @@ namespace HybridDb
             {
                 var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-                var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key, Op = Operation.Deleted }).SingleOrDefault();
+                var row = (IDictionary<string, object>)await connection.Connection.QuerySingleOrDefaultAsync(sql, new { Id = key, Op = Operation.Deleted });
 
                 Interlocked.Increment(ref numberOfRequests);
 

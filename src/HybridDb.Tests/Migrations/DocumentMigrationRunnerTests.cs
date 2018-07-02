@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -20,7 +21,7 @@ namespace HybridDb.Tests.Migrations
         [Theory]
         [InlineData(true, 42)]
         [InlineData(false, 0)]
-        public void ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
+        public async Task ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
         {
             Document<Entity>().With(x => x.Number);
 
@@ -28,7 +29,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = new DocumentTable("Entities");
-            store.Insert(table, id, new
+            await store.Insert(table, id, new
             {
                 AwaitsReprojection = awaitsReprojection, 
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
@@ -38,14 +39,14 @@ namespace HybridDb.Tests.Migrations
 
             new DocumentMigrationRunner().Run(store).Wait();
 
-            var row = store.Get(table, id);
+            var row = await store.Get(table, id);
             row["Number"].ShouldBe(result);
             row["AwaitsReprojection"].ShouldBe(false);
             row[table.VersionColumn].ShouldBe(0);
         }
 
         [Fact]
-        public void DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
+        public async Task DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
         {
             var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
 
@@ -61,7 +62,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
-            store.Insert(table, id, new
+            await store.Insert(table, id, new
             {
                 AwaitsReprojection = false,
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
@@ -73,7 +74,7 @@ namespace HybridDb.Tests.Migrations
 
             A.CallTo(() => fakeStore.Get(table, id)).MustNotHaveHappened();
 
-            var row = store.Get(table, id);
+            var row = await store.Get(table, id);
             row[table.VersionColumn].ShouldBe(2);
         }
 
@@ -118,7 +119,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void AcceptsConcurrentWrites()
+        public async Task AcceptsConcurrentWrites()
         {
             UseRealTables();
 
@@ -128,7 +129,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = new DocumentTable("Entities");
-            var etag = store.Insert(table, id, new
+            var etag = await store.Insert(table, id, new
             {
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
@@ -147,7 +148,7 @@ namespace HybridDb.Tests.Migrations
 
             bool? failed = null;
 
-            new DocumentMigrationRunner()
+            await new DocumentMigrationRunner()
                 .Run(store)
                 .ContinueWith(x =>
                 {
@@ -157,7 +158,7 @@ namespace HybridDb.Tests.Migrations
 
             gate1.WaitOne();
 
-            store.Update(table, id, etag, new {});
+            await store.Update(table, id, etag, new {});
 
             gate2.WaitOne();
 
