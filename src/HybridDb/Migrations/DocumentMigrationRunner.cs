@@ -18,7 +18,7 @@ namespace HybridDb.Migrations
             if (!configuration.RunDocumentMigrationsOnStartup)
                 return Task.FromResult(0);
 
-            return Task.Factory.StartNew(() =>
+            return Task.Factory.StartNew(async () =>
             {
                 var migrator = new DocumentMigrator(configuration);
 
@@ -72,8 +72,8 @@ namespace HybridDb.Migrations
                                 {
                                     using (var session = new DocumentSession(store))
                                     {
-                                        session.Load(concreteDesign.DocumentType, key);
-                                        session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                        await session.Load(concreteDesign.DocumentType, key);
+                                        await session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                     }
                                 }
                                 catch (ConcurrencyException) { }
@@ -92,7 +92,7 @@ namespace HybridDb.Migrations
                                     {table.VersionColumn, configuration.ConfiguredVersion}
                                 };
 
-                                store.Update(table, key, (Guid)row[table.EtagColumn], projection);
+                                await store.Update(table, key, (Guid)row[table.EtagColumn], projection);
                             }
                         }
                     }

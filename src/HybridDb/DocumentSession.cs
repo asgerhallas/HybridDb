@@ -40,7 +40,7 @@ namespace HybridDb
                 Table = x.Value.Table
             });
 
-        public Task<T> Load<T>(string key) where T : class => Load(typeof(T), key) as Task<T>;
+        public async Task<T> Load<T>(string key) where T : class => (T)await Load(typeof(T), key);
 
         public async Task<object> Load(Type type, string key)
         {

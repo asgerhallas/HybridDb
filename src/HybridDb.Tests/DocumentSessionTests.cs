@@ -214,12 +214,12 @@ namespace HybridDb.Tests
                 await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 session.Delete(entity);
                 await session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<Entity>(id).ShouldBe(null);
+                (await session.Load<Entity>(id)).ShouldBe(null);
             }
         }
 
@@ -266,7 +266,7 @@ namespace HybridDb.Tests
 
                 var entity = await session.Load<Entity>(id);
                 session.Delete(entity);
-                session.Load<Entity>(id).ShouldBe(null);
+                (await session.Load<Entity>(id)).ShouldBe(null);
             }
         }
 
@@ -808,32 +808,32 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact]
-        public async Task TracksChangesFromMigrations()
-        {
-            Document<Entity>();
+        //[Fact]
+        //public async Task TracksChangesFromMigrations()
+        //{
+        //    Document<Entity>();
 
-            var id = NewId();
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Entity { Id = id, Property = "Asger" });
-                await session.SaveChanges();
-            }
+        //    var id = NewId();
+        //    using (var session = store.OpenSession())
+        //    {
+        //        session.Store(new Entity { Id = id, Property = "Asger" });
+        //        await session.SaveChanges();
+        //    }
 
-            Reset();
+        //    Reset();
 
-            Document<Entity>();
-            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
+        //    Document<Entity>();
+        //    UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
-            var numberOfRequests = store.NumberOfRequests;
-            using (var session = store.OpenSession())
-            {
-                await session.Load<Entity>(id);
-                await session.SaveChanges();
-            }
+        //    var numberOfRequests = store.NumberOfRequests;
+        //    using (var session = store.OpenSession())
+        //    {
+        //        await session.Load<Entity>(id);
+        //        await session.SaveChanges();
+        //    }
 
-            (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
-        }
+        //    (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
+        //}
 
         [Fact]
         public async Task AddsVersionOnInsert()

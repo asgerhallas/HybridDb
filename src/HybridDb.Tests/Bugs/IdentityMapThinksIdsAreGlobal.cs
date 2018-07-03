@@ -20,8 +20,8 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public async Task DocumentsAreCachedNotOnlyByIdButAlsoByType()
         {
-            Save(new Doc1 { Id = ThisIsAKnownId, Label = "this is doc1" });
-            Save(new Doc2 { Id = ThisIsAKnownId, Caption = "this is doc2" });
+            await Save(new Doc1 { Id = ThisIsAKnownId, Label = "this is doc1" });
+            await Save(new Doc2 { Id = ThisIsAKnownId, Caption = "this is doc2" });
 
             using (var session = documentStore.OpenSession())
             {
@@ -33,12 +33,12 @@ namespace HybridDb.Tests.Bugs
             }
         }
 
-        void Save(object doc)
+        async Task Save(object doc)
         {
             using (var session1 = documentStore.OpenSession())
             {
                 session1.Store(doc);
-                session1.SaveChanges();
+                await session1.SaveChanges();
             }
         }
 

@@ -159,7 +159,7 @@ namespace HybridDb
                     expectedRowCount += preparedCommand.ExpectedRowCount;
                     numberOfParameters += numberOfNewParameters;
 
-                    await InternalExecute(connectionManager, sql, parameters, expectedRowCount);
+                    await InternalExecute(connectionManager, sql, parameters, expectedRowCount).ConfigureAwait(false);
 
                     sql = "";
                     parameters = new List<Parameter>();
@@ -193,7 +193,7 @@ namespace HybridDb
         {
             var fastParameters = new FastDynamicParameters(parameters);
 
-            var rowcount = await managedConnection.Connection.ExecuteAsync(sql, fastParameters);
+            var rowcount = await managedConnection.Connection.ExecuteAsync(sql, fastParameters).ConfigureAwait(false);
 
             Interlocked.Increment(ref numberOfRequests);
 
@@ -356,7 +356,7 @@ namespace HybridDb
             {
                 var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-                var row = (IDictionary<string, object>)await connection.Connection.QuerySingleOrDefaultAsync(sql, new { Id = key, Op = Operation.Deleted });
+                var row = (IDictionary<string, object>)await connection.Connection.QuerySingleOrDefaultAsync(sql, new { Id = key, Op = Operation.Deleted }).ConfigureAwait(false);
 
                 Interlocked.Increment(ref numberOfRequests);
 

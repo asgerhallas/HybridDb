@@ -28,7 +28,7 @@ namespace HybridDb.Tests
                 entity1.ShouldBeOfType<MoreDerivedEntity1>();
                 entity1.Property.ShouldBe("Asger");
 
-                var entity2 = session.Load<IOtherInterface>(id);
+                var entity2 = await session.Load<IOtherInterface>(id);
                 entity2.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }

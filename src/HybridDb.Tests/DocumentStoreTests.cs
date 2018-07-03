@@ -188,7 +188,7 @@ namespace HybridDb.Tests
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
+            var etag = await store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
 
             var row = await store.Get(table.Table, id);
             row[table.Table.IdColumn].ShouldBe(id);
@@ -237,8 +237,8 @@ namespace HybridDb.Tests
             var id2 = NewId();
             var id3 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
-            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
+            var etag1 = await store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
+            var etag2 = await store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
             await store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
 
             QueryStats stats;
@@ -778,7 +778,7 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>();
 
-            using (new TransactionScope())
+            using (new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
             {
                 await store.Insert(table.Table, NewId(), new { });
                 await store.Insert(table.Table, NewId(), new { });
@@ -790,7 +790,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanUseTempDb()
+        public async Task CanUseTempDb()
         {
             var prefix = Guid.NewGuid().ToString();
 
@@ -807,13 +807,13 @@ namespace HybridDb.Tests
                 globalStore1.Initialize();
 
                 var id = NewId();
-                globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
+                await globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
                 using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, Configurator))
                 {
                     globalStore2.Initialize();
 
-                    var result = globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
+                    var result = await globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
 
                     result.ShouldNotBe(null);
                 }
@@ -824,12 +824,12 @@ namespace HybridDb.Tests
         }
 
         [Fact()]
-        public void UtilityColsAreRemovedFromQueryResults()
+        public async Task UtilityColsAreRemovedFromQueryResults()
         {
             Document<Entity>();
 
             var table = new DocumentTable("Entities");
-            store.Insert(table, NewId(), new { Version = 1 });
+            await store.Insert(table, NewId(), new { Version = 1 });
 
             var result1 = store.Query(table, out _, skip: 0, take: 2).Single();
             result1.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
@@ -857,15 +857,15 @@ namespace HybridDb.Tests
 
             InitializeStore();
 
-            Parallel.For(0, 10, x =>
+            Parallel.For(0, 10, async x =>
             {
                 var table = new DocumentTable("Entities");
-                store.Insert(table, NewId(), new { Property = "Asger", Version = 1 });
+                await store.Insert(table, NewId(), new { Property = "Asger", Version = 1 });
             });
         }
 
         [Fact]
-        public void QueueInserts()
+        public async Task QueueInserts()
         {
             Document<Entity>().With(x => x.Property);
 
@@ -873,10 +873,10 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
-            store.Insert(table, NewId(), new { Property = "first" });
+            await store.Insert(table, NewId(), new { Property = "first" });
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
-            store.Insert(table, NewId(), new { Property = "second" });
+            await store.Insert(table, NewId(), new { Property = "second" });
             var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
 
             results2.Count.ShouldBe(1);
