@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using HybridDb.Commands;
 using HybridDb.Config;
 
@@ -14,8 +15,8 @@ namespace HybridDb
 
         void Initialize();
         IDocumentSession OpenSession();
-        Guid Execute(IEnumerable<DatabaseCommand> commands);
-        IDictionary<string, object> Get(DocumentTable table, string key);
+        Task<Guid> Execute(IEnumerable<DatabaseCommand> commands);
+        Task<IDictionary<string, object>> Get(DocumentTable table, string key);
         IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = "", 
             string where = "", int skip = 0, int take = 0, 

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -31,7 +33,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanGetEtagForEntity()
+        public async Task CanGetEtagForEntity()
         {
             Document<Entity>();
 
@@ -43,14 +45,14 @@ namespace HybridDb.Tests
                 session.Store(entity1);
                 session.Advanced.GetEtagFor(entity1).ShouldBe(Guid.Empty);
 
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.GetEtagFor(entity1).ShouldNotBe(null);
                 session.Advanced.GetEtagFor(entity1).ShouldNotBe(Guid.Empty);
             }
         }
 
         [Fact]
-        public void CanDeferCommands()
+        public async Task CanDeferCommands()
         {
             Document<Entity>();
 
@@ -63,7 +65,7 @@ namespace HybridDb.Tests
 
                 session.Advanced.Defer(new InsertCommand(table.Table, id, new { }));
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
-                session.SaveChanges();
+                await session.SaveChanges();
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
@@ -78,14 +80,14 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanStoreDocument()
+        public async Task CanStoreDocument()
         {
             Document<Entity>();
 
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity());
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
@@ -95,7 +97,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void AccessToNestedPropertyCanBeNullSafe()
+        public async Task AccessToNestedPropertyCanBeNullSafe()
         {
             Document<Entity>().With(x => x.TheChild.NestedProperty);
 
@@ -105,7 +107,7 @@ namespace HybridDb.Tests
                 {
                     TheChild = null
                 });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
@@ -128,7 +130,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void StoresIdRetrievedFromObject()
+        public async Task StoresIdRetrievedFromObject()
         {
             Document<Entity>();
 
@@ -136,7 +138,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             var retrivedId = store.Database.RawQuery<string>("select Id from #Entities").SingleOrDefault();
@@ -144,7 +146,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void StoringDocumentWithSameIdTwiceIsIgnored()
+        public async Task StoringDocumentWithSameIdTwiceIsIgnored()
         {
             Document<Entity>();
 
@@ -155,12 +157,12 @@ namespace HybridDb.Tests
                 var entity2 = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity1);
                 session.Store(entity2);
-                session.Load<Entity>(id).ShouldBe(entity1);
+                (await session.Load<Entity>(id)).ShouldBe(entity1);
             }
         }
 
         [Fact]
-        public void SessionWillNotSaveWhenSaveChangesIsNotCalled()
+        public async Task SessionWillNotSaveWhenSaveChangesIsNotCalled()
         {
             Document<Entity>();
 
@@ -169,15 +171,15 @@ namespace HybridDb.Tests
             {
                 var entity = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity);
-                session.SaveChanges();
+                await session.SaveChanges();
                 entity.Property = "Lars";
                 session.Advanced.Clear();
-                session.Load<Entity>(id).Property.ShouldBe("Asger");
+                (await session.Load<Entity>(id)).Property.ShouldBe("Asger");
             }
         }
 
         [Fact]
-        public void CanSaveChangesWithPessimisticConcurrency()
+        public async Task CanSaveChangesWithPessimisticConcurrency()
         {
             Document<Entity>();
 
@@ -187,22 +189,22 @@ namespace HybridDb.Tests
             {
                 var entityFromSession1 = new Entity { Id = id, Property = "Asger" };
                 session1.Store(entityFromSession1);
-                session1.SaveChanges();
+                await session1.SaveChanges();
 
-                var entityFromSession2 = session2.Load<Entity>(id);
+                var entityFromSession2 = await session2.Load<Entity>(id);
                 entityFromSession2.Property = " er craazy";
-                session2.SaveChanges();
+                await session2.SaveChanges();
 
                 entityFromSession1.Property += " er 4 real";
-                session1.SaveChanges(lastWriteWins: true, forceWriteUnchangedDocument: false);
+                await session1.SaveChanges(lastWriteWins: true, forceWriteUnchangedDocument: false);
 
                 session1.Advanced.Clear();
-                session1.Load<Entity>(id).Property.ShouldBe("Asger er 4 real");
+                (await session1.Load<Entity>(id)).Property.ShouldBe("Asger er 4 real");
             }
         }
 
         [Fact]
-        public void CanDeleteDocument()
+        public async Task CanDeleteDocument()
         {
             Document<Entity>();
 
@@ -210,15 +212,15 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 session.Delete(entity);
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<Entity>(id).ShouldBe(null);
+                (await session.Load<Entity>(id)).ShouldBe(null);
             }
         }
 
@@ -252,7 +254,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void LoadingADocumentMarkedForDeletionReturnNothing()
+        public async Task LoadingADocumentMarkedForDeletionReturnNothing()
         {
             Document<Entity>();
 
@@ -260,17 +262,17 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 session.Delete(entity);
-                session.Load<Entity>(id).ShouldBe(null);
+                (await session.Load<Entity>(id)).ShouldBe(null);
             }
         }
 
         [Fact]
-        public void LoadingAManagedDocumentWithWrongTypeReturnsNothing()
+        public async Task LoadingAManagedDocumentWithWrongTypeReturnsNothing()
         {
             Document<Entity>();
             Document<OtherEntity>();
@@ -279,7 +281,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                var otherEntity = session.Load<OtherEntity>(id);
+                var otherEntity = await session.Load<OtherEntity>(id);
                 otherEntity.ShouldBe(null);
             }
         }
@@ -313,7 +315,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanLoadDocument()
+        public async Task CanLoadDocument()
         {
             Document<Entity>();
 
@@ -321,16 +323,16 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 entity.Property.ShouldBe("Asger");
             }
         }
 
         [Fact]
-        public void CanLoadDocumentWithDesign()
+        public async Task CanLoadDocumentWithDesign()
         {
             Document<Entity>();
 
@@ -338,17 +340,17 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load(typeof(Entity), id);
+                var entity = await session.Load(typeof(Entity), id);
 
                 entity.ShouldBeOfType<Entity>();
             }
         }
 
         [Fact]
-        public void LoadingSameDocumentTwiceInSameSessionReturnsSameInstance()
+        public async Task LoadingSameDocumentTwiceInSameSessionReturnsSameInstance()
         {
             Document<Entity>();
 
@@ -356,17 +358,17 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var document1 = session.Load<Entity>(id);
-                var document2 = session.Load<Entity>(id);
+                var document1 = await session.Load<Entity>(id);
+                var document2 = await session.Load<Entity>(id);
                 document1.ShouldBe(document2);
             }
         }
 
         [Fact]
-        public void CanLoadATransientEntity()
+        public async Task CanLoadATransientEntity()
         {
             Document<Entity>();
 
@@ -375,23 +377,23 @@ namespace HybridDb.Tests
             {
                 var entity = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity);
-                session.Load<Entity>(id).ShouldBe(entity);
+                (await session.Load<Entity>(id)).ShouldBe(entity);
             }
         }
 
         [Fact]
-        public void LoadingANonExistingDocumentReturnsNull()
+        public async Task LoadingANonExistingDocumentReturnsNull()
         {
             Document<Entity>();
 
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(NewId()).ShouldBe(null);
+                (await session.Load<Entity>(NewId())).ShouldBe(null);
             }
         }
 
         [Fact]
-        public void SavesChangesWhenObjectHasChanged()
+        public async Task SavesChangesWhenObjectHasChanged()
         {
             Document<Entity>();
 
@@ -402,21 +404,21 @@ namespace HybridDb.Tests
                 var initialNumberOfRequest = store.NumberOfRequests;
 
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges(); // 1
+                await session.SaveChanges(); // 1
                 session.Advanced.Clear();
 
-                var document = session.Load<Entity>(id); // 2
+                var document = await session.Load<Entity>(id); // 2
                 document.Property = "Lars";
-                session.SaveChanges(); // 3
+                await session.SaveChanges(); // 3
 
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
                 session.Advanced.Clear();
-                session.Load<Entity>(id).Property.ShouldBe("Lars");
+                (await session.Load<Entity>(id)).Property.ShouldBe("Lars");
             }
         }
 
         [Fact]
-        public void DoesNotSaveChangesWhenObjectHasNotChanged()
+        public async Task DoesNotSaveChangesWhenObjectHasNotChanged()
         {
             Document<Entity>();
 
@@ -427,18 +429,18 @@ namespace HybridDb.Tests
                 var initialNumberOfRequest = store.NumberOfRequests;
 
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges(); // 1
+                await session.SaveChanges(); // 1
                 session.Advanced.Clear();
 
-                session.Load<Entity>(id); // 2
-                session.SaveChanges(); // Should not issue a request
+                await session.Load<Entity>(id); // 2
+                await session.SaveChanges(); // Should not issue a request
 
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
             }
         }
 
         //[Fact]
-        //public void BatchesMultipleChanges()
+        //public async Task BatchesMultipleChanges()
         //{
         //    Document<Entity>();
 
@@ -453,24 +455,24 @@ namespace HybridDb.Tests
 
         //        session.Store(new Entity { Id = id1, Property = "Asger" });
         //        session.Store(new Entity { Id = id2, Property = "Asger" });
-        //        session.SaveChanges(); // 1
+        //        await session.SaveChanges(); // 1
         //        store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
         //        session.Advanced.Clear();
 
-        //        var entity1 = session.Load<Entity>(id1); // 2
-        //        var entity2 = session.Load<Entity>(id2); // 3
+        //        var entity1 = await session.Load<Entity>(id1); // 2
+        //        var entity2 = await session.Load<Entity>(id2); // 3
         //        store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
 
         //        session.Delete(entity1);
         //        entity2.Property = "Lars";
         //        session.Store(new Entity { Id = id3, Property = "Jacob" });
-        //        session.SaveChanges(); // 4
+        //        await session.SaveChanges(); // 4
         //        store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 4);
         //    }
         //}
 
         [Fact]
-        public void SavingChangesTwiceInARowDoesNothing()
+        public async Task SavingChangesTwiceInARowDoesNothing()
         {
             Document<Entity>();
 
@@ -482,20 +484,20 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity { Id = id1, Property = "Asger" });
                 session.Store(new Entity { Id = id2, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity1 = session.Load<Entity>(id1);
-                var entity2 = session.Load<Entity>(id2);
+                var entity1 = await session.Load<Entity>(id1);
+                var entity2 = await session.Load<Entity>(id2);
                 session.Delete(entity1);
                 entity2.Property = "Lars";
                 session.Store(new Entity { Id = id3, Property = "Jacob" });
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 var numberOfRequests = store.NumberOfRequests;
                 var lastEtag = store.LastWrittenEtag;
 
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 store.NumberOfRequests.ShouldBe(numberOfRequests);
                 store.LastWrittenEtag.ShouldBe(lastEtag);
@@ -503,7 +505,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void IssuesConcurrencyExceptionWhenTwoSessionsChangeSameDocument()
+        public async Task IssuesConcurrencyExceptionWhenTwoSessionsChangeSameDocument()
         {
             Document<Entity>();
 
@@ -513,13 +515,13 @@ namespace HybridDb.Tests
             using (var session2 = store.OpenSession())
             {
                 session1.Store(new Entity { Id = id1, Property = "Asger" });
-                session1.SaveChanges();
+                await session1.SaveChanges();
 
-                var entity1 = session1.Load<Entity>(id1);
-                var entity2 = session2.Load<Entity>(id1);
+                var entity1 = await session1.Load<Entity>(id1);
+                var entity2 = await session2.Load<Entity>(id1);
 
                 entity1.Property = "A";
-                session1.SaveChanges();
+                await session1.SaveChanges();
 
                 entity2.Property = "B";
                 Should.Throw<ConcurrencyException>(() => session2.SaveChanges());
@@ -527,7 +529,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryDocument()
+        public async Task CanQueryDocument()
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
@@ -536,7 +538,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
                 session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
                 var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").ToList();
@@ -548,7 +550,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanSaveChangesOnAQueriedDocument()
+        public async Task CanSaveChangesOnAQueriedDocument()
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
@@ -556,21 +558,21 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
                 var entity = session.Query<Entity>().Single(x => x.ProjectedProperty == "Large");
 
                 entity.Property = "Lars";
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<Entity>(id).Property.ShouldBe("Lars");
+                (await session.Load<Entity>(id)).Property.ShouldBe("Lars");
             }
         }
 
         [Fact]
-        public void QueryingALoadedDocumentReturnsSameInstance()
+        public async Task QueryingALoadedDocumentReturnsSameInstance()
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
@@ -578,10 +580,10 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var instance1 = session.Load<Entity>(id);
+                var instance1 = await session.Load<Entity>(id);
                 var instance2 = session.Query<Entity>().Single(x => x.ProjectedProperty == "Large");
 
                 instance1.ShouldBe(instance2);
@@ -589,7 +591,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void QueryingALoadedDocumentMarkedForDeletionReturnsNothing()
+        public async Task QueryingALoadedDocumentMarkedForDeletionReturnsNothing()
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
@@ -597,10 +599,10 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 session.Delete(entity);
 
                 var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").ToList();
@@ -610,7 +612,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryAndReturnProjection()
+        public async Task CanQueryAndReturnProjection()
         {
             Document<Entity>()
                 .With(x => x.ProjectedProperty)
@@ -621,7 +623,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
                 session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
                 var entities = session.Query<Entity>().Where(x => x.ProjectedProperty == "Large").AsProjection<EntityProjection>().ToList();
@@ -633,7 +635,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void WillNotSaveChangesToProjectedValues()
+        public async Task WillNotSaveChangesToProjectedValues()
         {
             Document<Entity>()
                 .With(x => x.ProjectedProperty)
@@ -643,28 +645,28 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
                 var entity = session.Query<Entity>().AsProjection<EntityProjection>().Single(x => x.ProjectedProperty == "Large");
                 entity.ProjectedProperty = "Small";
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<Entity>(id).ProjectedProperty.ShouldBe("Large");
+                (await session.Load<Entity>(id)).ProjectedProperty.ShouldBe("Large");
             }
         }
 
 
         [Fact]
-        public void StoreOneTypeAndLoadAnotherFromSameTableAndKeyResultsInOneManagedEntity()
+        public async Task StoreOneTypeAndLoadAnotherFromSameTableAndKeyResultsInOneManagedEntity()
         {
             using (var session = store.OpenSession())
             {
                 session.Store("key", new OtherEntity());
-                session.SaveChanges();
+                await session.SaveChanges();
 
-                session.Load<object>("key").ShouldNotBe(null);
+                (await session.Load<object>("key")).ShouldNotBe(null);
 
                 session.Advanced.ManagedEntities.Count().ShouldBe(1);
             }
@@ -688,7 +690,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryUserDefinedProjection()
+        public async Task CanQueryUserDefinedProjection()
         {
             Document<OtherEntity>().With("Unknown", x => 2);
 
@@ -696,7 +698,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new OtherEntity { Id = id });
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 var entities = session.Query<OtherEntity>().Where(x => x.Column<int>("Unknown") == 2).ToList();
                 entities.Count.ShouldBe(1);
@@ -704,7 +706,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void Bug10_UsesProjectedTypeToSelectColumns()
+        public async Task Bug10_UsesProjectedTypeToSelectColumns()
         {
             Document<Entity>()
                 .With(x => x.Property)
@@ -714,7 +716,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "asger", Number = 2 });
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 Should.NotThrow(() => session.Query<Entity>().Select(x => new AProjection { Number = x.Number }).ToList());
             }
@@ -722,7 +724,7 @@ namespace HybridDb.Tests
 
 
         [Fact]
-        public void CanQueryIndex()
+        public async Task CanQueryIndex()
         {
             Document<AbstractEntity>()
                 .Extend<EntityIndex>(e => e.With(x => x.YksiKaksiKolme, x => x.Number))
@@ -733,7 +735,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger", Number = 2 });
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 //var test = from x in session.Query<AbstractEntity>()
                 //           let index = x.Index<EntityIndex>()
@@ -746,7 +748,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void AppliesMigrationsOnLoad()
+        public async Task AppliesMigrationsOnLoad()
         {
             Document<Entity>();
 
@@ -754,7 +756,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             Reset();
@@ -765,13 +767,13 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 entity.Property.ShouldBe("Peter");
             }
         }
 
         [Fact]
-        public void AppliesMigrationsOnQuery()
+        public async Task AppliesMigrationsOnQuery()
         {
             Document<AbstractEntity>().With(x => x.Number);
             Document<DerivedEntity>();
@@ -783,7 +785,7 @@ namespace HybridDb.Tests
                 session.Store(new DerivedEntity { Property = "Asger", Number = 1 });
                 session.Store(new MoreDerivedEntity1 { Property = "Jacob", Number = 2 });
                 session.Store(new MoreDerivedEntity2 { Property = "Lars", Number = 3 });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             Reset();
@@ -808,7 +810,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void TracksChangesFromMigrations()
+        public async Task TracksChangesFromMigrations()
         {
             Document<Entity>();
 
@@ -816,7 +818,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             Reset();
@@ -827,15 +829,15 @@ namespace HybridDb.Tests
             var numberOfRequests = store.NumberOfRequests;
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(id);
-                session.SaveChanges();
+                await session.Load<Entity>(id);
+                await session.SaveChanges();
             }
 
             (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
         }
 
         [Fact]
-        public void AddsVersionOnInsert()
+        public async Task AddsVersionOnInsert()
         {
             Document<Entity>();
             UseMigrations(new InlineMigration(1), new InlineMigration(2));
@@ -844,16 +846,16 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             var table = configuration.GetDesignFor<Entity>().Table;
-            var row = store.Get(table, id);
+            var row = await store.Get(table, id);
             ((int)row[table.VersionColumn]).ShouldBe(2);
         }
 
         [Fact]
-        public void UpdatesVersionOnUpdate()
+        public async Task UpdatesVersionOnUpdate()
         {
             Document<Entity>();
 
@@ -862,7 +864,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             Reset();
@@ -872,17 +874,17 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 entity.Number++;
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
-            var row = store.Get(table, id);
+            var row = await store.Get(table, id);
             ((int)row[table.VersionColumn]).ShouldBe(2);
         }
 
         [Fact]
-        public void BacksUpMigratedDocumentOnSave()
+        public async Task BacksUpMigratedDocumentOnSave()
         {
             var id = NewId();
 
@@ -891,7 +893,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             var backupWriter = new FakeBackupWriter();
@@ -906,12 +908,12 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(id);
+                await session.Load<Entity>(id);
 
                 // no backup on load
                 backupWriter.Files.Count.ShouldBe(0);
 
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 // backup on save
                 backupWriter.Files.Count.ShouldBe(1);
@@ -931,12 +933,12 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Load<Entity>(id);
+                await session.Load<Entity>(id);
 
                 // no backup on load
                 backupWriter.Files.Count.ShouldBe(1);
 
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 // backup on save
                 backupWriter.Files.Count.ShouldBe(2);
@@ -946,7 +948,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void DoesNotBackUpDocumentWithNoMigrations()
+        public async Task DoesNotBackUpDocumentWithNoMigrations()
         {
             Document<Entity>();
 
@@ -958,16 +960,16 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
 
                 entity.Property = "Jacob";
 
-                session.SaveChanges();
+                await session.SaveChanges();
 
                 // no migrations, means no backup
                 backupWriter.Files.Count.ShouldBe(0);
@@ -975,7 +977,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void FailsOnSaveChangesWhenPreviousSaveFailed()
+        public async Task FailsOnSaveChangesWhenPreviousSaveFailed()
         {
             var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
 
@@ -993,7 +995,7 @@ namespace HybridDb.Tests
 
                 try
                 {
-                    session.SaveChanges(); // fails when in an inconsitent state
+                    await session.SaveChanges(); // fails when in an inconsitent state
                 }
                 catch (Exception) { }
 
@@ -1003,7 +1005,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void DoesNotFailsOnSaveChangesWhenPreviousSaveWasSuccessful()
+        public async Task DoesNotFailsOnSaveChangesWhenPreviousSaveWasSuccessful()
         {
             Document<Entity>();
 
@@ -1011,61 +1013,61 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity());
 
-                session.SaveChanges();
-                session.SaveChanges();
+                await session.SaveChanges();
+                await session.SaveChanges();
             }
         }
 
         [Fact]
-        public void DoesNotFailsOnSaveChangesWhenPreviousSaveWasNoop()
+        public async Task DoesNotFailsOnSaveChangesWhenPreviousSaveWasNoop()
         {
             using (var session = store.OpenSession())
             {
-                session.SaveChanges();
-                session.SaveChanges();
+                await session.SaveChanges();
+                await session.SaveChanges();
             }
         }
 
         [Fact]
-        public void CanUseADifferentIdProjection()
+        public async Task CanUseADifferentIdProjection()
         {
             Document<Entity>().Key(x => x.Property);
 
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity() { Property = "TheId" });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>("TheId");
+                var entity = await session.Load<Entity>("TheId");
 
                 entity.ShouldNotBe(null);
             }
         }
 
         [Fact]
-        public void CanStoreWithGivenKey()
+        public async Task CanStoreWithGivenKey()
         {
             Document<EntityWithoutId>();
 
             using (var session = store.OpenSession())
             {
                 session.Store("mykey", new EntityWithoutId { Data = "TheId" });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<EntityWithoutId>("mykey");
+                var entity = await session.Load<EntityWithoutId>("mykey");
 
                 entity.ShouldNotBe(null);
             }
         }
 
         [Fact]
-        public void CanStoreMetadata()
+        public async Task CanStoreMetadata()
         {
             Document<Entity>();
 
@@ -1079,12 +1081,12 @@ namespace HybridDb.Tests
                     ["key"] = new List<string> { "value1", "value2" }
                 });
 
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
 
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
@@ -1093,7 +1095,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanStoreWithoutOverwritingMetadata()
+        public async Task CanStoreWithoutOverwritingMetadata()
         {
             Document<Entity>();
 
@@ -1107,19 +1109,19 @@ namespace HybridDb.Tests
                     ["key"] = new List<string> { "value1", "value2" }
                 });
 
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 entity.Field = "a new field";
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
 
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
@@ -1128,7 +1130,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanUpdateMetadata()
+        public async Task CanUpdateMetadata()
         {
             Document<Entity>();
 
@@ -1142,22 +1144,22 @@ namespace HybridDb.Tests
                     ["key"] = new List<string> { "value1", "value2" }
                 });
 
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
                 session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
                 {
                     ["another-key"] = new List<string> { "value" }
                 });
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>(id);
+                var entity = await session.Load<Entity>(id);
 
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
@@ -1167,7 +1169,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanSetMetadataToNull()
+        public async Task CanSetMetadataToNull()
         {
             Document<Entity>();
 
@@ -1180,19 +1182,19 @@ namespace HybridDb.Tests
                     ["key"] = new List<string> { "value1", "value2" }
                 });
 
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>("id");
+                var entity = await session.Load<Entity>("id");
                 session.Advanced.SetMetadataFor(entity, null);
-                session.SaveChanges();
+                await session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var entity = session.Load<Entity>("id");
+                var entity = await session.Load<Entity>("id");
 
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
@@ -1202,7 +1204,7 @@ namespace HybridDb.Tests
 
 
         [Fact]
-        public void UsesIdToStringAsDefaultKeyResolver()
+        public async Task UsesIdToStringAsDefaultKeyResolver()
         {
             using (var session = store.OpenSession())
             {
@@ -1212,15 +1214,15 @@ namespace HybridDb.Tests
                     Id = id
                 });
 
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<EntityWithFunnyKey>(id.ToString()).Id.ShouldBe(id);
+                (await session.Load<EntityWithFunnyKey>(id.ToString())).Id.ShouldBe(id);
             }
         }
 
         [Fact]
-        public void CanSetDefaultKeyResolver()
+        public async Task CanSetDefaultKeyResolver()
         {
             UseKeyResolver(x => "asger");
 
@@ -1228,10 +1230,10 @@ namespace HybridDb.Tests
             {
                 session.Store(new object());
 
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<object>("asger").ShouldNotBe(null);
+                (await session.Load<object>("asger")).ShouldNotBe(null);
             }
         }
 
@@ -1275,7 +1277,6 @@ namespace HybridDb.Tests
         {
             public Guid Id { get; set; }
         }
-
 
         public class EntityProjection
         {

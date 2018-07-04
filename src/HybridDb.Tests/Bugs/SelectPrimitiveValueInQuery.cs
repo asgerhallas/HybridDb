@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridDb.Linq;
 using Shouldly;
 using Xunit;
@@ -9,7 +10,7 @@ namespace HybridDb.Tests.Bugs
     public class SelectPrimitiveValueInQuery : HybridDbAutoInitializeTests
     {
         [Fact]
-        public void ShouldBeAble()
+        public async Task ShouldBeAble()
         {
             Document<WeirdEntity>()
                 .With(x => x.A)
@@ -28,7 +29,7 @@ namespace HybridDb.Tests.Bugs
                     C = DateTime.MaxValue,
                     D = null
                 });
-                session.SaveChanges();
+                await session.SaveChanges();
                 session.Advanced.Clear();
 
                 session.Query<WeirdEntity>().Select(x => x.Column<string>("Id")).ToList().Single().ShouldBe(id.ToString());

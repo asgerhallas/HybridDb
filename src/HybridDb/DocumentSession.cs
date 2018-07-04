@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -39,9 +40,9 @@ namespace HybridDb
                 Table = x.Value.Table
             });
 
-        public T Load<T>(string key) where T : class => Load(typeof(T), key) as T;
+        public async Task<T> Load<T>(string key) where T : class => (T)await Load(typeof(T), key);
 
-        public object Load(Type type, string key)
+        public async Task<object> Load(Type type, string key)
         {
             var design = store.Configuration.GetOrCreateDesignFor(type);
 
@@ -52,7 +53,7 @@ namespace HybridDb
                     : null;
             }
             
-            var row = store.Get(design.Table, key);
+            var row = await store.Get(design.Table, key);
             
             if (row == null) return null;
 
@@ -159,17 +160,11 @@ namespace HybridDb
             }
         }
 
-        public void SaveChanges()
-        {
-            SaveChangesInternal(lastWriteWins: false, forceWriteUnchangedDocument: false);
-        }
+        public Task SaveChanges() => SaveChangesInternal(lastWriteWins: false, forceWriteUnchangedDocument: false);
 
-        public void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument)
-        {
-            SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
-        }
+        public Task SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument) => SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
 
-        void SaveChangesInternal(bool lastWriteWins, bool forceWriteUnchangedDocument)
+        async Task SaveChangesInternal(bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
             if (saving)
             {
@@ -223,7 +218,7 @@ namespace HybridDb
                 }
             }
 
-            var etag = store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
+            var etag = await store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
 
             foreach (var managedEntity in commands.Keys)
             {

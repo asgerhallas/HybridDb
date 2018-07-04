@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridDb.Commands;
 using HybridDb.Config;
 
@@ -8,16 +9,16 @@ namespace HybridDb
 {
     public static class DocumentStoreEx
     {
-        public static Guid Insert(this IDocumentStore store, DocumentTable table, string key, object projections) => 
+        public static Task<Guid> Insert(this IDocumentStore store, DocumentTable table, string key, object projections) => 
             Execute(store, new InsertCommand(table, key, projections));
 
-        public static Guid Update(this IDocumentStore store, DocumentTable table, string key, Guid etag, object projections, bool lastWriteWins = false) => 
+        public static Task<Guid> Update(this IDocumentStore store, DocumentTable table, string key, Guid etag, object projections, bool lastWriteWins = false) => 
             Execute(store, new UpdateCommand(table, key, etag, projections, lastWriteWins));
 
-        public static void Delete(this IDocumentStore store, DocumentTable table, string key, Guid etag, bool lastWriteWins = false) => 
+        public static Task Delete(this IDocumentStore store, DocumentTable table, string key, Guid etag, bool lastWriteWins = false) => 
             Execute(store, new DeleteCommand(table, key, etag, lastWriteWins));
 
-        public static Guid Execute(this IDocumentStore store, params DatabaseCommand[] commands) => store.Execute(commands);
+        public static Task<Guid> Execute(this IDocumentStore store, params DatabaseCommand[] commands) => store.Execute(commands);
 
         public static IEnumerable<IDictionary<string, object>> Query(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",

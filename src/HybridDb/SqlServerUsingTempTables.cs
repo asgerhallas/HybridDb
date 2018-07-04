@@ -31,7 +31,8 @@ namespace HybridDb
                 {
                     var tx = new TransactionScope(
                         TransactionScopeOption.RequiresNew,
-                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
+                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                        TransactionScopeAsyncFlowOption.Enabled);
 
                     complete += tx.Complete;
                     dispose += tx.Dispose;
