@@ -115,32 +115,31 @@ namespace HybridDb
             var timer = Stopwatch.StartNew();
             using (var connectionManager = Database.Connect())
             {
-                var i = 0;
                 var etag = Guid.NewGuid();
-                var sql = "";
-                var parameters = new List<Parameter>();
-                var numberOfParameters = 0;
-                var expectedRowCount = 0;
                 var numberOfInsertCommands = 0;
                 var numberOfUpdateCommands = 0;
                 var numberOfDeleteCommands = 0;
                 foreach (var command in commands)
                 {
+                    var sql = "";
+                    var parameters = new List<Parameter>();
+                    var expectedRowCount = 0;
+
                     var preparedCommand = Switch<SqlDatabaseCommand>.On(command)
                         .Match<InsertCommand>(insert =>
                         {
                             numberOfInsertCommands++;
-                            return PrepareInsertCommand(insert, etag, i++);
+                            return PrepareInsertCommand(insert, etag, 0);
                         })
                         .Match<UpdateCommand>(update =>
                         {
                             numberOfUpdateCommands++;
-                            return PrepareUpdateCommand(update, etag, i++);
+                            return PrepareUpdateCommand(update, etag, 0);
                         })
                         .Match<DeleteCommand>(delete =>
                         {
                             numberOfDeleteCommands++;
-                            return PrepareDeleteCommand(delete, i++);
+                            return PrepareDeleteCommand(delete, 0);
                         })
                         .OrThrow();
 
@@ -156,24 +155,9 @@ namespace HybridDb
                     parameters.AddRange(preparedCommand.Parameters);
 
                     expectedRowCount += preparedCommand.ExpectedRowCount;
-                    numberOfParameters += numberOfNewParameters;
 
                     InternalExecute(connectionManager, sql, parameters, expectedRowCount);
-
-                    sql = "";
-                    parameters = new List<Parameter>();
-                    expectedRowCount = 0;
-                    numberOfParameters = 0;
-                    i = 0;
-
-                    //if (numberOfParameters + numberOfNewParameters >= 2000)
-                    //{
-                    //}
-
-
                 }
-
-                //InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
                 connectionManager.Complete();
 
@@ -190,9 +174,15 @@ namespace HybridDb
 
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
-            var fastParameters = new FastDynamicParameters(parameters);
+            var dynamicParameters = new DynamicParameters();
+            foreach (var parameter in parameters)
+            {
+                dynamicParameters.Add(parameter.Name, parameter.Value, parameter.DbType);
+            }
 
-            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+            //var fastParameters = new FastDynamicParameters(parameters);
+
+            var rowcount = managedConnection.Connection.Execute(sql, dynamicParameters);
 
             Interlocked.Increment(ref numberOfRequests);
 
