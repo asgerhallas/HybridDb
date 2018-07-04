@@ -98,7 +98,7 @@ namespace HybridDb.Migrations
                     }
                 }
 
-            }, TaskCreationOptions.LongRunning);
+            }, TaskCreationOptions.LongRunning).Unwrap();
         }
     }
 }

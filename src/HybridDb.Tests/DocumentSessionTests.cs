@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
@@ -808,32 +809,32 @@ namespace HybridDb.Tests
             }
         }
 
-        //[Fact]
-        //public async Task TracksChangesFromMigrations()
-        //{
-        //    Document<Entity>();
+        [Fact]
+        public async Task TracksChangesFromMigrations()
+        {
+            Document<Entity>();
 
-        //    var id = NewId();
-        //    using (var session = store.OpenSession())
-        //    {
-        //        session.Store(new Entity { Id = id, Property = "Asger" });
-        //        await session.SaveChanges();
-        //    }
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id, Property = "Asger" });
+                await session.SaveChanges();
+            }
 
-        //    Reset();
+            Reset();
 
-        //    Document<Entity>();
-        //    UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
-        //    var numberOfRequests = store.NumberOfRequests;
-        //    using (var session = store.OpenSession())
-        //    {
-        //        await session.Load<Entity>(id);
-        //        await session.SaveChanges();
-        //    }
+            var numberOfRequests = store.NumberOfRequests;
+            using (var session = store.OpenSession())
+            {
+                await session.Load<Entity>(id);
+                await session.SaveChanges();
+            }
 
-        //    (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
-        //}
+            (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
+        }
 
         [Fact]
         public async Task AddsVersionOnInsert()

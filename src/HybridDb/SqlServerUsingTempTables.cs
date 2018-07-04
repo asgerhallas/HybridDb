@@ -36,7 +36,6 @@ namespace HybridDb
 
                     complete += tx.Complete;
                     dispose += tx.Dispose;
-                    dispose += () => Transaction.Current = null;
                 }
 
                 if (ambientConnectionForTesting == null)
