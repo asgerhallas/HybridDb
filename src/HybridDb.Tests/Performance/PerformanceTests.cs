@@ -129,7 +129,7 @@ namespace HybridDb.Tests.Performance
                             new {SomeNumber = i, SomeData = "ABC"}));
                     }
 
-                    store.Execute(commands.ToArray());
+                    store.ExecuteAsync(commands.ToArray());
 
                     decimal time = 0;
                     for (var i = 0; i < 10; i++)

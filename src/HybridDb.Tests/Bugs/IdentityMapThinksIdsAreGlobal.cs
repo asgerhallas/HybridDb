@@ -25,8 +25,8 @@ namespace HybridDb.Tests.Bugs
 
             using (var session = documentStore.OpenSession())
             {
-                var doc1 = await session.Load<Doc1>(ThisIsAKnownId);
-                var doc2 = await session.Load<Doc2>(ThisIsAKnownId);
+                var doc1 = await session.LoadAsync<Doc1>(ThisIsAKnownId);
+                var doc2 = await session.LoadAsync<Doc2>(ThisIsAKnownId);
 
                 Assert.Equal("this is doc1", doc1.Label);
                 Assert.Equal("this is doc2", doc2.Caption);
@@ -38,7 +38,7 @@ namespace HybridDb.Tests.Bugs
             using (var session1 = documentStore.OpenSession())
             {
                 session1.Store(doc);
-                await session1.SaveChanges();
+                await session1.SaveChangesAsync();
             }
         }
 

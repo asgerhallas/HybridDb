@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Bugs
                     C = DateTime.MaxValue,
                     D = null
                 });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
                 session.Query<WeirdEntity>().Select(x => x.Column<string>("Id")).ToList().Single().ShouldBe(id.ToString());

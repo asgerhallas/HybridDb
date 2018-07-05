@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = new DocumentTable("Entities");
-            await store.Insert(table, id, new
+            await store.InsertAsync(table, id, new
             {
                 AwaitsReprojection = awaitsReprojection,
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
@@ -39,7 +39,7 @@ namespace HybridDb.Tests.Migrations
 
             await new DocumentMigrationRunner().Run(store);
 
-            var row = await store.Get(table, id);
+            var row = await store.GetAsync(table, id);
             row["Number"].ShouldBe(result);
             row["AwaitsReprojection"].ShouldBe(false);
             row[table.VersionColumn].ShouldBe(0);
@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
-            await store.Insert(table, id, new
+            await store.InsertAsync(table, id, new
             {
                 AwaitsReprojection = false,
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
@@ -72,9 +72,9 @@ namespace HybridDb.Tests.Migrations
 
             new DocumentMigrationRunner().Run(fakeStore).Wait();
 
-            A.CallTo(() => fakeStore.Get(table, id)).MustNotHaveHappened();
+            A.CallTo(() => fakeStore.GetAsync(table, id)).MustNotHaveHappened();
 
-            var row = await store.Get(table, id);
+            var row = await store.GetAsync(table, id);
             row[table.VersionColumn].ShouldBe(2);
         }
 
@@ -91,7 +91,7 @@ namespace HybridDb.Tests.Migrations
 
             for (var i = 0; i < 200; i++)
             {
-                await store.Insert(documentTable, NewId(), new
+                await store.InsertAsync(documentTable, NewId(), new
                 {
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
@@ -129,7 +129,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = new DocumentTable("Entities");
-            var etag = await store.Insert(table, id, new
+            var etag = await store.InsertAsync(table, id, new
             {
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
@@ -158,7 +158,7 @@ namespace HybridDb.Tests.Migrations
 
             gate1.WaitOne();
 
-            await store.Update(table, id, etag, new { });
+            await store.UpdateAsync(table, id, etag, new { });
 
             gate2.WaitOne();
 
@@ -202,7 +202,7 @@ namespace HybridDb.Tests.Migrations
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -244,7 +244,7 @@ namespace HybridDb.Tests.Migrations
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();

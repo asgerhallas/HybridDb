@@ -21,14 +21,14 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id, Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
-                var entity1 = await session.Load<ISomeInterface>(id);
+                var entity1 = await session.LoadAsync<ISomeInterface>(id);
                 entity1.ShouldBeOfType<MoreDerivedEntity1>();
                 entity1.Property.ShouldBe("Asger");
 
-                var entity2 = await session.Load<IOtherInterface>(id);
+                var entity2 = await session.LoadAsync<IOtherInterface>(id);
                 entity2.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
@@ -43,10 +43,10 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
-                var entity = await session.Load<AbstractEntity>(id);
+                var entity = await session.LoadAsync<AbstractEntity>(id);
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
@@ -62,10 +62,10 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity2 { Id = id, Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
-                Should.Throw<InvalidOperationException>(() => session.Load<IOtherInterface>(id))
+                Should.Throw<InvalidOperationException>(() => session.LoadAsync<IOtherInterface>(id))
                     .Message.ShouldBe($"Document with id '{id}' exists, but is of type 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity2', which is not assignable to 'HybridDb.Tests.HybridDbTests+IOtherInterface'.");
             }
         }
@@ -81,10 +81,10 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
-                Should.Throw<InvalidOperationException>(() => session.Load<MoreDerivedEntity2>(id))
+                Should.Throw<InvalidOperationException>(() => session.LoadAsync<MoreDerivedEntity2>(id))
                     .Message.ShouldBe($"Document with id '{id}' exists, but is of type 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity1', which is not assignable to 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity2'.");
             }
         }
@@ -99,10 +99,10 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = id });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
-                var entity = await session.Load<MoreDerivedEntity1>(id);
+                var entity = await session.LoadAsync<MoreDerivedEntity1>(id);
                 entity.ShouldBeOfType<MoreDerivedEntity1>();
             }
         }
@@ -116,7 +116,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var entity = await session.Load<AbstractEntity>(id);
+                var entity = await session.LoadAsync<AbstractEntity>(id);
                 entity.ShouldBe(null);
             }
         }
@@ -132,7 +132,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new MoreDerivedEntity1 { Id = NewId(), Property = "Asger" });
                 session.Store(new MoreDerivedEntity2 { Id = NewId(), Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
                 var entities = session.Query<ISomeInterface>().OrderBy(x => QueryableEx.Column<string>(x, "Discriminator")).ToList();
@@ -157,7 +157,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new MoreDerivedEntity1 { Id = NewId(), Property = "Asger" });
                 session.Store(new MoreDerivedEntity2 { Id = NewId(), Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
                 var entities = session.Query<AbstractEntity>().Where(x => x.Property == "Asger").OrderBy(x => x.Column<string>("Discriminator")).ToList();
@@ -178,7 +178,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new MoreDerivedEntity1 { Id = NewId(), Property = "Asger" });
                 session.Store(new MoreDerivedEntity2 { Id = NewId(), Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
                 session.Advanced.Clear();
 
                 var entities = session.Query<MoreDerivedEntity2>().Where(x => x.Property == "Asger").ToList();
@@ -195,7 +195,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store("key", new DerivedEntity());
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -204,7 +204,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var load = await session.Load<AbstractEntity>("key");
+                var load = await session.LoadAsync<AbstractEntity>("key");
                 load.ShouldBeOfType<DerivedEntity>();
             }
         }
@@ -215,14 +215,14 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store("key", new DerivedEntity());
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
 
             using (var session = store.OpenSession())
             {
-                var load = await session.Load<AbstractEntity>("key");
+                var load = await session.LoadAsync<AbstractEntity>("key");
                 load.ShouldBeOfType<DerivedEntity>();
             }
 
@@ -230,7 +230,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var load = await session.Load<object>("key");
+                var load = await session.LoadAsync<object>("key");
                 load.ShouldBeOfType<DerivedEntity>();
             }
         }
@@ -243,7 +243,7 @@ namespace HybridDb.Tests
                 session.Store(new DerivedEntity { Id = "A" });
                 session.Store(new MoreDerivedEntity1 { Id = "B" });
                 session.Store(new OtherEntity { Id = "C" }); // unrelated type
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -268,7 +268,7 @@ namespace HybridDb.Tests
                 session.Store(new DerivedEntity { Id = "A" });
                 session.Store(new MoreDerivedEntity1 { Id = "B" });
                 session.Store(new OtherEntity { Id = "C" }); // unrelated type
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -293,7 +293,7 @@ namespace HybridDb.Tests
                 session.Store(new DerivedEntity { Id = "A", Property = "A" });
                 session.Store(new MoreDerivedEntity1 { Id = "B", Property = "B" });
                 session.Store(new OtherEntity { Id = "C" }); // does not implement interface
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -316,14 +316,14 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store("key", entity);
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
 
             using (var session = store.OpenSession())
             {
-                var load = await session.Load<object>("key");
+                var load = await session.LoadAsync<object>("key");
                 load.ShouldBeOfType(entity.GetType());
             }
         }
@@ -336,14 +336,14 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store("key", entity);
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
 
             using (var session = store.OpenSession())
             {
-                var load = await session.Load(entity.GetType(), "key");
+                var load = await session.LoadAsync(entity.GetType(), "key");
                 load.ShouldBeOfType(entity.GetType());
             }
         }
@@ -356,7 +356,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = "A", Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
 
                 configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldNotBe(null);
 
@@ -373,7 +373,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store(new MoreDerivedEntity1 { Id = "A", Property = "Asger" });
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -382,7 +382,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                (await session.Load<AbstractEntity>("A")).ShouldBeOfType<MoreDerivedEntity1>();
+                (await session.LoadAsync<AbstractEntity>("A")).ShouldBeOfType<MoreDerivedEntity1>();
 
                 configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldNotBe(null);
             }
@@ -396,7 +396,7 @@ namespace HybridDb.Tests
                 session.Store(new DerivedEntity { Id = "A" });
                 session.Store(new MoreDerivedEntity1 { Id = "B" });
                 session.Store(new OtherEntity { Id = "C" }); // unrelated type
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -432,7 +432,7 @@ namespace HybridDb.Tests
                 session.Store(new DerivedEntity { Id = "A" });
                 session.Store(new MoreDerivedEntity1 { Id = "B" });
                 session.Store(new OtherEntity { Id = "C" }); // unrelated type
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
@@ -476,14 +476,14 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 session.Store("key", new DerivedEntity());
-                await session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
             Reset();
 
             using (var session = store.OpenSession())
             {
-                Should.Throw<InvalidOperationException>(() => session.Load<AbstractEntity>("key"))
+                Should.Throw<InvalidOperationException>(() => session.LoadAsync<AbstractEntity>("key"))
                     .Message.ShouldBe("No concrete type could be mapped from discriminator 'NoShow'.");
             }
         }

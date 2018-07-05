@@ -72,8 +72,8 @@ namespace HybridDb.Migrations
                                 {
                                     using (var session = new DocumentSession(store))
                                     {
-                                        await session.Load(concreteDesign.DocumentType, key);
-                                        await session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                        await session.LoadAsync(concreteDesign.DocumentType, key);
+                                        await session.SaveChangesAsync(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                     }
                                 }
                                 catch (ConcurrencyException) { }
@@ -92,7 +92,7 @@ namespace HybridDb.Migrations
                                     {table.VersionColumn, configuration.ConfiguredVersion}
                                 };
 
-                                await store.Update(table, key, (Guid)row[table.EtagColumn], projection);
+                                await store.UpdateAsync(table, key, (Guid)row[table.EtagColumn], projection);
                             }
                         }
                     }
