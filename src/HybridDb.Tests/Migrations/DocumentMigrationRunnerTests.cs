@@ -113,7 +113,7 @@ namespace HybridDb.Tests.Migrations
 
             // each document is being updated individually
             A.CallTo(fakeStore)
-                .Where(x => x.Method.Name == "Execute")
+                .Where(x => x.Method.Name == nameof(IDocumentStore.ExecuteAsync))
                 .WhenArgumentsMatch(x => x.Get<DatabaseCommand[]>(0)[0] is UpdateCommand)
                 .MustHaveHappened(200, Times.Exactly);
         }
