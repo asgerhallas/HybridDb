@@ -363,7 +363,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = await store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(async () => await store.Delete(table.Table, NewId(), etag));
+            Should.Throw<ConcurrencyException>(async () => await store.Delete(table.Table, NewId(), etag)); 
         }
 
         [Fact]

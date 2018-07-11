@@ -122,10 +122,6 @@ namespace HybridDb
                 var numberOfDeleteCommands = 0;
                 foreach (var command in commands)
                 {
-                    var sql = "";
-                    var parameters = new List<Parameter>();
-                    var expectedRowCount = 0;
-
                     var preparedCommand = Switch<SqlDatabaseCommand>.On(command)
                         .Match<InsertCommand>(insert =>
                         {
@@ -152,12 +148,8 @@ namespace HybridDb
                     {
                         throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
                     }
-                    sql += $"{preparedCommand.Sql};";
-                    parameters.AddRange(preparedCommand.Parameters);
 
-                    expectedRowCount += preparedCommand.ExpectedRowCount;
-
-                    await InternalExecute(connectionManager, sql, parameters, expectedRowCount);
+                    await InternalExecute(connectionManager, preparedCommand.Sql, preparedCommand.Parameters, preparedCommand.ExpectedRowCount);
                 }
 
                 connectionManager.Complete();
@@ -175,16 +167,14 @@ namespace HybridDb
 
         async Task InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
-            var dynamicParameters = new DynamicParameters();
-            foreach (var parameter in parameters)
-            {
-                dynamicParameters.Add(parameter.Name, parameter.Value, parameter.DbType);
-            }
+            //var dynamicParameters = new DynamicParameters();
+            //foreach (var parameter in parameters)
+            //{
+            //    dynamicParameters.Add(parameter.Name, parameter.Value, parameter.DbType);
+            //}
 
-            //var fastParameters = new FastDynamicParameters(parameters);
+            var fastParameters = new FastDynamicParameters(parameters);
             var rowcount = await managedConnection.Connection.ExecuteAsync(sql, fastParameters);
-
-            var rowcount = managedConnection.Connection.Execute(sql, dynamicParameters);
 
             Interlocked.Increment(ref numberOfRequests);
 

@@ -62,8 +62,6 @@ namespace HybridDb.Migrations
                         throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
                     }
 
-                    // For test ShouldTryNotToDeadlockOnSchemaMigationsForTempTables: Console.Write($"Got lock: {Thread.CurrentThread.ManagedThreadId} with result {result}... ");
-
                     connection.Complete();
                 }
 
