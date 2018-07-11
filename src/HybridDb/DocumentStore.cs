@@ -106,7 +106,7 @@ namespace HybridDb
             return new DocumentSession(this);
         }
 
-        public async Task<Guid> Execute(IEnumerable<DatabaseCommand> commands)
+        public async Task<Guid> ExecuteAsync(IEnumerable<DatabaseCommand> commands)
         {
             commands = commands.ToList();
 
@@ -329,7 +329,7 @@ namespace HybridDb
             from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
             select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
 
-        public async Task<IDictionary<string, object>> Get(DocumentTable table, string key)
+        public async Task<IDictionary<string, object>> GetAsync(DocumentTable table, string key)
         {
             var timer = Stopwatch.StartNew();
 

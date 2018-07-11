@@ -40,9 +40,9 @@ namespace HybridDb
                 Table = x.Value.Table
             });
 
-        public async Task<T> Load<T>(string key) where T : class => (T)await Load(typeof(T), key);
+        public async Task<T> LoadAsync<T>(string key) where T : class => (T)await LoadAsync(typeof(T), key);
 
-        public async Task<object> Load(Type type, string key)
+        public async Task<object> LoadAsync(Type type, string key)
         {
             var design = store.Configuration.GetOrCreateDesignFor(type);
 
@@ -53,7 +53,7 @@ namespace HybridDb
                     : null;
             }
             
-            var row = await store.Get(design.Table, key);
+            var row = await store.GetAsync(design.Table, key);
             
             if (row == null) return null;
 
@@ -160,9 +160,9 @@ namespace HybridDb
             }
         }
 
-        public Task SaveChanges() => SaveChangesInternal(lastWriteWins: false, forceWriteUnchangedDocument: false);
+        public Task SaveChangesAsync() => SaveChangesInternal(lastWriteWins: false, forceWriteUnchangedDocument: false);
 
-        public Task SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument) => SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
+        public Task SaveChangesAsync(bool lastWriteWins, bool forceWriteUnchangedDocument) => SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
 
         async Task SaveChangesInternal(bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
@@ -218,7 +218,7 @@ namespace HybridDb
                 }
             }
 
-            var etag = await store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
+            var etag = await store.ExecuteAsync(commands.Select(x => x.Value).Concat(deferredCommands));
 
             foreach (var managedEntity in commands.Keys)
             {

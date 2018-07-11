@@ -244,7 +244,7 @@ namespace HybridDb.Tests.Migrations
                 session.Store(new DerivedEntity());
                 session.Store(new OtherEntity());
                 session.Store(new OtherEntity());
-                session.SaveChanges();
+                session.SaveChangesAsync();
             }
 
             var runner = new SchemaMigrationRunner(store, 

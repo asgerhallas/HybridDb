@@ -15,8 +15,8 @@ namespace HybridDb
 
         void Initialize();
         IDocumentSession OpenSession();
-        Task<Guid> Execute(IEnumerable<DatabaseCommand> commands);
-        Task<IDictionary<string, object>> Get(DocumentTable table, string key);
+        Task<Guid> ExecuteAsync(IEnumerable<DatabaseCommand> commands);
+        Task<IDictionary<string, object>> GetAsync(DocumentTable table, string key);
         IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = "", 
             string where = "", int skip = 0, int take = 0, 

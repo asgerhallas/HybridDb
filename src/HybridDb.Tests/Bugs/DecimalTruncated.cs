@@ -19,10 +19,10 @@ namespace HybridDb.Tests.Bugs
                     MyDecimal = 123.456m
                 };
                 documentSession.Store("id", classWithDecimal);
-                await documentSession.SaveChanges();
+                await documentSession.SaveChangesAsync();
             }
 
-            (await store.Get(store.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id"))["MyDecimal"].ShouldBe(123.456m);
+            (await store.GetAsync(store.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id"))["MyDecimal"].ShouldBe(123.456m);
         }
 
         public class ClassWithDecimal

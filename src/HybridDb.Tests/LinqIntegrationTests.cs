@@ -26,7 +26,7 @@ namespace HybridDb.Tests
             session.Store(new Entity { Id = NewId(), Property = 1, StringProp = "Asger" });
             session.Store(new Entity { Id = NewId(), Property = 2, StringProp = "Lars", TheChild = new Entity.Child { NestedProperty = 3.1 } });
             session.Store(new Entity { Id = NewId(), Property = 3, StringProp = null });
-            session.SaveChanges().Wait();
+            session.SaveChangesAsync().Wait();
         }
 
         [Fact]
