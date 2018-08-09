@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Shouldly;
+﻿using Shouldly;
 using Xunit;
 
 namespace HybridDb.Tests.Bugs
@@ -7,7 +6,7 @@ namespace HybridDb.Tests.Bugs
     public class DecimalTruncated : HybridDbTests
     { 
         [Fact]
-        public async Task ShouldHaveRightPrecisionAndScale()
+        public void ShouldHaveRightPrecisionAndScale()
         {
             store.Configuration.Document<ClassWithDecimal>().With(x => x.MyDecimal);
             store.Initialize();
@@ -19,10 +18,10 @@ namespace HybridDb.Tests.Bugs
                     MyDecimal = 123.456m
                 };
                 documentSession.Store("id", classWithDecimal);
-                await documentSession.SaveChangesAsync();
+                documentSession.SaveChanges();
             }
 
-            (await store.GetAsync(store.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id"))["MyDecimal"].ShouldBe(123.456m);
+            store.Get(store.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id")["MyDecimal"].ShouldBe(123.456m);
         }
 
         public class ClassWithDecimal

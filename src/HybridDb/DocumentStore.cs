@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -106,7 +105,7 @@ namespace HybridDb
             return new DocumentSession(this);
         }
 
-        public async Task<Guid> ExecuteAsync(IEnumerable<DatabaseCommand> commands)
+        public Guid Execute(IEnumerable<DatabaseCommand> commands)
         {
             commands = commands.ToList();
 
@@ -149,7 +148,7 @@ namespace HybridDb
                         throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
                     }
 
-                    await InternalExecute(connectionManager, preparedCommand.Sql, preparedCommand.Parameters, preparedCommand.ExpectedRowCount);
+                    InternalExecute(connectionManager, preparedCommand.Sql, preparedCommand.Parameters, preparedCommand.ExpectedRowCount);
                 }
 
                 connectionManager.Complete();
@@ -165,7 +164,7 @@ namespace HybridDb
             }
         }
 
-        async Task InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
+        void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             //var dynamicParameters = new DynamicParameters();
             //foreach (var parameter in parameters)
@@ -174,7 +173,7 @@ namespace HybridDb
             //}
 
             var fastParameters = new FastDynamicParameters(parameters);
-            var rowcount = await managedConnection.Connection.ExecuteAsync(sql, fastParameters);
+            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
 
             Interlocked.Increment(ref numberOfRequests);
 
@@ -329,7 +328,7 @@ namespace HybridDb
             from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
             select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
 
-        public async Task<IDictionary<string, object>> GetAsync(DocumentTable table, string key)
+        public IDictionary<string, object> Get(DocumentTable table, string key)
         {
             var timer = Stopwatch.StartNew();
 
@@ -337,7 +336,7 @@ namespace HybridDb
             {
                 var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-                var row = (IDictionary<string, object>)await connection.Connection.QuerySingleOrDefaultAsync(sql, new { Id = key, Op = Operation.Deleted });
+                var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key, Op = Operation.Deleted }).SingleOrDefault();
 
                 Interlocked.Increment(ref numberOfRequests);
 

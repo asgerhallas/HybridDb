@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Xunit;
+﻿using Xunit;
 
 namespace HybridDb.Tests.Bugs
 {
@@ -18,27 +17,27 @@ namespace HybridDb.Tests.Bugs
         }
 
         [Fact]
-        public async Task DocumentsAreCachedNotOnlyByIdButAlsoByType()
+        public void DocumentsAreCachedNotOnlyByIdButAlsoByType()
         {
-            await Save(new Doc1 { Id = ThisIsAKnownId, Label = "this is doc1" });
-            await Save(new Doc2 { Id = ThisIsAKnownId, Caption = "this is doc2" });
+            Save(new Doc1 { Id = ThisIsAKnownId, Label = "this is doc1" });
+            Save(new Doc2 { Id = ThisIsAKnownId, Caption = "this is doc2" });
 
             using (var session = documentStore.OpenSession())
             {
-                var doc1 = await session.LoadAsync<Doc1>(ThisIsAKnownId);
-                var doc2 = await session.LoadAsync<Doc2>(ThisIsAKnownId);
+                var doc1 = session.Load<Doc1>(ThisIsAKnownId);
+                var doc2 = session.Load<Doc2>(ThisIsAKnownId);
 
                 Assert.Equal("this is doc1", doc1.Label);
                 Assert.Equal("this is doc2", doc2.Caption);
             }
         }
 
-        async Task Save(object doc)
+        void Save(object doc)
         {
             using (var session1 = documentStore.OpenSession())
             {
                 session1.Store(doc);
-                await session1.SaveChangesAsync();
+                session1.SaveChanges();
             }
         }
 

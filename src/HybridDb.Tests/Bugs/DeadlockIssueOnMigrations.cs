@@ -25,7 +25,7 @@ namespace HybridDb.Tests.Bugs
             {
                 Id = Guid.NewGuid()
             });
-            session.SaveChangesAsync();
+            session.SaveChanges();
             session.Advanced.Clear();
 
             session.Query<EntityWithGuidKey>().ToList().Count.ShouldBe(1);

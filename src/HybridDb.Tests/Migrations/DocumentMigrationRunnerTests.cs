@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -21,7 +20,7 @@ namespace HybridDb.Tests.Migrations
         [Theory]
         [InlineData(true, 42)]
         [InlineData(false, 0)]
-        public async Task ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
+        public void ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
         {
             Document<Entity>().With(x => x.Number);
 
@@ -29,24 +28,24 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = new DocumentTable("Entities");
-            await store.InsertAsync(table, id, new
+            store.Insert(table, id, new
             {
-                AwaitsReprojection = awaitsReprojection,
+                AwaitsReprojection = awaitsReprojection, 
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
-            await new DocumentMigrationRunner().Run(store);
+            new DocumentMigrationRunner().Run(store).Wait();
 
-            var row = await store.GetAsync(table, id);
+            var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
             row["AwaitsReprojection"].ShouldBe(false);
             row[table.VersionColumn].ShouldBe(0);
         }
 
         [Fact]
-        public async Task DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
+        public void DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
         {
             var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
 
@@ -62,7 +61,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
-            await store.InsertAsync(table, id, new
+            store.Insert(table, id, new
             {
                 AwaitsReprojection = false,
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
@@ -72,14 +71,14 @@ namespace HybridDb.Tests.Migrations
 
             new DocumentMigrationRunner().Run(fakeStore).Wait();
 
-            A.CallTo(() => fakeStore.GetAsync(table, id)).MustNotHaveHappened();
+            A.CallTo(() => fakeStore.Get(table, id)).MustNotHaveHappened();
 
-            var row = await store.GetAsync(table, id);
+            var row = store.Get(table, id);
             row[table.VersionColumn].ShouldBe(2);
         }
 
         [Fact]
-        public async Task QueriesInSetsAndUpdatesOneByOne()
+        public void QueriesInSetsAndUpdatesOneByOne()
         {
             var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
 
@@ -89,12 +88,12 @@ namespace HybridDb.Tests.Migrations
 
             var documentTable = new DocumentTable("Entities");
 
-            for (var i = 0; i < 200; i++)
+            for (int i = 0; i < 200; i++)
             {
-                await store.InsertAsync(documentTable, NewId(), new
+                store.Insert(documentTable, NewId(), new
                 {
-                    Discriminator = typeof(Entity).AssemblyQualifiedName,
-                    Version = 0,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName, 
+                    Version = 0, 
                     Document = configuration.Serializer.Serialize(new Entity())
                 });
             }
@@ -113,13 +112,13 @@ namespace HybridDb.Tests.Migrations
 
             // each document is being updated individually
             A.CallTo(fakeStore)
-                .Where(x => x.Method.Name == nameof(IDocumentStore.ExecuteAsync))
+                .Where(x => x.Method.Name == "Execute")
                 .WhenArgumentsMatch(x => x.Get<DatabaseCommand[]>(0)[0] is UpdateCommand)
                 .MustHaveHappened(200, Times.Exactly);
         }
 
         [Fact]
-        public async Task AcceptsConcurrentWrites()
+        public void AcceptsConcurrentWrites()
         {
             UseRealTables();
 
@@ -129,7 +128,7 @@ namespace HybridDb.Tests.Migrations
 
             var id = NewId();
             var table = new DocumentTable("Entities");
-            var etag = await store.InsertAsync(table, id, new
+            var etag = store.Insert(table, id, new
             {
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
@@ -158,7 +157,7 @@ namespace HybridDb.Tests.Migrations
 
             gate1.WaitOne();
 
-            await store.UpdateAsync(table, id, etag, new { });
+            store.Update(table, id, etag, new {});
 
             gate2.WaitOne();
 
@@ -192,7 +191,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public async Task ContinuesIfMigrationFails()
+        public void ContinuesIfMigrationFails()
         {
             Document<Entity>().With(x => x.Number);
 
@@ -202,7 +201,7 @@ namespace HybridDb.Tests.Migrations
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id });
-                await session.SaveChangesAsync();
+                session.SaveChanges();
             }
 
             Reset();
@@ -227,14 +226,14 @@ namespace HybridDb.Tests.Migrations
 
             var numberOfRetries = logEventSink.Captures
                 .Count(x => x == $"Error while migrating document of type \"HybridDb.Tests.HybridDbTests+Entity\" with id \"{id}\".");
-
+            
             // it has a back off of 100ms
             numberOfRetries.ShouldBeLessThan(12);
             numberOfRetries.ShouldBeGreaterThan(8);
         }
 
         [Fact]
-        public async Task BacksUpMigratedDocumentBeforeMigration()
+        public void BacksUpMigratedDocumentBeforeMigration()
         {
             var id = NewId();
             Document<Entity>();
@@ -244,7 +243,7 @@ namespace HybridDb.Tests.Migrations
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                await session.SaveChangesAsync();
+                session.SaveChanges();
             }
 
             Reset();
@@ -282,7 +281,7 @@ namespace HybridDb.Tests.Migrations
             public void Emit(LogEvent logEvent)
             {
                 if (stopped) return;
-
+                
                 Captures.Add(logEvent.RenderMessage());
             }
         }

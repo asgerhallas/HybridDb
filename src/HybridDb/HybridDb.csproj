@@ -182,7 +182,6 @@
     <Compile Include="Config\Projection.cs" />
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
-    <Compile Include="DocumentSessionEx.cs" />
     <Compile Include="DocumentStoreEx.cs" />
     <Compile Include="EntityKey.cs" />
     <Compile Include="EntityState.cs" />

@@ -21,17 +21,19 @@ namespace HybridDb.Tests
     {
         readonly byte[] documentAsByteArray;
 
-        public DocumentStoreTests() => 
+        public DocumentStoreTests()
+        {
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
+        }
 
         [Fact]
-        public async Task CanInsert()
+        public void CanInsert()
         {
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
+            store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
 
             var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Id).ShouldBe(id);
@@ -41,12 +43,12 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanInsertDynamically()
+        public void CanInsertDynamically()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
-            await store.InsertAsync(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
 
             var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Id).ShouldBe(id);
@@ -56,11 +58,11 @@ namespace HybridDb.Tests
         }
 
         [Fact(Skip = "We will maybe not support this in the future. Just get the table from QuerySchema and use that, when it can return DocumentTable and not just Table.")]
-        public async Task CanInsertNullsDynamically()
+        public void CanInsertNullsDynamically()
         {
             Document<Entity>().With(x => x.Field);
 
-            await store.InsertAsync(new DynamicDocumentTable("Entities"), NewId(), new Dictionary<string, object> {{"Field", null}});
+            store.Insert(new DynamicDocumentTable("Entities"), NewId(), new Dictionary<string, object> {{"Field", null}});
 
             var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row.Field).ShouldBe(null);
@@ -81,17 +83,17 @@ namespace HybridDb.Tests
             Document<Entity>();
             
             Should.Throw<ArgumentException>(() =>
-                store.InsertAsync(new DynamicDocumentTable("Entities"), NewId(), new { Complex = new Entity.ComplexType() }));
+                store.Insert(new DynamicDocumentTable("Entities"), NewId(), new { Complex = new Entity.ComplexType() }));
         }
 
         [Fact(Skip = "Feature on hold")]
-        public async Task CanInsertCollectionProjections()
+        public void CanInsertCollectionProjections()
         {
             Document<Entity>().With(x => x.Children.Select(y => y.NestedProperty));
             
             var id = NewId();
             var schema = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(
+            store.Insert(
                 schema.Table, id,
                 new
                 {
@@ -114,15 +116,15 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanUpdate()
+        public void CanUpdate()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.InsertAsync(table.Table, id, new {Field = "Asger"});
+            var etag = store.Insert(table.Table, id, new {Field = "Asger"});
 
-            await store.UpdateAsync(table.Table, id, etag, new {Field = "Lars"});
+            store.Update(table.Table, id, etag, new {Field = "Lars"});
 
             var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
@@ -130,71 +132,71 @@ namespace HybridDb.Tests
         }
 
         [Fact(Skip ="We will maybe not support this in the future. Just get the table from QuerySchema and use that, when it can return DocumentTable and not just Table.")]
-        public async Task CanUpdateDynamically()
+        public void CanUpdateDynamically()
         {
             Document<Entity>().With(x => x.Field).With(x => x.Property);
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.InsertAsync(table.Table, id, new {Field = "Asger"});
+            var etag = store.Insert(table.Table, id, new {Field = "Asger"});
 
             // Maybe it should not be required to be a DocumentTable. If we do that everything should part of the projection. 
             // If we do not do that, why do we have document as part of the projection? Either or.
-            await store.UpdateAsync(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "Property", "Lars" } });
+            store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "Property", "Lars" } });
 
-            var row = await store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe(null);
             ((string) row.Property).ShouldBe("Lars");
         }
 
         [Fact]
-        public async Task CanUpdatePessimistically()
+        public void CanUpdatePessimistically()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id, new {Field = "Asger", Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}});
+            store.Insert(table.Table, id, new {Field = "Asger", Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}});
 
-            Should.NotThrow(() => store.UpdateAsync(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}, lastWriteWins: true));
+            Should.NotThrow(() => store.Update(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}, lastWriteWins: true));
         }
 
         [Fact]
-        public async Task UpdateFailsWhenEtagNotMatch()
+        public void UpdateFailsWhenEtagNotMatch()
         {
             Document<Entity>().With(x => x.Field);
                         
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            Should.Throw<ConcurrencyException>(() => store.UpdateAsync(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}));
+            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}));
         }
 
         [Fact]
-        public async Task UpdateFailsWhenIdNotMatchAkaObjectDeleted()
+        public void UpdateFailsWhenIdNotMatchAkaObjectDeleted()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
             var etag = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            Should.Throw<ConcurrencyException>(() => store.UpdateAsync(table.Table, NewId(), etag, new {Field = "Lars"}));
+            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new {Field = "Lars"}));
         }
 
         [Fact]
-        public async Task CanGet()
+        public void CanGet()
         {
             Document<Entity>().With(x => x.Field).With(x => x.Complex.ToString());
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.InsertAsync(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
+            var etag = store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
 
-            var row = await store.GetAsync(table.Table, id);
+            var row = store.Get(table.Table, id);
             row[table.Table.IdColumn].ShouldBe(id);
             row[table.Table.EtagColumn].ShouldBe(etag);
             row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -203,15 +205,15 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetDynamically()
+        public void CanGetDynamically()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.InsertAsync(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var row = await store.GetAsync(new DynamicDocumentTable("Entities"), id);
+            var row = store.Get(new DynamicDocumentTable("Entities"), id);
             row[table.Table.IdColumn].ShouldBe(id);
             row[table.Table.EtagColumn].ShouldBe(etag);
             row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -219,21 +221,22 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanQueryProjectToNestedProperty()
+        public void CanQueryProjectToNestedProperty()
         {
             Document<Entity>().With(x => x.TheChild.NestedDouble);
             
             var id1 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id1, new { TheChildNestedDouble = 9.8d });
+            store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
 
-            var rows = store.Query<ProjectionWithNestedProperty>(table.Table, out _).ToList();
+            QueryStats stats;
+            var rows = store.Query<ProjectionWithNestedProperty>(table.Table, out stats).ToList();
 
             rows.Single().Data.TheChildNestedDouble.ShouldBe(9.8d);
         }
 
         [Fact]
-        public async Task CanQueryAndReturnFullDocuments()
+        public void CanQueryAndReturnFullDocuments()
         {
             Document<Entity>().With(x => x.Field);
             
@@ -241,14 +244,14 @@ namespace HybridDb.Tests
             var id2 = NewId();
             var id3 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag1 = await store.InsertAsync(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
-            var etag2 = await store.InsertAsync(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
-            await store.InsertAsync(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
+            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
+            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
+            store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
 
             QueryStats stats;
             var rows = store.Query(table.Table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
 
-            rows.Count.ShouldBe(2);
+            rows.Count().ShouldBe(2);
             var first = rows.Single(x => (string)x[table.Table.IdColumn] == id1);
             first[table.Table.EtagColumn].ShouldBe(etag1);
             first[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -262,14 +265,14 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanQueryAndReturnAnonymousProjections()
+        public void CanQueryAndReturnAnonymousProjections()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
-            await store.InsertAsync(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             var t = new {Field = ""};
 
@@ -285,14 +288,14 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanQueryAndReturnValueProjections()
+        public void CanQueryAndReturnValueProjections()
         {
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
-            await store.InsertAsync(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             QueryStats stats;
             var rows = store.Query<string>(table.Table, out stats, select: "Field").Select(x => x.Data).ToList();
@@ -301,84 +304,84 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanQueryDynamicTable()
+        public void CanQueryDynamicTable()
         {
             Document<Entity>().With(x => x.Field).With(x => x.Property);
             
             var id1 = NewId();
             var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id1, new { Field = "Asger", Property = "A", Document = documentAsByteArray });
-            await store.InsertAsync(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
+            store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = documentAsByteArray });
+            store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
 
             QueryStats stats;
             var rows = store.Query(new DynamicDocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
 
-            rows.Count.ShouldBe(1);
+            rows.Count().ShouldBe(1);
             var row = rows.Single();
             row[table.Table["Field"]].ShouldBe("Asger");
             row[table.Table["Property"]].ShouldBe("A");
         }
 
         [Fact]
-        public async Task CanDelete()
+        public void CanDelete()
         {
             Document<Entity>();
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.InsertAsync(table.Table, id, new { });
+            var etag = store.Insert(table.Table, id, new { });
 
-            await store.DeleteAsync(table.Table, id, etag);
+            store.Delete(table.Table, id, etag);
 
             store.Query<object>(table.Table, out _).Count().ShouldBe(0);
         }
 
         [Fact]
-        public async Task CanDeletePessimistically()
+        public void CanDeletePessimistically()
         {
             Document<Entity>();
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id, new { });
+            store.Insert(table.Table, id, new { });
 
-            Should.NotThrow(async () => await store.DeleteAsync(table.Table, id, Guid.NewGuid(), lastWriteWins: true));
+            Should.NotThrow(() => store.Delete(table.Table, id, Guid.NewGuid(), lastWriteWins: true));
         }
 
         [Fact]
-        public async Task DeleteFailsWhenEtagNotMatch()
+        public void DeleteFailsWhenEtagNotMatch()
         {
             Document<Entity>();
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, id, new { });
+            store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(async () => await store.DeleteAsync(table.Table, id, Guid.NewGuid()));
+            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, id, Guid.NewGuid()));
         }
 
         [Fact]
-        public async Task DeleteFailsWhenIdNotMatchAkaDocumentAlreadyDeleted()
+        public void DeleteFailsWhenIdNotMatchAkaDocumentAlreadyDeleted()
         {
             Document<Entity>();
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.InsertAsync(table.Table, id, new { });
+            var etag = store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(async () => await store.DeleteAsync(table.Table, NewId(), etag));
+            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, NewId(), etag));
         }
 
         [Fact]
-        public async Task CanBatchCommandsAndGetEtag()
+        public void CanBatchCommandsAndGetEtag()
         {
             Document<Entity>().With(x => x.Field);
             
             var id1 = NewId();
             var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = await store.ExecuteAsync(new InsertCommand(table.Table, id1, new { Field = "A" }),
+            var etag = store.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }),
                                      new InsertCommand(table.Table, id2, new { Field = "B" }));
 
             var rows = store.Database.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
@@ -388,7 +391,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task BatchesAreTransactional()
+        public void BatchesAreTransactional()
         {
             Document<Entity>().With(x => x.Field);
             
@@ -397,7 +400,7 @@ namespace HybridDb.Tests
             var etagThatMakesItFail = Guid.NewGuid();
             try
             {
-                await store.ExecuteAsync(new InsertCommand(table.Table, id1, new { Field = "A" }),
+                store.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }),
                               new UpdateCommand(table.Table, id1, etagThatMakesItFail, new { Field = "B" }, false));
             }
             catch (ConcurrencyException)
@@ -409,7 +412,7 @@ namespace HybridDb.Tests
         }
 
         //[Fact]
-        //public async Task DoesNotSplitBelow2000Params()
+        //public void DoesNotSplitBelow2000Params()
         //{
         //    Document<Entity>().With(x => x.Field);
 
@@ -422,13 +425,13 @@ namespace HybridDb.Tests
         //    for (var i = 0; i < 285; i++) // each insert i 7 params so 285 commands equals 1995 params, threshold is at 2000
         //        commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
 
-        //    await store.Execute(commands.ToArray());
+        //    store.Execute(commands.ToArray());
 
         //    (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(1);
-        //}
+        ////}
 
         //[Fact]
-        //public async Task SplitsAbove2000Params()
+        //public void SplitsAbove2000Params()
         //{
         //    Document<Entity>().With(x => x.Field);
 
@@ -441,32 +444,32 @@ namespace HybridDb.Tests
         //    for (var i = 0; i < 286; i++) // each insert i 7 params so 286 commands equals 2002 params, threshold is at 2000
         //        commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
 
-        //    await store.Execute(commands.ToArray());
+        //    store.Execute(commands.ToArray());
 
         //    (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
         //}
 
         [Fact]
-        public async Task CanStoreAndQueryEnumProjection()
+        public void CanStoreAndQueryEnumProjection()
         {
             Document<Entity>().With(x => x.EnumProp);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
-            await store.InsertAsync(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
+            store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
 
-            var result = await store.GetAsync(table.Table, id);
+            var result = store.Get(table.Table, id);
             result[table.Table["EnumProp"]].ShouldBe(SomeFreakingEnum.Two.ToString());
         }
 
         [Fact]
-        public async Task CanStoreAndQueryEnumProjectionToNetType()
+        public void CanStoreAndQueryEnumProjectionToNetType()
         {
             Document<Entity>().With(x => x.EnumProp);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
-            await store.InsertAsync(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
+            store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
 
             QueryStats stats;
             var result = store.Query<ProjectionWithEnum>(table.Table, out stats).Single();
@@ -474,26 +477,26 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanStoreAndQueryStringProjection()
+        public void CanStoreAndQueryStringProjection()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
-            await store.InsertAsync(table.Table, id, new { Property = "Hest" });
+            store.Insert(table.Table, id, new { Property = "Hest" });
 
-            var result = await store.GetAsync(table.Table, id);
+            var result = store.Get(table.Table, id);
             result[table.Table["Property"]].ShouldBe("Hest");
         }
 
         [Fact]
-        public async Task CanStoreAndQueryOnNull()
+        public void CanStoreAndQueryOnNull()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
-            await store.InsertAsync(table.Table, id, new { Property = (string)null });
+            store.Insert(table.Table, id, new { Property = (string)null });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, where: "(@Value IS NULL AND Property IS NULL) OR Property = @Value", parameters: new { Value = (string)null });
@@ -501,13 +504,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanStoreAndQueryDateTimeProjection()
+        public void CanStoreAndQueryDateTimeProjection()
         {
             Document<Entity>().With(x => x.DateTimeProp);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
-            await store.InsertAsync(table.Table, id, new { DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1) });
+            store.Insert(table.Table, id, new { DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1) });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, where: "DateTimeProp = @dtp", parameters: new { dtp = new DateTime(2001, 12, 24, 1, 1, 1) });
@@ -515,13 +518,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanPage()
+        public void CanPage()
         {
             Document<Entity>().With(x => x.Number);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Number = i });
+                store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, skip: 2, take: 5, orderby: "Number").ToList();
@@ -537,13 +540,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanTake()
+        public void CanTake()
         {
             Document<Entity>().With(x => x.Number);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Number = i });
+                store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, take: 2, orderby: "Number").ToList();
@@ -556,13 +559,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanSkip()
+        public void CanSkip()
         {
             Document<Entity>().With(x => x.Number);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Number = i });
+                store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, skip: 7, orderby: "Number").ToList();
@@ -576,12 +579,12 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanQueryWithoutWhere()
+        public void CanQueryWithoutWhere()
         {
             Document<Entity>();
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, NewId(), new { });
+            store.Insert(table.Table, NewId(), new { });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats).ToList();
@@ -590,13 +593,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetStats()
+        public void CanGetStats()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5");
@@ -606,13 +609,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetStatsWhenSkipping()
+        public void CanGetStatsWhenSkipping()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", skip: 1);
@@ -636,17 +639,17 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetStatsWhenOrderingByPropertyWithSameValue()
+        public void CanGetStatsWhenOrderingByPropertyWithSameValue()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
-            await store.InsertAsync(table.Table, NewId(), new { Property = 10 });
-            await store.InsertAsync(table.Table, NewId(), new { Property = 10 });
-            await store.InsertAsync(table.Table, NewId(), new { Property = 10 });
-            await store.InsertAsync(table.Table, NewId(), new { Property = 10 });
-            await store.InsertAsync(table.Table, NewId(), new { Property = 11 });
-            await store.InsertAsync(table.Table, NewId(), new { Property = 11 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 10 });
+            store.Insert(table.Table, NewId(), new { Property = 11 });
+            store.Insert(table.Table, NewId(), new { Property = 11 });
 
             QueryStats stats;
             store.Query(table.Table, out stats, @orderby: "Property", skip: 1);
@@ -656,13 +659,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetStatsWhenSkippingAllOrMore()
+        public void CanGetStatsWhenSkippingAllOrMore()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", skip: 10);
@@ -672,13 +675,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetStatsWhenTaking()
+        public void CanGetStatsWhenTaking()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", take: 2);
@@ -688,13 +691,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanGetStatsWhenTakingAllOrMore()
+        public void CanGetStatsWhenTakingAllOrMore()
         {
             Document<Entity>().With(x => x.Property);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
-                await store.InsertAsync(table.Table, NewId(), new { Property = i });
+                store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
             store.Query(table.Table, out stats, where: "Property >= 5", take: 20);
@@ -704,13 +707,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanOrderBy()
+        public void CanOrderBy()
         {
             Document<Entity>().With(x => x.Field);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                await store.InsertAsync(table.Table, NewId(), new { Field = i });
+                store.Insert(table.Table, NewId(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, orderby: "Field").ToList();
@@ -724,13 +727,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanOrderByIdAndSelectOtherField()
+        public void CanOrderByIdAndSelectOtherField()
         {
             Document<Entity>().With(x => x.Field);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                await store.InsertAsync(table.Table, i.ToString(), new { Field = i });
+                store.Insert(table.Table, i.ToString(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id").ToList();
@@ -744,13 +747,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanOrderByIdAndSelectOtherFieldWindowed()
+        public void CanOrderByIdAndSelectOtherFieldWindowed()
         {
             Document<Entity>().With(x => x.Field);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                await store.InsertAsync(table.Table, i.ToString(), new { Field = i });
+                store.Insert(table.Table, i.ToString(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id", skip: 1, take:1).Single();
@@ -759,13 +762,13 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanOrderByDescWhileSkippingAndTaking()
+        public void CanOrderByDescWhileSkippingAndTaking()
         {
             Document<Entity>().With(x => x.Field);
             
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
-                await store.InsertAsync(table.Table, NewId(), new { Field = i });
+                store.Insert(table.Table, NewId(), new { Field = i });
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, skip: 2, take: 2, orderby: "Field desc").ToList();
@@ -776,16 +779,16 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task WillEnlistCommandsInAmbientTransactions()
+        public void WillEnlistCommandsInAmbientTransactions()
         {
             Document<Entity>();
 
             var table = store.Configuration.GetDesignFor<Entity>();
 
-            using (new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+            using (new TransactionScope())
             {
-                await store.InsertAsync(table.Table, NewId(), new { });
-                await store.InsertAsync(table.Table, NewId(), new { });
+                store.Insert(table.Table, NewId(), new { });
+                store.Insert(table.Table, NewId(), new { });
 
                 // No tx complete here
             }
@@ -794,30 +797,30 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanUseTempDb()
+        public void CanUseTempDb()
         {
             var prefix = Guid.NewGuid().ToString();
 
             UseTempDb();
 
-            void Configurator(Configuration x)
+            Action<Configuration> configurator = x =>
             {
                 x.UseTableNamePrefix(prefix);
                 x.Document<Case>();
-            }
+            };
 
-            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, Configurator))
+            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
             {
                 globalStore1.Initialize();
 
                 var id = NewId();
-                await globalStore1.InsertAsync(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
+                globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, Configurator))
+                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
                 {
                     globalStore2.Initialize();
 
-                    var result = await globalStore2.GetAsync(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
+                    var result = globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
 
                     result.ShouldNotBe(null);
                 }
@@ -828,12 +831,12 @@ namespace HybridDb.Tests
         }
 
         [Fact()]
-        public async Task UtilityColsAreRemovedFromQueryResults()
+        public void UtilityColsAreRemovedFromQueryResults()
         {
             Document<Entity>();
 
             var table = new DocumentTable("Entities");
-            await store.InsertAsync(table, NewId(), new { Version = 1 });
+            store.Insert(table, NewId(), new { Version = 1 });
 
             var result1 = store.Query(table, out _, skip: 0, take: 2).Single();
             result1.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
@@ -861,15 +864,15 @@ namespace HybridDb.Tests
 
             InitializeStore();
 
-            Parallel.For(0, 10, async x =>
+            Parallel.For(0, 10, x =>
             {
                 var table = new DocumentTable("Entities");
-                await store.InsertAsync(table, NewId(), new { Property = "Asger", Version = 1 });
+                store.Insert(table, NewId(), new { Property = "Asger", Version = 1 });
             });
         }
 
         [Fact]
-        public async Task QueueInserts()
+        public void QueueInserts()
         {
             Document<Entity>().With(x => x.Property);
 
@@ -877,10 +880,10 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
-            await store.InsertAsync(table, NewId(), new { Property = "first" });
+            store.Insert(table, NewId(), new { Property = "first" });
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
-            await store.InsertAsync(table, NewId(), new { Property = "second" });
+            store.Insert(table, NewId(), new { Property = "second" });
             var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
 
             results2.Count.ShouldBe(1);
@@ -889,7 +892,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task QueueUpdates()
+        public void QueueUpdates()
         {
             Document<Entity>().With(x => x.Property);
 
@@ -899,10 +902,10 @@ namespace HybridDb.Tests
 
             var id = NewId();
 
-            var etag1 = await store.InsertAsync(table, id, new { Property = "first" });
+            var etag1 = store.Insert(table, id, new { Property = "first" });
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
-            await store.UpdateAsync(table, id, etag1, new { Property = "second" });
+            store.Update(table, id, etag1, new { Property = "second" });
             var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
 
             results2.Count.ShouldBe(1);
@@ -911,7 +914,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task QueueDeletes()
+        public void QueueDeletes()
         {
             Document<Entity>().With(x => x.Property);
 
@@ -921,10 +924,10 @@ namespace HybridDb.Tests
 
             var id = NewId();
 
-            var etag1 = await store.InsertAsync(table, id, new { Property = "first" });
+            var etag1 = store.Insert(table, id, new { Property = "first" });
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
-            await store.DeleteAsync(table, id, etag1);
+            store.Delete(table, id, etag1);
 
             var results2 = store.Query<string>(table, results1[0].RowVersion, "Property").ToList();
 
@@ -934,7 +937,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanReinsertDeleted()
+        public void CanReinsertDeleted()
         {
             Document<Entity>().With(x => x.Property);
 
@@ -944,9 +947,9 @@ namespace HybridDb.Tests
 
             var id = NewId();
 
-            var etag1 = await store.InsertAsync(table, id, new { Property = "first" });
-            await store.DeleteAsync(table, id, etag1);
-            await store.InsertAsync(table, id, new { Property = "second" });
+            var etag1 = store.Insert(table, id, new { Property = "first" });
+            store.Delete(table, id, etag1);
+            store.Insert(table, id, new { Property = "second" });
 
             var results2 = store.Query<string>(table, new byte[8], "Property").ToList();
 
@@ -958,7 +961,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task CanRedeleteReinserted()
+        public void CanRedeleteReinserted()
         {
             Document<Entity>().With(x => x.Property);
 
@@ -968,10 +971,10 @@ namespace HybridDb.Tests
 
             var id = NewId();
 
-            var etag1 = await store.InsertAsync(table, id, new { Property = "first" });
-            await store.DeleteAsync(table, id, etag1);
-            var etag2 = await store.InsertAsync(table, id, new { Property = "second" });
-            await store.DeleteAsync(table, id, etag2);
+            var etag1 = store.Insert(table, id, new { Property = "first" });
+            store.Delete(table, id, etag1);
+            var etag2 = store.Insert(table, id, new { Property = "second" });
+            store.Delete(table, id, etag2);
 
             var results2 = store.Query<string>(table, new byte[8], "Property").ToList();
 
@@ -983,7 +986,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async Task Bug_RaceConditionWithSnapshotAndRowVersion()
+        public async void Bug_RaceConditionWithSnapshotAndRowVersion()
         {
             //Nummeret til rowversion kolonnen tildeles ved starten af tx, hvilket betyder at ovenstående giver følgende situation:
 
@@ -1014,8 +1017,8 @@ namespace HybridDb.Tests
             var id2 = NewId();
 
             // the race condition only happens on updates, because inserts locks the primary key index and thus is not concurrent
-            var etag1 = await store.InsertAsync(table, id1, new { Property = "first" });
-            var etag2 = await store.InsertAsync(table, id2, new { Property = "second" });
+            var etag1 = store.Insert(table, id1, new { Property = "first" });
+            var etag2 = store.Insert(table, id2, new { Property = "second" });
 
             // get the initial row version after insert
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
@@ -1023,11 +1026,11 @@ namespace HybridDb.Tests
 
             using (var tx1 = new TransactionScope(TransactionScopeOption.RequiresNew, readCommitted, TransactionScopeAsyncFlowOption.Enabled))
             {
-                await store.UpdateAsync(table, id1, etag1, new { Property = "first updated" });
+                store.Update(table, id1, etag1, new { Property = "first updated" });
 
                 using (var tx2 = new TransactionScope(TransactionScopeOption.RequiresNew, readCommitted, TransactionScopeAsyncFlowOption.Enabled))
                 {
-                    await store.UpdateAsync(table, id2, etag2, new { Property = "second updated" });
+                    store.Update(table, id2, etag2, new { Property = "second updated" });
 
                     tx2.Complete();
                 }
