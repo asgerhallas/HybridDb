@@ -38,7 +38,7 @@ namespace HybridDb
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this IDocumentStore documentStore, DocumentTable table, byte[] since, string select = null) =>
             documentStore.Query<TProjection>(table, out _, select,
-                where: $"{table.RowVersionColumn.Name} > @Since",
+                where: $"{table.RowVersionColumn.Name} > @Since and {table.RowVersionColumn.Name} < min_active_rowversion()",
                 orderby: $"{table.RowVersionColumn.Name} ASC",
                 includeDeleted: true,
                 parameters: new {Since = since});
