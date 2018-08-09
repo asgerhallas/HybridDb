@@ -34,8 +34,8 @@
 -
   branches:
     only:
-      - 2.0
-  version: 2.0.{build}
+      - sideshow
+  version: 1.0.{build}-sideshow
   configuration: Release
   platform: Any CPU
   image: Visual Studio 2017
