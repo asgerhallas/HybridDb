@@ -874,6 +874,8 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueInserts()
         {
+            UseRealTables();
+
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -894,6 +896,8 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueUpdates()
         {
+            UseRealTables();
+
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -916,6 +920,8 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueDeletes()
         {
+            UseRealTables();
+
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -939,6 +945,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanReinsertDeleted()
         {
+            UseRealTables();
+
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -963,6 +971,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanRedeleteReinserted()
         {
+            UseRealTables();
+
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -986,7 +996,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public async void Bug_RaceConditionWithSnapshotAndRowVersion()
+        public void Bug_RaceConditionWithSnapshotAndRowVersion()
         {
             //Nummeret til rowversion kolonnen tildeles ved starten af tx, hvilket betyder at ovenstående giver følgende situation:
 

@@ -115,7 +115,7 @@ namespace HybridDb.Tests
         protected void Reset()
         {
             configuration = new Configuration();
-            //UseSerializer(new DefaultSerializer());
+
             store = Using(new DocumentStore(store, configuration, true));
         }
 
@@ -138,7 +138,7 @@ namespace HybridDb.Tests
                 dispose();
             }
 
-            //Transaction.Current.ShouldBe(null);
+            Transaction.Current.ShouldBe(null);
         }
 
         public interface ISomeInterface
