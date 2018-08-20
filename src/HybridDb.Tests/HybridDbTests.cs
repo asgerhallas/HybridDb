@@ -19,8 +19,8 @@ namespace HybridDb.Tests
         readonly ConcurrentStack<Action> disposables;
 
         protected readonly ILogger logger;
-        protected string connectionString;
-        
+        protected readonly string connectionString;
+
 
         protected HybridDbTests()
         {
@@ -30,6 +30,8 @@ namespace HybridDb.Tests
                 .CreateLogger();
             
             disposables = new ConcurrentStack<Action>();
+
+            connectionString = GetConnectionString();
 
             UseTempDb();
         }
@@ -42,7 +44,7 @@ namespace HybridDb.Tests
 
             return isAppveyor
                 ? "Server=(local)\\SQL2014;Database=master;User ID=sa;Password=Password12!"
-                : "data source =.; Integrated Security = True";
+                : "data source =.;Integrated Security=True";
         }
 
         protected string Format(Table table) => store.Database.FormatTableNameAndEscape(table.Name);
@@ -51,8 +53,6 @@ namespace HybridDb.Tests
         void UseTempDb()
         {
             UseTableNamePrefix(GetType().Name);
-
-            connectionString = GetConnectionString();
             
             store = Using(new DocumentStore(configuration, connectionString, null, true));
         }
@@ -94,7 +94,7 @@ namespace HybridDb.Tests
 
         public void Dispose()
         {
-            store.Database.RemoveTables(tablesToRemove);
+            store.Database.DropTables(tablesToRemove);
 
             while (disposables.TryPop(out var dispose))
             {

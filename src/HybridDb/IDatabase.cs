@@ -13,6 +13,6 @@ namespace HybridDb
         string FormatTableName(string tablename);
         int RawExecute(string sql, object parameters = null);
         IEnumerable<T> RawQuery<T>(string sql, object parameters = null);
-        void RemoveTables(IEnumerable<string> tables);
+        void DropTables(IEnumerable<string> tables);
     }
 }

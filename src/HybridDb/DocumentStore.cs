@@ -17,7 +17,6 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
-        readonly string connectionString;
         readonly bool testing;
 
         Guid lastWrittenEtag;
@@ -26,17 +25,17 @@ namespace HybridDb
         internal DocumentStore(Configuration configuration, string connectionString, string prefix, bool testing)
         {
             this.testing = testing;
-            this.connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
 
             if (testing)
             {
-                this.connectionString += ";Initial Catalog=tempdb";
+                ConnectionString += ";Initial Catalog=tempdb";
             }
 
             Prefix = prefix ?? CreatePrefix(configuration.TableNamePrefix, testing);
             Configuration = configuration;
             Logger = configuration.Logger;
-            Database = new SqlServer(this, this.connectionString, Prefix);
+            Database = new SqlServer(this, ConnectionString, Prefix);
         }
 
         public void Dispose()
@@ -45,7 +44,7 @@ namespace HybridDb
 
             SqlConnection.ClearAllPools();
 
-            Database.RemoveTables(Configuration.Tables.Select(x => x.Key));
+            Database.DropTables(Configuration.Tables.Select(x => x.Key));
         }
 
         public static IDocumentStore Create(string connectionString, Action<Configuration> configure = null)
@@ -87,6 +86,7 @@ namespace HybridDb
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; }
         public string Prefix { get; } = "";
+        public string ConnectionString { get; }
         public bool IsInitialized { get; private set; }
 
         public void Initialize()

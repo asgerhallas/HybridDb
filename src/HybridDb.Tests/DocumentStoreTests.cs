@@ -1008,6 +1008,12 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
+            using (var connection = new SqlConnection(store.ConnectionString))
+            {
+                connection.Open();
+                connection.Execute($@"alter database tempdb set allow_snapshot_isolation on;");
+            }
+
             var id1 = NewId();
             var id2 = NewId();
 

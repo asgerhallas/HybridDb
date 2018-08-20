@@ -65,7 +65,7 @@ namespace HybridDb
             }
         }
 
-        public void RemoveTables(IEnumerable<string> tables)
+        public void DropTables(IEnumerable<string> tables)
         {
             using (var connection = new SqlConnection(connectionString))
             {
