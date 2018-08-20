@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
@@ -17,8 +16,6 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
-        readonly bool testing;
-
         Guid lastWrittenEtag;
         long numberOfRequests;
 
@@ -26,6 +23,8 @@ namespace HybridDb
         {
             Configuration = configuration;
             Logger = configuration.Logger;
+            Testing = testing;
+            TableMode = mode;
 
             switch (mode)
             {
@@ -39,10 +38,8 @@ namespace HybridDb
                     Database = new SqlServerUsingTempDb(this, connectionString);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("mode", mode, null);
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
-
-            this.testing = testing;
         }
 
         internal DocumentStore(DocumentStore store, Configuration configuration, bool testing)
@@ -51,7 +48,7 @@ namespace HybridDb
             Database = store.Database;
             Logger = configuration.Logger;
 
-            this.testing = testing;
+            Testing = testing;
         }
 
         public static IDocumentStore Create(string connectionString, Action<Configuration> configure = null)
@@ -78,7 +75,9 @@ namespace HybridDb
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; }
         public bool IsInitialized { get; private set; }
-
+        public bool Testing { get; }
+        public TableMode TableMode { get; }
+        
         public void Initialize()
         {
             if (IsInitialized)
@@ -90,7 +89,7 @@ namespace HybridDb
 
             new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
             var documentMigration = new DocumentMigrationRunner().Run(this);
-            if (testing) documentMigration.Wait();
+            if (Testing) documentMigration.Wait();
 
             IsInitialized = true;
         }
@@ -166,12 +165,6 @@ namespace HybridDb
 
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
-            //var dynamicParameters = new DynamicParameters();
-            //foreach (var parameter in parameters)
-            //{
-            //    dynamicParameters.Add(parameter.Name, parameter.Value, parameter.DbType);
-            //}
-
             var fastParameters = new FastDynamicParameters(parameters);
             var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
 
@@ -180,7 +173,7 @@ namespace HybridDb
             if (rowcount != expectedRowCount)
             {
                 throw new ConcurrencyException(
-                    $"Someone beat you to it. Expected {expectedRowCount} changes, but got {rowcount}. " + 
+                    $"Someone beat you to it. Expected {expectedRowCount} changes, but got {rowcount}. " +
                     $"The transaction is rolled back now, so no changes was actually made.");
             }
         }
@@ -216,33 +209,33 @@ namespace HybridDb
                 if (isWindowed)
                 {
                     sql.Append("select count(*) as TotalResults")
-                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
-                       .Append(";");
+                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                        .Append(";");
 
                     sql.Append(@"with temp as (select *")
-                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
-                       .Append($", {table.LastOperationColumn.Name} as __LastOperation")
-                       .Append($", {table.RowVersionColumn.Name} as __RowVersion")
-                       .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
-                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(where), $"where {where}")
-                       .Append(")")
-                       .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
-                       .Append($"where RowNumber >= {skip + 1}")
-                       .Append(take > 0, $"and RowNumber <= {skip + take}")
-                       .Append("order by RowNumber")
-                       .Append(";");
+                        .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
+                        .Append($", {table.LastOperationColumn.Name} as __LastOperation")
+                        .Append($", {table.RowVersionColumn.Name} as __RowVersion")
+                        .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
+                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                        .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                        .Append(")")
+                        .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
+                        .Append($"where RowNumber >= {skip + 1}")
+                        .Append(take > 0, $"and RowNumber <= {skip + take}")
+                        .Append("order by RowNumber")
+                        .Append(";");
                 }
                 else
                 {
                     sql.Append(select.IsNullOrEmpty(), "select *").Or($"select {select}")
-                       .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
-                       .Append($", {table.LastOperationColumn.Name} AS __LastOperation")
-                       .Append($", {table.RowVersionColumn.Name} AS __RowVersion")
-                       .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
-                       .Append(!string.IsNullOrEmpty(where), $"where ({where})")
-                       .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
+                        .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
+                        .Append($", {table.LastOperationColumn.Name} AS __LastOperation")
+                        .Append($", {table.RowVersionColumn.Name} AS __RowVersion")
+                        .Append($"from {Database.FormatTableNameAndEscape(table.Name)}")
+                        .Append(!string.IsNullOrEmpty(where), $"where ({where})")
+                        .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 }
 
                 var result = InternalQuery<TProjection>(connection, sql, parameters, isWindowed, out stats);
@@ -278,17 +271,17 @@ namespace HybridDb
 
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns =
-                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
                 let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                 let column = split[0]
                 let alias = split.Length > 1 ? split[1] : null
                 where neededColumns.Contains(alias)
-                select new { column, alias = alias ?? column };
+                select new {column, alias = alias ?? column};
 
             var missingColumns =
                 from column in neededColumns
                 where !selectedColumns.Select(x => x.alias).Contains(column)
-                select new { column, alias = column };
+                select new {column, alias = column};
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
@@ -312,7 +305,7 @@ namespace HybridDb
 
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
-                var rows = (List<QueryResult<T>>)reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
+                var rows = (List<QueryResult<T>>) reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
                     new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
 
                 stats = new QueryStats
@@ -336,7 +329,7 @@ namespace HybridDb
             {
                 var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-                var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key, Op = Operation.Deleted }).SingleOrDefault();
+                var row = (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key, Op = Operation.Deleted}).SingleOrDefault();
 
                 Interlocked.Increment(ref numberOfRequests);
 
@@ -415,7 +408,7 @@ namespace HybridDb
             var sql = new SqlBuilder()
                 .Append($"update {Database.FormatTableNameAndEscape(command.Table.Name)}")
                 .Append($"set {command.Table.IdColumn.Name} = @NewId{uniqueParameterIdentifier}")
-                .Append($", {command.Table.LastOperationColumn.Name} = {(byte)Operation.Deleted}")
+                .Append($", {command.Table.LastOperationColumn.Name} = {(byte) Operation.Deleted}")
                 .Append($"where {command.Table.IdColumn.Name} = @Id{uniqueParameterIdentifier}")
                 .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @ExpectedEtag{uniqueParameterIdentifier}")
                 .ToString();
@@ -452,48 +445,48 @@ namespace HybridDb
 
         static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
         {
-            parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType };
+            parameters[name] = new Parameter {Name = name, Value = value, DbType = dbType};
         }
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
         {
-            typeof (byte),
-            typeof (sbyte),
-            typeof (short),
-            typeof (ushort),
-            typeof (int),
-            typeof (uint),
-            typeof (long),
-            typeof (ulong),
-            typeof (float),
-            typeof (double),
-            typeof (decimal),
-            typeof (bool),
-            typeof (string),
-            typeof (char),
-            typeof (Guid),
-            typeof (DateTime),
-            typeof (DateTimeOffset),
-            typeof (TimeSpan),
-            typeof (byte[]),
-            typeof (byte?),
-            typeof (sbyte?),
-            typeof (short?),
-            typeof (ushort?),
-            typeof (int?),
-            typeof (uint?),
-            typeof (long?),
-            typeof (ulong?),
-            typeof (float?),
-            typeof (double?),
-            typeof (decimal?),
-            typeof (bool?),
-            typeof (char?),
-            typeof (Guid?),
-            typeof (DateTime?),
-            typeof (DateTimeOffset?),
-            typeof (TimeSpan?),
-            typeof (object)
+            typeof(byte),
+            typeof(sbyte),
+            typeof(short),
+            typeof(ushort),
+            typeof(int),
+            typeof(uint),
+            typeof(long),
+            typeof(ulong),
+            typeof(float),
+            typeof(double),
+            typeof(decimal),
+            typeof(bool),
+            typeof(string),
+            typeof(char),
+            typeof(Guid),
+            typeof(DateTime),
+            typeof(DateTimeOffset),
+            typeof(TimeSpan),
+            typeof(byte[]),
+            typeof(byte?),
+            typeof(sbyte?),
+            typeof(short?),
+            typeof(ushort?),
+            typeof(int?),
+            typeof(uint?),
+            typeof(long?),
+            typeof(ulong?),
+            typeof(float?),
+            typeof(double?),
+            typeof(decimal?),
+            typeof(bool?),
+            typeof(char?),
+            typeof(Guid?),
+            typeof(DateTime?),
+            typeof(DateTimeOffset?),
+            typeof(TimeSpan?),
+            typeof(object)
         };
 
         class SqlDatabaseCommand

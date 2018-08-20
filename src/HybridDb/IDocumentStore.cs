@@ -11,6 +11,9 @@ namespace HybridDb
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         bool IsInitialized { get; }
+        bool Testing { get; }
+        TableMode TableMode { get; }
+        
 
         void Initialize();
         IDocumentSession OpenSession();

@@ -26,13 +26,17 @@ namespace HybridDb
                 .Select(x => (IDictionary<string, object>) x.Data);
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            this IDocumentStore documentStore, DocumentTable table, byte[] since, string select = null) =>
-            documentStore.Query<TProjection>(table, out _, select,
-                where: $"{table.RowVersionColumn.Name} > @Since and {table.RowVersionColumn.Name} < min_active_rowversion()",
-                orderby: $"{table.RowVersionColumn.Name} ASC",
+            this IDocumentStore documentStore, DocumentTable table, byte[] since, string select = null)
+        {
+            var upperBoundary = !documentStore.Testing || documentStore.TableMode == TableMode.UseRealTables 
+                ? $"and {table.RowVersionColumn.Name} < min_active_rowversion()" 
+                : "";
+
+            return documentStore.Query<TProjection>(table, out _, @select,
+                @where: $"{table.RowVersionColumn.Name} > @Since {upperBoundary}",
+                @orderby: $"{table.RowVersionColumn.Name} ASC",
                 includeDeleted: true,
-                parameters: new { Since = since });
-
-
+                parameters: new {Since = since});
+        }
     }
 }
