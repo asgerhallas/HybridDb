@@ -2,136 +2,45 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Transactions;
 using Dapper;
 using HybridDb.Config;
 
 namespace HybridDb
 {
-    public class SqlServer : IDatabase
+    public abstract class SqlServer : IDatabase
     {
-        readonly DocumentStore store;
-        readonly string connectionString;
-        readonly string prefix;
+        protected readonly DocumentStore store;
+        protected readonly string connectionString;
 
-        public SqlServer(DocumentStore store, string connectionString, string prefix)
+        protected SqlServer(DocumentStore store, string connectionString)
         {
             this.store = store;
             this.connectionString = connectionString;
-            this.prefix = prefix;
 
             OnMessage = message => { };
         }
 
         public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
 
-        public string FormatTableName(string tablename) => $"{prefix}{tablename}";
-        public string FormatTableNameAndEscape(string tablename) => Escape(FormatTableName(tablename));
-        public string Escape(string identifier) => $"[{identifier}]";
+        public abstract ManagedConnection Connect();
+        public abstract Dictionary<string, List<string>> QuerySchema();
+        public abstract string FormatTableName(string tablename);
+        public abstract void Dispose();
 
-        public ManagedConnection Connect()
+        public string FormatTableNameAndEscape(string tablename)
         {
-            Action complete = () => { };
-            Action dispose = () => { };
-
-            try
-            {
-                if (Transaction.Current == null)
-                {
-                    var tx = new TransactionScope(
-                        TransactionScopeOption.RequiresNew,
-                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
-
-                    complete += tx.Complete;
-                    dispose += tx.Dispose;
-                }
-
-                var connection = new SqlConnection(connectionString);
-
-                complete = connection.Dispose + complete;
-                dispose = connection.Dispose + dispose;
-
-                connection.InfoMessage += (obj, args) => OnMessage(args);
-                connection.Open();
-
-                connection.EnlistTransaction(Transaction.Current);
-
-                return new ManagedConnection(connection, complete, dispose);
-            }
-            catch (Exception)
-            {
-                dispose();
-                throw;
-            }
+            return Escape(FormatTableName(tablename));
         }
 
-        public void DropTables(IEnumerable<string> tables)
+        public string Escape(string identifier)
         {
-            using (var connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-
-                foreach (var table in tables)
-                {
-                    var tableName = FormatTableNameAndEscape(table);
-
-                    connection.Execute($@"
-                        if (object_id('{tableName}', 'U') is not null) 
-                        begin
-                            drop table {tableName};
-                        end");
-                }
-            }
-        }
-
-        public Dictionary<string, List<string>> QuerySchema()
-        {
-            var schema = new Dictionary<string, List<string>>();
-
-            using (var managedConnection = Connect())
-            {
-                var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
-SELECT 
-   table_name = t.table_name,
-   full_table_name = t.table_name,
-   column_name = c.name,
-   type_name = (select name from sys.types where user_type_id = c.user_type_id),
-   max_length = c.max_length,
-   is_nullable = c.is_nullable,
-   default_value = (select column_default from information_schema.columns where table_name=t.table_name and column_name=c.name),
-   is_primary_key = (
-        select 1 
-        from information_schema.table_constraints as ct
-        join information_schema.key_column_usage as k
-        on ct.table_name = k.table_name
-        and ct.constraint_catalog = k.constraint_catalog
-        and ct.constraint_schema = k.constraint_schema 
-        and ct.constraint_name = k.constraint_name
-        where ct.constraint_type = 'primary key'
-        and k.table_name = t.table_name
-        and k.column_name = c.name)
-FROM information_schema.tables AS t
-INNER JOIN sys.columns AS c
-ON OBJECT_ID(t.table_name) = c.[object_id]
-WHERE t.table_type='BASE TABLE' and t.table_name LIKE '{prefix}%'
-OPTION (FORCE ORDER);",
-
-                    Tuple.Create, splitOn: "column_name");
-
-                foreach (var columnByTable in columns.GroupBy(x => x.Item1))
-                {
-                    var tableName = columnByTable.Key.table_name.Remove(0, prefix.Length);
-
-                    schema.Add(tableName, columnByTable.Select(column => column.Item2.column_name).ToList());
-                }
-
-                return schema;
-            }
+            return string.Format("[{0}]", identifier);
         }
 
         public int RawExecute(string sql, object parameters = null)
         {
-            if (parameters is IEnumerable<Parameter> hdbParams)
+            var hdbParams = parameters as IEnumerable<Parameter>;
+            if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
             store.Logger.Debug(sql);
@@ -147,7 +56,8 @@ OPTION (FORCE ORDER);",
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null)
         {
-            if (parameters is IEnumerable<Parameter> hdbParams)
+            var hdbParams = parameters as IEnumerable<Parameter>;
+            if (hdbParams != null)
                 parameters = new FastDynamicParameters(hdbParams);
 
             store.Logger.Debug(sql);
@@ -193,6 +103,26 @@ OPTION (FORCE ORDER);",
                 : type;
         }
 
+        bool IsPrimaryKey(string column, bool isTempTable)
+        {
+            var dbPrefix = isTempTable ? "tempdb." : "";
+            var sql = $@"
+select k.table_name, 
+k.column_name,
+k.constraint_name 
+from {dbPrefix}information_schema.table_constraints as c
+join {dbPrefix}information_schema.key_column_usage as k
+on c.table_name = k.table_name
+and c.constraint_catalog = k.constraint_catalog
+and c.constraint_schema = k.constraint_schema 
+and c.constraint_name = k.constraint_name
+where c.constraint_type = 'primary key'
+and k.column_name = '{column}'";
+
+            var isPrimaryKey = RawQuery<dynamic>(sql).Any();
+            return isPrimaryKey;
+        }
+
         object GetDefaultValue(Type columnType, QueryColumn column)
         {
             if (column.default_value == null)
@@ -227,7 +157,10 @@ OPTION (FORCE ORDER);",
             public string table_name { get; set; }
             public string full_table_name { get; set; }
 
-            protected bool Equals(TableInfo other) => string.Equals(table_name, other.table_name) && string.Equals(full_table_name, other.full_table_name);
+            protected bool Equals(TableInfo other)
+            {
+                return string.Equals(table_name, other.table_name) && string.Equals(full_table_name, other.full_table_name);
+            }
 
             public override bool Equals(object obj)
             {

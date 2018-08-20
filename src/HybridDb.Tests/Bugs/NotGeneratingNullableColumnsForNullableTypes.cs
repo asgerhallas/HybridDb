@@ -9,7 +9,8 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void NullableGuidGetsNullableColumnType()
         {
-            var store = DocumentStore.ForTesting(connectionString, c => c.Document<Entity>().With(x => x.SomeNullableGuid));
+            var store = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString, c => 
+                c.Document<Entity>().With(x => x.SomeNullableGuid));
 
             store.Initialize();
 

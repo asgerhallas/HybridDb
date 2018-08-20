@@ -19,7 +19,13 @@ namespace HybridDb.Migrations
         public abstract void Execute(IDatabase database);
         public new abstract string ToString();
 
-        protected string GetTableExistsSql(IDatabase db, string tablename) => $"object_id('{db.FormatTableName(tablename)}', 'U') is not null";
+        protected string GetTableExistsSql(IDatabase db, string tablename)
+        {
+            return string.Format(db is SqlServerUsingRealTables || db is SqlServerUsingTempDb
+                ? "object_id('{0}', 'U') is not null"
+                : "OBJECT_ID('tempdb..{0}') is not null",
+                db.FormatTableName(tablename));
+        }
 
         protected SqlBuilder GetColumnSqlType(Column column, string defaultValuePostfix = "", bool inMem = false)
         {

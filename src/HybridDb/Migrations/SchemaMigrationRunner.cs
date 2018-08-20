@@ -15,6 +15,8 @@ namespace HybridDb.Migrations
 {
     public class SchemaMigrationRunner
     {
+        public static readonly ConcurrentDictionary<object, int> objects = new ConcurrentDictionary<object, int>();
+
         readonly ILogger logger;
         readonly DocumentStore store;
         readonly IReadOnlyList<Migration> migrations;
@@ -29,7 +31,7 @@ namespace HybridDb.Migrations
             migrations = store.Configuration.Migrations;
         }
 
-        public void Run(bool testing)
+        public void Run()
         {
             if (!store.Configuration.RunSchemaMigrationsOnStartup)
                 return;
@@ -81,7 +83,7 @@ namespace HybridDb.Migrations
                 }
 
                 // run provided migrations only if we are using real tables
-                if (!testing)
+                if (database is SqlServerUsingRealTables)
                 {
                     if (currentSchemaVersion < configuration.ConfiguredVersion)
                     {
@@ -106,8 +108,8 @@ namespace HybridDb.Migrations
                 }
 
                 // get the diff and run commands to get to configured schema
-                var schema = testing
-                    ? new Dictionary<string, List<string>>() // testing implies an empty database
+                var schema = database is SqlServerUsingTempTables
+                    ? new Dictionary<string, List<string>>()
                     : database.QuerySchema();
 
                 var commands = differ.CalculateSchemaChanges(schema, configuration);

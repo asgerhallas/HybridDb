@@ -9,15 +9,21 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class RenameColumnTests : HybridDbTests
     {
-        [Fact]
-        public void RenamesColumn()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseRealTables)]
+        public void RenamesColumn(TableMode mode)
         {
+            Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+
             var table = new Table("Entities", new Column("Col1", typeof(int)));
 
-            Execute(new CreateTable(table));
-            Execute(new AddColumn("Entities", new Column("SomeColumn", typeof(int))));
+            new CreateTable(table).Execute(store.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
 
-            Execute(new RenameColumn(table, "SomeColumn", "SomeNewColumn"));
+            new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(store.Database);
 
             store.Database.QuerySchema()["Entities"].ShouldNotContain("SomeColumn");
             store.Database.QuerySchema()["Entities"].ShouldContain("SomeNewColumn");

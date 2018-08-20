@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Transactions;
+using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations;
-using HybridDb.Migrations.Commands;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
@@ -15,12 +16,10 @@ namespace HybridDb.Tests
 {
     public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
     {
-        readonly List<string> tablesToRemove = new List<string>();
         readonly ConcurrentStack<Action> disposables;
 
         protected readonly ILogger logger;
-        protected readonly string connectionString;
-
+        protected string connectionString;
 
         protected HybridDbTests()
         {
@@ -31,9 +30,7 @@ namespace HybridDb.Tests
             
             disposables = new ConcurrentStack<Action>();
 
-            connectionString = GetConnectionString();
-
-            UseTempDb();
+            UseTempTables();
         }
 
         protected virtual DocumentStore store { get; set; }
@@ -44,24 +41,82 @@ namespace HybridDb.Tests
 
             return isAppveyor
                 ? "Server=(local)\\SQL2014;Database=master;User ID=sa;Password=Password12!"
-                : "data source =.;Integrated Security=True";
+                : "data source =.; Integrated Security = True";
         }
 
-        protected string Format(Table table) => store.Database.FormatTableNameAndEscape(table.Name);
-        protected string Format(DocumentDesign design) => store.Database.FormatTableNameAndEscape(design.Table.Name);
-
-        void UseTempDb()
+        protected void Use(TableMode mode, string prefix = null)
         {
-            UseTableNamePrefix(GetType().Name);
-            
-            store = Using(new DocumentStore(configuration, connectionString, null, true));
+            switch (mode)
+            {
+                case TableMode.UseRealTables:
+                    UseRealTables();
+                    break;
+                case TableMode.UseTempTables:
+                    UseTempTables();
+                    break;
+                case TableMode.UseTempDb:
+                    UseTempDb();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("mode");
+            }
+        }
+
+        protected void UseTempTables()
+        {
+            connectionString = GetConnectionString();
+            store = Using(new DocumentStore(configuration, TableMode.UseTempTables, connectionString, true));
+        }
+
+        protected void UseTempDb()
+        {
+            connectionString = GetConnectionString();
+            store = Using(new DocumentStore(configuration, TableMode.UseTempDb, connectionString, true));
+        }
+
+        protected void UseRealTables()
+        {
+            var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
+
+            using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
+            {
+                connection.Open();
+
+                connection.Execute(string.Format(@"
+                        IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
+                        BEGIN
+                            CREATE DATABASE {0}
+                        END", uniqueDbName));
+            }
+
+            using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
+            {
+                connection.Open();
+
+                connection.Execute($"ALTER DATABASE {uniqueDbName} SET ALLOW_SNAPSHOT_ISOLATION ON;");
+            }
+
+            connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
+
+            store = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
+
+            disposables.Push(() =>
+            {
+                SqlConnection.ClearAllPools();
+
+                using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
+                {
+                    connection.Open();
+                    connection.Execute($"DROP DATABASE {uniqueDbName}");
+                }
+            });
         }
 
         protected void Reset()
         {
             configuration = new Configuration();
 
-            store = Using(new DocumentStore(configuration, connectionString, store.Prefix, true));
+            store = Using(new DocumentStore(store, configuration, true));
         }
 
         protected T Using<T>(T disposable) where T : IDisposable
@@ -70,33 +125,15 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        protected string NewId() => Guid.NewGuid().ToString();
-
-        protected void Execute(SchemaMigrationCommand command)
+        protected string NewId()
         {
-            if (command is CreateTable createTable)
-            {
-                tablesToRemove.Add(createTable.Table.Name);
-            }
-
-            if (command is RenameTable renameTable)
-            {
-                tablesToRemove.Add(renameTable.NewTableName);
-            }
-
-            command.Execute(store.Database);
-        }
-
-        protected void DropTableWhenDone(string tableName)
-        {
-            tablesToRemove.Add(tableName);
+            return Guid.NewGuid().ToString();
         }
 
         public void Dispose()
         {
-            store.Database.DropTables(tablesToRemove);
-
-            while (disposables.TryPop(out var dispose))
+            Action dispose;
+            while (disposables.TryPop(out dispose))
             {
                 dispose();
             }

@@ -11,23 +11,29 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void RemovesColumn()
         {
-            var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
-            Execute(new CreateTable(table));
-            Execute(new AddColumn("Entities", new Column("SomeColumn", typeof(int))));
+            Use(TableMode.UseRealTables);
 
-            Execute(new RemoveColumn(table, "SomeColumn"));
+            var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
+            new CreateTable(table).Execute(store.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
+
+            new RemoveColumn(table, "SomeColumn").Execute(store.Database);
 
             //store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
 
-        [Fact]
-        public void RemovesTempTableColumn()
+        [Theory(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseTempTables)]
+        public void RemovesTempTableColumn(TableMode mode)
         {
-            var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
-            Execute(new CreateTable(table));
-            Execute(new AddColumn("Entities", new Column("SomeColumn", typeof(int))));
+            Use(mode);
 
-            Execute(new RemoveColumn(table, "SomeColumn"));
+            var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
+            new CreateTable(table).Execute(store.Database);
+            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
+
+            new RemoveColumn(table, "SomeColumn").Execute(store.Database);
 
             //store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }

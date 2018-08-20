@@ -120,6 +120,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void AcceptsConcurrentWrites()
         {
+            UseRealTables();
+
             Document<Entity>().With(x => x.Number);
 
             store.Initialize();

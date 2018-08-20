@@ -13,15 +13,22 @@ namespace HybridDb.Migrations.Commands
             NewColumnName = newColumnName;
         }
 
-        public Table Table { get; }
-        public string OldColumnName { get; }
-        public string NewColumnName { get; }
+        public Table Table { get; private set; }
+        public string OldColumnName { get; private set; }
+        public string NewColumnName { get; private set; }
 
         public override void Execute(IDatabase database)
         {
-            database.RawExecute($"sp_rename '{database.FormatTableNameAndEscape(Table.Name)}.{OldColumnName}', '{NewColumnName}', 'COLUMN'");         
+            database.RawExecute(string.Format("{0}sp_rename '{1}.{2}', '{3}', 'COLUMN'",
+                database is SqlServerUsingTempTables ? "tempdb.." : "",
+                database.FormatTableNameAndEscape(Table.Name),
+                OldColumnName,
+                NewColumnName));         
         }
 
-        public override string ToString() => $"Rename column {OldColumnName} on table {Table.Name} to {NewColumnName}";
+        public override string ToString()
+        {
+            return string.Format("Rename column {0} on table {1} to {2}", OldColumnName, Table.Name, NewColumnName);
+        }
     }
 }

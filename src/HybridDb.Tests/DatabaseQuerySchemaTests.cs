@@ -2,18 +2,23 @@
 using HybridDb.Config;
 using HybridDb.Migrations.Commands;
 using Shouldly;
-using Xunit;
 using Xunit.Extensions;
 
 namespace HybridDb.Tests
 {
     public class DatabaseQuerySchemaTests : HybridDbTests
     {
-        [Fact]
-        public void ReturnsAllTables()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseRealTables)]
+        public void ReturnsAllTables(TableMode mode)
         {
-            Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
-            Execute(new CreateTable(new Table("Entities2", new Column("test", typeof(int)))));
+            Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(store.Database);
 
             var schema = store.Database.QuerySchema();
 
@@ -21,15 +26,21 @@ namespace HybridDb.Tests
             schema.Keys.ShouldContain("Entities2");
         }
 
-        [Fact]
-        public void ReturnsAllColumns()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseRealTables)]
+        public void ReturnsAllColumns(TableMode mode)
         {
-            Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
-            Execute(new AddColumn("Entities1", new Column("SomeInt", typeof(int))));
-            Execute(new AddColumn("Entities1", new Column("SomeBool", typeof(bool))));
+            Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
 
-            Execute(new CreateTable(new Table("Entities2", new Column("test", typeof(int)))));
-            Execute(new AddColumn("Entities2", new Column("SomeString", typeof(string))));
+            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeInt", typeof(int))).Execute(store.Database);
+            new AddColumn("Entities1", new Column("SomeBool", typeof(bool))).Execute(store.Database);
+
+            new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(store.Database);
+            new AddColumn("Entities2", new Column("SomeString", typeof(string))).Execute(store.Database);
 
             var schema = store.Database.QuerySchema();
 

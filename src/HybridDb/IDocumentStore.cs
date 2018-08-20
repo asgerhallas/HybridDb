@@ -8,7 +8,6 @@ namespace HybridDb
     public interface IDocumentStore : IDisposable
     {
         Configuration Configuration { get; }
-        string Prefix { get; }
         long NumberOfRequests { get; }
         Guid LastWrittenEtag { get; }
         bool IsInitialized { get; }

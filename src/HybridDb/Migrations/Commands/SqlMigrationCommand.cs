@@ -27,6 +27,9 @@ namespace HybridDb.Migrations.Commands
             database.RawExecute(sql.ToString());
         }
 
-        public override string ToString() => Description;
+        public override string ToString()
+        {
+            return Description;
+        }
     }
 }

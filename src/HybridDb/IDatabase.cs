@@ -4,7 +4,7 @@ using HybridDb.Config;
 
 namespace HybridDb
 {
-    public interface IDatabase
+    public interface IDatabase : IDisposable
     {
         ManagedConnection Connect();
         Dictionary<string, List<string>> QuerySchema();
@@ -13,6 +13,5 @@ namespace HybridDb
         string FormatTableName(string tablename);
         int RawExecute(string sql, object parameters = null);
         IEnumerable<T> RawQuery<T>(string sql, object parameters = null);
-        void DropTables(IEnumerable<string> tables);
     }
 }

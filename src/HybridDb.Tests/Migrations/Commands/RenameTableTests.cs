@@ -9,12 +9,17 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class RenameTableTests : HybridDbTests
     {
-        [Fact]
-        public void RenamesTable()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseRealTables)]
+        public void RenamesTable(TableMode mode)
         {
-            Execute(new CreateTable(new Table("Entities", new Column("col1", typeof(int)))));
+            Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+            new CreateTable(new Table("Entities", new Column("col1", typeof(int)))).Execute(store.Database);
 
-            Execute(new RenameTable("Entities", "OtherEntities"));
+            new RenameTable("Entities", "OtherEntities").Execute(store.Database);
 
             store.Database.QuerySchema().ShouldNotContainKey("Entities");
             store.Database.QuerySchema().ShouldContainKey("OtherEntities");

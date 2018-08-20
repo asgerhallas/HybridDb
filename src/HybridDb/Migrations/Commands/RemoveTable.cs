@@ -8,13 +8,16 @@ namespace HybridDb.Migrations.Commands
             Tablename = tablename;
         }
 
-        public string Tablename { get; }
+        public string Tablename { get; private set; }
 
         public override void Execute(IDatabase database)
         {
-            database.RawExecute($"drop table {database.FormatTableNameAndEscape(Tablename)};");
+            database.RawExecute(string.Format("drop table {0};", database.FormatTableNameAndEscape(Tablename)));
         }
 
-        public override string ToString() => $"Remove table {Tablename}";
+        public override string ToString()
+        {
+            return string.Format("Remove table {0}", Tablename);
+        }
     }
 }

@@ -9,12 +9,17 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class RemoveTableTests : HybridDbTests
     {
-        [Fact]
-        public void RemovesTable()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseRealTables)]
+        public void RemovesTable(TableMode mode)
         {
-            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))));
+            Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store.Database);
 
-            Execute(new RemoveTable("Entities"));
+            new RemoveTable("Entities").Execute(store.Database);
 
             store.Database.QuerySchema().ShouldNotContainKey("Entities");
         }

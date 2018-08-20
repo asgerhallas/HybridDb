@@ -19,7 +19,7 @@ namespace HybridDb
 
         public ulong RowVersionUInt64 => BigEndianToUInt64(RowVersion);
 
-        public static ulong BigEndianToUInt64(byte[] bigEndianBinary)
+        static ulong BigEndianToUInt64(byte[] bigEndianBinary)
         {
             ulong result = 0;
             for (var i = 0; i < 8; i++)

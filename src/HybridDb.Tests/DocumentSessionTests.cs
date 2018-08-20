@@ -67,7 +67,7 @@ namespace HybridDb.Tests
                 store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
-            var entity = store.Database.RawQuery<dynamic>($"select * from {Format(store.Configuration.GetDesignFor<Entity>())} where Id = '{id}'").SingleOrDefault();
+            var entity = store.Database.RawQuery<dynamic>($"select * from #Entities where Id = '{id}'").SingleOrDefault();
             Assert.NotNull(entity);
         }
 
@@ -88,7 +88,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.Database.RawQuery<dynamic>($"select * from {Format(store.Configuration.GetDesignFor<Entity>())}").SingleOrDefault();
+            var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity.Document);
             Assert.NotEqual(0, entity.Document.Length);
@@ -108,7 +108,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.Database.RawQuery<dynamic>($"select * from {Format(store.Configuration.GetDesignFor<Entity>())}").SingleOrDefault();
+            var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
             Assert.Null(entity.TheChildNestedProperty);
         }
 
@@ -139,7 +139,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var retrivedId = store.Database.RawQuery<string>($"select Id from {Format(store.Configuration.GetDesignFor<Entity>())}").SingleOrDefault();
+            var retrivedId = store.Database.RawQuery<string>("select Id from #Entities").SingleOrDefault();
             retrivedId.ShouldBe(id);
         }
 
