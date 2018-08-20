@@ -42,8 +42,6 @@ namespace HybridDb
         {
             if (!testing) return;
 
-            SqlConnection.ClearAllPools();
-
             Database.DropTables(Configuration.Tables.Select(x => x.Key));
         }
 

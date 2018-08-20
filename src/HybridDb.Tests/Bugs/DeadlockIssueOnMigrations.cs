@@ -46,7 +46,7 @@ namespace HybridDb.Tests.Bugs
         {
             Parallel.For(0, 10, i =>
             {
-                var realstore = Using(DocumentStore.ForTesting(connectionString));
+                var realstore = DocumentStore.ForTesting(connectionString);
 
                 realstore.Configuration.UseTableNamePrefix(Guid.NewGuid().ToString());
 
@@ -84,6 +84,8 @@ namespace HybridDb.Tests.Bugs
                     .With(x => x.Complex.A);
 
                 realstore.Initialize();
+
+                realstore.Dispose();
             });
         }
 
