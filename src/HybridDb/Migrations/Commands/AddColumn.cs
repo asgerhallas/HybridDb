@@ -12,8 +12,8 @@ namespace HybridDb.Migrations.Commands
             Column = column;
         }
 
-        public string Tablename { get; private set; }
-        public Column Column { get; private set; }
+        public string Tablename { get; }
+        public Column Column { get; }
 
         public override void Execute(IDatabase database)
         {
@@ -24,9 +24,6 @@ namespace HybridDb.Migrations.Commands
             database.RawExecute(sql.ToString());
         }
 
-        public override string ToString()
-        {
-            return string.Format("Add column {0} to table {1}.", Column, Tablename);
-        }
+        public override string ToString() => $"Add column {Column} to table {Tablename}.";
     }
 }

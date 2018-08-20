@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Transactions;
-using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Commands;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
@@ -30,7 +29,7 @@ namespace HybridDb.Tests
             
             disposables = new ConcurrentStack<Action>();
 
-            UseTempTables();
+            UseTempDb();
         }
 
         protected virtual DocumentStore store { get; set; }
@@ -44,79 +43,23 @@ namespace HybridDb.Tests
                 : "data source =.; Integrated Security = True";
         }
 
-        protected void Use(TableMode mode, string prefix = null)
-        {
-            switch (mode)
-            {
-                case TableMode.UseRealTables:
-                    UseRealTables();
-                    break;
-                case TableMode.UseTempTables:
-                    UseTempTables();
-                    break;
-                case TableMode.UseTempDb:
-                    UseTempDb();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("mode");
-            }
-        }
+        protected string Format(Table table) => store.Database.FormatTableNameAndEscape(table.Name);
+        protected string Format(DocumentDesign design) => store.Database.FormatTableNameAndEscape(design.Table.Name);
 
-        protected void UseTempTables()
+        void UseTempDb()
         {
+            UseTableNamePrefix("Tests");
+
             connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.UseTempTables, connectionString, true));
-        }
-
-        protected void UseTempDb()
-        {
-            connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.UseTempDb, connectionString, true));
-        }
-
-        protected void UseRealTables()
-        {
-            var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
-
-            using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
-            {
-                connection.Open();
-
-                connection.Execute(string.Format(@"
-                        IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
-                        BEGIN
-                            CREATE DATABASE {0}
-                        END", uniqueDbName));
-            }
-
-            using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
-            {
-                connection.Open();
-
-                connection.Execute($"ALTER DATABASE {uniqueDbName} SET ALLOW_SNAPSHOT_ISOLATION ON;");
-            }
-
-            connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
-
-            store = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
-
-            disposables.Push(() =>
-            {
-                SqlConnection.ClearAllPools();
-
-                using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
-                {
-                    connection.Open();
-                    connection.Execute($"DROP DATABASE {uniqueDbName}");
-                }
-            });
+            
+            store = Using(new DocumentStore(configuration, connectionString, null, true));
         }
 
         protected void Reset()
         {
             configuration = new Configuration();
 
-            store = Using(new DocumentStore(store, configuration, true));
+            store = Using(new DocumentStore(configuration, connectionString, store.Prefix, true));
         }
 
         protected T Using<T>(T disposable) where T : IDisposable
@@ -125,15 +68,21 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        protected string NewId()
+        protected string NewId() => Guid.NewGuid().ToString();
+
+        protected void Execute(SchemaMigrationCommand command)
         {
-            return Guid.NewGuid().ToString();
+            if (command is CreateTable createTable)
+            {
+                disposables.Push(() => store.Database.RemoveTables(new[] {createTable.Table.Name}));
+            }
+
+            command.Execute(store.Database);
         }
 
         public void Dispose()
         {
-            Action dispose;
-            while (disposables.TryPop(out dispose))
+            while (disposables.TryPop(out var dispose))
             {
                 dispose();
             }

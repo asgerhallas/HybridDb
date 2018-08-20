@@ -190,7 +190,6 @@
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\ChangeDocument.cs" />
-    <Compile Include="Migrations\Commands\ChangeColumnType.cs" />
     <Compile Include="Migrations\Commands\SqlMigrationCommand.cs" />
     <Compile Include="Migrations\DocumentMigrationCommand.cs" />
     <Compile Include="Migrations\DocumentMigrationRunner.cs" />
@@ -281,12 +280,8 @@
     <Compile Include="Config\Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlServer.cs" />
-    <Compile Include="SqlServerUsingTempDb.cs" />
-    <Compile Include="SqlServerUsingTempTables.cs" />
-    <Compile Include="SqlServerUsingRealTables.cs" />
     <Compile Include="StringEx.cs" />
     <Compile Include="TableBuilder.cs" />
-    <Compile Include="TableMode.cs" />
     <Compile Include="TableNotFoundException.cs" />
     <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />

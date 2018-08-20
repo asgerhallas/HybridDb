@@ -9,91 +9,61 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class AddColumnTests : HybridDbTests
     {
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void AddsColumn(TableMode mode)
+        [Fact]
+        public void AddsColumn()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
-            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(store.Database);
+            Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
 
             store.Database.QuerySchema()["Entities"].ShouldContain("Col2");
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables, typeof(int), false)]
-        [InlineData(TableMode.UseTempDb, typeof(int), false)]
-        [InlineData(TableMode.UseRealTables, typeof(int), false)]
-        [InlineData(TableMode.UseTempTables, typeof(double), false)]
-        [InlineData(TableMode.UseTempDb, typeof(double), false)]
-        [InlineData(TableMode.UseRealTables, typeof(double), false)]
-        [InlineData(TableMode.UseTempTables, typeof(string), true)]
-        [InlineData(TableMode.UseTempDb, typeof(string), true)]
-        [InlineData(TableMode.UseRealTables, typeof(string), true)]
-        [InlineData(TableMode.UseTempTables, typeof(decimal), false)]
-        [InlineData(TableMode.UseTempDb, typeof(decimal), false)]
-        [InlineData(TableMode.UseRealTables, typeof(decimal), false)]
-        public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
+        [InlineData(typeof(int), false)]
+        [InlineData(typeof(double), false)]
+        [InlineData(typeof(string), true)]
+        [InlineData(typeof(decimal), false)]
+        public void ColumnIsOfCorrectType(Type type, bool nullable)
         {
-            Use(TableMode.UseRealTables);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
-            new AddColumn("Entities", new Column("Col2", type)).Execute(store.Database);
+            Execute(new AddColumn("Entities", new Column("Col2", type)));
 
             //store.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(type);
             //store.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
         }
 
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void SetsColumnAsNullableAndUsesUnderlyingTypeWhenNullable(TableMode mode)
+        [Fact]
+        public void SetsColumnAsNullableAndUsesUnderlyingTypeWhenNullable()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
-            new AddColumn("Entities", new Column("Col2", typeof(int?))).Execute(store.Database);
+            Execute(new AddColumn("Entities", new Column("Col2", typeof(int?))));
 
             //store.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
             //store.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(true);
         }
 
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void CanSetColumnAsPrimaryKey(TableMode mode)
+        [Fact]
+        public void CanSetColumnAsPrimaryKey()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
+            Execute(new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)));
 
             //store.Database.QuerySchema()["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
         }
 
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void CanAddColumnWithDefaultValue(TableMode mode)
+        [Fact]
+        public void CanAddColumnWithDefaultValue()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
 
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(store.Database);
+            Execute(new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)));
+            Execute(new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)));
+            Execute(new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")));
+            Execute(new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)));
+            Execute(new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))));
 
             var schema = store.Database.QuerySchema();
 
@@ -107,8 +77,8 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact(Skip = "Not solved yet")]
         public void ShouldNotAllowSqlInjection()
         {
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
+            Execute(new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")));
 
             store.Database.QuerySchema().ShouldContainKey("Entities1");
         }

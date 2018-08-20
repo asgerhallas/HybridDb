@@ -9,20 +9,14 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class SqlMigrationTests : HybridDbTests
     {
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void AddsColumn(TableMode mode)
+        [Fact]
+        public void AddsColumn()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
+            Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
 
-            new SqlMigrationCommand("add some index", (sql, db) => sql
-                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int"))
-                .Execute(store.Database);
+            Execute(new SqlMigrationCommand("add some index", (sql, db) => sql
+                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int")));
         }
 
         [Fact]

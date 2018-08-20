@@ -9,48 +9,29 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class CreateTableTests : HybridDbTests
     {
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void CreatesTable(TableMode mode)
+        [Fact]
+        public void CreatesTable()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))));
 
             store.Database.QuerySchema().ShouldContainKey("Entities");
         }
 
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
-        [InlineData(TableMode.UseRealTables)]
-        public void CreatesColumns(TableMode mode)
+        [Fact]
+        public void CreatesColumns()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))));
 
             store.Database.QuerySchema().ShouldContainKey("Entities");
             //store.Database.QuerySchema()["Entities"]["Col1"].Type.ShouldBe(typeof(string));
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables, typeof(int), null)]
-        [InlineData(TableMode.UseTempDb, typeof(int), null)]
-        [InlineData(TableMode.UseRealTables, typeof(int), null)]
-        [InlineData(TableMode.UseTempTables, typeof(string), 255)]
-        [InlineData(TableMode.UseTempDb, typeof(string), 255)]
-        [InlineData(TableMode.UseRealTables, typeof(string), 255)]
-        public void CreatesPrimaryKeyColumn(TableMode mode, Type type, int? length)
+        [InlineData(typeof(int), null)]
+        [InlineData(typeof(string), 255)]
+        public void CreatesPrimaryKeyColumn(Type type, int? length)
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-
-            new CreateTable(new Table("Entities", new Column("Col1", type, length, isPrimaryKey: true))).Execute(store.Database);
+            Execute(new CreateTable(new Table("Entities", new Column("Col1", type, length, isPrimaryKey: true))));
 
             //store.Database.QuerySchema()["Entities"]["Col1"].IsPrimaryKey.ShouldBe(true);
         }
@@ -61,21 +42,15 @@ namespace HybridDb.Tests.Migrations.Commands
             Should.NotThrow(() => new CreateTable(new Table("Create",new Column("By Int", typeof(int)))));
         }
 
-        [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseRealTables)]
-        [InlineData(TableMode.UseTempDb)]
-        public void CanCreateColumnWithDefaultValue(TableMode mode)
+        [Fact]
+        public void CanCreateColumnWithDefaultValue()
         {
-            Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
-
-            new CreateTable(new Table("Entities1",
+            Execute(new CreateTable(new Table("Entities1",
                 new Column("SomeNullableInt", typeof(int?), defaultValue: null),
                 new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42),
                 new Column("SomeString", typeof(string),  defaultValue: "peter"),
                 new Column("SomeInt", typeof(int),  defaultValue: 666),
-                new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24)))).Execute(store.Database);
+                new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24)))));
 
             var schema = store.Database.QuerySchema();
 

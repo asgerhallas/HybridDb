@@ -35,7 +35,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
 
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = store.Database.RawQuery<dynamic>($"select * from {Format(table)}").Single();
             ((string) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -48,9 +48,10 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
-            store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
+            var table = new DynamicDocumentTable("Entities");
+            store.Insert(table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = store.Database.RawQuery<dynamic>($"select * from {Format(table)}").Single();
             ((string) row.Id).ShouldBe(id);
             ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
             Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
@@ -126,7 +127,7 @@ namespace HybridDb.Tests
 
             store.Update(table.Table, id, etag, new {Field = "Lars"});
 
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = store.Database.RawQuery<dynamic>($"select * from {Format(table)}").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
         }
@@ -144,7 +145,7 @@ namespace HybridDb.Tests
             // If we do not do that, why do we have document as part of the projection? Either or.
             store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "Property", "Lars" } });
 
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            var row = store.Database.RawQuery<dynamic>($"select * from {Format(table)}").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe(null);
             ((string) row.Property).ShouldBe("Lars");
@@ -384,7 +385,7 @@ namespace HybridDb.Tests
             var etag = store.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }),
                                      new InsertCommand(table.Table, id2, new { Field = "B" }));
 
-            var rows = store.Database.RawQuery<Guid>("select Etag from #Entities order by Field").ToList();
+            var rows = store.Database.RawQuery<Guid>($"select Etag from {Format(table)} order by Field").ToList();
             rows.Count.ShouldBe(2);
             rows[0].ShouldBe(etag);
             rows[1].ShouldBe(etag);
@@ -408,7 +409,7 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            store.Database.RawQuery<dynamic>($"select * from {Format(table)}").Count().ShouldBe(0);
         }
 
         //[Fact]
@@ -793,30 +794,28 @@ namespace HybridDb.Tests
                 // No tx complete here
             }
 
-            store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            store.Database.RawQuery<dynamic>($"select * from {Format(table)}").Count().ShouldBe(0);
         }
 
         [Fact]
-        public void CanUseTempDb()
+        public void CanShareTablesBetweeenStoresInTestMode()
         {
             var prefix = Guid.NewGuid().ToString();
 
-            UseTempDb();
-
-            Action<Configuration> configurator = x =>
+            void configurator(Configuration x)
             {
                 x.UseTableNamePrefix(prefix);
                 x.Document<Case>();
-            };
+            }
 
-            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
+            using (var globalStore1 = DocumentStore.ForTesting(connectionString, configurator))
             {
                 globalStore1.Initialize();
 
                 var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
+                using (var globalStore2 = DocumentStore.ForTesting(connectionString, globalStore1.Prefix, configurator))
                 {
                     globalStore2.Initialize();
 
@@ -857,9 +856,6 @@ namespace HybridDb.Tests
         [Fact]
         public void CanExecuteOnMultipleThreads()
         {
-            UseTempDb();
-
-            UseTableNamePrefix(Guid.NewGuid().ToString());
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -874,8 +870,6 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueInserts()
         {
-            UseRealTables();
-
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -883,6 +877,8 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             store.Insert(table, NewId(), new { Property = "first" });
+            var rawQuery = QueryResult<int>.BigEndianToUInt64(store.Database.RawQuery<byte[]>("select VirtualTime from " + store.Database.FormatTableNameAndEscape(table.Name) + "").Single());
+            var rawQuery2 = QueryResult<int>.BigEndianToUInt64(store.Database.RawQuery<byte[]>("select min_active_rowversion()").Single());
             var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
 
             store.Insert(table, NewId(), new { Property = "second" });
@@ -896,8 +892,6 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueUpdates()
         {
-            UseRealTables();
-
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -920,8 +914,6 @@ namespace HybridDb.Tests
         [Fact]
         public void QueueDeletes()
         {
-            UseRealTables();
-
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -945,8 +937,6 @@ namespace HybridDb.Tests
         [Fact]
         public void CanReinsertDeleted()
         {
-            UseRealTables();
-
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -971,8 +961,6 @@ namespace HybridDb.Tests
         [Fact]
         public void CanRedeleteReinserted()
         {
-            UseRealTables();
-
             Document<Entity>().With(x => x.Property);
 
             InitializeStore();
@@ -1013,9 +1001,6 @@ namespace HybridDb.Tests
 
             var snapshot = new TransactionOptions { IsolationLevel = IsolationLevel.Snapshot };
             var readCommitted = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
-
-            UseRealTables();
-            UseTableNamePrefix(nameof(Bug_RaceConditionWithSnapshotAndRowVersion));
 
             Document<Entity>().With(x => x.Property);
 
