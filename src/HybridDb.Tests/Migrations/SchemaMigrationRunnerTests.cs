@@ -56,6 +56,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void RunsProvidedSchemaMigrations()
         {
+            DropTableWhenDone("Testing");
+
             CreateMetadataTable();
 
             UseMigrations(new InlineMigration(1,
@@ -92,6 +94,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void RunsDiffedSchemaMigrations()
         {
+            DropTableWhenDone("Testing");
+
             CreateMetadataTable();
 
             var runner = new SchemaMigrationRunner(store,
@@ -110,6 +114,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void RunsProvidedSchemaMigrationsInOrderThenDiffed()
         {
+            DropTableWhenDone("Testing");
+
             CreateMetadataTable();
 
             var table = new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true));
@@ -252,6 +258,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns()
         {
+            DropTableWhenDone("Testing");
+
             CreateMetadataTable();
 
             store.Initialize();

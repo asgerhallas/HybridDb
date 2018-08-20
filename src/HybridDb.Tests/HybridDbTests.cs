@@ -15,10 +15,12 @@ namespace HybridDb.Tests
 {
     public abstract class HybridDbTests : HybridDbConfigurator, IDisposable
     {
+        readonly List<string> tablesToRemove = new List<string>();
         readonly ConcurrentStack<Action> disposables;
 
         protected readonly ILogger logger;
         protected string connectionString;
+        
 
         protected HybridDbTests()
         {
@@ -48,7 +50,7 @@ namespace HybridDb.Tests
 
         void UseTempDb()
         {
-            UseTableNamePrefix("Tests");
+            UseTableNamePrefix(GetType().Name);
 
             connectionString = GetConnectionString();
             
@@ -74,14 +76,26 @@ namespace HybridDb.Tests
         {
             if (command is CreateTable createTable)
             {
-                disposables.Push(() => store.Database.RemoveTables(new[] {createTable.Table.Name}));
+                tablesToRemove.Add(createTable.Table.Name);
+            }
+
+            if (command is RenameTable renameTable)
+            {
+                tablesToRemove.Add(renameTable.NewTableName);
             }
 
             command.Execute(store.Database);
         }
 
+        protected void DropTableWhenDone(string tableName)
+        {
+            tablesToRemove.Add(tableName);
+        }
+
         public void Dispose()
         {
+            store.Database.RemoveTables(tablesToRemove);
+
             while (disposables.TryPop(out var dispose))
             {
                 dispose();
