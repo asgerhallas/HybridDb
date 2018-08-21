@@ -219,6 +219,12 @@ namespace HybridDb.Tests
             Should.Throw<InvalidOperationException>(() => configuration.Document<Entity>());
         }
 
+        [Fact]
+        public void X()
+        {
+            configuration.Document<Entity>().With("Id", x => x.String);
+        }
+
         public class OtherTypeMapper : ITypeMapper
         {
             readonly string discriminator;

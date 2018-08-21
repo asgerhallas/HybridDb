@@ -82,6 +82,23 @@ namespace HybridDb.Migrations
                         $"but configuration is version {store.Configuration.ConfiguredVersion}.");
                 }
 
+                // get the diff and run commands to get to configured schema
+                var schema = database is SqlServerUsingTempTables
+                    ? new Dictionary<string, List<string>>()
+                    : database.QuerySchema();
+
+                var commands = differ.CalculateSchemaChanges(schema, configuration);
+
+                if (commands.Any())
+                {
+                    logger.Information("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
+
+                    foreach (var command in commands)
+                    {
+                        requiresReprojection.AddRange(ExecuteCommand(database, command));
+                    }
+                }
+
                 // run provided migrations only if we are using real tables
                 if (database is SqlServerUsingRealTables)
                 {
@@ -105,23 +122,6 @@ namespace HybridDb.Migrations
                 else
                 {
                     logger.Information("Skips provided migrations when not using real tables.");
-                }
-
-                // get the diff and run commands to get to configured schema
-                var schema = database is SqlServerUsingTempTables
-                    ? new Dictionary<string, List<string>>()
-                    : database.QuerySchema();
-
-                var commands = differ.CalculateSchemaChanges(schema, configuration);
-
-                if (commands.Any())
-                {
-                    logger.Information("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
-
-                    foreach (var command in commands)
-                    {
-                        requiresReprojection.AddRange(ExecuteCommand(database, command));
-                    }
                 }
 
                 // flag each document of tables that need to run a re-projection

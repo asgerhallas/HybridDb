@@ -21,10 +21,8 @@ namespace HybridDb.Config
             return this;
         }
 
-        public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, params Option[] options)
-        {
-            return With(ColumnNameBuilder.GetColumnNameByConventionFor(projector), projector, options);
-        }
+        public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
+            With(ColumnNameBuilder.GetColumnNameByConventionFor(projector), projector, options);
 
         public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, params Option[] options)
         {

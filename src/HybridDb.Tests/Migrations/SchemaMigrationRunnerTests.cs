@@ -117,7 +117,7 @@ namespace HybridDb.Tests.Migrations
             tables["Testing"].ShouldContain("Noget");
         }
 
-        [Fact]
+        [Fact(Skip="We are experimenting with doing it the other way around to enable adding indexes to newly created tables.")]
         public void RunsProvidedSchemaMigrationsInOrderThenDiffed()
         {
             CreateMetadataTable();
