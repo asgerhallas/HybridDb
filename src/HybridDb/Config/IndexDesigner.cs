@@ -5,16 +5,18 @@ namespace HybridDb.Config
 {
     public class IndexDesigner<TIndex, TEntity>
     {
+        readonly Func<Expression, string> columnNameConvention;
         readonly DocumentDesigner<TEntity> designer;
 
-        public IndexDesigner(DocumentDesign design)
+        public IndexDesigner(DocumentDesign design, Func<Expression, string> columnNameConvention)
         {
-            designer = new DocumentDesigner<TEntity>(design);
+            this.columnNameConvention = columnNameConvention;
+            designer = new DocumentDesigner<TEntity>(design, columnNameConvention);
         }
 
         public IndexDesigner<TIndex, TEntity> With<TMember>(Expression<Func<TIndex, TMember>> namer, Expression<Func<TEntity, TMember>> projector, params Option[] options)
         {
-            var name = ColumnNameBuilder.GetColumnNameByConventionFor(namer);
+            var name = columnNameConvention(namer);
             designer.With(name, projector, options);
             return this;
         }

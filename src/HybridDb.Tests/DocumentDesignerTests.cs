@@ -212,6 +212,15 @@ namespace HybridDb.Tests
             TableFor<Entity>()["third"].Length.ShouldBe(1024);
         }
 
+        [Fact]
+        public void X()
+        {
+            configuration.Document<Entity>().With(x => x.String, x => x.Length);
+
+            ProjectionsFor<Entity>()["String"].Projector(new Entity{ String = "Asger" }, null).ShouldBe(5);
+        }
+
+
         public class Entity
         {
             public string String { get; set; }

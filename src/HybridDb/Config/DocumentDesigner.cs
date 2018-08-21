@@ -9,10 +9,12 @@ namespace HybridDb.Config
     public class DocumentDesigner<TEntity>
     {
         readonly DocumentDesign design;
+        readonly Func<Expression, string> columnNameConvention;
 
-        public DocumentDesigner(DocumentDesign design)
+        public DocumentDesigner(DocumentDesign design, Func<Expression, string> columnNameConvention)
         {
             this.design = design;
+            this.columnNameConvention = columnNameConvention;
         }
 
         public DocumentDesigner<TEntity> Key(Func<TEntity, string> projector)
@@ -22,11 +24,18 @@ namespace HybridDb.Config
         }
 
         public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
-            With(ColumnNameBuilder.GetColumnNameByConventionFor(projector), projector, options);
+            With(columnNameConvention(projector), projector, x => x, options);
 
-        public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, params Option[] options)
+        public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
+            With(name, projector, x => x, options);
+
+        public DocumentDesigner<TEntity> With<TMember, TReturn>(Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options) =>
+            With(columnNameConvention(projector), projector, converter, options);
+
+
+        public DocumentDesigner<TEntity> With<TMember, TReturn>(string name, Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options)
         {
-            if (typeof (TMember) == typeof (string))
+            if (typeof (TReturn) == typeof (string))
             {
                 options = options.Concat(new MaxLength(1024)).ToArray();
             }
@@ -44,7 +53,7 @@ namespace HybridDb.Config
                     .OfType<MaxLength>()
                     .FirstOrDefault();
 
-                column = new Column(name, typeof(TMember), lengthOption?.Length);
+                column = new Column(name, typeof(TReturn), lengthOption?.Length);
                 design.Table.Register(column);
             }
 
@@ -66,7 +75,7 @@ namespace HybridDb.Config
                 compiledProjector = Compile(name, projector);
             }
 
-            var newProjection = Projection.From<TMember>(document => compiledProjector(document));
+            var newProjection = Projection.From<TReturn>(document => converter((TMember)compiledProjector(document)));
 
             if (!newProjection.ReturnType.IsCastableTo(column.Type))
             {
@@ -95,7 +104,7 @@ namespace HybridDb.Config
 
         public DocumentDesigner<TEntity> Extend<TIndex>(Action<IndexDesigner<TIndex, TEntity>> extender)
         {
-            extender(new IndexDesigner<TIndex, TEntity>(design));
+            extender(new IndexDesigner<TIndex, TEntity>(design, columnNameConvention));
             return this;
         }
 

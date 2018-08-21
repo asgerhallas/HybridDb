@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Linq.Expressions;
 using HybridDb.Migrations;
 using HybridDb.Serialization;
 using Serilog;
@@ -33,6 +35,7 @@ namespace HybridDb.Config
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
             Queued = false;
+            ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
         }
 
         public ILogger Logger { get; private set; }
@@ -46,6 +49,7 @@ namespace HybridDb.Config
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
         public bool Queued { get; private set; }
+        public Func<Expression, string> ColumnNameConvention { get; private set; }
         public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
 
@@ -64,10 +68,8 @@ namespace HybridDb.Config
             }
         }
 
-        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null)
-        {
-            return new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof (TEntity), tablename));
-        }
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) => 
+            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof (TEntity), tablename), ColumnNameConvention);
 
         public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null)
         {
@@ -217,6 +219,8 @@ namespace HybridDb.Config
         public void UseKeyResolver(Func<object, string> resolver) => DefaultKeyResolver = resolver;
 
         public void UseQueues() => Queued = true;
+
+        public void UseColumnNameConventions(Func<Expression, string> convention) => ColumnNameConvention = convention;
 
         internal void DisableMigrationsOnStartup()
         {
