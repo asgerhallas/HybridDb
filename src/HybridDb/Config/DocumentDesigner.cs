@@ -75,7 +75,14 @@ namespace HybridDb.Config
                 compiledProjector = Compile(name, projector);
             }
 
-            var newProjection = Projection.From<TReturn>(document => converter((TMember)compiledProjector(document)));
+            var newProjection = Projection.From<TReturn>(document =>
+            {
+                var value = (TMember) compiledProjector(document);
+
+                if (value == null) return null;
+
+                return converter(value);
+            });
 
             if (!newProjection.ReturnType.IsCastableTo(column.Type))
             {

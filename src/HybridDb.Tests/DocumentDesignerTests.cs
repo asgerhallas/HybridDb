@@ -220,6 +220,14 @@ namespace HybridDb.Tests
             ProjectionsFor<Entity>()["String"].Projector(new Entity{ String = "Asger" }, null).ShouldBe(5);
         }
 
+        [Fact]
+        public void X2()
+        {
+            configuration.Document<Entity>().With(x => x.String, x => x.Length);
+
+            ProjectionsFor<Entity>()["String"].Projector(new Entity(), null).ShouldBe(null);
+        }
+
 
         public class Entity
         {
