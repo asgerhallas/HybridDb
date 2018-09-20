@@ -122,7 +122,7 @@ namespace HybridDb.Config
             }
         }
 
-        internal DocumentDesign GetOrCreateDesignByDiscriminator(DocumentDesign design, string discriminator)
+        public DocumentDesign GetOrCreateDesignByDiscriminator(DocumentDesign design, string discriminator)
         {
             lock (gate)
             {
