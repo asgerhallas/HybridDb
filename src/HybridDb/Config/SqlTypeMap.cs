@@ -53,7 +53,7 @@ namespace HybridDb.Config
                 return column.Length == -1 ? "MAX" : column.Length.ToString();
 
             if (column.Type == typeof (string))
-                return "1024";
+                return "850";
             
             if (column.Type == typeof(Enum))
                 return "255";
