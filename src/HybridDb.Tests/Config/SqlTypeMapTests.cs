@@ -9,7 +9,7 @@ namespace HybridDb.Tests.Config
     public class SqlTypeMapTests
     {
         [Theory]
-        [InlineData(typeof(string), "1024")]
+        [InlineData(typeof(string), "850")]
         [InlineData(typeof(SomeEnum), "255")]
         [InlineData(typeof(byte[]), "MAX")]
         [InlineData(typeof(double), null)]
