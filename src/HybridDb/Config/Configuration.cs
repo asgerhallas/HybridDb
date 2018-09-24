@@ -105,7 +105,7 @@ namespace HybridDb.Config
 
                 // we now know that type is a subtype to existing
                 // there is explicitly given a table name, so we add a new table for the derived type
-                if (tablename != null)
+                if (tablename != null && tablename != existing.Table.Name)
                 {
                     return AddDesign(new DocumentDesign(
                         this, GetOrAddTable(tablename),

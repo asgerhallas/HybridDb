@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -17,19 +18,16 @@ namespace HybridDb
         {
         }
 
-        public override string FormatTableName(string tablename)
-        {
-            return store.Configuration.TableNamePrefix + tablename;
-        }
+        public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
 
         public override ManagedConnection Connect()
         {
             Action complete = () => { };
-            Action dispose = () => { numberOfManagedConnections--; };
+            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
 
             try
             {
-                numberOfManagedConnections++;
+                Interlocked.Increment(ref numberOfManagedConnections);
 
                 if (Transaction.Current == null)
                 {

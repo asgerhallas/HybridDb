@@ -12,10 +12,7 @@ namespace HybridDb.Tests
     {
         readonly Configuration configuration;
 
-        public ConfigurationTests()
-        {
-            configuration = new Configuration();
-        }
+        public ConfigurationTests() => configuration = new Configuration();
 
         [Fact]
         public void RegisterDocumentDesign()
@@ -49,6 +46,25 @@ namespace HybridDb.Tests
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("AbstractEntities");
+        }
+
+        [Fact]
+        public void RegisterDerivedTypeAsDocument_WithExplicitTableName()
+        {
+            configuration.Document<AbstractEntity>("mytable");
+            configuration.Document<DerivedEntity>("mytable");
+
+            var designs = configuration.DocumentDesigns;
+            designs[0].DocumentType.ShouldBe(typeof(AbstractEntity));
+            designs[0].Parent.ShouldBe(null);
+            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0], designs[1] });
+
+            designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
+            designs[1].Parent.ShouldBe(designs[0]);
+            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
+
+            var table = configuration.Tables.Single();
+            table.Key.ShouldBe("mytable");
         }
 
         [Fact]
