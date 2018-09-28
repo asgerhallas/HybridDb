@@ -112,69 +112,96 @@ namespace HybridDb
                 return LastWrittenEtag;
 
             var timer = Stopwatch.StartNew();
-            using (var connectionManager = Database.Connect())
+
+            using (var writer = new Writer(this, Guid.NewGuid()))
             {
-                var etag = Guid.NewGuid();
-                var numberOfInsertCommands = 0;
-                var numberOfUpdateCommands = 0;
-                var numberOfDeleteCommands = 0;
                 foreach (var command in commands)
                 {
-                    var preparedCommand = Switch<SqlDatabaseCommand>.On(command)
-                        .Match<InsertCommand>(insert =>
-                        {
-                            numberOfInsertCommands++;
-                            return PrepareInsertCommand(insert, etag, 0);
-                        })
-                        .Match<UpdateCommand>(update =>
-                        {
-                            numberOfUpdateCommands++;
-                            return PrepareUpdateCommand(update, etag, 0);
-                        })
-                        .Match<DeleteCommand>(delete =>
-                        {
-                            numberOfDeleteCommands++;
-                            return PrepareDeleteCommand(delete, 0);
-                        })
-                        .OrThrow();
-
-                    var numberOfNewParameters = preparedCommand.Parameters.Count;
-
-                    // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
-                    // params are added some where in the stack) so we cut it some slack and say 2000.
-                    if (numberOfNewParameters >= 2000)
-                    {
-                        throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
-                    }
-
-                    InternalExecute(connectionManager, preparedCommand.Sql, preparedCommand.Parameters, preparedCommand.ExpectedRowCount);
+                    writer.Write(command);
                 }
 
-                connectionManager.Complete();
+                writer.Complete();
 
                 Logger.Debug("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
-                    numberOfInsertCommands,
-                    numberOfUpdateCommands,
-                    numberOfDeleteCommands,
+                    writer.NumberOfInsertCommands,
+                    writer.NumberOfUpdateCommands,
+                    writer.NumberOfDeleteCommands,
                     timer.ElapsedMilliseconds);
 
-                lastWrittenEtag = etag;
-                return etag;
+                lastWrittenEtag = writer.Etag;
+                return writer.Etag;
             }
         }
 
-        void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
+        public class Writer : IDisposable
         {
-            var fastParameters = new FastDynamicParameters(parameters);
-            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+            readonly DocumentStore store;
+            readonly ManagedConnection connection;
 
-            Interlocked.Increment(ref numberOfRequests);
-
-            if (rowcount != expectedRowCount)
+            public Writer(DocumentStore store, Guid etag)
             {
-                throw new ConcurrencyException(
-                    $"Someone beat you to it. Expected {expectedRowCount} changes, but got {rowcount}. " +
-                    $"The transaction is rolled back now, so no changes was actually made.");
+                this.store = store;
+                this.connection = store.Database.Connect();
+
+                Etag = etag;
+            }
+
+            public void Complete()
+            {
+                connection.Complete();
+            }
+
+            public void Dispose()
+            {
+                connection.Dispose();
+            }
+
+            public Guid Etag { get; }
+
+            public int NumberOfInsertCommands { get; private set; } = 0;
+            public int NumberOfUpdateCommands { get; private set; } = 0;
+            public int NumberOfDeleteCommands { get; private set; } = 0;
+
+            public void Write(DatabaseCommand command)
+            {
+                var preparedCommand = Switch<SqlDatabaseCommand>.On(command)
+                    .Match<InsertCommand>(insert =>
+                    {
+                        NumberOfInsertCommands++;
+                        return store.PrepareInsertCommand(insert, Etag, 0);
+                    })
+                    .Match<UpdateCommand>(update =>
+                    {
+                        NumberOfUpdateCommands++;
+                        return store.PrepareUpdateCommand(update, Etag, 0);
+                    })
+                    .Match<DeleteCommand>(delete =>
+                    {
+                        NumberOfDeleteCommands++;
+                        return store.PrepareDeleteCommand(delete, 0);
+                    })
+                    .OrThrow();
+
+                var numberOfNewParameters = preparedCommand.Parameters.Count;
+
+                // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
+                // params are added some where in the stack) so we cut it some slack and say 2000.
+                if (numberOfNewParameters >= 2000)
+                {
+                    throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
+                }
+
+                var fastParameters = new FastDynamicParameters(preparedCommand.Parameters);
+                var rowcount = connection.Connection.Execute(preparedCommand.Sql, fastParameters);
+
+                Interlocked.Increment(ref store.numberOfRequests);
+
+                if (rowcount != preparedCommand.ExpectedRowCount)
+                {
+                    throw new ConcurrencyException(
+                        $"Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}. " +
+                        $"The transaction is rolled back now, so no changes was actually made.");
+                }
             }
         }
 
