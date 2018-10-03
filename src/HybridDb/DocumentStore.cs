@@ -345,7 +345,11 @@ namespace HybridDb
         {
             using (var connection = Database.Connect())
             {
-                return Get(connection, table, key);
+                var result = Get(connection, table, key);
+
+                connection.Complete();
+
+                return result;
             }
         }
 
@@ -358,8 +362,6 @@ namespace HybridDb
             var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key, Op = Operation.Deleted }).SingleOrDefault();
 
             Interlocked.Increment(ref numberOfRequests);
-
-            connection.Complete();
 
             Logger.Debug("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
