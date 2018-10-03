@@ -113,14 +113,16 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
 
-            using (var writer = new Writer(this, Guid.NewGuid()))
+            using( var connection = Database.Connect())
             {
+                var writer = new Writer(this, connection, Guid.NewGuid());
+
                 foreach (var command in commands)
                 {
                     writer.Write(command);
                 }
 
-                writer.Complete();
+                connection.Complete();
 
                 Logger.Debug("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
                     writer.NumberOfInsertCommands,
@@ -133,27 +135,17 @@ namespace HybridDb
             }
         }
 
-        public class Writer : IDisposable
+        public class Writer
         {
             readonly DocumentStore store;
             readonly ManagedConnection connection;
 
-            public Writer(DocumentStore store, Guid etag)
+            public Writer(DocumentStore store, ManagedConnection connection, Guid etag)
             {
                 this.store = store;
-                this.connection = store.Database.Connect();
+                this.connection = connection;
 
                 Etag = etag;
-            }
-
-            public void Complete()
-            {
-                connection.Complete();
-            }
-
-            public void Dispose()
-            {
-                connection.Dispose();
             }
 
             public Guid Etag { get; }
@@ -348,24 +340,30 @@ namespace HybridDb
             from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
             select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
 
+
         public IDictionary<string, object> Get(DocumentTable table, string key)
+        {
+            using (var connection = Database.Connect())
+            {
+                return Get(connection, table, key);
+            }
+        }
+
+        public IDictionary<string, object> Get(ManagedConnection connection, DocumentTable table, string key)
         {
             var timer = Stopwatch.StartNew();
 
-            using (var connection = Database.Connect())
-            {
-                var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
+            var sql = $"select * from {Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-                var row = (IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key, Op = Operation.Deleted}).SingleOrDefault();
+            var row = (IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key, Op = Operation.Deleted }).SingleOrDefault();
 
-                Interlocked.Increment(ref numberOfRequests);
+            Interlocked.Increment(ref numberOfRequests);
 
-                connection.Complete();
+            connection.Complete();
 
-                Logger.Debug("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
+            Logger.Debug("Retrieved {0} in {1}ms", key, timer.ElapsedMilliseconds);
 
-                return row;
-            }
+            return row;
         }
 
         public long NumberOfRequests => numberOfRequests;
