@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -15,8 +13,6 @@ namespace HybridDb.Migrations
 {
     public class SchemaMigrationRunner
     {
-        public static readonly ConcurrentDictionary<object, int> objects = new ConcurrentDictionary<object, int>();
-
         readonly ILogger logger;
         readonly DocumentStore store;
         readonly IReadOnlyList<Migration> migrations;
@@ -45,6 +41,8 @@ namespace HybridDb.Migrations
             {
                 using (var connection = database.Connect())
                 {
+                    connection.Connection.EnlistTransaction(Transaction.Current);
+
                     var parameters = new DynamicParameters();
                     parameters.Add("@Resource", "HybridDb");
                     parameters.Add("@DbPrincipal", "public");

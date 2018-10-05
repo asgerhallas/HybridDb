@@ -59,12 +59,12 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
-                var initialNumberOfRequest = store.NumberOfRequests;
+                var initialNumberOfRequest = store.Stats.NumberOfRequests;
 
                 session.Advanced.Defer(new InsertCommand(table.Table, id, new { }));
-                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
+                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
                 session.SaveChanges();
-                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
+                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
             var entity = store.Database.RawQuery<dynamic>($"select * from #Entities where Id = '{id}'").SingleOrDefault();
@@ -399,7 +399,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
-                var initialNumberOfRequest = store.NumberOfRequests;
+                var initialNumberOfRequest = store.Stats.NumberOfRequests;
 
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges(); // 1
@@ -409,7 +409,7 @@ namespace HybridDb.Tests
                 document.Property = "Lars";
                 session.SaveChanges(); // 3
 
-                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
+                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
                 session.Advanced.Clear();
                 session.Load<Entity>(id).Property.ShouldBe("Lars");
             }
@@ -424,7 +424,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
-                var initialNumberOfRequest = store.NumberOfRequests;
+                var initialNumberOfRequest = store.Stats.NumberOfRequests;
 
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges(); // 1
@@ -433,7 +433,7 @@ namespace HybridDb.Tests
                 session.Load<Entity>(id); // 2
                 session.SaveChanges(); // Should not issue a request
 
-                store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
+                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
             }
         }
 
@@ -492,13 +492,13 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id3, Property = "Jacob" });
                 session.SaveChanges();
 
-                var numberOfRequests = store.NumberOfRequests;
-                var lastEtag = store.LastWrittenEtag;
+                var numberOfRequests = store.Stats.NumberOfRequests;
+                var lastEtag = store.Stats.LastWrittenEtag;
 
                 session.SaveChanges();
 
-                store.NumberOfRequests.ShouldBe(numberOfRequests);
-                store.LastWrittenEtag.ShouldBe(lastEtag);
+                store.Stats.NumberOfRequests.ShouldBe(numberOfRequests);
+                store.Stats.LastWrittenEtag.ShouldBe(lastEtag);
             }
         }
 
@@ -824,14 +824,14 @@ namespace HybridDb.Tests
             Document<Entity>();
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
-            var numberOfRequests = store.NumberOfRequests;
+            var numberOfRequests = store.Stats.NumberOfRequests;
             using (var session = store.OpenSession())
             {
                 session.Load<Entity>(id);
                 session.SaveChanges();
             }
 
-            (store.NumberOfRequests - numberOfRequests).ShouldBe(1);
+            (store.Stats.NumberOfRequests - numberOfRequests).ShouldBe(1);
         }
 
         [Fact]
@@ -980,7 +980,7 @@ namespace HybridDb.Tests
             var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
 
             A.CallTo(fakeStore)
-                .Where(x => x.Method.Name == nameof(IDocumentStore.Execute))
+                .Where(x => x.Method.Name == nameof(IDocumentStore.BeginTransaction))
                 .Throws(() => new Exception());
 
             Document<Entity>();

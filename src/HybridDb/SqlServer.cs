@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Transactions;
 using Dapper;
 using HybridDb.Config;
 
@@ -47,6 +48,8 @@ namespace HybridDb
 
             using (var connection = Connect())
             {
+                connection.Connection.EnlistTransaction(Transaction.Current);
+
                 var result = connection.Connection.Execute(sql, parameters);
                 connection.Complete();
 
@@ -64,6 +67,8 @@ namespace HybridDb
 
             using (var connection = Connect())
             {
+                connection.Connection.EnlistTransaction(Transaction.Current);
+
                 return connection.Connection.Query<T>(sql, parameters);
             }
         }

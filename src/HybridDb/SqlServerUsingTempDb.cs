@@ -72,6 +72,8 @@ namespace HybridDb
 
             using (var managedConnection = Connect())
             {
+                managedConnection.Connection.EnlistTransaction(Transaction.Current);
+
                 var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
 SELECT 
    table_name = t.table_name,

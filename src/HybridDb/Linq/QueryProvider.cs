@@ -93,10 +93,9 @@ namespace HybridDb.Linq
 
             if (translation.ProjectAs == null)
             {
-                QueryStats storeStats;
                 var results =
                     from row in store.Query<object>(
-                        design.Table, out storeStats,
+                        design.Table, out var storeStats,
                         translation.Select, translation.Where, translation.Skip,
                         translation.Take, translation.OrderBy, false, translation.Parameters)
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
@@ -115,10 +114,9 @@ namespace HybridDb.Linq
             {
                 var table = design.Table;
 
-                QueryStats storeStats;
                 var results =
                     from row in store.Query<TProjection>(
-                        table, out storeStats,
+                        table, out var storeStats,
                         translation.Select, translation.Where, translation.Skip,
                         translation.Take, translation.OrderBy, false, translation.Parameters)
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)

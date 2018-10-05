@@ -27,15 +27,15 @@ namespace HybridDb
             {
                 numberOfManagedConnections++;
 
-                if (Transaction.Current == null)
-                {
-                    var tx = new TransactionScope(
-                        TransactionScopeOption.RequiresNew,
-                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
+                //if (Transaction.Current == null)
+                //{
+                //    var tx = new TransactionScope(
+                //        TransactionScopeOption.RequiresNew,
+                //        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
 
-                    complete += tx.Complete;
-                    dispose += tx.Dispose;
-                }
+                //    complete += tx.Complete;
+                //    dispose += tx.Dispose;
+                //}
 
                 if (ambientConnectionForTesting == null)
                 {
@@ -47,7 +47,7 @@ namespace HybridDb
                 // Connections that are kept open during multiple operations (for testing mostly)
                 // will not automatically be enlisted in transactions started later, we fix that here.
                 // Calling EnlistTransaction on a connection that is already enlisted is a no-op.
-                ambientConnectionForTesting.EnlistTransaction(Transaction.Current);
+                //ambientConnectionForTesting.EnlistTransaction(Transaction.Current);
 
                 return new ManagedConnection(ambientConnectionForTesting, complete, dispose);
             }
@@ -67,6 +67,8 @@ namespace HybridDb
 
             using (var managedConnection = Connect())
             {
+                if (Transaction.Current != null) managedConnection.Connection.EnlistTransaction(Transaction.Current);
+
                 var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>(@"
 SELECT 
    table_name = SUBSTRING(t.name, 1, CHARINDEX('___', t.name)-1),

@@ -51,7 +51,7 @@ namespace HybridDb
                     ? managedEntity.Entity
                     : null;
             }
-            
+
             var row = store.Get(design.Table, key);
             
             if (row == null) return null;
@@ -223,7 +223,10 @@ namespace HybridDb
                 }
             }
 
-            var etag = store.Execute(commands.Select(x => x.Value).Concat(deferredCommands));
+            var etag = store.Transactionally(tx => commands
+                .Select(x => x.Value)
+                .Concat(deferredCommands)
+                .Aggregate(Guid.Empty, (acc, next) => tx.Execute(next)));
 
             foreach (var managedEntity in commands.Keys)
             {

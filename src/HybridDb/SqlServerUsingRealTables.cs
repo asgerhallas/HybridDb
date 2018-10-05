@@ -7,6 +7,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Config;
 using Serilog;
+using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
@@ -22,32 +23,22 @@ namespace HybridDb
 
         public override ManagedConnection Connect()
         {
-            Action complete = () => { };
             Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
 
             try
             {
-                Interlocked.Increment(ref numberOfManagedConnections);
-
-                if (Transaction.Current == null)
-                {
-                    var tx = new TransactionScope(
-                        TransactionScopeOption.RequiresNew,
-                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
-
-                    complete += tx.Complete;
-                    dispose += tx.Dispose;
-                }
-
                 var connection = new SqlConnection(connectionString);
+                dispose += connection.Dispose;
 
-                complete = connection.Dispose + complete;
-                dispose = connection.Dispose + dispose;
+                Interlocked.Increment(ref numberOfManagedConnections);
 
                 connection.InfoMessage += (obj, args) => OnMessage(args);
                 connection.Open();
 
-                return new ManagedConnection(connection, complete, dispose);
+                return new ManagedConnection(
+                    connection,
+                    () => connection.Dispose(),
+                    dispose);
             }
             catch (Exception)
             {
@@ -62,6 +53,8 @@ namespace HybridDb
 
             using (var managedConnection = Connect())
             {
+                managedConnection.Connection.EnlistTransaction(Transaction.Current);
+
                 var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
 SELECT 
    table_name = t.table_name,
