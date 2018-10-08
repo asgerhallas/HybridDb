@@ -153,6 +153,8 @@ namespace HybridDb
 
         public Guid Etag { get; }
 
+        public IDocumentStore Store => store;
+
         public Guid Execute(DatabaseCommand command)
         {
             storeStats.NumberOfRequests++;
@@ -497,5 +499,7 @@ namespace HybridDb
             typeof(TimeSpan?),
             typeof(object)
         };
+
+        IDocumentTransaction documentTransactionImplementation;
     }
 }

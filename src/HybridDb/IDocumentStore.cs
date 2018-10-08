@@ -22,6 +22,8 @@ namespace HybridDb
 
     public interface IDocumentTransaction : IDisposable
     {
+        IDocumentStore Store { get; }
+
         Guid Execute(DatabaseCommand command);
         IDictionary<string, object> Get(DocumentTable table, string key);
         (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(

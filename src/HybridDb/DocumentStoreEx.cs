@@ -43,23 +43,28 @@ namespace HybridDb
             int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             return store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, includeDeleted, parameters)
-                .Select(x => (IDictionary<string, object>)x.Data);
+                .Select(x => (IDictionary<string, object>) x.Data);
         }
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this IDocumentStore store, DocumentTable table, byte[] since, string select = null)
         {
-            var upperBoundary = !store.Testing || store.TableMode == TableMode.UseRealTables 
+            return store.Transactionally(tx => tx.Query<TProjection>(table, since, @select));
+        }
+
+        public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
+            this IDocumentTransaction tx, DocumentTable table, byte[] since, string select = null)
+        {
+            var upperBoundary = !tx.Store.Testing || tx.Store.TableMode == TableMode.UseRealTables 
                 ? $"and {table.RowVersionColumn.Name} < min_active_rowversion()" 
                 : "";
 
-            return store.Transactionally(tx => tx.Query<TProjection>(table, @select,
-                    @where: $"{table.RowVersionColumn.Name} > @Since {upperBoundary}",
-                    @orderby: $"{table.RowVersionColumn.Name} ASC",
-                    includeDeleted: true,
-                    parameters: new {Since = since}
-                ).rows
-            );
+            return tx.Query<TProjection>(table, @select,
+                @where: $"{table.RowVersionColumn.Name} > @Since {upperBoundary}",
+                @orderby: $"{table.RowVersionColumn.Name} ASC",
+                includeDeleted: true,
+                parameters: new {Since = since}
+            ).rows;
         }
 
         public static T Transactionally<T>(this IDocumentStore store, Func<IDocumentTransaction, T> func)
