@@ -28,11 +28,13 @@ namespace HybridDb
         {
             using (var tx = store.BeginTransaction())
             {
-                var results = tx.Query<T>(table, out stats, @select, @where, skip, take, @orderby, includeDeleted, parameters);
+                var (queryStats, rows) = tx.Query<T>(table, @select, @where, skip, take, @orderby, includeDeleted, parameters);
 
                 tx.Complete();
 
-                return results;
+                stats = queryStats;
+
+                return rows;
             }
         }
 
@@ -51,11 +53,12 @@ namespace HybridDb
                 ? $"and {table.RowVersionColumn.Name} < min_active_rowversion()" 
                 : "";
 
-            return store.Transactionally(tx => tx.Query<TProjection>(table, out _, @select,
-                @where: $"{table.RowVersionColumn.Name} > @Since {upperBoundary}",
-                @orderby: $"{table.RowVersionColumn.Name} ASC",
-                includeDeleted: true,
-                parameters: new {Since = since})
+            return store.Transactionally(tx => tx.Query<TProjection>(table, @select,
+                    @where: $"{table.RowVersionColumn.Name} > @Since {upperBoundary}",
+                    @orderby: $"{table.RowVersionColumn.Name} ASC",
+                    includeDeleted: true,
+                    parameters: new {Since = since}
+                ).rows
             );
         }
 

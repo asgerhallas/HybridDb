@@ -93,17 +93,17 @@ namespace HybridDb
             IsInitialized = true;
         }
 
-        public IDocumentSession OpenSession()
+        public IDocumentSession OpenSession(IDocumentTransaction tx = null)
         {
             if (!IsInitialized)
             {
                 throw new InvalidOperationException("You must call Initialize() on the store before opening a session.");
             }
 
-            return new DocumentSession(this);
+            return new DocumentSession(this, tx);
         }
 
-        public IDocumentTransaction BeginTransaction() => new DocumentTransaction(this, Stats);
+        public IDocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => new DocumentTransaction(this, level, Stats);
     }
 
     public class StoreStats
@@ -127,14 +127,14 @@ namespace HybridDb
         readonly SqlConnection connection;
         readonly SqlTransaction tx;
 
-        public DocumentTransaction(DocumentStore store, StoreStats storeStats)
+        public DocumentTransaction(DocumentStore store, IsolationLevel level, StoreStats storeStats)
         {
             this.store = store;
             this.storeStats = storeStats;
 
             managedConnection = store.Database.Connect();
             connection = managedConnection.Connection;
-            tx = connection.BeginTransaction();
+            tx = connection.BeginTransaction(level);
 
             Etag = Guid.NewGuid();
         }
@@ -207,9 +207,9 @@ namespace HybridDb
             return (IDictionary<string, object>)connection.Query(sql, new { Id = key, Op = Operation.Deleted }, tx).SingleOrDefault();
         }
 
-        public IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            DocumentTable table, out QueryStats stats, string select = null, string where = "",
-            int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null)
+        public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
+            DocumentTable table, string select = null, string where = "", int skip = 0, int take = 0, 
+            string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
@@ -269,7 +269,7 @@ namespace HybridDb
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
             }
 
-            var result = InternalQuery<TProjection>(sql, parameters, isWindowed, out stats);
+            var result = InternalQuery<TProjection>(sql, parameters, isWindowed, out var stats);
 
             stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
 
@@ -286,7 +286,7 @@ namespace HybridDb
                 stats.RetrievedResults = stats.TotalResults;
             }
 
-            return result;
+            return (stats, result);
         }
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)

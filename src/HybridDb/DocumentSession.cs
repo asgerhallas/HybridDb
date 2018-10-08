@@ -12,17 +12,19 @@ namespace HybridDb
     {
         readonly Dictionary<EntityKey, ManagedEntity> entities;
         readonly IDocumentStore store;
+        readonly IDocumentTransaction enlistedTransaction;
         readonly List<DatabaseCommand> deferredCommands;
         readonly DocumentMigrator migrator;
         bool saving = false;
 
-        internal DocumentSession(IDocumentStore store)
+        internal DocumentSession(IDocumentStore store, IDocumentTransaction enlistedTransaction = null)
         {
             deferredCommands = new List<DatabaseCommand>();
             entities = new Dictionary<EntityKey, ManagedEntity>();
             migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
+            this.enlistedTransaction = enlistedTransaction;
         }
 
         public IAdvancedDocumentSessionCommands Advanced => this;
@@ -52,7 +54,7 @@ namespace HybridDb
                     : null;
             }
 
-            var row = store.Get(design.Table, key);
+            var row = Transactionally(tx => tx.Get(design.Table, key));
             
             if (row == null) return null;
 
@@ -66,6 +68,7 @@ namespace HybridDb
 
             return ConvertToEntityAndPutUnderManagement(concreteDesign, row);
         }
+
 
         /// <summary>
         /// Query for document of type T and subtypes of T in the table assigned to T.
@@ -223,7 +226,7 @@ namespace HybridDb
                 }
             }
 
-            var etag = store.Transactionally(tx => commands
+            var etag = Transactionally(tx => commands
                 .Select(x => x.Value)
                 .Concat(deferredCommands)
                 .Aggregate(Guid.Empty, (acc, next) => tx.Execute(next)));
@@ -276,6 +279,21 @@ namespace HybridDb
             return entity;
         }
 
+        internal T Transactionally<T>(Func<IDocumentTransaction, T> func)
+        {
+            if (enlistedTransaction != null)
+                return func(enlistedTransaction);
+
+            using (var tx = store.BeginTransaction())
+            {
+                var result = func(tx);
+
+                tx.Complete();
+
+                return result;
+            }
+        }
+
         public void Clear()
         {
             entities.Clear();
@@ -291,6 +309,7 @@ namespace HybridDb
                 .Select(x => x.Value)
                 .SingleOrDefault(x => x.Entity == entity);
         }
+
 
         bool SafeSequenceEqual<T>(IEnumerable<T> first, IEnumerable<T> second)
         {

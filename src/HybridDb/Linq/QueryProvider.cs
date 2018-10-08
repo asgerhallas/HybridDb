@@ -93,11 +93,12 @@ namespace HybridDb.Linq
 
             if (translation.ProjectAs == null)
             {
+                var (stats, rows) = session.Transactionally(tx => tx.Query<object>(
+                    design.Table, translation.Select, translation.Where, translation.Skip,
+                    translation.Take, translation.OrderBy, false, translation.Parameters));
+
                 var results =
-                    from row in store.Query<object>(
-                        design.Table, out var storeStats,
-                        translation.Select, translation.Where, translation.Skip,
-                        translation.Take, translation.OrderBy, false, translation.Parameters)
+                    from row in rows
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
                     // TProjection is always an entity type (if ProjectAs == null).
                     // Either it's the same as TSourceElement or it is filtered by OfType<TProjection>
@@ -107,42 +108,33 @@ namespace HybridDb.Linq
                     where entity != null
                     select (TProjection) entity;
   
-                storeStats.CopyTo(lastQueryStats);
+                stats.CopyTo(lastQueryStats);
+
                 return new TranslationAndResult<TProjection>(translation, results);
             }
             else
             {
-                var table = design.Table;
+                var (stats, rows) = session.Transactionally(tx => tx.Query<TProjection>(
+                    design.Table, translation.Select, translation.Where, translation.Skip,
+                    translation.Take, translation.OrderBy, false, translation.Parameters));
 
                 var results =
-                    from row in store.Query<TProjection>(
-                        table, out var storeStats,
-                        translation.Select, translation.Where, translation.Skip,
-                        translation.Take, translation.OrderBy, false, translation.Parameters)
+                    from row in rows
                     let concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator)
                     //TODO: OfType won't work with this. Go figure it out later.
                     where design.DocumentType.IsAssignableFrom(concreteDesign.DocumentType)
                     select row.Data;
 
-                storeStats.CopyTo(lastQueryStats);
+                stats.CopyTo(lastQueryStats);
                 return new TranslationAndResult<TProjection>(translation, results);
             }
         }
 
-        public string GetQueryText(IQueryable query)
-        {
-            return query.Translate().Where;
-        }
+        public string GetQueryText(IQueryable query) => query.Translate().Where;
 
-        internal void WriteStatisticsTo(out QueryStats stats)
-        {
-            stats = lastQueryStats;
-        }
+        internal void WriteStatisticsTo(out QueryStats stats) => stats = lastQueryStats;
 
-        public object Execute(Expression expression)
-        {
-            throw new NotSupportedException();
-        }
+        public object Execute(Expression expression) => throw new NotSupportedException();
 
         class TranslationAndResult<T>
         {
