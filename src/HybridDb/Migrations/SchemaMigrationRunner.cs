@@ -41,8 +41,6 @@ namespace HybridDb.Migrations
             {
                 using (var connection = database.Connect())
                 {
-                    connection.Connection.EnlistTransaction(Transaction.Current);
-
                     var parameters = new DynamicParameters();
                     parameters.Add("@Resource", "HybridDb");
                     parameters.Add("@DbPrincipal", "public");

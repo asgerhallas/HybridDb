@@ -5,12 +5,14 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using Serilog;
 using ShinySwitch;
+using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
@@ -134,20 +136,24 @@ namespace HybridDb
 
             managedConnection = store.Database.Connect();
             connection = managedConnection.Connection;
-            tx = connection.BeginTransaction(level);
+
+            if (Transaction.Current == null)
+            {
+                tx = connection.BeginTransaction(level);
+            }
 
             Etag = Guid.NewGuid();
         }
 
         public void Dispose()
         {
-            tx.Dispose();
+            tx?.Dispose();
             managedConnection.Dispose();
         }
 
         public Guid Complete()
         {
-            tx.Commit();
+            tx?.Commit();
             return Etag;
         }
 

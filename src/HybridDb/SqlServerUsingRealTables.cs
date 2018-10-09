@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
-using System.Transactions;
 using Dapper;
-using HybridDb.Config;
-using Serilog;
-using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
@@ -53,8 +49,6 @@ namespace HybridDb
 
             using (var managedConnection = Connect())
             {
-                managedConnection.Connection.EnlistTransaction(Transaction.Current);
-
                 var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
 SELECT 
    table_name = t.table_name,

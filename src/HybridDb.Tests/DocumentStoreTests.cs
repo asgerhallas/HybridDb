@@ -264,7 +264,7 @@ namespace HybridDb.Tests
             second[table.Table["Field"]].ShouldBe("Hans");
         }
 
-        [Fact(Skip = "sideshow")]
+        [Fact]
         public void CanQueryAndReturnAnonymousProjections()
         {
             Document<Entity>().With(x => x.Field);
@@ -277,11 +277,11 @@ namespace HybridDb.Tests
             var t = new {Field = ""};
 
             QueryStats stats = null;
-            var methodInfo = (from method in store.GetType().GetMethods()
-                              where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 9
+            var methodInfo = (from method in typeof(DocumentStoreEx).GetMethods()
+                              where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 10
                               select method).Single().MakeGenericMethod(t.GetType());
 
-            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", 0, 0, "", false, new {name = "Asger"}})).ToList();
+            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(null, new object[] { store, table.Table, stats, null, "Field = @name", 0, 0, "", false, new {name = "Asger"}})).ToList();
 
             rows.Count.ShouldBe(1);
             Assert.Equal("Asger", rows.Single().Data.Field);
@@ -784,7 +784,7 @@ namespace HybridDb.Tests
             props[1].ShouldBe("2");
         }
 
-        [Fact(Skip="sideshow")]
+        [Fact]
         public void WillEnlistCommandsInAmbientTransactions()
         {
             Document<Entity>();
@@ -795,14 +795,12 @@ namespace HybridDb.Tests
             {
                 store.Insert(table.Table, NewId(), new { });
                 store.Insert(table.Table, NewId(), new { });
-
-                // No tx complete here
             }
 
             store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
-        [Fact(Skip = "sideshow")]
+        [Fact]
         public void CanUseTempDb()
         {
             var prefix = Guid.NewGuid().ToString();
@@ -836,7 +834,7 @@ namespace HybridDb.Tests
             // database.QuerySchema().ShouldNotContainKey("Cases");
         }
 
-        [Fact()]
+        [Fact]
         public void UtilityColsAreRemovedFromQueryResults()
         {
             Document<Entity>();
@@ -1001,7 +999,7 @@ namespace HybridDb.Tests
             results2[1].LastOperation.ShouldBe(Operation.Deleted);
         }
 
-        [Fact(Skip = "sideshow")]
+        [Fact]
         public void Bug_RaceConditionWithSnapshotAndRowVersion()
         {
             //Nummeret til rowversion kolonnen tildeles ved starten af tx, hvilket betyder at ovenstående giver følgende situation:

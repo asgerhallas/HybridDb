@@ -34,16 +34,6 @@ namespace HybridDb
             {
                 numberOfManagedConnections++;
 
-                if (Transaction.Current == null)
-                {
-                    var tx = new TransactionScope(
-                        TransactionScopeOption.RequiresNew,
-                        new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted });
-
-                    complete += tx.Complete;
-                    dispose += tx.Dispose;
-                }
-
                 var connection = new SqlConnection(connectionString);
 
                 complete = connection.Dispose + complete;
@@ -53,7 +43,10 @@ namespace HybridDb
                 connection.Open();
                 connection.ChangeDatabase("tempdb");
 
-                connection.EnlistTransaction(Transaction.Current);
+                if (Transaction.Current != null)
+                {
+                    connection.EnlistTransaction(Transaction.Current);
+                }
 
                 return new ManagedConnection(connection, complete, dispose);
             }
@@ -72,8 +65,6 @@ namespace HybridDb
 
             using (var managedConnection = Connect())
             {
-                managedConnection.Connection.EnlistTransaction(Transaction.Current);
-
                 var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
 SELECT 
    table_name = t.table_name,

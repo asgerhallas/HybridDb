@@ -187,6 +187,7 @@
     <Compile Include="EntityState.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
+    <Compile Include="IDocumentTransaction.cs" />
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\ChangeDocument.cs" />

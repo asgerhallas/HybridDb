@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using FakeItEasy;
@@ -99,7 +100,7 @@ namespace HybridDb.Tests.Migrations
             // bump the version of the configuration
             UseMigrations(new InlineMigration(1));
 
-            new DocumentMigrationRunner().Run(fakeStore).Wait();
+            new DocumentMigrationRunner().Run(store).Wait();
 
             // 1+2: Entities table => 100 rows
             // 3: Entities table => 0 rows

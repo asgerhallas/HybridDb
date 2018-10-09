@@ -125,15 +125,11 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        protected string NewId()
-        {
-            return Guid.NewGuid().ToString();
-        }
+        protected string NewId() => Guid.NewGuid().ToString();
 
         public void Dispose()
         {
-            Action dispose;
-            while (disposables.TryPop(out dispose))
+            while (disposables.TryPop(out var dispose))
             {
                 dispose();
             }
