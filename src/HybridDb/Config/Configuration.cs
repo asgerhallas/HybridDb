@@ -19,7 +19,7 @@ namespace HybridDb.Config
         internal readonly ConcurrentDictionary<string, Table> tables;
         readonly List<DocumentDesign> documentDesigns;
 
-        internal Configuration()
+        public Configuration()
         {
             tables = new ConcurrentDictionary<string, Table>();
             documentDesigns = new List<DocumentDesign>();
@@ -53,10 +53,7 @@ namespace HybridDb.Config
         public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
 
-        static string GetTableNameByConventionFor(Type type)
-        {
-            return Inflector.Inflector.Pluralize(type.Name);
-        }
+        static string GetTableNameByConventionFor(Type type) => Inflector.Inflector.Pluralize(type.Name);
 
         internal void Initialize()
         {
