@@ -41,13 +41,13 @@ namespace HybridDb
             }
         }
 
-        internal DocumentStore(DocumentStore store, Configuration configuration, bool testing)
+        internal DocumentStore(DocumentStore store, Configuration configuration)
         {
             Configuration = configuration;
-            Database = store.Database;
             Logger = configuration.Logger;
-
-            Testing = testing;
+            Testing = store.Testing;
+            TableMode = store.TableMode;
+            Database = store.Database;
         }
 
         public static IDocumentStore Create(string connectionString, Action<Configuration> configure = null)
@@ -60,13 +60,18 @@ namespace HybridDb
 
         public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null) => ForTesting(mode, null, configure);
 
+        public static IDocumentStore ForTesting(TableMode mode, Configuration configuration) => ForTesting(mode, null, configuration);
+
         public static IDocumentStore ForTesting(TableMode mode, string connectionString, Action<Configuration> configure = null)
         {
             configure = configure ?? (x => { });
             var configuration = new Configuration();
             configure(configuration);
-            return new DocumentStore(configuration, mode, connectionString ?? "data source=.;Integrated Security=True", true);
+            return ForTesting(mode, null, configuration);
         }
+
+        public static IDocumentStore ForTesting(TableMode mode, string connectionString, Configuration configuration) => 
+            new DocumentStore(configuration, mode, connectionString ?? "data source=.;Integrated Security=True", true);
 
         public void Dispose() => Database.Dispose();
 

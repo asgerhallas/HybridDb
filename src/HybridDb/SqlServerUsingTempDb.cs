@@ -4,8 +4,6 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
 using Dapper;
-using HybridDb.Config;
-using Serilog;
 
 namespace HybridDb
 {
