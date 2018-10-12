@@ -116,7 +116,7 @@ namespace HybridDb.Tests
         {
             configuration = new Configuration();
 
-            store = Using(new DocumentStore(store, configuration, true));
+            store = Using(new DocumentStore(store, configuration));
         }
 
         protected T Using<T>(T disposable) where T : IDisposable
