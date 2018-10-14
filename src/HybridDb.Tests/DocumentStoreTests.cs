@@ -1077,6 +1077,14 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void Bug()
+        {
+            var documentStore = DocumentStore.ForTesting(TableMode.UseRealTables, connectionString, x => x.Document<Case>());
+            documentStore.Initialize();
+        }
+
+
         public class Case
         {
             public Guid Id { get; private set; }

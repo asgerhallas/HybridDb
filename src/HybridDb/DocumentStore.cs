@@ -67,7 +67,7 @@ namespace HybridDb
             configure = configure ?? (x => { });
             var configuration = new Configuration();
             configure(configuration);
-            return ForTesting(mode, null, configuration);
+            return ForTesting(mode, connectionString, configuration);
         }
 
         public static IDocumentStore ForTesting(TableMode mode, string connectionString, Configuration configuration) => 
