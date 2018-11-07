@@ -37,7 +37,10 @@ namespace HybridDb.Migrations
             var database = store.Database;
             var configuration = store.Configuration;
 
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions {IsolationLevel = IsolationLevel.Serializable}))
+            using (var tx = new TransactionScope(
+                TransactionScopeOption.RequiresNew, 
+                new TransactionOptions { IsolationLevel = IsolationLevel.Serializable}, 
+                TransactionScopeAsyncFlowOption.Suppress))
             {
                 using (var connection = database.Connect())
                 {

@@ -510,7 +510,5 @@ namespace HybridDb
             typeof(TimeSpan?),
             typeof(object)
         };
-
-        IDocumentTransaction documentTransactionImplementation;
     }
 }
