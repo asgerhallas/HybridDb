@@ -39,7 +39,7 @@ namespace HybridDb.Migrations
 
             using (var tx = new TransactionScope(
                 TransactionScopeOption.RequiresNew, 
-                new TransactionOptions { IsolationLevel = IsolationLevel.Serializable}, 
+                new TransactionOptions { IsolationLevel = IsolationLevel.Serializable, Timeout = TimeSpan.FromMinutes(10) }, 
                 TransactionScopeAsyncFlowOption.Suppress))
             {
                 using (var connection = database.Connect(true))
