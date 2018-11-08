@@ -4,24 +4,22 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Transactions;
 using Dapper;
-using HybridDb.Config;
-using Serilog;
 
 namespace HybridDb
 {
-    public class SqlServerUsingTempTables : SqlServer
+    public class SqlServerUsingLocalTempTables : SqlServer
     {
         int numberOfManagedConnections;
         SqlConnection ambientConnectionForTesting;
 
-        public SqlServerUsingTempTables(DocumentStore store, string connectionString) : base(store, connectionString) {}
+        public SqlServerUsingLocalTempTables(DocumentStore store, string connectionString) : base(store, connectionString) {}
 
         public override string FormatTableName(string tablename) => "#" + tablename;
 
-        public override ManagedConnection Connect()
+        public override ManagedConnection Connect(bool schema = false)
         {
-            Action complete = () => { };
-            Action dispose = () => { numberOfManagedConnections--; };
+            void Complete() { }
+            void Dispose() => numberOfManagedConnections--;
 
             try
             {
@@ -43,11 +41,11 @@ namespace HybridDb
                     ambientConnectionForTesting.EnlistTransaction(Transaction.Current);
                 }
 
-                return new ManagedConnection(ambientConnectionForTesting, complete, dispose);
+                return new ManagedConnection(ambientConnectionForTesting, Complete, Dispose);
             }
             catch (Exception)
             {
-                dispose();
+                Dispose();
 
                 ambientConnectionForTesting.Dispose();
 

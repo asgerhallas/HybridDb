@@ -9,13 +9,12 @@ namespace HybridDb.Tests
     public class DatabaseQuerySchemaTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseLocalTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllTables(TableMode mode)
         {
             Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
             new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(store.Database);
@@ -27,13 +26,12 @@ namespace HybridDb.Tests
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseLocalTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void ReturnsAllColumns(TableMode mode)
         {
             Use(mode);
-            UseTableNamePrefix(Guid.NewGuid().ToString());
 
             new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
             new AddColumn("Entities1", new Column("SomeInt", typeof(int))).Execute(store.Database);

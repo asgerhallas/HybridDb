@@ -10,8 +10,8 @@ namespace HybridDb.Tests.Migrations.Commands
     public class SqlMigrationTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseLocalTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void AddsColumn(TableMode mode)
         {

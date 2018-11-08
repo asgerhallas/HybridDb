@@ -803,35 +803,32 @@ namespace HybridDb.Tests
         [Fact]
         public void CanUseTempDb()
         {
-            var prefix = Guid.NewGuid().ToString();
+            var prefix = "myprefix";
 
-            UseTempDb();
+            UseGlobalTempTables();
 
-            Action<Configuration> configurator = x =>
+            void configurator(Configuration x)
             {
                 x.UseTableNamePrefix(prefix);
                 x.Document<Case>();
-            };
+            }
 
-            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
+            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables, connectionString, configurator))
             {
                 globalStore1.Initialize();
 
                 var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, configurator))
+                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables, connectionString, configurator))
                 {
                     globalStore2.Initialize();
 
-                    var result = globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id);
-
-                    result.ShouldNotBe(null);
+                    globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id).ShouldNotBe(null);
                 }
-            }
 
-            // the tempdb connection does not currently delete it's own tables
-            // database.QuerySchema().ShouldNotContainKey("Cases");
+                globalStore1.Get(globalStore1.Configuration.GetDesignFor<Case>().Table, id).ShouldNotBe(null);
+            }
         }
 
         [Fact]
@@ -861,7 +858,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanExecuteOnMultipleThreads()
         {
-            UseTempDb();
+            UseGlobalTempTables();
 
             UseTableNamePrefix(Guid.NewGuid().ToString());
             Document<Entity>().With(x => x.Property);

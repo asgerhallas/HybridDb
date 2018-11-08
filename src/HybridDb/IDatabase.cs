@@ -6,12 +6,17 @@ namespace HybridDb
 {
     public interface IDatabase : IDisposable
     {
-        ManagedConnection Connect();
+        void Initialize();
+
+        ManagedConnection Connect(bool schema = false);
+
         Dictionary<string, List<string>> QuerySchema();
-        string FormatTableNameAndEscape(string tablename);
+
         string Escape(string identifier);
         string FormatTableName(string tablename);
-        int RawExecute(string sql, object parameters = null);
-        IEnumerable<T> RawQuery<T>(string sql, object parameters = null);
+        string FormatTableNameAndEscape(string tablename);
+
+        int RawExecute(string sql, object parameters = null, bool schema = false);
+        IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false);
     }
 }

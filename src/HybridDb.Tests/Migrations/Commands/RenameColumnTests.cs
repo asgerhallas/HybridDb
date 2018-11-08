@@ -10,8 +10,6 @@ namespace HybridDb.Tests.Migrations.Commands
     public class RenameColumnTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
         [InlineData(TableMode.UseRealTables)]
         public void RenamesColumn(TableMode mode)
         {

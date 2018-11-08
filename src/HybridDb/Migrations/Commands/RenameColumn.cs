@@ -20,7 +20,7 @@ namespace HybridDb.Migrations.Commands
         public override void Execute(IDatabase database)
         {
             database.RawExecute(string.Format("{0}sp_rename '{1}.{2}', '{3}', 'COLUMN'",
-                database is SqlServerUsingTempTables ? "tempdb.." : "",
+                database is SqlServerUsingLocalTempTables ? "tempdb.." : "",
                 database.FormatTableNameAndEscape(Table.Name),
                 OldColumnName,
                 NewColumnName));         

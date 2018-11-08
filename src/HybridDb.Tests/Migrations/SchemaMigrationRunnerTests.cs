@@ -78,8 +78,8 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseLocalTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         public void DoesNotRunProvidedSchemaMigrationsOnTempTables(TableMode mode)
         {
             Use(mode);

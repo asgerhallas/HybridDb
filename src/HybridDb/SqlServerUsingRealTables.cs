@@ -17,7 +17,7 @@ namespace HybridDb
 
         public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
 
-        public override ManagedConnection Connect()
+        public override ManagedConnection Connect(bool schema = false)
         {
             Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
 

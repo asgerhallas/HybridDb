@@ -30,7 +30,7 @@ namespace HybridDb.Tests
             
             disposables = new ConcurrentStack<Action>();
 
-            UseTempTables();
+            UseLocalTempTables();
         }
 
         protected virtual DocumentStore store { get; set; }
@@ -51,27 +51,27 @@ namespace HybridDb.Tests
                 case TableMode.UseRealTables:
                     UseRealTables();
                     break;
-                case TableMode.UseTempTables:
-                    UseTempTables();
+                case TableMode.UseLocalTempTables:
+                    UseLocalTempTables();
                     break;
-                case TableMode.UseTempDb:
-                    UseTempDb();
+                case TableMode.UseGlobalTempTables:
+                    UseGlobalTempTables();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("mode");
             }
         }
 
-        protected void UseTempTables()
+        protected void UseLocalTempTables()
         {
             connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.UseTempTables, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.UseLocalTempTables, connectionString, true));
         }
 
-        protected void UseTempDb()
+        protected void UseGlobalTempTables()
         {
             connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.UseTempDb, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.UseGlobalTempTables, connectionString, true));
         }
 
         protected void UseRealTables()

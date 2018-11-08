@@ -11,8 +11,8 @@ namespace HybridDb.Tests
         {
             Should.NotThrow(() =>
             {
-                using (var store1 = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString, x => x.Document<Case>()))
-                using (var store2 = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString, x => x.Document<Case>()))
+                using (var store1 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables, connectionString, x => x.Document<Case>()))
+                using (var store2 = DocumentStore.ForTesting(TableMode.UseLocalTempTables, connectionString, x => x.Document<Case>()))
                 {
                     store1.Configuration.UseTableNamePrefix("something");
                     store1.Initialize();

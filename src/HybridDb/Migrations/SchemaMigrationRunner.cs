@@ -42,7 +42,7 @@ namespace HybridDb.Migrations
                 new TransactionOptions { IsolationLevel = IsolationLevel.Serializable}, 
                 TransactionScopeAsyncFlowOption.Suppress))
             {
-                using (var connection = database.Connect())
+                using (var connection = database.Connect(true))
                 {
                     var parameters = new DynamicParameters();
                     parameters.Add("@Resource", "HybridDb");
@@ -70,9 +70,9 @@ namespace HybridDb.Migrations
                 new CreateTable(metadata, false).Execute(database);
 
                 // get schema version
-                var currentSchemaVersion = database.RawQuery<int>(
-                        $"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}")
-                    .SingleOrDefault();
+                var hybridDbTableName = database.FormatTableNameAndEscape("HybridDb");
+
+                var currentSchemaVersion = database.RawQuery<int>($"select top 1 SchemaVersion from {hybridDbTableName}", schema: true).SingleOrDefault();
 
                 if (currentSchemaVersion > store.Configuration.ConfiguredVersion)
                 {
@@ -82,7 +82,7 @@ namespace HybridDb.Migrations
                 }
 
                 // get the diff and run commands to get to configured schema
-                var schema = database is SqlServerUsingTempTables
+                var schema = database is SqlServerUsingLocalTempTables
                     ? new Dictionary<string, List<string>>()
                     : database.QuerySchema();
 
@@ -136,13 +136,12 @@ namespace HybridDb.Migrations
                 }
 
                 // update the schema version
-                database.RawExecute(string.Format(@"
-if not exists (select * from {0}) 
-    insert into {0} (SchemaVersion) values (@version); 
-else
-    update {0} set SchemaVersion=@version",
-                        database.FormatTableNameAndEscape("HybridDb")),
-                    new {version = currentSchemaVersion});
+                database.RawExecute($@"
+                    if not exists (select * from {hybridDbTableName}) 
+                        insert into {hybridDbTableName} (SchemaVersion) values (@version); 
+                    else
+                        update {hybridDbTableName} set SchemaVersion=@version",
+                    new {version = currentSchemaVersion}, schema: true);
 
                 tx.Complete();
 

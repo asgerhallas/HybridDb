@@ -10,8 +10,8 @@ namespace HybridDb.Tests.Migrations.Commands
     public class RemoveTableTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseTempTables)]
-        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseLocalTempTables)]
+        [InlineData(TableMode.UseGlobalTempTables)]
         [InlineData(TableMode.UseRealTables)]
         public void RemovesTable(TableMode mode)
         {

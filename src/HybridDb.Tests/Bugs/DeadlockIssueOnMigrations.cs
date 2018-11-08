@@ -49,7 +49,7 @@ namespace HybridDb.Tests.Bugs
 
             Parallel.For(0, 100, i =>
             {
-                var realstore = DocumentStore.ForTesting(TableMode.UseTempTables, connectionString);
+                var realstore = DocumentStore.ForTesting(TableMode.UseLocalTempTables, connectionString);
 
                 realstore.Configuration.Document<Entity>()
                     .With(x => x.DateTimeProp)
@@ -95,7 +95,7 @@ namespace HybridDb.Tests.Bugs
         {
             Parallel.For(0, 10, i =>
             {
-                var realstore = DocumentStore.ForTesting(TableMode.UseTempDb, connectionString);
+                var realstore = DocumentStore.ForTesting(TableMode.UseGlobalTempTables, connectionString);
 
                 realstore.Configuration.UseTableNamePrefix(Guid.NewGuid().ToString());
 

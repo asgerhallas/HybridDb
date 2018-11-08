@@ -114,7 +114,6 @@
     <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />
     <Compile Include="InlineMigration.cs" />
-    <Compile Include="Migrations\Commands\ChangeColumnTypeTests.cs" />
     <Compile Include="Migrations\Commands\SqlMigrationTests.cs" />
     <Compile Include="Migrations\Commands\AddColumnTests.cs" />
     <Compile Include="Migrations\Commands\CreateTableTests.cs" />

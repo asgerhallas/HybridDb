@@ -30,11 +30,11 @@ namespace HybridDb
                 case TableMode.UseRealTables:
                     Database = new SqlServerUsingRealTables(this, connectionString);
                     break;
-                case TableMode.UseTempTables:
-                    Database = new SqlServerUsingTempTables(this, connectionString);
+                case TableMode.UseLocalTempTables:
+                    Database = new SqlServerUsingLocalTempTables(this, connectionString);
                     break;
-                case TableMode.UseTempDb:
-                    Database = new SqlServerUsingTempDb(this, connectionString);
+                case TableMode.UseGlobalTempTables:
+                    Database = new SqlServerUsingGlobalTempTables(this, connectionString);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
@@ -90,6 +90,7 @@ namespace HybridDb
                 return;
 
             Configuration.Initialize();
+            Database.Initialize();
 
             Logger = Configuration.Logger;
 

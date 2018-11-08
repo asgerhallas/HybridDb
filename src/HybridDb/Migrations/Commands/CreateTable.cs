@@ -41,7 +41,7 @@ namespace HybridDb.Migrations.Commands
 
             sql.Append($") {(inMem ? " WITH (MEMORY_OPTIMIZED = ON, DURABILITY = SCHEMA_ONLY)" : "")}; end;");
 
-            database.RawExecute(sql.ToString());
+            database.RawExecute(sql.ToString(), schema: true);
         }
 
         public override string ToString()

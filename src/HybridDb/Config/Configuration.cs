@@ -65,8 +65,8 @@ namespace HybridDb.Config
             }
         }
 
-        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) => 
-            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof (TEntity), tablename), ColumnNameConvention);
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) =>
+            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof(TEntity), tablename), ColumnNameConvention);
 
         public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null)
         {
@@ -85,7 +85,7 @@ namespace HybridDb.Config
                 if (existing == null)
                 {
                     return AddDesign(new DocumentDesign(
-                        this, GetOrAddTable(tablename ?? GetTableNameByConventionFor(type)), 
+                        this, GetOrAddTable(tablename ?? GetTableNameByConventionFor(type)),
                         type, TypeMapper.ToDiscriminator(type)));
                 }
 
@@ -144,7 +144,7 @@ namespace HybridDb.Config
 
             throw new HybridDbException(string.Format(
                 "No design was registered for documents of type {0}. " +
-                "Please run store.Document<{0}>() to register it before use.", 
+                "Please run store.Document<{0}>() to register it before use.",
                 typeof(T).Name));
         }
 
@@ -198,11 +198,11 @@ namespace HybridDb.Config
         {
             Migrations = migrations.OrderBy(x => x.Version).Where((x, i) =>
             {
-                var expectedVersion = i+1;
-                
+                var expectedVersion = i + 1;
+
                 if (x.Version == expectedVersion)
                     return true;
-                
+
                 throw new ArgumentException($"Missing migration for version {expectedVersion}.");
             }).ToList();
 
@@ -229,7 +229,7 @@ namespace HybridDb.Config
 
         static string KeyResolver(object entity)
         {
-            var id = ((dynamic)entity).Id;
+            var id = ((dynamic) entity).Id;
             return id != null ? id.ToString() : Guid.NewGuid().ToString();
         }
 
@@ -249,7 +249,7 @@ namespace HybridDb.Config
         {
             if (tablename == null) throw new ArgumentNullException(nameof(tablename));
 
-            return (DocumentTable)tables.GetOrAdd(tablename, name =>
+            return (DocumentTable) tables.GetOrAdd(tablename, name =>
             {
                 if (initialized)
                 {

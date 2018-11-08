@@ -23,7 +23,7 @@ namespace HybridDb.Migrations.Commands
             // column constraints on a specific column.
             // See: https://connect.microsoft.com/SQLServer/feedback/details/765777/sys-default-constraints-empty-for-temporary-tables-in-tempdb
             // See: http://www.sqlservercentral.com/Forums/Topic1359991-3077-1.aspx
-            if (database is SqlServerUsingTempTables)
+            if (database is SqlServerUsingLocalTempTables)
                 throw new InvalidOperationException("It is currently not possible to remove columns on temp tables.");
 
             var tableName = database.FormatTableNameAndEscape(Table.Name);
