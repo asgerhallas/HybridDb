@@ -43,7 +43,7 @@ namespace HybridDb.Migrations
 
                         if (stats.TotalResults == 0) break;
 
-                        logger.Information("Found {0} document that must be migrated.", stats.TotalResults);
+                        logger.Information($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
 
                         foreach (var row in rows)
                         {
