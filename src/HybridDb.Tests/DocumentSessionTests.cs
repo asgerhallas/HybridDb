@@ -1194,12 +1194,12 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Store(new object());
+                session.Store(new Entity());
 
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<object>("asger").ShouldNotBe(null);
+                session.Load<Entity>("asger").ShouldNotBe(null);
             }
         }
 
