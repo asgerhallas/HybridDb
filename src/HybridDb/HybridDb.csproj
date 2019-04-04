@@ -171,6 +171,7 @@
     <Compile Include="..\GlobalAssemblyInfo.cs">
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="ColumnAlreadRegisteredException.cs" />
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Commands\UpsertCommand.cs" />
     <Compile Include="Config\AssemblyQualifiedNameTypeMapper.cs" />
@@ -183,6 +184,7 @@
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
     <Compile Include="DocumentStoreEx.cs" />
+    <Compile Include="DocumentTransaction.cs" />
     <Compile Include="EntityKey.cs" />
     <Compile Include="EntityState.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
@@ -248,6 +250,7 @@
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migrations\SchemaMigrationCommand.cs" />
     <Compile Include="Migrations\ZipBackupDecorator.cs" />
+    <Compile Include="Operation.cs" />
     <Compile Include="QueryResult.cs" />
     <Compile Include="QueryStats.cs" />
     <Compile Include="Parameter.cs" />
@@ -268,10 +271,12 @@
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
+    <Compile Include="Serialization\ContractMutator.cs" />
     <Compile Include="Serialization\DefaultSerializer.cs" />
     <Compile Include="Serialization\Discriminator.cs" />
     <Compile Include="Serialization\DiscriminatorAttribute.cs" />
     <Compile Include="Serialization\Discriminators.cs" />
+    <Compile Include="Serialization\IContractMutator.cs" />
     <Compile Include="Serialization\IDefaultSerializerConfigurator.cs" />
     <Compile Include="Serialization\ReferenceEqualityComparer.cs" />
     <Compile Include="Serialization\SerializationContext.cs" />
@@ -285,10 +290,11 @@
     <Compile Include="SqlServerUsingGlobalTempTables.cs" />
     <Compile Include="SqlServerUsingLocalTempTables.cs" />
     <Compile Include="SqlServerUsingRealTables.cs" />
+    <Compile Include="StoreStats.cs" />
     <Compile Include="StringEx.cs" />
     <Compile Include="TableBuilder.cs" />
     <Compile Include="TableMode.cs" />
-    <Compile Include="TableNotFoundException.cs" />
+    <Compile Include="HybridDbException.cs" />
     <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />
   </ItemGroup>

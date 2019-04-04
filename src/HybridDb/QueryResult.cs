@@ -1,5 +1,3 @@
-using System;
-
 namespace HybridDb
 {
     public class QueryResult<T>
@@ -30,13 +28,5 @@ namespace HybridDb
 
             return result;
         }
-    }
-
-    [Flags]
-    public enum Operation
-    {
-        Inserted = 1,
-        Updated = 2,
-        Deleted = 4
     }
 }
