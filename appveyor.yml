@@ -2,7 +2,7 @@
   branches:
     only:
       - master
-  version: 0.10.{build}
+  version: 2.0.{build}-alpha
   configuration: Release
   platform: Any CPU
   image: Visual Studio 2017
@@ -31,32 +31,3 @@
   - provider: NuGet
     api_key:
       secure: rTAOxhsBekNlEb9IN6Iyy5mayYbiTTIWidYKB4f1ZyRbwiIeqjFr0x6qDZQM6RYP
--
-  branches:
-    only:
-      - sideshow
-  version: 1.0.{build}-sideshow
-  configuration: Release
-  platform: Any CPU
-  image: Visual Studio 2017
-  services: mssql2014
-  assembly_info:
-    patch: true
-    file: '**\AssemblyInfo.*'
-    assembly_version: '{version}'
-    assembly_file_version: '{version}'
-    assembly_informational_version: '{version}'
-  build:
-    project: src\HybridDb.sln
-    verbosity: minimal
-  after_build:
-  - cmd: >-
-      nuget install ILMerge -Version 2.14.1208 -ExcludeVersion
-
-      ILMerge\tools\ilmerge.exe /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:src\HybridDb\HybridDb.dll src\HybridDb\bin\Release\HybridDb.dll src\HybridDb\bin\Release\Dapper.dll src\HybridDb\bin\Release\Newtonsoft.Json.dll src\HybridDb\bin\Release\Inflector.dll src\HybridDb\bin\Release\Indentional.dll
-
-      nuget pack src\HybridDb\HybridDb.nuspec -Version %APPVEYOR_BUILD_VERSION% -Symbols
-  
-      nuget pack src\HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.nuspec -Version %APPVEYOR_BUILD_VERSION% -Symbols
-  artifacts:
-  - path: '*.nupkg'
