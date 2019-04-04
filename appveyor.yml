@@ -18,7 +18,7 @@
     verbosity: minimal
   after_build:
   - cmd: >-
-      nuget install ILMerge -ExcludeVersion
+      nuget install ILMerge -Version 2.14.1208 -ExcludeVersion
 
       ILMerge\tools\ilmerge.exe /targetplatform:v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319 /target:library /internalize /out:src\HybridDb\HybridDb.dll src\HybridDb\bin\Release\HybridDb.dll src\HybridDb\bin\Release\Dapper.dll src\HybridDb\bin\Release\Newtonsoft.Json.dll src\HybridDb\bin\Release\Inflector.dll src\HybridDb\bin\Release\Indentional.dll src\HybridDb\bin\Release\ShinySwitch.dll
 
