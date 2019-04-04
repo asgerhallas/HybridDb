@@ -506,6 +506,15 @@ namespace HybridDb.Tests
             Should.Throw<ArgumentException>(() => serializer.Hide((WithMethod x) => x.TheMethod(), () => 10));
         }
 
+        [Fact]
+        public void DeserializeToObject()
+        {
+            var result = serializer.Deserialize(
+                serializer.Serialize(new object()), typeof(object)
+            ).ShouldBeOfType<object>();
+        }
+
+
         public class RootWithPrimitive
         {
             public ChildWithPrimitive Child { get; set; }

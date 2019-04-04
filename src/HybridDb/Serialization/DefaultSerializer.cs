@@ -34,6 +34,7 @@ namespace HybridDb.Serialization
         Action<JsonSerializerSettings> setup = x => { };
 
         List<JsonConverter> converters = new List<JsonConverter>();
+
         readonly List<IContractMutator> contractFilters = new List<IContractMutator>();
         readonly HybridDbContractResolver contractResolver;
 
@@ -352,10 +353,7 @@ namespace HybridDb.Serialization
         {
             readonly Discriminators discriminators;
 
-            public DiscriminatedTypeConverter(Discriminators discriminators)
-            {
-                this.discriminators = discriminators;
-            }
+            public DiscriminatedTypeConverter(Discriminators discriminators) => this.discriminators = discriminators;
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
             {
@@ -371,10 +369,9 @@ namespace HybridDb.Serialization
 
                 if (discriminator == null) return jObject;
 
-                Type type;
-                if (!discriminators.TryGetFromDiscriminator(discriminator, out type))
+                if (!discriminators.TryGetFromDiscriminator(discriminator, out var type))
                 {
-                    throw new InvalidOperationException(string.Format("Could not find a type from discriminator {0}", discriminator));
+                    throw new InvalidOperationException($"Could not find a type from discriminator {discriminator}");
                 }
 
                 var contract = serializer.ContractResolver.ResolveContract(type);
@@ -386,16 +383,8 @@ namespace HybridDb.Serialization
             }
 
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) { }
-
-            public override bool CanWrite
-            {
-                get { return false; }
-            }
-
-            public override bool CanConvert(Type objectType)
-            {
-                return discriminators.IsDiscriminated(objectType);
-            }
+            public override bool CanWrite => false;
+            public override bool CanConvert(Type objectType) => discriminators.IsDiscriminated(objectType);
         }
 
         public class DiscriminatorContractMutator : ContractMutator<JsonObjectContract>

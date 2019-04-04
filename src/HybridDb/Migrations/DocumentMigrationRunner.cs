@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,14 +31,15 @@ namespace HybridDb.Migrations
                         throw new InvalidOperationException($"Design not found for table '{table.Name}'");
                     }
 
-                    while (true)
+                    var running = true;
+
+                    while (running)
                     {
                         var rows = store
                             .Query(table, out var stats,
                                 @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
                                 @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
-                                take: 100,
-                                @orderby: "newid()",
+                                take: 500,
                                 parameters: new { AwaitsReprojection = true, version = configuration.ConfiguredVersion })
                             .ToList();
 
@@ -77,10 +79,14 @@ namespace HybridDb.Migrations
                                     }
                                 }
                                 catch (ConcurrencyException) { }
+                                catch (SqlException) { }
                                 catch (Exception exception)
                                 {
-                                    logger.Error(exception, "Error while migrating document of type {0} with id {1}.", concreteDesign.DocumentType.FullName, key);
-                                    Thread.Sleep(100);
+                                    logger.Error(exception, 
+                                        "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
+                                        concreteDesign.DocumentType.FullName, key, concreteDesign.Table.Name);
+
+                                    running = false;
                                 }
                             }
                             else

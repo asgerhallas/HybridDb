@@ -118,16 +118,17 @@ namespace HybridDb.Config
         protected static Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> projector)
         {
             var compiled = projector.Compile();
+
             return entity =>
             {
                 try
                 {
-                    return (object)compiled((TEntity)entity);
+                    return compiled((TEntity)entity);
                 }
                 catch (Exception ex)
                 {
                     throw new TargetInvocationException(
-                        string.Format("The projector for column {0} threw an exception.\nThe projector code is {1}.", name, projector), ex);
+                        $"The projector for column {name} threw an exception.\nThe projector code is {projector}.", ex);
                 }
             };
         }

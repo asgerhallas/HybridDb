@@ -228,6 +228,14 @@ namespace HybridDb.Tests
             ProjectionsFor<Entity>()["String"].Projector(new Entity(), null).ShouldBe(null);
         }
 
+        [Fact(Skip = "this is not supported, but return type could be changed in projection to make it work.")]
+        public void NullCheckWithNonNullableValueTypeProjections()
+        {
+            configuration.Document<Entity>().With("Test", x => x.String.Length);
+
+            ProjectionsFor<Entity>()["Test"].Projector(new Entity(), null).ShouldBe(null);
+        }
+
 
         public class Entity
         {

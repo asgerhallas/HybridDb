@@ -256,6 +256,12 @@ namespace HybridDb
             var document = (byte[])row[table.DocumentColumn];
             var currentDocumentVersion = (int) row[table.VersionColumn];
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, document, currentDocumentVersion);
+            var actualEntityType = entity.GetType();
+
+            if (actualEntityType != concreteDesign.DocumentType)
+            {
+                throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{actualEntityType}'.");
+            }
 
             var metadataDocument = (byte[])row[table.MetadataColumn];
             var metadata = metadataDocument != null
