@@ -466,23 +466,4 @@ namespace HybridDb.Serialization
             }
         }
     }
-
-    public interface IContractMutator
-    {
-        void Mutate(JsonContract contract);
-    }
-
-    public abstract class ContractMutator<T> : IContractMutator where T : JsonContract
-    {
-        public abstract void Mutate(T contract);
-        
-        public void Mutate(JsonContract contract)
-        {
-            var tContract = contract as T;
-            if (tContract != null)
-            {
-                Mutate(tContract);
-            }
-        }
-    }
 }

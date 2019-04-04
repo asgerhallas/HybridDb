@@ -437,38 +437,6 @@ namespace HybridDb.Tests
             }
         }
 
-        //[Fact]
-        //public void BatchesMultipleChanges()
-        //{
-        //    Document<Entity>();
-
-        //    var id1 = NewId();
-        //    var id2 = NewId();
-        //    var id3 = NewId();
-
-        //    using (var session = store.OpenSession())
-        //    {
-        //        // the initial migrations might issue some requests
-        //        var initialNumberOfRequest = store.NumberOfRequests;
-
-        //        session.Store(new Entity { Id = id1, Property = "Asger" });
-        //        session.Store(new Entity { Id = id2, Property = "Asger" });
-        //        session.SaveChanges(); // 1
-        //        store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
-        //        session.Advanced.Clear();
-
-        //        var entity1 = session.Load<Entity>(id1); // 2
-        //        var entity2 = session.Load<Entity>(id2); // 3
-        //        store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
-
-        //        session.Delete(entity1);
-        //        entity2.Property = "Lars";
-        //        session.Store(new Entity { Id = id3, Property = "Jacob" });
-        //        session.SaveChanges(); // 4
-        //        store.NumberOfRequests.ShouldBe(initialNumberOfRequest + 4);
-        //    }
-        //}
-
         [Fact]
         public void SavingChangesTwiceInARowDoesNothing()
         {

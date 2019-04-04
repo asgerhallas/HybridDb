@@ -417,44 +417,6 @@ namespace HybridDb.Tests
             store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
         }
 
-        //[Fact]
-        //public void DoesNotSplitBelow2000Params()
-        //{
-        //    Document<Entity>().With(x => x.Field);
-
-        //    var table = store.Configuration.GetDesignFor<Entity>();
-
-        //    // the initial migrations might issue some requests
-        //    var initialNumberOfRequest = store.NumberOfRequests;
-
-        //    var commands = new List<DatabaseCommand>();
-        //    for (var i = 0; i < 285; i++) // each insert i 7 params so 285 commands equals 1995 params, threshold is at 2000
-        //        commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
-
-        //    store.Execute(commands.ToArray());
-
-        //    (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(1);
-        ////}
-
-        //[Fact]
-        //public void SplitsAbove2000Params()
-        //{
-        //    Document<Entity>().With(x => x.Field);
-
-        //    var table = store.Configuration.GetDesignFor<Entity>();
-
-        //    // the initial migrations might issue some requests
-        //    var initialNumberOfRequest = store.NumberOfRequests;
-
-        //    var commands = new List<DatabaseCommand>();
-        //    for (var i = 0; i < 286; i++) // each insert i 7 params so 286 commands equals 2002 params, threshold is at 2000
-        //        commands.Add(new InsertCommand(table.Table, NewId(), new { Field = "A", Document = documentAsByteArray }));
-
-        //    store.Execute(commands.ToArray());
-
-        //    (store.NumberOfRequests - initialNumberOfRequest).ShouldBe(2);
-        //}
-
         [Fact]
         public void CanStoreAndQueryEnumProjection()
         {
@@ -1002,7 +964,7 @@ namespace HybridDb.Tests
             //Nummeret til rowversion kolonnen tildeles ved starten af tx, hvilket betyder at ovenstående giver følgende situation:
 
             //1. Tx1 starter og row A opdateres.Får tildelt rowversion = 1.
-            //    2. Tx2 starter og row B opdateres. Får tildelt rowversion = 2 og comittes.
+            //2. Tx2 starter og row B opdateres. Får tildelt rowversion = 2 og comittes.
             //3. Tx3 starter og læser højeste nuværende rowversion, som er 2 og kører sin opdatering og gemmer sidst læste version som 2. 
             //4. Tx1 comittes og har stadig rowversion 1, men næste gang vi forespørger efter opdateringer, så kigger vi kun på rowversions højere end 2.
             //   Derfor misser vi Tx1 opdateringen.
@@ -1073,14 +1035,6 @@ namespace HybridDb.Tests
                 results3[1].Data.ShouldBe("second updated");
             }
         }
-
-        [Fact]
-        public void Bug()
-        {
-            var documentStore = DocumentStore.ForTesting(TableMode.UseRealTables, connectionString, x => x.Document<Case>());
-            documentStore.Initialize();
-        }
-
 
         public class Case
         {

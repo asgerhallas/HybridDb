@@ -22,7 +22,7 @@ namespace HybridDb.Tests.Config
         [InlineData(typeof(Guid), null)]
         [InlineData(typeof(DateTime), null)]
         [InlineData(typeof(DateTimeOffset), null)]
-        [InlineData(typeof(Single), null)]
+        [InlineData(typeof(float), null)]
         public void ConvertGivesCorrectDefaultLength(Type columnType, string expectedLenght)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, null));
@@ -43,34 +43,33 @@ namespace HybridDb.Tests.Config
         [InlineData(typeof (Guid))]
         [InlineData(typeof (DateTime))]
         [InlineData(typeof (DateTimeOffset))]
-        [InlineData(typeof (Single))]
+        [InlineData(typeof (float))]
         public void ConvertGivesCorrectLength(Type columnType)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, length: 42));
             sqlColumn.Length.ShouldBe("42");
         }
 
-        //[Theory]
-        //[InlineData(typeof(string), DbType.String)]
-        //[InlineData(typeof(SomeEnum), DbType.String)]
-        //[InlineData(typeof(byte[]), DbType.Binary)]
-        //[InlineData(typeof(double), DbType.Double)]
-        //[InlineData(typeof(decimal), DbType.Decimal)]
-        //[InlineData(typeof(bool), DbType.Boolean)]
-        //[InlineData(typeof(byte), DbType.Byte)]
-        //[InlineData(typeof(long), DbType.Int64)]
-        //[InlineData(typeof(int), DbType.Int32)]
-        //[InlineData(typeof(short), DbType.Int16)]
-        //[InlineData(typeof(Guid), DbType.Guid)]
-        //[InlineData(typeof(DateTime), DbType.DateTime2)]
-        //[InlineData(typeof(DateTimeOffset), DbType.DateTimeOffset)]
-        //[InlineData(typeof(Single), DbType.Single)]
-        //[InlineData(typeof(TimeSpan), DbType.Time)]u
-        //public void ConvertGivesCorrectType(Type columnType, DbType expectedType)
-        //{
-        //    var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, 42));
-        //    sqlColumn.DbType.ShouldBe(expectedType);
-        //}
+        [Theory]
+        [InlineData(typeof(string), SqlDbType.NVarChar)]
+        [InlineData(typeof(SomeEnum), SqlDbType.NVarChar)]
+        [InlineData(typeof(byte[]), SqlDbType.VarBinary)]
+        [InlineData(typeof(double), SqlDbType.Float)]
+        [InlineData(typeof(decimal), SqlDbType.Decimal)]
+        [InlineData(typeof(bool), SqlDbType.Bit)]
+        [InlineData(typeof(byte), SqlDbType.TinyInt)]
+        [InlineData(typeof(long), SqlDbType.BigInt)]
+        [InlineData(typeof(int), SqlDbType.Int)]
+        [InlineData(typeof(short), SqlDbType.SmallInt)]
+        [InlineData(typeof(Guid), SqlDbType.UniqueIdentifier)]
+        [InlineData(typeof(DateTime), SqlDbType.DateTime2)]
+        [InlineData(typeof(DateTimeOffset), SqlDbType.DateTimeOffset)]
+        [InlineData(typeof(float), SqlDbType.Real)]
+        public void ConvertGivesCorrectType(Type columnType, SqlDbType expectedType)
+        {
+            var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, 42));
+            sqlColumn.DbType.ShouldBe(expectedType);
+        }
 
         [Theory]
         [InlineData(typeof(object))]

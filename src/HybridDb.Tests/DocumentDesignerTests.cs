@@ -213,7 +213,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void X()
+        public void ConvertProjection()
         {
             configuration.Document<Entity>().With(x => x.String, x => x.Length);
 
@@ -221,7 +221,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void X2()
+        public void ConvertProjection_HandleNull()
         {
             configuration.Document<Entity>().With(x => x.String, x => x.Length);
 
