@@ -22,10 +22,7 @@ namespace HybridDb.Linq
             lastQueryStats = new QueryStats();
         }
 
-        public IQueryable<T> CreateQuery<T>(Expression expression)
-        {
-            return new Query<T>(this, expression);
-        }
+        public IQueryable<T> CreateQuery<T>(Expression expression) => new Query<T>(this, expression);
 
         public IQueryable CreateQuery(Expression expression)
         {

@@ -14,10 +14,10 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(TableMode.UseRealTables);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
-            new CreateTable(table).Execute(store.Database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
+            store.Execute(new CreateTable(table));
+            store.Execute(new AddColumn("Entities", new Column("SomeColumn", typeof(int))));
 
-            new RemoveColumn(table, "SomeColumn").Execute(store.Database);
+            store.Execute(new RemoveColumn(table, "SomeColumn"));
 
             //store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }
@@ -30,10 +30,10 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(mode);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof(int)));
-            new CreateTable(table).Execute(store.Database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
+            store.Execute(new CreateTable(table));
+            store.Execute(new AddColumn("Entities", new Column("SomeColumn", typeof(int))));
 
-            new RemoveColumn(table, "SomeColumn").Execute(store.Database);
+            store.Execute(new RemoveColumn(table, "SomeColumn"));
 
             //store.Database.QuerySchema()["Entities"]["SomeColumn"].ShouldBe(null);
         }

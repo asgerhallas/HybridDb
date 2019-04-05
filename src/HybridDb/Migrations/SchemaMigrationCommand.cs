@@ -16,30 +16,7 @@ namespace HybridDb.Migrations
         public bool Unsafe { get; protected set; }
         public string RequiresReprojectionOf { get; protected set; }
 
-        public abstract void Execute(IDatabase database);
         public new abstract string ToString();
 
-        protected string GetTableExistsSql(IDatabase db, string tablename) =>
-            string.Format(db is SqlServerUsingRealTables
-                    ? "object_id('{0}', 'U') is not null"
-                    : "OBJECT_ID('tempdb..{0}') is not null",
-                db.FormatTableName(tablename));
-
-        protected SqlBuilder GetColumnSqlType(Column column, string defaultValuePostfix = "", bool inMem = false)
-        {
-            if (column.Type == null)
-                throw new ArgumentException($"Column {column.Name} must have a type");
-
-            var sql = new SqlBuilder();
-
-            var sqlColumn = SqlTypeMap.Convert(column);
-            sql.Append(column.DbType.ToString());
-            sql.Append(sqlColumn.Length != null, "(" + sqlColumn.Length + ")");
-            sql.Append(column.Nullable, "NULL").Or("NOT NULL");
-            sql.Append(column.DefaultValue != null, $"DEFAULT '{column.DefaultValue}'");
-            sql.Append(column.IsPrimaryKey, $" PRIMARY KEY {(inMem ? "NONCLUSTERED HASH WITH (BUCKET_COUNT = 100000)" : "")}");
-
-            return sql;
-        }
     }
 }

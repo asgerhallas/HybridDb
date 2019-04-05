@@ -41,6 +41,8 @@ namespace HybridDb
 
         protected void UseQueues() => configuration.UseQueues();
 
+        protected void UseEventStore() => configuration.UseEventStore();
+
         internal void DisableMigrations() => configuration.DisableMigrationsOnStartup();
 
         protected void DisableDocumentMigrationsInBackground() => configuration.DisableDocumentMigrationsOnStartup();

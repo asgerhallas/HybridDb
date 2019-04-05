@@ -20,12 +20,9 @@ namespace HybridDb
 
         public override void Initialize()
         {
-            if (prefix != null)
-            {
-                throw new InvalidOperationException("SqlServerUsingGlobalTempTables is already initialized.");
-            }
+            if (prefix != null) return;
 
-            if (store.Configuration.TableNamePrefix.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(store.Configuration.TableNamePrefix))
             {
                 store.Configuration.UseTableNamePrefix($"{DateTimeOffset.Now:s}_{Guid.NewGuid()}");
             }
@@ -48,7 +45,7 @@ namespace HybridDb
 
         public override string FormatTableName(string tablename)
         {
-            if (prefix.IsNullOrEmpty()) Initialize();
+            if (string.IsNullOrEmpty(prefix)) Initialize();
 
             return $"{prefix}{tablename}";
         }

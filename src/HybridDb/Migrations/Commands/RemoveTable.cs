@@ -8,16 +8,16 @@ namespace HybridDb.Migrations.Commands
             Tablename = tablename;
         }
 
-        public string Tablename { get; private set; }
+        public string Tablename { get; }
 
-        public override void Execute(IDatabase database)
-        {
-            database.RawExecute(string.Format("drop table {0};", database.FormatTableNameAndEscape(Tablename)));
-        }
+        public override string ToString() => $"Remove table {Tablename}";
+    }
 
-        public override string ToString()
+    public class RemoveTableExecutor : DdlCommandExecutor<DocumentStore, RemoveTable>
+    {
+        public override void Execute(DocumentStore store, RemoveTable command)
         {
-            return string.Format("Remove table {0}", Tablename);
+            store.Database.RawExecute($"drop table {store.Database.FormatTableNameAndEscape(command.Tablename)};");
         }
     }
 }

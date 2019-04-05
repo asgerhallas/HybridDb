@@ -1,21 +1,10 @@
 using System;
 using System.Linq;
-using HybridDb.Config;
 
-namespace HybridDb.Migrations.Commands
-{
-    public class CreateTable : SchemaMigrationCommand
+namespace HybridDb.Migrations.Commands {
+    public static class DdlCommandExecutors
     {
-        public CreateTable(Table table) => Table = table;
-
-        public Table Table { get; }
-
-        public override string ToString() => $"Create table {Table} with columns {string.Join(", ", Table.Columns.Select(x => x.ToString()))}";
-    }
-
-    public class CreateTableExecutor : DdlCommandExecutor<DocumentStore, CreateTable>
-    {
-        public override void Execute(DocumentStore store, CreateTable command)
+        public static void Execute(DocumentStore store, CreateTable command)
         {
             if (!command.Table.Columns.Any())
             {
@@ -38,5 +27,6 @@ namespace HybridDb.Migrations.Commands
 
             store.Database.RawExecute(sql.ToString(), schema: true);
         }
+ 
     }
 }

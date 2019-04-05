@@ -278,7 +278,7 @@ namespace HybridDb.Tests.Migrations
                 new SlowCommand(),
                 countingCommand));
 
-            new CreateTable(new DocumentTable("Other")).Execute(store.Database);
+            store.Execute(new CreateTable(new DocumentTable("Other")));
 
             Parallel.For(1, 10, x =>
             {
@@ -289,34 +289,26 @@ namespace HybridDb.Tests.Migrations
             countingCommand.NumberOfTimesCalled.ShouldBe(1);
         }
 
-        void CreateMetadataTable()
-        {
-            new CreateTable(new Table("HybridDb", 
-                new Column("SchemaVersion", typeof(int))))
-                .Execute(store.Database);
-        }
+        void CreateMetadataTable() => store.Execute(
+            new CreateTable(new Table("HybridDb",
+                new Column("SchemaVersion", typeof(int)))));
 
         public class FakeSchemaDiffer : ISchemaDiffer
         {
             readonly SchemaMigrationCommand[] commands;
 
-            public FakeSchemaDiffer(params SchemaMigrationCommand[] commands)
-            {
-                this.commands = commands;
-            }
+            public FakeSchemaDiffer(params SchemaMigrationCommand[] commands) => this.commands = commands;
 
-            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration)
-            {
-                return commands.ToList();
-            }
+            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration) => 
+                commands.ToList();
         }
 
         public class ThrowingCommand : SchemaMigrationCommand
         {
-            public override void Execute(IDatabase database)
-            {
-                throw new InvalidOperationException();
-            }
+            //public override void Execute(IDatabase database)
+            //{
+            //    throw new InvalidOperationException();
+            //}
 
             public override string ToString()
             {
@@ -336,10 +328,10 @@ namespace HybridDb.Tests.Migrations
         {
             public int NumberOfTimesCalled { get; private set; }
 
-            public override void Execute(IDatabase database)
-            {
-                NumberOfTimesCalled++;
-            }
+            //public override void Execute(IDatabase database)
+            //{
+            //    NumberOfTimesCalled++;
+            //}
 
             public override string ToString()
             {
@@ -349,10 +341,10 @@ namespace HybridDb.Tests.Migrations
         
         public class SlowCommand : SchemaMigrationCommand
         {
-            public override void Execute(IDatabase database)
-            {
-                Thread.Sleep(5000);
-            }
+            //public override void Execute(IDatabase database)
+            //{
+            //    Thread.Sleep(5000);
+            //}
 
             public override string ToString()
             {

@@ -108,8 +108,11 @@
     <Compile Include="DefaultSerializerTests.cs" />
     <Compile Include="DocumentDesignerTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
-    <Compile Include="DocumentSessionTests2.cs" />
+    <Compile Include="DocumentSession_EventStoreTests.cs" />
+    <Compile Include="DocumentSession_WithoutInitializeTests.cs" />
     <Compile Include="DocumentSessionTypesTests.cs" />
+    <Compile Include="DocumentStore_EventStoreTests.cs" />
+    <Compile Include="DocumentStore_QueryChangesTests.cs" />
     <Compile Include="FakeBackupWriter.cs" />
     <Compile Include="FileBackupWriterTests.cs" />
     <Compile Include="HybridDbTests.cs" />

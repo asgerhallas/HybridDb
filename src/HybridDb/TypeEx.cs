@@ -7,43 +7,6 @@ namespace HybridDb
 {
     public static class TypeEx
     {
-        public static bool IsA<T>(this Type type)
-        {
-            return typeof (T).IsAssignableFrom(type);
-        }
-
-        public static bool IsA(this Type type, Type typeToBe)
-        {
-            if (!typeToBe.IsGenericTypeDefinition)
-                return typeToBe.IsAssignableFrom(type);
-
-            var toCheckTypes = new List<Type> {type};
-            if (typeToBe.IsInterface)
-                toCheckTypes.AddRange(type.GetInterfaces());
-
-            var basedOn = type;
-            while (basedOn.BaseType != null)
-            {
-                toCheckTypes.Add(basedOn.BaseType);
-                basedOn = basedOn.BaseType;
-            }
-
-            return toCheckTypes.Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeToBe);
-        }
-
-        public static bool IsA(this object instance, Type typeToBe)
-        {
-            if (instance == null)
-                return false;
-
-            return instance.GetType().IsA(typeToBe);
-        }
-
-        public static bool IsA<T>(this object instance)
-        {
-            return IsA(instance, typeof (T));
-        }
-
         public static Type GetEnumeratedType(this Type type)
         {
             return type
@@ -53,23 +16,8 @@ namespace HybridDb
                 .Select(t => t.GetGenericArguments()[0]).SingleOrDefault();
         }
 
-        public static bool IsNullable(this Type type)
-        {
-            return type != null && Nullable.GetUnderlyingType(type) != null;
-        }
-
-        public static bool CanBeNull(this Type type)
-        {
-            return !type.IsValueType || type.IsNullable();
-        }
-
-        public static Type GetTypeOrDefault(this object self)
-        {
-            if (self == null)
-                return null;
-
-            return self.GetType();
-        }
+        public static bool IsNullable(this Type type) => type != null && Nullable.GetUnderlyingType(type) != null;
+        public static bool CanBeNull(this Type type) => !type.IsValueType || type.IsNullable();
 
         static readonly Dictionary<Type, List<Type>> dict = new Dictionary<Type, List<Type>>
         {

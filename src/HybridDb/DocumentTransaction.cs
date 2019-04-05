@@ -116,7 +116,7 @@ namespace HybridDb
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
 
-            if (select.IsNullOrEmpty() || select == "*")
+            if (string.IsNullOrEmpty(select) || select == "*")
             {
                 select = "";
 
@@ -154,7 +154,7 @@ namespace HybridDb
                     .Append($"from {store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
-                    .Append(select.IsNullOrEmpty(), "select * from temp").Or($"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
+                    .Append(string.IsNullOrEmpty(select), "select * from temp", $"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
                     .Append($"where RowNumber >= {skip + 1}")
                     .Append(take > 0, $"and RowNumber <= {skip + take}")
                     .Append("order by RowNumber")
@@ -162,7 +162,7 @@ namespace HybridDb
             }
             else
             {
-                sql.Append(select.IsNullOrEmpty(), "select *").Or($"select {select}")
+                sql.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
                     .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {table.LastOperationColumn.Name} AS __LastOperation")
                     .Append($", {table.RowVersionColumn.Name} AS __RowVersion")

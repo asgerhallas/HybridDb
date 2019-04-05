@@ -8,19 +8,21 @@ namespace HybridDb.Migrations.Commands
             NewTableName = newTableName;
         }
 
-        public string OldTableName { get; private set; }
-        public string NewTableName { get; private set; }
-
-        public override void Execute(IDatabase database)
-        {
-            if (database is SqlServerUsingRealTables)
-            {
-                database.RawExecute($"sp_rename {database.FormatTableNameAndEscape(OldTableName)}, {database.FormatTableNameAndEscape(NewTableName)};");
-            }
-
-            // Not supported for temp tables
-        }
+        public string OldTableName { get; }
+        public string NewTableName { get; }
 
         public override string ToString() => $"Rename table {OldTableName} to {NewTableName}";
     }
+
+    public class RenameTableExecutor : DdlCommandExecutor<DocumentStore, RenameTable>
+    {
+        public override void Execute(DocumentStore store, RenameTable command)
+        {
+            store.Database.RawExecute(new SqlBuilder()
+                .Append(store.Database is SqlServerUsingRealTables, "", "tempdb..")
+                .Append($"sp_rename {store.Database.FormatTableNameAndEscape(command.OldTableName)}, {store.Database.FormatTableNameAndEscape(command.NewTableName)};")
+                .ToString());
+        }
+    }
+
 }

@@ -4,10 +4,10 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTests2 : HybridDbTests
+    public class DocumentSession_WithoutInitializeTests : HybridDbTests
     {
         [Fact]
-        public void CanNotOpenSessionBEforeStoreIsInitialized()
+        public void CanNotOpenSessionBeforeStoreIsInitialized()
         {
             Should.Throw<InvalidOperationException>(() => store.OpenSession());
         }

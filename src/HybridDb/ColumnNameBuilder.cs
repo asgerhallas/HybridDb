@@ -7,10 +7,7 @@ namespace HybridDb
 {
     public class ColumnNameBuilder : ExpressionVisitor
     {
-        public ColumnNameBuilder()
-        {
-            ColumnName = "";
-        }
+        public ColumnNameBuilder() => ColumnName = "";
 
         string ColumnName { get; set; }
 

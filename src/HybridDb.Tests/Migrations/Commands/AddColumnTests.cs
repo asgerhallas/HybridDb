@@ -17,9 +17,9 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
-            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(store.Database);
+            store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
 
             store.Database.QuerySchema()["Entities"].ShouldContain("Col2");
         }
@@ -40,9 +40,9 @@ namespace HybridDb.Tests.Migrations.Commands
         public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
             Use(TableMode.UseRealTables);
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
-            new AddColumn("Entities", new Column("Col2", type)).Execute(store.Database);
+            store.Execute(new AddColumn("Entities", new Column("Col2", type)));
 
             //store.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(type);
             //store.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(nullable);
@@ -56,9 +56,9 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
-            new AddColumn("Entities", new Column("Col2", typeof(int?))).Execute(store.Database);
+            store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int?))));
 
             //store.Database.QuerySchema()["Entities"]["Col2"].Type.ShouldBe(typeof(int));
             //store.Database.QuerySchema()["Entities"]["Col2"].Nullable.ShouldBe(true);
@@ -73,8 +73,8 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
 
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
+            store.Execute(new AddColumn("Entities1", new Column("SomeInt", typeof(int), isPrimaryKey: true)));
 
             //store.Database.QuerySchema()["Entities1"]["SomeInt"].IsPrimaryKey.ShouldBe(true);
         }
@@ -87,13 +87,13 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
 
-            new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))).Execute(store.Database);
+            store.Execute(new AddColumn("Entities1", new Column("SomeNullableInt", typeof(int?), defaultValue: null)));
+            store.Execute(new AddColumn("Entities1", new Column("SomeOtherNullableInt", typeof(int?), defaultValue: 42)));
+            store.Execute(new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "peter")));
+            store.Execute(new AddColumn("Entities1", new Column("SomeInt", typeof(int),  defaultValue: 666)));
+            store.Execute(new AddColumn("Entities1", new Column("SomeDateTime", typeof(DateTime),  defaultValue: new DateTime(1999, 12, 24))));
 
             var schema = store.Database.QuerySchema();
 
@@ -107,8 +107,8 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact(Skip = "Not solved yet")]
         public void ShouldNotAllowSqlInjection()
         {
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
+            store.Execute(new AddColumn("Entities1", new Column("SomeString", typeof(string), defaultValue: "'; DROP TABLE #Entities1; SELECT '")));
 
             store.Database.QuerySchema().ShouldContainKey("Entities1");
         }

@@ -1,78 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace HybridDb
 {
     public class SqlBuilder
     {
-        readonly List<string> strings;
+        readonly StringBuilder fragments;
         readonly List<Parameter> parameters;
-
-        bool? previousPredicate;
 
         public SqlBuilder()
         {
-            strings = new List<string>();
+            fragments = new StringBuilder();
             parameters = new List<Parameter>();
-            previousPredicate = null;
         }
 
         public IEnumerable<Parameter> Parameters => parameters;
 
         public SqlBuilder Append(string sql, params Parameter[] args)
         {
-            var formatArgs = new List<object>();
-
             foreach (var arg in args)
             {
                 parameters.Add(arg);
             }
 
-            strings.Add(string.Format(sql, formatArgs.ToArray()));
+            fragments.Append(sql);
+
             return this;
         }
 
         public SqlBuilder Append(bool predicate, string sql, params Parameter[] args)
         {
-            previousPredicate = predicate;
             if (predicate) Append(sql, args);
             return this;
         }
 
-        //TODO: remove this stateful mess
-        public SqlBuilder Or(string sql, params Parameter[] args)
-        {
-            if (!previousPredicate.HasValue)
-                throw new InvalidOperationException("Cannot use Or() when no Append with condition has been run.");
-
-            if (!previousPredicate.Value) Append(sql, args);
-
-            previousPredicate = null;
-            return this;
-        }
+        public SqlBuilder Append(bool predicate, string sql, string orSql, params Parameter[] args) => 
+            predicate ? Append(sql, args) : Append(orSql, args);
 
         public SqlBuilder Append(SqlBuilder builder)
         {
-            strings.AddRange(builder.strings);
+            fragments.Append(builder.fragments);
             parameters.AddRange(builder.parameters);
             return this;
         }
 
-        public override string ToString() => string.Join(" ", strings);
-
-        public string ToDynamicSql()
-        {
-            var sql = "declare @sql nvarchar(4000) = " +
-                      string.Join(" + ", strings.Select(x => "' " + x + " '").ToArray()) +
-                      "; exec(@sql);";
-
-            sql = parameters
-                .OrderByDescending(x => x.Name.Length)
-                .Select(parameter => "@" + parameter.Name)
-                .Aggregate(sql, (current, sqlName) => current.Replace(sqlName, "' + quotename(" + sqlName + ", '''') + '"));
-
-            return sql;
-        }
+        public override string ToString() => string.Join(" ", fragments);
     }
 }

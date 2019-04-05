@@ -4,13 +4,11 @@ namespace HybridDb.Migrations.Commands
 {
     public class SqlMigrationCommand : SchemaMigrationCommand
     {
-        readonly Action<SqlBuilder, IDatabase> builder;
-
         public SqlMigrationCommand(string description, Action<SqlBuilder, IDatabase> builder) : this(description, null, builder) { }
 
         public SqlMigrationCommand(string description, string requiresReprojectionOf, Action<SqlBuilder, IDatabase> builder)
         {
-            this.builder = builder;
+            Builder = builder;
 
             Description = description;
             RequiresReprojectionOf = requiresReprojectionOf;
@@ -18,18 +16,20 @@ namespace HybridDb.Migrations.Commands
             Unsafe = false;
         }
 
+        public Action<SqlBuilder, IDatabase> Builder { get; }
         public string Description { get; }
 
-        public sealed override void Execute(IDatabase database)
+        public override string ToString() => Description;
+    }
+
+    public class SqlMigrationCommandExecutor : DdlCommandExecutor<DocumentStore, SqlMigrationCommand>
+    {
+        public override void Execute(DocumentStore store, SqlMigrationCommand command)
         {
             var sql = new SqlBuilder();
-            builder(sql, database);
-            database.RawExecute(sql.ToString());
-        }
-
-        public override string ToString()
-        {
-            return Description;
+            command.Builder(sql, store.Database);
+            store.Database.RawExecute(sql.ToString());
         }
     }
+
 }

@@ -16,8 +16,8 @@ namespace HybridDb.Tests
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-            new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
+            store.Execute(new CreateTable(new Table("Entities2", new Column("test", typeof(int)))));
 
             var schema = store.Database.QuerySchema();
 
@@ -33,12 +33,12 @@ namespace HybridDb.Tests
         {
             Use(mode);
 
-            new CreateTable(new Table("Entities1", new Column("test", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeInt", typeof(int))).Execute(store.Database);
-            new AddColumn("Entities1", new Column("SomeBool", typeof(bool))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
+            store.Execute(new AddColumn("Entities1", new Column("SomeInt", typeof(int))));
+            store.Execute(new AddColumn("Entities1", new Column("SomeBool", typeof(bool))));
 
-            new CreateTable(new Table("Entities2", new Column("test", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities2", new Column("SomeString", typeof(string))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities2", new Column("test", typeof(int)))));
+            store.Execute(new AddColumn("Entities2", new Column("SomeString", typeof(string))));
 
             var schema = store.Database.QuerySchema();
 

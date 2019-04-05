@@ -20,10 +20,10 @@ namespace HybridDb.Tests.Migrations.Commands
 
             var table = new Table("Entities", new Column("Col1", typeof(int)));
 
-            new CreateTable(table).Execute(store.Database);
-            new AddColumn("Entities", new Column("SomeColumn", typeof(int))).Execute(store.Database);
+            store.Execute(new CreateTable(table));
+            store.Execute(new AddColumn("Entities", new Column("SomeColumn", typeof(int))));
 
-            new RenameColumn(table, "SomeColumn", "SomeNewColumn").Execute(store.Database);
+            store.Execute(new RenameColumn(table, "SomeColumn", "SomeNewColumn"));
 
             store.Database.QuerySchema()["Entities"].ShouldNotContain("SomeColumn");
             store.Database.QuerySchema()["Entities"].ShouldContain("SomeNewColumn");

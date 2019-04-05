@@ -17,12 +17,11 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))).Execute(store.Database);
-            new AddColumn("Entities", new Column("Col2", typeof(int))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
+            store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
 
-            new SqlMigrationCommand("add some index", (sql, db) => sql
-                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int"))
-                .Execute(store.Database);
+            store.Execute(new SqlMigrationCommand("add some index", (sql, db) => sql
+                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int")));
         }
 
         [Fact]

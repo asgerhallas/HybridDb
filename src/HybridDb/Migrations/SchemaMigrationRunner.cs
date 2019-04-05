@@ -67,7 +67,7 @@ namespace HybridDb.Migrations
                 // create metadata table if it does not exist
                 var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
                 configuration.tables.TryAdd(metadata.Name, metadata);
-                new CreateTable(metadata, false).Execute(database);
+                store.Execute(new CreateTable(metadata));
 
                 // get schema version
                 var hybridDbTableName = database.FormatTableNameAndEscape("HybridDb");
@@ -82,7 +82,7 @@ namespace HybridDb.Migrations
                 }
 
                 // get the diff and run commands to get to configured schema
-                var schema = database is SqlServerUsingLocalTempTables
+                var schema = currentSchemaVersion == 0
                     ? new Dictionary<string, List<string>>()
                     : database.QuerySchema();
 
@@ -94,7 +94,7 @@ namespace HybridDb.Migrations
 
                     foreach (var command in commands)
                     {
-                        requiresReprojection.AddRange(ExecuteCommand(database, command));
+                        requiresReprojection.AddRange(ExecuteCommand(command));
                     }
                 }
 
@@ -111,7 +111,7 @@ namespace HybridDb.Migrations
                             var migrationCommands = migration.MigrateSchema();
                             foreach (var command in migrationCommands)
                             {
-                                requiresReprojection.AddRange(ExecuteCommand(database, command));
+                                requiresReprojection.AddRange(ExecuteCommand(command));
                             }
 
                             currentSchemaVersion++;
@@ -144,12 +144,10 @@ namespace HybridDb.Migrations
                     new {version = currentSchemaVersion}, schema: true);
 
                 tx.Complete();
-
-                // For test ShouldTryNotToDeadlockOnSchemaMigationsForTempTables: Console.WriteLine($"Released lock: {Thread.CurrentThread.ManagedThreadId}.");
             }
         }
 
-        IEnumerable<string> ExecuteCommand(IDatabase database, SchemaMigrationCommand command)
+        IEnumerable<string> ExecuteCommand(SchemaMigrationCommand command)
         {
             if (command.Unsafe)
             {
@@ -159,7 +157,7 @@ namespace HybridDb.Migrations
 
             logger.Information("Executing migration command '{0}'.", command.ToString());
 
-            command.Execute(database);
+            store.Execute(command);
 
             if (command.RequiresReprojectionOf != null)
                 yield return command.RequiresReprojectionOf;

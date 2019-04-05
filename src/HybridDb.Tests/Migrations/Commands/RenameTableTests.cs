@@ -15,9 +15,9 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            new CreateTable(new Table("Entities", new Column("col1", typeof(int)))).Execute(store.Database);
+            store.Execute(new CreateTable(new Table("Entities", new Column("col1", typeof(int)))));
 
-            new RenameTable("Entities", "OtherEntities").Execute(store.Database);
+            store.Execute(new RenameTable("Entities", "OtherEntities"));
 
             store.Database.QuerySchema().ShouldNotContainKey("Entities");
             store.Database.QuerySchema().ShouldContainKey("OtherEntities");

@@ -35,6 +35,7 @@ namespace HybridDb.Config
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
             Queued = false;
+            EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
         }
 
@@ -49,6 +50,7 @@ namespace HybridDb.Config
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
         public bool Queued { get; private set; }
+        public bool EventStore { get; private set; }
         public Func<Expression, string> ColumnNameConvention { get; private set; }
         public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
@@ -57,6 +59,8 @@ namespace HybridDb.Config
 
         internal void Initialize()
         {
+            if (initialized) return;
+
             lock (gate)
             {
                 documentDesigns.Insert(0, new DocumentDesign(this, GetOrAddTable("Documents"), typeof(object), "object"));
@@ -216,6 +220,13 @@ namespace HybridDb.Config
         public void UseKeyResolver(Func<object, string> resolver) => DefaultKeyResolver = resolver;
 
         public void UseQueues() => Queued = true;
+
+        public void UseEventStore()
+        {
+            EventStore = true;
+
+            //tables.TryAdd("events", new Table("events", new Column()))
+        }
 
         public void UseColumnNameConventions(Func<Expression, string> convention) => ColumnNameConvention = convention;
 

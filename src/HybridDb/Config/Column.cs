@@ -49,7 +49,7 @@ namespace HybridDb.Config
 
             if (!Nullable && defaultValue == null && dbType != SqlDbType.Timestamp)
             {
-                DefaultValue = Type.IsA<string>() ? "" : Activator.CreateInstance(type);
+                DefaultValue = typeof (string).IsAssignableFrom(Type) ? "" : Activator.CreateInstance(type);
             }
             else
             {

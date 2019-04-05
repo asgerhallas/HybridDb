@@ -13,6 +13,12 @@ namespace HybridDb
         void Delete(object entity);
         void SaveChanges();
         void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument);
-        IAdvancedDocumentSessionCommands Advanced { get; }
+        IAdvancedDocumentSession Advanced { get; }
+        //IEventsDocumentSession Events { get; }
     }
+
+    //public interface IEventsDocumentSession
+    //{
+    //    void Append(string streamId, Guid eventId, object @event)
+    //}
 }
