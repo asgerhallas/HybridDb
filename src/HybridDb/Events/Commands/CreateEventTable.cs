@@ -12,9 +12,9 @@ namespace HybridDb.Events.Commands
 
         public static void CreateEventTableExecutor(DocumentStore store, CreateEventTable command)
         {
-            // ALTER DATABASE ""{store.Database}"" SET ALLOW_SNAPSHOT_ISOLATION ON
-
             var tableName = store.Database.FormatTableName(command.EventTable.Name);
+
+            //store.Database.RawExecute($"ALTER DATABASE \"{store.Database}\" SET ALLOW_SNAPSHOT_ISOLATION ON;", schema: true);
 
             store.Database.RawExecute($@"
                 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName}')

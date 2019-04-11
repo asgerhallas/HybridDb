@@ -30,7 +30,7 @@ namespace HybridDb.Events.Commands
             var sql = $@"
                 SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
                 FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE Position >= @fromPosition
+                WHERE Position >= @fromPosition AND RowVersion < min_active_rowversion()
                 ORDER BY Position ASC";
 
             var currentCommitId = Guid.Empty;

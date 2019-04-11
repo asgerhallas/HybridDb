@@ -20,7 +20,7 @@ namespace HybridDb.Tests.Events
         {
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 0)));
 
-            var @event = store.Transactionally(tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).Single(), IsolationLevel.Snapshot);
+            var @event = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).Single());
 
             @event.StreamId.ShouldBe("stream-1");
             @event.SequenceNumber.ShouldBe(0);
@@ -90,7 +90,7 @@ namespace HybridDb.Tests.Events
                 }
             });
 
-            var events = store.Transactionally(tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).ToList(), IsolationLevel.Snapshot);
+            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).ToList());
 
             events.ShouldBeEmpty();
         }
