@@ -98,7 +98,7 @@ namespace HybridDb.Tests.Events
         [Fact]
         public void ReadEventsConcurrently()
         {
-            ExecuteManyAppendEventCommands(store, "stream-1", 0, 1000);
+            store.Execute(Enumerable.Range(0, 1000).Select(i => CreateAppendEventCommand(CreateEventData("stream-1", i))));
 
             Parallel.For(0, 100, i => ReadEventsFrom(store, 0));
         }
@@ -115,13 +115,17 @@ namespace HybridDb.Tests.Events
 
             var domainEvents = ReadEventsFrom(store, 2);
 
-            domainEvents.Single().Events.Single().Data.ShouldBe(new [] {(byte) 64});
+            domainEvents.Single().Events.Single().Name.ShouldBe("myspecialevent");
         }
 
         [Fact]
         public void ReadWhileSaving()
         {
-            ExecuteManyAppendEventCommands(store, "stream-1", 0, 2);
+            store.Execute(
+                CreateAppendEventCommand(CreateEventData("stream-1", 0)),
+                CreateAppendEventCommand(CreateEventData("stream-1", 1)),
+                CreateAppendEventCommand(CreateEventData("stream-1", 2))
+            );
 
             var enumerator = ReadEventsFrom(store, 0).SelectMany(x => x.Events).GetEnumerator();
 
@@ -133,9 +137,6 @@ namespace HybridDb.Tests.Events
             enumerator.MoveNext().ShouldBe(false);
             enumerator.Dispose();
         }
-
-        static void ExecuteManyAppendEventCommands(DocumentStore store, string streamId, long start, int count) => 
-            store.Execute(Enumerable.Range((int)start, count).Select(i => CreateAppendEventCommand(CreateEventData(streamId, i))));
 
         static List<Commit<byte[]>> ReadEventsFrom(DocumentStore store, long fromPositionIncluding) => 
             store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadEvents(new EventTable("events"), fromPositionIncluding)).ToList());
