@@ -171,7 +171,6 @@
     <Compile Include="..\GlobalAssemblyInfo.cs">
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="ColumnAlreadRegisteredException.cs" />
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Commands\DocumentWriteCommand.cs" />
     <Compile Include="Config\AssemblyQualifiedNameTypeMapper.cs" />
@@ -206,7 +205,6 @@
     <Compile Include="Events\SequenceNumber.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
-    <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\Documents\ChangeDocument.cs" />
     <Compile Include="Migrations\Schema\DdlCommandExecutors.cs" />
@@ -276,7 +274,7 @@
     <Compile Include="Config\DocumentDesigner.cs" />
     <Compile Include="Config\DocumentTable.cs" />
     <Compile Include="Config\IndexDesigner.cs" />
-    <Compile Include="Commands\Command.cs" />
+    <Compile Include="Command.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
     <Compile Include="IAdvancedDocumentSession.cs" />
     <Compile Include="Commands\InsertCommand.cs" />

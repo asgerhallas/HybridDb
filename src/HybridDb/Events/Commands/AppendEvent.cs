@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using Dapper;
@@ -24,8 +23,6 @@ namespace HybridDb.Events.Commands
 
         public static EventData<byte[]> Execute(DocumentTransaction tx, AppendEvent command)
         {
-            var parameters = new DynamicParameters();
-
             if (command.Event.SequenceNumber == SequenceNumber.Any)
                 throw new InvalidOperationException("SequenceNumber.Any is not currently supported.");
 
@@ -34,6 +31,8 @@ namespace HybridDb.Events.Commands
 
             if (string.IsNullOrWhiteSpace(command.Event.StreamId))
                 throw new InvalidOperationException("StreamId must be set.");
+
+            var parameters = new DynamicParameters();
 
             parameters.Add("@EventId", command.Event.EventId);
             parameters.Add("@CommitId", tx.CommitId);
