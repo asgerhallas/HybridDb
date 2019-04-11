@@ -186,6 +186,7 @@
     <Compile Include="DocumentTransaction.cs" />
     <Compile Include="EntityKey.cs" />
     <Compile Include="EntityState.cs" />
+    <Compile Include="Events\Commands\GetPosition.cs" />
     <Compile Include="Events\Commands\ReadEventsByCommitIds.cs" />
     <Compile Include="Events\Row.cs" />
     <Compile Include="Events\Commit.cs" />
