@@ -30,7 +30,9 @@ namespace HybridDb.Tests.Events
                 return tx.CommitId;
             });
 
-            var commits = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), id1, id2)).ToList());
+            var commits = store.Transactionally(IsolationLevel.Snapshot, 
+                tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), id1, id2)).ToList());
+
             commits.Count.ShouldBe(2);
             commits[0].Id.ShouldBe(id1);
             commits[1].Id.ShouldBe(id2);
@@ -39,14 +41,16 @@ namespace HybridDb.Tests.Events
         [Fact]
         public void LoadEmptyListOfCommits()
         {
-            var commits = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"))).ToList());
+            var commits = store.Transactionally(IsolationLevel.Snapshot, 
+                tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"))).ToList());
             commits.ShouldBeEmpty();
         }
 
         [Fact]
         public void LoadEmptyCommitFromEmptyGuid()
         {
-            var commits = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), Guid.Empty)).ToList());
+            var commits = store.Transactionally(IsolationLevel.Snapshot, 
+                tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), Guid.Empty)).ToList());
 
             commits.Count.ShouldBe(1);
             commits[0].Id.ShouldBe(Guid.Empty);
