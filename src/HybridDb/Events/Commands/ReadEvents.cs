@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using Dapper;
 using HybridDb.Commands;
+using HybridDb.Linq;
 using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands

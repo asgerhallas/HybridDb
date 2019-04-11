@@ -43,12 +43,8 @@ namespace HybridDb.Events.Commands
 
             foreach (var row in tx.SqlConnection.Query<Row>(sql, new { Id = idParameter, command.FromStreamSeq, command.ToPosition }, tx.SqlTransaction, buffered: false))
             {
-                yield return RowToEvent(row);
+                yield return Row.ToEvent(row);
             }
         }
-
-        static EventData<byte[]> RowToEvent(Row row) =>
-            new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber, 
-                new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata)), row.Data);
     }
 }

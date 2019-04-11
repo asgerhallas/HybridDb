@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace HybridDb.Events
 {
@@ -13,5 +15,9 @@ namespace HybridDb.Events
         public string Generation { get; set; }
         public string Metadata { get; set; }
         public byte[] Data { get; set; }
+
+        public static EventData<byte[]> ToEvent(Row row) =>
+            new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber,
+                new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata)), row.Data);
     }
 }
