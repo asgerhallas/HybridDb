@@ -109,7 +109,7 @@
     <Compile Include="DocumentMigratorTests.cs" />
     <Compile Include="DocumentSession_WithoutInitializeTests.cs" />
     <Compile Include="DocumentSessionTypesTests.cs" />
-    <Compile Include="Events\AppendEventCommandTests.cs" />
+    <Compile Include="Events\AppendEventTests.cs" />
     <Compile Include="DocumentStore_QueryChangesTests.cs" />
     <Compile Include="Events\EventStoreTests.cs" />
     <Compile Include="Events\ReadEventsTests.cs" />

@@ -195,7 +195,7 @@
     <Compile Include="Events\Generation.cs" />
     <Compile Include="Events\IEventStore.cs" />
     <Compile Include="Events\IEventStoreImporter.cs" />
-    <Compile Include="Events\Commands\AppendEventCommand.cs" />
+    <Compile Include="Events\Commands\AppendEvent.cs" />
     <Compile Include="Events\IReadOnlyMetadata.cs" />
     <Compile Include="Events\Metadata.cs" />
     <Compile Include="Events\Position.cs" />

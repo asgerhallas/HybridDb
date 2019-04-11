@@ -27,19 +27,10 @@ namespace HybridDb.Events.Commands
             }
 
             var sql = $@"
-                SELECT
-                    globSeq AS [Position],
-                    id AS [eventId],
-                    batch AS [CommitId],
-                    name AS [Name],
-                    gen AS [Generation],
-                    stream AS [StreamId], 
-                    seq AS [Seq],
-                    data AS [Data], 
-                    meta AS [Metadata]
+                SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
                 FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE globSeq >= @fromPosition
-                ORDER BY globSeq ASC";
+                WHERE Position >= @fromPosition
+                ORDER BY Position ASC";
 
             var currentCommitId = Guid.Empty;
             var currentGeneration = "0.0";
@@ -67,7 +58,7 @@ namespace HybridDb.Events.Commands
                 // still same commit
                 var metadata = new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata));
 
-                events.Add(new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.Seq, metadata, row.Data));
+                events.Add(new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber, metadata, row.Data));
             }
 
             if (events.Any())

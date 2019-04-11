@@ -313,7 +313,7 @@ namespace HybridDb.Config
 
             Decorate<Func<DocumentTransaction, Command, Func<object>>>((container, decoratee) => (tx, command) =>
                 () => Switch<object>.On(command)
-                    .Match<AppendEventCommand>(appendEvent => AppendEventCommand.Execute(tx, appendEvent))
+                    .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
                     .Match<ReadEvents>(readEvents => ReadEvents.Execute(tx, readEvents))
                     .Else(() => decoratee(tx, command)()));
