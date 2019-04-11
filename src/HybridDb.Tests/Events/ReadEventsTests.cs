@@ -127,7 +127,9 @@ namespace HybridDb.Tests.Events
                 CreateAppendEventCommand(CreateEventData("stream-1", 2))
             );
 
-            var enumerator = ReadEventsFrom(store, 0).SelectMany(x => x.Events).GetEnumerator();
+            var enumerator =
+            store.Transactionally(IsolationLevel.Snapshot, 
+                tx => tx.Execute(new ReadEvents(new EventTable("events"), 0))).SelectMany(x => x.Events).GetEnumerator();
 
             enumerator.MoveNext();
 
