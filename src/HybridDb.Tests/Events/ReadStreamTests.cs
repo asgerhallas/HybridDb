@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
@@ -15,7 +17,6 @@ namespace HybridDb.Tests.Events
             UseEventStore();
         }
 
-
         [Fact]
         public void ReadsByStream()
         {
@@ -24,7 +25,7 @@ namespace HybridDb.Tests.Events
                 CreateAppendEventCommand(CreateEventData("stream-1", 1)),
                 CreateAppendEventCommand(CreateEventData("stream-2", 0)));
 
-            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).ToList());
+            var events = Execute(new ReadStream(new EventTable("events"), "stream-1", 0));
 
             events.Select(x => x.SequenceNumber).ShouldBe(new long[] { 0, 1 });
         }
@@ -36,7 +37,7 @@ namespace HybridDb.Tests.Events
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 1)));
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2)));
 
-            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 1)).ToList());
+            var events = Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 1));
 
             events.Select(x => x.SequenceNumber).ShouldBe(new long[] {0, 1});
         }
@@ -49,7 +50,7 @@ namespace HybridDb.Tests.Events
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 1)));
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2)));
 
-            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 2)).ToList());
+            var events = Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 2));
 
             events.Select(x => x.SequenceNumber).ShouldBe(new long[] {0, 1});
         }
@@ -63,9 +64,73 @@ namespace HybridDb.Tests.Events
 
             store.Execute(Enumerable.Range(0, 100).Select(i => CreateAppendEventCommand(CreateEventData("stream-0", i))));
 
-            var count = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-0", 0, 9)).Count());
+            var count = Execute(new ReadStream(new EventTable("events"), "stream-0", 0, 9)).Count;
 
             count.ShouldBe(10);
         }
+
+        [Fact]
+        public void LastOrDefault()
+        {
+            store.Execute(Enumerable.Range(0, 100).Select(x => CreateAppendEventCommand(CreateEventData("stream-1", x))));
+
+            var events = Execute(new ReadStream(new EventTable("events"), "stream-1", -1, direction: Direction.Backward));
+
+            events.FirstOrDefault().SequenceNumber.ShouldBe(99);
+        }
+
+        [Fact]
+        public void LastOrDefaultNoEvents()
+        {
+            store.Execute(Enumerable.Range(0, 100).Select(x => CreateAppendEventCommand(CreateEventData("stream-1", x))));
+
+            var events = Execute(new ReadStream(new EventTable("events"), "some-other-id", -1, direction: Direction.Backward));
+
+            events.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void LoadEventsByStreamConcurrently()
+        {
+            store.Execute(Enumerable.Range(0, 1000).Select(x => CreateAppendEventCommand(CreateEventData("stream-1", x))));
+
+            Parallel.For(0, 100, i =>
+            {
+                Execute(new ReadStream(new EventTable("events"), "stream-1", 0));
+            });
+        }
+
+        [Fact]
+        public void LoadEventsByStreamFromSeqNumber()
+        {
+            //bump up the global sequence number so it does not match the stream seq number
+            store.Execute(Enumerable.Range(0, 10).Select(x => CreateAppendEventCommand(CreateEventData("stream-1", x))));
+            store.Execute(Enumerable.Range(0, 10).Select(x => CreateAppendEventCommand(CreateEventData("stream-2", x))));
+
+            var events = Execute(new ReadStream(new EventTable("events"), "stream-2", 5));
+
+            events
+                .Select(x => x.SequenceNumber)
+                .ShouldBe(new long[] { 5, 6, 7, 8, 9 });
+        }
+
+        [Fact]
+        public void LoadEventsByStreamWithCutoffAtPosition()
+        {
+            byte pos = 0;
+
+            //bump up the global sequence number so it does not match the stream seq number
+            store.Execute(Enumerable.Range(0, 10).Select(x => CreateAppendEventCommand(CreateEventData("stream-1", pos++))));
+            store.Execute(Enumerable.Range(0, 6).Select(x => CreateAppendEventCommand(CreateEventData("stream-2", pos++))));
+            store.Execute(Enumerable.Range(6, 4).Select(x => CreateAppendEventCommand(CreateEventData("stream-2", pos++))));
+
+            var events = Execute(new ReadStream(new EventTable("events"), "stream-2", 0, 15));
+
+            events
+                .Select(x => x.SequenceNumber)
+                .ShouldBe(new long[] { 10, 11, 12, 13, 14, 15 });
+        }
+
+        List<EventData<byte[]>> Execute(ReadStream command) => store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(command).ToList());
     }
 }

@@ -24,7 +24,7 @@ namespace HybridDb.Tests.Events
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, "c")));
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2, "d")));
 
-            var commits = ReadEventsFrom(store, 0);
+            var commits = Execute(new ReadEvents(new EventTable("events"), 0));
 
             commits
                 .SelectMany(x => x.Events.Select(e => e.Name))
@@ -72,7 +72,8 @@ namespace HybridDb.Tests.Events
 
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, "test123")));
 
-            var commits = ReadEventsFrom(store, 0);
+            var commits = Execute(new ReadEvents(new EventTable("events"), 0));
+
             var stream1 = commits[0].Events;
             var stream2 = commits[1].Events;
 
@@ -88,11 +89,11 @@ namespace HybridDb.Tests.Events
         [Fact]
         public void DoesNotFailOnEmptyStream()
         {
-            Should.NotThrow(() => ReadEventsFrom(store, 0));
+            Should.NotThrow(() => Execute(new ReadEvents(new EventTable("events"), 0)));
 
             // this is actually the most common scenario for this error
             // when projectors try to catch up but there are no new commits
-            Should.NotThrow(() => ReadEventsFrom(store, 100));
+            Should.NotThrow(() => Execute(new ReadEvents(new EventTable("events"), 100)));
         }
 
         [Fact]
@@ -100,7 +101,7 @@ namespace HybridDb.Tests.Events
         {
             store.Execute(Enumerable.Range(0, 1000).Select(i => CreateAppendEventCommand(CreateEventData("stream-1", i))));
 
-            Parallel.For(0, 100, i => ReadEventsFrom(store, 0));
+            Parallel.For(0, 100, i => Execute(new ReadEvents(new EventTable("events"), 0)));
         }
 
         [Fact]
@@ -108,12 +109,11 @@ namespace HybridDb.Tests.Events
         {
             store.Execute(
                 CreateAppendEventCommand(CreateEventData("stream-1", 0)),
-                CreateAppendEventCommand(CreateEventData("stream-1", 1)),
-                CreateAppendEventCommand(CreateEventData("stream-1", 2)));
+                CreateAppendEventCommand(CreateEventData("stream-1", 1)));
 
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, "myspecialevent")));
 
-            var domainEvents = ReadEventsFrom(store, 2);
+            var domainEvents = Execute(new ReadEvents(new EventTable("events"), 2));
 
             domainEvents.Single().Events.Single().Name.ShouldBe("myspecialevent");
         }
@@ -123,24 +123,23 @@ namespace HybridDb.Tests.Events
         {
             store.Execute(
                 CreateAppendEventCommand(CreateEventData("stream-1", 0)),
-                CreateAppendEventCommand(CreateEventData("stream-1", 1)),
-                CreateAppendEventCommand(CreateEventData("stream-1", 2))
-            );
+                CreateAppendEventCommand(CreateEventData("stream-1", 1)));
 
-            var enumerator =
-            store.Transactionally(IsolationLevel.Snapshot, 
-                tx => tx.Execute(new ReadEvents(new EventTable("events"), 0))).SelectMany(x => x.Events).GetEnumerator();
+            store.Transactionally(IsolationLevel.Snapshot, tx =>
+            {
+                using (var enumerator = tx.Execute(new ReadEvents(new EventTable("events"), 0)).SelectMany(x => x.Events).GetEnumerator())
+                {
+                    enumerator.MoveNext().ShouldBe(true);
 
-            enumerator.MoveNext();
+                    store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2)));
 
-            store.Execute(Enumerable.Range(2, 4).Select(i => CreateAppendEventCommand(CreateEventData("stream-1", i))));
-
-            enumerator.MoveNext().ShouldBe(true);
-            enumerator.MoveNext().ShouldBe(false);
-            enumerator.Dispose();
+                    enumerator.MoveNext().ShouldBe(true);
+                    enumerator.MoveNext().ShouldBe(false);
+                }
+            });
         }
 
-        static List<Commit<byte[]>> ReadEventsFrom(DocumentStore store, long fromPositionIncluding) => 
-            store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadEvents(new EventTable("events"), fromPositionIncluding)).ToList());
+        List<Commit<byte[]>> Execute(ReadEvents command) => 
+            store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(command).ToList());
     }
 }
