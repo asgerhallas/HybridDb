@@ -111,6 +111,7 @@
     <Compile Include="DocumentSessionTypesTests.cs" />
     <Compile Include="Events\AppendEventCommandTests.cs" />
     <Compile Include="DocumentStore_QueryChangesTests.cs" />
+    <Compile Include="Events\EventStoreTests.cs" />
     <Compile Include="Events\ReadEventsTests.cs" />
     <Compile Include="Events\ReadStreamTests.cs" />
     <Compile Include="FakeBackupWriter.cs" />

@@ -25,10 +25,12 @@ namespace HybridDb.Events.Commands
         public static EventData<byte[]> Execute(DocumentTransaction tx, AppendEventCommand command)
         {
             var parameters = new DynamicParameters();
-            var rows = new List<string>();
 
-            //if (command.SequenceNumber < Events.SequenceNumber.BeginningOfStream)
-            //    throw new InvalidOperationException("SequenceNumber must be set to SequenceNumber.Any, SequenceNumber.BeginningOfStream or a positive integer.");
+            if (command.Event.SequenceNumber == SequenceNumber.Any)
+                throw new InvalidOperationException("SequenceNumber.Any is not currently supported.");
+
+            if (command.Event.SequenceNumber < SequenceNumber.BeginningOfStream)
+                throw new InvalidOperationException("SequenceNumber must be 0 or a positive integer.");
 
             if (string.IsNullOrWhiteSpace(command.Event.StreamId))
                 throw new InvalidOperationException("StreamId must be set.");
@@ -42,8 +44,10 @@ namespace HybridDb.Events.Commands
             parameters.Add("@data", command.Event.Data);
             parameters.Add("@meta", JsonConvert.SerializeObject(command.Event.Metadata.Values));
 
-            rows.Add("(@commitId, @eventId, @stream, @seq, @name, @gen, @meta, @data)");
-            var sql = $@"INSERT INTO {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} (batch, id, stream, seq, name, gen, meta, data) OUTPUT Inserted.globSeq, Inserted.seq VALUES {string.Join(", ", rows)}";
+            var sql = $@"
+                INSERT INTO {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} (batch, id, stream, seq, name, gen, meta, data) 
+                OUTPUT Inserted.globSeq, Inserted.seq
+                VALUES (@commitId, @eventId, @stream, @seq, @name, @gen, @meta, @data)";
 
             try
             {

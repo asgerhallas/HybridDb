@@ -9,12 +9,6 @@ using Xunit;
 
 namespace HybridDb.Tests.Events
 {
-    public class EventStoreTests : HybridDbAutoInitializeTests
-    {
-        protected static AppendEventCommand CreateAppendEventCommand(EventData<byte[]> eventData) => new AppendEventCommand(new EventTable("events"), "1.0", eventData);
-        protected static EventData<byte[]> CreateEventData(string streamId, int sequenceNumber, string name = "myevent") => new EventData<byte[]>(streamId, Guid.NewGuid(), name, sequenceNumber, new Metadata(), new[] { (byte)sequenceNumber });
-    }
-
     public class AppendEventCommandTests : EventStoreTests
     {
         public AppendEventCommandTests()
@@ -34,6 +28,18 @@ namespace HybridDb.Tests.Events
             @event.Name.ShouldBe("myevent");
             @event.Data.ShouldBe(new byte[] { 0 });
         }
+
+        [Fact]
+        public void FailsOnDuplicateEventId()
+        {
+            var eventId = Guid.NewGuid();
+
+            store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 0, eventId)));
+
+            Should.Throw<ConcurrencyException>(() => store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, eventId))));
+        }
+
+
 
         [Fact]
         public void StreamsEntireCommitToSubscribtion()
