@@ -27,19 +27,10 @@ namespace HybridDb.Events.Commands
                 parameters.Add(param.name, param.value);
 
             var sql = $@"
-                SELECT 
-                    id AS [EventId],
-                    globSeq AS [Position],
-                    batch as [CommitId],
-                    stream AS [StreamId],
-                    seq as [Seq],
-                    name as [Name],
-                    gen as [Generation],
-                    data as [Data], 
-                    meta as [Metadata]
+                SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
                 FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE batch IN ({string.Join(", ", parameters.ParameterNames.Select(x => $"@{x}"))})
-                ORDER BY globSeq";
+                WHERE CommitId IN ({string.Join(", ", parameters.ParameterNames.Select(x => $"@{x}"))})
+                ORDER BY Position";
 
             var commits = new[] { Commit.Empty<byte[]>() }.Concat(
                 from row in tx.SqlConnection.Query<Row>(sql, parameters, tx.SqlTransaction)
