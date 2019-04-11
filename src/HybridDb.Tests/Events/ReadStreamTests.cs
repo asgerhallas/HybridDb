@@ -24,7 +24,7 @@ namespace HybridDb.Tests.Events
                 CreateAppendEventCommand(CreateEventData("stream-1", 1)),
                 CreateAppendEventCommand(CreateEventData("stream-2", 0)));
 
-            var events = store.Transactionally(tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).ToList(), IsolationLevel.Snapshot);
+            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).ToList());
 
             events.Select(x => x.SequenceNumber).ShouldBe(new long[] { 0, 1 });
         }
@@ -36,7 +36,7 @@ namespace HybridDb.Tests.Events
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 1)));
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2)));
 
-            var events = store.Transactionally(tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 1)).ToList(), IsolationLevel.Snapshot);
+            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 1)).ToList());
 
             events.Select(x => x.SequenceNumber).ShouldBe(new long[] {0, 1});
         }
@@ -49,7 +49,7 @@ namespace HybridDb.Tests.Events
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 1)));
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2)));
 
-            var events = store.Transactionally(tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 2)).ToList(), IsolationLevel.Snapshot);
+            var events = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 2)).ToList());
 
             events.Select(x => x.SequenceNumber).ShouldBe(new long[] {0, 1});
         }
@@ -63,7 +63,7 @@ namespace HybridDb.Tests.Events
 
             store.Execute(Enumerable.Range(0, 100).Select(i => CreateAppendEventCommand(CreateEventData("stream-0", i))));
 
-            var count = store.Transactionally(tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-0", 0, 9)).Count(), IsolationLevel.Snapshot);
+            var count = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-0", 0, 9)).Count());
 
             count.ShouldBe(10);
         }
