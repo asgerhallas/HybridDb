@@ -88,7 +88,7 @@ namespace HybridDb
             });
 
         public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func) => 
-            Transactionally<T>(store, IsolationLevel.ReadCommitted, func);
+            Transactionally(store, IsolationLevel.ReadCommitted, func);
 
         public static T Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, T> func)
         {
