@@ -31,34 +31,20 @@ namespace HybridDb.Events.Commands
                 throw new InvalidOperationException("Reads from event store is best done in snapshot isolation so they don't block writes.");
             }
 
-            var sql =
-                $@"SELECT
-                    globSeq AS [Position],
-                    batch as [CommitId],
-                    @id AS [StreamId],
-                    seq as [Seq],
-                    name as [Name],
-                    gen as [Generation],
-                    data as [Data], 
-                    meta as [Metadata]
-                  FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                  WHERE stream = @id AND seq >= @fromStreamSeq AND globSeq <= @toPosition
-                  ORDER BY seq {(command.Direction == Direction.Forward ? "ASC" : "DESC")}";
+            var sql = $@"
+                SELECT Position, EventId, CommitId, @Id AS [StreamId], SequenceNumber, Name, Generation, Metadata, Data
+                FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
+                WHERE StreamId = @Id AND SequenceNumber >= @fromStreamSeq AND Position <= @toPosition
+                ORDER BY SequenceNumber {(command.Direction == Direction.Forward ? "ASC" : "DESC")}";
 
             // Using DbString over just string as a important performance optimization, 
             // see https://github.com/StackExchange/dapper-dot-net/issues/288
             var idParameter = new DbString {Value = command.StreamId, IsAnsi = false, IsFixedLength = false, Length = 850};
 
-            foreach (var row in tx.SqlConnection.Query<Row>(sql, new {id = idParameter, command.FromStreamSeq, command.ToPosition }, tx.SqlTransaction, buffered: false))
+            foreach (var row in tx.SqlConnection.Query<Row>(sql, new { Id = idParameter, command.FromStreamSeq, command.ToPosition }, tx.SqlTransaction, buffered: false))
             {
-                yield return RowToEvent(row);
+                yield return Row.ToEvent(row);
             }
-        }
-
-        static EventData<byte[]> RowToEvent(Row row)
-        {
-            var metadata = new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata));
-            return new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.Seq, metadata, row.Data);
         }
     }
 }

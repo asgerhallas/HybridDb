@@ -9,9 +9,9 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    public class AppendEventCommand : Command<EventData<byte[]>>
+    public class AppendEvent : Command<EventData<byte[]>>
     {
-        public AppendEventCommand(Table table, Generation generation, EventData<byte[]> @event)
+        public AppendEvent(Table table, Generation generation, EventData<byte[]> @event)
         {
             Table = table;
             Generation = generation;
@@ -22,7 +22,7 @@ namespace HybridDb.Events.Commands
         public Generation Generation { get; }
         public EventData<byte[]> Event { get; }
 
-        public static EventData<byte[]> Execute(DocumentTransaction tx, AppendEventCommand command)
+        public static EventData<byte[]> Execute(DocumentTransaction tx, AppendEvent command)
         {
             var parameters = new DynamicParameters();
 
@@ -35,19 +35,19 @@ namespace HybridDb.Events.Commands
             if (string.IsNullOrWhiteSpace(command.Event.StreamId))
                 throw new InvalidOperationException("StreamId must be set.");
 
-            parameters.Add("@commitId", tx.CommitId);
-            parameters.Add("@eventId", command.Event.EventId);
-            parameters.Add("@stream", command.Event.StreamId);
-            parameters.Add("@seq", command.Event.SequenceNumber);
-            parameters.Add("@name", command.Event.Name);
-            parameters.Add("@gen", command.Generation.ToString());
-            parameters.Add("@data", command.Event.Data);
-            parameters.Add("@meta", JsonConvert.SerializeObject(command.Event.Metadata.Values));
+            parameters.Add("@EventId", command.Event.EventId);
+            parameters.Add("@CommitId", tx.CommitId);
+            parameters.Add("@StreamId", command.Event.StreamId);
+            parameters.Add("@SequenceNumber", command.Event.SequenceNumber);
+            parameters.Add("@Name", command.Event.Name);
+            parameters.Add("@Generation", command.Generation.ToString());
+            parameters.Add("@Metadata", JsonConvert.SerializeObject(command.Event.Metadata.Values));
+            parameters.Add("@Data", command.Event.Data);
 
             var sql = $@"
-                INSERT INTO {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} (batch, id, stream, seq, name, gen, meta, data) 
-                OUTPUT Inserted.globSeq, Inserted.seq
-                VALUES (@commitId, @eventId, @stream, @seq, @name, @gen, @meta, @data)";
+                INSERT INTO {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
+                OUTPUT Inserted.Position, Inserted.SequenceNumber
+                VALUES (@EventId, @CommitId, @StreamId, @SequenceNumber, @Name, @Generation, @Metadata, @Data)";
 
             try
             {
