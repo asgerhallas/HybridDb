@@ -1,6 +1,6 @@
 using System;
 using HybridDb.Config;
-using HybridDb.Migrations.Commands;
+using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;

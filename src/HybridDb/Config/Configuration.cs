@@ -1,17 +1,74 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
+using HybridDb.Commands;
+using HybridDb.Events;
+using HybridDb.Events.Commands;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
+using HybridDb.Migrations.Schema;
+using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Serialization;
 using Serilog;
+using ShinySwitch;
 using static Indentional.Indent;
 
 namespace HybridDb.Config
 {
-    public class Configuration
+    public interface IContainerActivator
+    {
+        T Resolve<T>();
+    }
+
+    public class ConfigurationContainer : IContainerActivator, IDisposable
+    {
+        readonly List<object> tracked = new List<object>();
+        readonly ConcurrentDictionary<Type, Lazy<object>> factories = new ConcurrentDictionary<Type, Lazy<object>>();
+
+        public void Register<T>(Func<IContainerActivator, T> factory)
+        {
+            var activator = new Lazy<object>(() => Track(factory(this)), isThreadSafe: true);
+
+            factories.AddOrUpdate(typeof(T), key => activator, (key, current) => activator);
+        }
+
+        public void Decorate<T>(Func<IContainerActivator, T, T> factory)
+        {
+            factories.AddOrUpdate(typeof(T), 
+                key => throw new InvalidOperationException($"There's no {key} to decorate in the container."), 
+                (key, decoratee) => new Lazy<object>(() => Track(factory(this, (T)decoratee.Value)), isThreadSafe: true));
+        }
+
+        public T Resolve<T>()
+        {
+            if (!factories.TryGetValue(typeof(T), out var activator))
+            {
+                throw new InvalidOperationException($"No activator registered for {typeof(T)}");
+            }
+
+            return (T)activator.Value;
+        }
+
+        public void Dispose()
+        {
+            foreach (var disposable in tracked.OfType<IDisposable>())
+            {
+                disposable.Dispose();
+            }
+        }
+
+        T Track<T>(T obj)
+        {
+            tracked.Add(obj);
+            return obj;
+        }
+    }
+
+
+    public class Configuration : ConfigurationContainer
     {
         readonly object gate = new object();
 
@@ -37,6 +94,26 @@ namespace HybridDb.Config
             Queued = false;
             EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
+
+            Register<Func<IDocumentStore, Action<SchemaMigrationCommand>>>(x => store =>
+                Switch<Action<SchemaMigrationCommand>>.On(store)
+                    .Match<DocumentStore>(documentStore => command => Switch.On(command)
+                        .Match<CreateTable>(createTable => DdlCommandExecutors.Execute(documentStore, createTable))
+                        .Match<RemoveTable>(removeTable => DdlCommandExecutors.Execute(documentStore, removeTable))
+                        .Match<RenameTable>(renameTable => DdlCommandExecutors.Execute(documentStore, renameTable))
+                        .Match<AddColumn>(addColumn => DdlCommandExecutors.Execute(documentStore, addColumn))
+                        .Match<RemoveColumn>(removeColumn => DdlCommandExecutors.Execute(documentStore, removeColumn))
+                        .Match<RenameColumn>(renameColumn => DdlCommandExecutors.Execute(documentStore, renameColumn))
+                        .Match<SqlMigrationCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(documentStore, sqlMigrationCommand))
+                        .OrThrow())
+                    .OrThrow());
+
+            Register<Func<DocumentTransaction, Command, Func<object>>>(container => (tx, command) => () => 
+                Switch<object>.On(command)
+                    .Match<InsertCommand>(insertCommand => InsertCommand.Execute(tx, insertCommand))
+                    .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
+                    .Match<DeleteCommand>(deleteCommand => DeleteCommand.Execute(tx, deleteCommand))
+                    .OrThrow());
         }
 
         public ILogger Logger { get; private set; }
@@ -225,7 +302,21 @@ namespace HybridDb.Config
         {
             EventStore = true;
 
-            //tables.TryAdd("events", new Table("events", new Column()))
+            tables.TryAdd("events", new EventTable("events"));
+
+            Decorate<Func<IDocumentStore, Action<SchemaMigrationCommand>>>((container, decoratee) => store =>
+                Switch<Action<SchemaMigrationCommand>>.On(store)
+                    .Match<DocumentStore>(documentStore => command => Switch.On(command)
+                        .Match<CreateEventTable>(createEventTable => CreateEventTable.CreateEventTableExecutor(documentStore, createEventTable))
+                        .Else(_ => decoratee(store)(command)))
+                    .Else(_ => decoratee(store)));
+
+            Decorate<Func<DocumentTransaction, Command, Func<object>>>((container, decoratee) => (tx, command) =>
+                () => Switch<object>.On(command)
+                    .Match<AppendEventCommand>(appendEvent => AppendEventCommand.Execute(tx, appendEvent))
+                    .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
+                    .Match<ReadEvents>(readEvents => ReadEvents.Execute(tx, readEvents))
+                    .Else(() => decoratee(tx, command)()));
         }
 
         public void UseColumnNameConventions(Func<Expression, string> convention) => ColumnNameConvention = convention;
@@ -270,5 +361,20 @@ namespace HybridDb.Config
                 return new DocumentTable(name);
             });
         }
+
+        public Action<SchemaMigrationCommand> GetDdlCommandExecutor(IDocumentStore store) => 
+            Resolve<Func<IDocumentStore, Action<SchemaMigrationCommand>>>()(store);
+
+        public Func<object> GetDmlCommandExecutor(DocumentTransaction tx, Command command) => 
+            Resolve<Func<DocumentTransaction, Command, Func<object>>>()(tx, command);
+
+        // ok... den simple udgave er at have executors liggende på commanden
+        // med dette kan vi godt udvide med nye commands, men ikke nye stores/txes
+        // hvis vi gerne vil intercepte en command, så ville det være godt hvis man havde en executor
+        // som vi kan decorate - vi kan ikke nemt decorate den command, der sendes, da det ikke er os der bestemmer hvilken instans den er
+        // dette er sandsynligvis kun nødvendigt for dml commands - ikke dll
+        // interception kan bruges til logging, stats og er generelt bare godt design til formålet
+
+        // se om vi kan få det til at virke med generics
     }
 }

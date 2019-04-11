@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using HybridDb.Migrations.Documents;
+using HybridDb.Migrations.Schema;
 
 namespace HybridDb.Migrations
 {

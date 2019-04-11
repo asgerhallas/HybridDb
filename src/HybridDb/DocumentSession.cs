@@ -5,6 +5,7 @@ using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
 
 namespace HybridDb
 {
@@ -12,14 +13,14 @@ namespace HybridDb
     {
         readonly Dictionary<EntityKey, ManagedEntity> entities;
         readonly IDocumentStore store;
-        readonly IDocumentTransaction enlistedTransaction;
-        readonly List<DatabaseCommand> deferredCommands;
+        readonly DocumentTransaction enlistedTransaction;
+        readonly List<Command> deferredCommands;
         readonly DocumentMigrator migrator;
         bool saving = false;
 
-        internal DocumentSession(IDocumentStore store, IDocumentTransaction enlistedTransaction = null)
+        internal DocumentSession(IDocumentStore store, DocumentTransaction enlistedTransaction = null)
         {
-            deferredCommands = new List<DatabaseCommand>();
+            deferredCommands = new List<Command>();
             entities = new Dictionary<EntityKey, ManagedEntity>();
             migrator = new DocumentMigrator(store.Configuration);
 
@@ -95,7 +96,7 @@ namespace HybridDb
             return query;
         }
 
-        public void Defer(DatabaseCommand command)
+        public void Defer(Command command)
         {
             deferredCommands.Add(command);
         }
@@ -182,7 +183,7 @@ namespace HybridDb
 
             saving = true;
 
-            var commands = new Dictionary<ManagedEntity, DatabaseCommand>();
+            var commands = new Dictionary<ManagedEntity, Command>();
             foreach (var managedEntity in entities.Values.ToList())
             {
                 var key = managedEntity.Key;
@@ -227,10 +228,15 @@ namespace HybridDb
                 }
             }
 
-            var etag = Transactionally(tx => commands
-                .Select(x => x.Value)
-                .Concat(deferredCommands)
-                .Aggregate(Guid.Empty, (acc, next) => tx.Execute(next)));
+            var etag = Transactionally(tx =>
+            {
+                foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
+                {
+                    tx.Execute(command);
+                }
+
+                return tx.CommitId;
+            });
 
             foreach (var managedEntity in commands.Keys)
             {
@@ -286,7 +292,7 @@ namespace HybridDb
             return entity;
         }
 
-        internal T Transactionally<T>(Func<IDocumentTransaction, T> func)
+        internal T Transactionally<T>(Func<DocumentTransaction, T> func)
         {
             if (enlistedTransaction != null)
                 return func(enlistedTransaction);

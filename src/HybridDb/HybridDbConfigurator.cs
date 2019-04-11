@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
 using HybridDb.Serialization;
 using Serilog;
 

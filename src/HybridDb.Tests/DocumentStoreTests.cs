@@ -13,12 +13,7 @@ namespace HybridDb.Tests
 {
     public class DocumentStoreTests : HybridDbAutoInitializeTests
     {
-        readonly byte[] documentAsByteArray;
-
-        public DocumentStoreTests()
-        {
-            documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
-        }
+        readonly byte[] documentAsByteArray = { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
 
         [Fact]
         public void CanInsert()
@@ -37,79 +32,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanInsertDynamically()
-        {
-            Document<Entity>().With(x => x.Field);
-            
-            var id = NewId();
-            store.Insert(new DynamicDocumentTable("Entities"), id, new { Field = "Asger", Document = documentAsByteArray });
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string) row.Id).ShouldBe(id);
-            ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
-            Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
-            ((string) row.Field).ShouldBe("Asger");
-        }
-
-        [Fact(Skip = "We will maybe not support this in the future. Just get the table from QuerySchema and use that, when it can return DocumentTable and not just Table.")]
-        public void CanInsertNullsDynamically()
-        {
-            Document<Entity>().With(x => x.Field);
-
-            store.Insert(new DynamicDocumentTable("Entities"), NewId(), new Dictionary<string, object> {{"Field", null}});
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string) row.Field).ShouldBe(null);
-        }
-
-        [Fact(Skip = "This will fail on first insert now, but we might want to check it at configuration time, but only if other stores do not support either.")]
-        public void FailsOnSettingUpComplexProjections()
-        {
-            Should.Throw<ArgumentException>(() =>
-            {
-                Document<Entity>().With(x => x.Complex);
-            });
-        }
-
-        [Fact]
-        public void FailsOnDynamicallyInsertedComplexProjections()
-        {
-            Document<Entity>();
-            
-            Should.Throw<ArgumentException>(() =>
-                store.Insert(new DynamicDocumentTable("Entities"), NewId(), new { Complex = new Entity.ComplexType() }));
-        }
-
-        [Fact(Skip = "Feature on hold")]
-        public void CanInsertCollectionProjections()
-        {
-            Document<Entity>().With(x => x.Children.Select(y => y.NestedProperty));
-            
-            var id = NewId();
-            var schema = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(
-                schema.Table, id,
-                new
-                {
-                    Children = new[]
-                    {
-                        new {NestedProperty = "A"},
-                        new {NestedProperty = "B"}
-                    }
-                });
-
-            var mainrow = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string)mainrow.Id).ShouldBe(id);
-
-            var utilrows = store.Database.RawQuery<dynamic>("select * from #Entities_Children").ToList();
-            utilrows.Count.ShouldBe(2);
-            
-            var utilrow = utilrows.First();
-            ((string)utilrow.DocumentId).ShouldBe(id);
-            ((string)utilrow.NestedString).ShouldBe("A");
-        }
-
-        [Fact]
         public void CanUpdate()
         {
             Document<Entity>().With(x => x.Field);
@@ -123,25 +45,6 @@ namespace HybridDb.Tests
             var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((Guid) row.Etag).ShouldNotBe(etag);
             ((string) row.Field).ShouldBe("Lars");
-        }
-
-        [Fact(Skip ="We will maybe not support this in the future. Just get the table from QuerySchema and use that, when it can return DocumentTable and not just Table.")]
-        public void CanUpdateDynamically()
-        {
-            Document<Entity>().With(x => x.Field).With(x => x.Property);
-            
-            var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new {Field = "Asger"});
-
-            // Maybe it should not be required to be a DocumentTable. If we do that everything should part of the projection. 
-            // If we do not do that, why do we have document as part of the projection? Either or.
-            store.Update(new DynamicDocumentTable("Entities"), id, etag, new Dictionary<string, object> { { "Field", null }, { "Property", "Lars" } });
-
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid) row.Etag).ShouldNotBe(etag);
-            ((string) row.Field).ShouldBe(null);
-            ((string) row.Property).ShouldBe("Lars");
         }
 
         [Fact]
@@ -207,7 +110,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var row = store.Get(new DynamicDocumentTable("Entities"), id);
+            var row = store.Get(new DocumentTable("Entities"), id);
             row[table.Table.IdColumn].ShouldBe(id);
             row[table.Table.EtagColumn].ShouldBe(etag);
             row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
@@ -309,7 +212,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
 
             QueryStats stats;
-            var rows = store.Query(new DynamicDocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
+            var rows = store.Query(new DocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
 
             rows.Count().ShouldBe(1);
             var row = rows.Single();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -17,8 +18,17 @@ namespace HybridDb
         public static Guid Delete(this IDocumentStore store, DocumentTable table, string key, Guid etag, bool lastWriteWins = false) =>
             store.Transactionally(tx => tx.Execute(new DeleteCommand(table, key, etag, lastWriteWins)));
 
-        public static Guid Execute(this IDocumentStore store, params DatabaseCommand[] commands) =>
-            store.Transactionally(tx => commands.Aggregate(Guid.Empty, (etag, next) => tx.Execute(next)));
+        public static object Execute(this IDocumentStore store, Command command) => store.Transactionally(tx => tx.Execute(command));
+        public static T Execute<T>(this IDocumentStore store, Command<T> command) => store.Transactionally(tx => tx.Execute(command));
+
+        public static void Execute(this IDocumentStore store, IEnumerable<Command> commands) => store.Execute(commands.ToArray());
+        public static void Execute(this IDocumentStore store, params Command[] commands) => store.Transactionally(tx =>
+        {
+            foreach (var command in commands)
+            {
+                tx.Execute(command);
+            }
+        });
 
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
@@ -53,23 +63,32 @@ namespace HybridDb
         }
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            this IDocumentTransaction tx, DocumentTable table, byte[] since, string select = null)
+            this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null)
         {
             var upperBoundary = !tx.Store.Testing || tx.Store.TableMode == TableMode.UseRealTables 
-                ? $"and {table.RowVersionColumn.Name} < min_active_rowversion()" 
+                ? $"and {table.TimestampColumn.Name} < min_active_rowversion()" 
                 : "";
 
             return tx.Query<TProjection>(table, @select,
-                @where: $"{table.RowVersionColumn.Name} > @Since {upperBoundary}",
-                @orderby: $"{table.RowVersionColumn.Name} ASC",
+                @where: $"{table.TimestampColumn.Name} > @Since {upperBoundary}",
+                @orderby: $"{table.TimestampColumn.Name} ASC",
                 includeDeleted: true,
                 parameters: new {Since = since}
             ).rows;
         }
 
-        public static T Transactionally<T>(this IDocumentStore store, Func<IDocumentTransaction, T> func)
+        public static void Transactionally(this IDocumentStore store, Action<DocumentTransaction> func, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            using (var tx = store.BeginTransaction())
+            store.Transactionally<object>(tx =>
+            {
+                func(tx);
+                return null;
+            }, isolationLevel);
+        }
+
+        public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        {
+            using (var tx = store.BeginTransaction(isolationLevel))
             {
                 var result = func(tx);
 

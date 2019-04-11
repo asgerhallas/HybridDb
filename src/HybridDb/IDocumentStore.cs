@@ -2,6 +2,7 @@
 using System.Data;
 using HybridDb.Config;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Schema;
 
 namespace HybridDb
 {
@@ -17,7 +18,7 @@ namespace HybridDb
         void Initialize();
 
         void Execute(SchemaMigrationCommand command);
-        IDocumentSession OpenSession(IDocumentTransaction tx = null);
-        IDocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted);
+        IDocumentSession OpenSession(DocumentTransaction tx = null);
+        DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted);
     }
 }

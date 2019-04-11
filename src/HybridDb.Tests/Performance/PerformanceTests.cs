@@ -120,7 +120,7 @@ namespace HybridDb.Tests.Performance
                 {
                     store.Initialize();
 
-                    var commands = new List<DatabaseCommand>();
+                    var commands = new List<Command>();
                     for (var i = 0; i < 10; i++)
                     {
                         commands.Add(new InsertCommand(
@@ -129,7 +129,10 @@ namespace HybridDb.Tests.Performance
                             new {SomeNumber = i, SomeData = "ABC"}));
                     }
 
-                    store.Execute(commands.ToArray());
+                    foreach (var command in commands)
+                    {
+                        store.Execute(command);
+                    }
 
                     decimal time = 0;
                     for (var i = 0; i < 10; i++)

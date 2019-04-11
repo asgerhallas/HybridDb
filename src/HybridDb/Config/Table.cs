@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using HybridDb.Migrations.Schema;
+using HybridDb.Migrations.Schema.Commands;
 
 namespace HybridDb.Config
 {
@@ -23,15 +25,18 @@ namespace HybridDb.Config
             this.columns = columns.ToDictionary(x => x.Name, x => x);
         }
 
-        public Column this[string name] => columns.TryGetValue(name, out var value) ? value : null;
-
-        public virtual Column this[KeyValuePair<string, object> namedValue] => this[namedValue.Key];
-
         public string Name { get; }
-
         public IEnumerable<Column> Columns => columns.Values;
 
-        public void Register(Column column) => columns.Add(column.Name, column);
+        public Column this[string name] => columns.TryGetValue(name, out var value) ? value : null;
+
+        public Column Add(Column column)
+        {
+            columns.Add(column.Name, column);
+            return column;
+        }
+
+        public virtual SchemaMigrationCommand GetCreateCommand() => new CreateTable(this);
 
         public override string ToString() => Name;
     }

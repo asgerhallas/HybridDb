@@ -25,6 +25,8 @@ namespace HybridDb
                 parameters.Add(arg);
             }
 
+            if (fragments.Length != 0) fragments.Append(" ");
+
             fragments.Append(sql);
 
             return this;

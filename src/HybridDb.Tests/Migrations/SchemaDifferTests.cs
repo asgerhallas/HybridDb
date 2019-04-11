@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations;
-using HybridDb.Migrations.Commands;
+using HybridDb.Migrations.Schema;
+using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
 
@@ -89,7 +90,7 @@ namespace HybridDb.Tests.Migrations
         public void FindMissingColumn()
         {
             var table = new DocumentTable("Entities");
-            table.Register(new Column("Number", typeof(int)));
+            table.Add(new Column("Number", typeof(int)));
 
             schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
@@ -105,7 +106,7 @@ namespace HybridDb.Tests.Migrations
         public void FindColumnTypeChange()
         {
             var table = new DocumentTable("Entities");
-            table.Register(new Column("Number", typeof(int)));
+            table.Add(new Column("Number", typeof(int)));
 
             schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 

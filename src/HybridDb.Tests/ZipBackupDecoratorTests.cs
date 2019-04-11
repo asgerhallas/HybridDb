@@ -1,6 +1,7 @@
 using System.IO;
 using System.IO.Compression;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
 

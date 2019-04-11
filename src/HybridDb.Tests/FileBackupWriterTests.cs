@@ -1,5 +1,6 @@
 using System.IO;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
 

@@ -7,38 +7,17 @@ namespace HybridDb.Config
     {
         public DocumentTable(string name) : base(name)
         {
-            IdColumn = new Column("Id", typeof(string), length: 850, isPrimaryKey: true);
-            Register(IdColumn);
-
-            EtagColumn = new Column("Etag", typeof(Guid));
-            Register(EtagColumn);
-
-            CreatedAtColumn = new Column("CreatedAt", typeof(DateTimeOffset));
-            Register(CreatedAtColumn);
-
-            ModifiedAtColumn = new Column("ModifiedAt", typeof(DateTimeOffset));
-            Register(ModifiedAtColumn);
-
-            DocumentColumn = new Column("Document", typeof(byte[]));
-            Register(DocumentColumn);
-
-            MetadataColumn = new Column("Metadata", typeof(byte[]));
-            Register(MetadataColumn);
-
-            DiscriminatorColumn = new Column("Discriminator", typeof(string), length: 850);
-            Register(DiscriminatorColumn);
-
-            AwaitsReprojectionColumn = new Column("AwaitsReprojection", typeof(bool));
-            Register(AwaitsReprojectionColumn);
-
-            VersionColumn = new Column("Version", typeof(int));
-            Register(VersionColumn);
-
-            RowVersionColumn = new Column("VirtualTime", SqlDbType.Timestamp, typeof(int));
-            Register(RowVersionColumn);
-
-            LastOperationColumn = new Column("LastOperation", SqlDbType.TinyInt, typeof(byte));
-            Register(LastOperationColumn);
+            IdColumn = Add(new Column("Id", typeof(string), length: 850, isPrimaryKey: true));
+            EtagColumn = Add(new Column("Etag", typeof(Guid)));
+            CreatedAtColumn = Add(new Column("CreatedAt", typeof(DateTimeOffset)));
+            ModifiedAtColumn = Add(new Column("ModifiedAt", typeof(DateTimeOffset)));
+            DocumentColumn = Add(new Column("Document", typeof(byte[])));
+            MetadataColumn = Add(new Column("Metadata", typeof(byte[])));
+            DiscriminatorColumn = Add(new Column("Discriminator", typeof(string), length: 850));
+            AwaitsReprojectionColumn = Add(new Column("AwaitsReprojection", typeof(bool)));
+            VersionColumn = Add(new Column("Version", typeof(int)));
+            TimestampColumn = Add(new Column("Timestamp", SqlDbType.Timestamp, typeof(int)));
+            LastOperationColumn = Add(new Column("LastOperation", SqlDbType.TinyInt, typeof(byte)));
         }
 
         public Column IdColumn { get; }
@@ -50,7 +29,7 @@ namespace HybridDb.Config
         public Column DiscriminatorColumn { get; }
         public Column AwaitsReprojectionColumn { get; }
         public Column VersionColumn { get; }
-        public Column RowVersionColumn { get; }
+        public Column TimestampColumn { get; }
         public Column LastOperationColumn { get; }
     }
 }

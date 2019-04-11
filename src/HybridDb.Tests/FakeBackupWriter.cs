@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
 
 namespace HybridDb.Tests
 {

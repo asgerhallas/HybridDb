@@ -14,99 +14,59 @@ using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
-    public class DocumentTransaction : IDocumentTransaction
+    public class DocumentTransaction : IDisposable
     {
-        readonly DocumentStore store;
         readonly StoreStats storeStats;
 
         readonly ManagedConnection managedConnection;
-        readonly SqlConnection connection;
-        readonly SqlTransaction tx;
 
         public DocumentTransaction(DocumentStore store, IsolationLevel level, StoreStats storeStats)
         {
-            this.store = store;
+            Store = store;
+
             this.storeStats = storeStats;
 
             managedConnection = store.Database.Connect();
-            connection = managedConnection.Connection;
+            SqlConnection = managedConnection.Connection;
 
             if (Transaction.Current == null)
             {
-                tx = connection.BeginTransaction(level);
+                SqlTransaction = SqlConnection.BeginTransaction(level);
             }
 
-            Etag = Guid.NewGuid();
+            CommitId = Guid.NewGuid();
         }
 
         public void Dispose()
         {
-            tx?.Dispose();
+            SqlTransaction?.Dispose();
             managedConnection.Dispose();
         }
 
         public Guid Complete()
         {
-            tx?.Commit();
-            return Etag;
+            SqlTransaction?.Commit();
+            return CommitId;
         }
 
-        public Guid Etag { get; }
+        public Guid CommitId { get; }
 
-        public IDocumentStore Store => store;
+        public DocumentStore Store { get; }
+        public SqlConnection SqlConnection { get; }
+        public SqlTransaction SqlTransaction { get; }
 
-        public Guid Execute(DatabaseCommand command)
-        {
-            storeStats.NumberOfRequests++;
+        public object Execute(Command command) => Store.Configuration.GetDmlCommandExecutor(this, command)();
 
-            var preparedCommand = Switch<SqlDatabaseCommand>.On(command)
-                .Match<InsertCommand>(insert =>
-                {
-                    storeStats.NumberOfInsertCommands++;
-                    return PrepareInsertCommand(insert);
-                })
-                .Match<UpdateCommand>(update =>
-                {
-                    storeStats.NumberOfUpdateCommands++;
-                    return PrepareUpdateCommand(update);
-                })
-                .Match<DeleteCommand>(delete =>
-                {
-                    storeStats.NumberOfDeleteCommands++;
-                    return PrepareDeleteCommand(delete);
-                })
-                .OrThrow();
-
-            var numberOfNewParameters = preparedCommand.Parameters.Count;
-
-            // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
-            // params are added some where in the stack) so we cut it some slack and say 2000.
-            if (numberOfNewParameters >= 2000)
-            {
-                throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
-            }
-
-            var fastParameters = new FastDynamicParameters(preparedCommand.Parameters);
-            var rowcount = connection.Execute(preparedCommand.Sql, fastParameters, tx);
-
-            if (rowcount != preparedCommand.ExpectedRowCount)
-            {
-                throw new ConcurrencyException(
-                    $"Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}. " +
-                    $"The transaction is rolled back now, so no changes was actually made.");
-            }
-
-            return storeStats.LastWrittenEtag = Etag;
-        }
+        public T Execute<T>(Command<T> command) => (T)Execute((Command)command);
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfGets++;
 
-            var sql = $"select * from {store.Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
+            var sql = $"select * from {Store.Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
 
-            return (IDictionary<string, object>) connection.Query(sql, new {Id = key, Op = Operation.Deleted}, tx).SingleOrDefault();
+            return (IDictionary<string, object>) SqlConnection.Query(sql, new {Id = key, Op = Operation.Deleted}, SqlTransaction).SingleOrDefault();
         }
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
@@ -142,16 +102,16 @@ namespace HybridDb
             if (isWindowed)
             {
                 sql.Append("select count(*) as TotalResults")
-                    .Append($"from {store.Database.FormatTableNameAndEscape(table.Name)}")
+                    .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(";");
 
                 sql.Append(@"with temp as (select *")
                     .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {table.LastOperationColumn.Name} as __LastOperation")
-                    .Append($", {table.RowVersionColumn.Name} as __RowVersion")
+                    .Append($", {table.TimestampColumn.Name} as __RowVersion")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
-                    .Append($"from {store.Database.FormatTableNameAndEscape(table.Name)}")
+                    .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
                     .Append(string.IsNullOrEmpty(select), "select * from temp", $"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
@@ -165,8 +125,8 @@ namespace HybridDb
                 sql.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
                     .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {table.LastOperationColumn.Name} AS __LastOperation")
-                    .Append($", {table.RowVersionColumn.Name} AS __RowVersion")
-                    .Append($"from {store.Database.FormatTableNameAndEscape(table.Name)}")
+                    .Append($", {table.TimestampColumn.Name} AS __RowVersion")
+                    .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
             }
@@ -221,7 +181,7 @@ namespace HybridDb
 
             if (hasTotalsQuery)
             {
-                using (var reader = connection.QueryMultiple(sql.ToString(), normalizedParameters, tx))
+                using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
                 {
                     stats = reader.Read<QueryStats>(buffered: true).Single();
 
@@ -230,7 +190,7 @@ namespace HybridDb
                 }
             }
 
-            using (var reader = connection.QueryMultiple(sql.ToString(), normalizedParameters, tx))
+            using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
             {
                 var rows = (List<QueryResult<T>>) reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
                     new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
@@ -246,118 +206,7 @@ namespace HybridDb
 
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters) =>
             from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
-            select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
-
-        SqlDatabaseCommand PrepareInsertCommand(InsertCommand command)
-        {
-            var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
-
-            values[command.Table.IdColumn] = command.Id;
-            values[command.Table.EtagColumn] = Etag;
-            values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.LastOperationColumn] = Operation.Inserted;
-
-            var sql = $@"
-                insert into {store.Database.FormatTableNameAndEscape(command.Table.Name)} 
-                ({string.Join(", ", from column in values.Keys select column.Name)}) 
-                values ({string.Join(", ", from column in values.Keys select "@" + column.Name)});";
-
-            var parameters = MapProjectionsToParameters(values);
-
-            return new SqlDatabaseCommand
-            {
-                Sql = sql,
-                Parameters = parameters.Values.ToList(),
-                ExpectedRowCount = 1
-            };
-        }
-
-        SqlDatabaseCommand PrepareUpdateCommand(UpdateCommand command)
-        {
-            var values = command.ConvertAnonymousToProjections(command.Table, command.Projections);
-
-            values[command.Table.EtagColumn] = Etag;
-            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.LastOperationColumn] = Operation.Updated;
-
-            var sql = new SqlBuilder()
-                .Append($"update {store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name)}")
-                .Append($"where {command.Table.IdColumn.Name}=@Id")
-                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name}=@ExpectedEtag")
-                .ToString();
-
-            var parameters = MapProjectionsToParameters(values);
-            AddTo(parameters, "@Id", command.Id, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
-
-            if (!command.LastWriteWins)
-            {
-                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
-            }
-
-            return new SqlDatabaseCommand
-            {
-                Sql = sql,
-                Parameters = parameters.Values.ToList(),
-                ExpectedRowCount = 1
-            };
-        }
-
-        SqlDatabaseCommand PrepareDeleteCommand(DeleteCommand command)
-        {
-            // Note that last write wins can actually still produce a ConcurrencyException if the 
-            // row was already deleted, which would result in 0 resulting rows changed
-
-            var sql = new SqlBuilder()
-                .Append($"update {store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {command.Table.IdColumn.Name} = @NewId")
-                .Append($", {command.Table.LastOperationColumn.Name} = {(byte) Operation.Deleted}")
-                .Append($"where {command.Table.IdColumn.Name} = @Id")
-                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @ExpectedEtag")
-                .ToString();
-
-            var parameters = new Dictionary<string, Parameter>();
-            AddTo(parameters, "@Id", command.Key, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
-            AddTo(parameters, "@NewId", $"{command.Key}/{Guid.NewGuid()}", SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
-
-            if (!command.LastWriteWins)
-            {
-                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
-            }
-
-            return new SqlDatabaseCommand
-            {
-                Sql = sql,
-                Parameters = parameters.Values.ToList(),
-                ExpectedRowCount = 1
-            };
-        }
-
-        protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections)
-        {
-            var parameters = new Dictionary<string, Parameter>();
-            foreach (var projection in projections)
-            {
-                var column = projection.Key;
-                var sqlColumn = SqlTypeMap.Convert(column);
-                AddTo(parameters, "@" + column.Name, projection.Value, sqlColumn.DbType, sqlColumn.Length);
-            }
-
-            return parameters;
-        }
-
-        static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
-        {
-            parameters[name] = new Parameter {Name = name, Value = value, DbType = dbType};
-        }
-
-        class SqlDatabaseCommand
-        {
-            public string Sql { get; set; }
-            public List<Parameter> Parameters { get; set; }
-            public int ExpectedRowCount { get; set; }
-        }
+            select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
         {
@@ -399,5 +248,12 @@ namespace HybridDb
             typeof(TimeSpan?),
             typeof(object)
         };
+    }
+
+    public class SqlDatabaseCommand
+    {
+        public string Sql { get; set; }
+        public List<Parameter> Parameters { get; set; }
+        public int ExpectedRowCount { get; set; }
     }
 }

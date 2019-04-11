@@ -54,7 +54,7 @@ namespace HybridDb.Config
                     .FirstOrDefault();
 
                 column = new Column(name, typeof(TReturn), lengthOption?.Length);
-                design.Table.Register(column);
+                design.Table.Add(column);
             }
 
             Func<object, object> compiledProjector;
