@@ -316,7 +316,7 @@ namespace HybridDb.Config
                     .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
                     .Match<ReadEvents>(readEvents => ReadEvents.Execute(tx, readEvents))
-                    .Match<ReadEventsByIds>(readEvents => ReadEventsByIds.Execute(tx, readEvents))
+                    .Match<ReadEventsByCommitIds>(readEvents => ReadEventsByCommitIds.Execute(tx, readEvents))
                     .Else(() => decoratee(tx, command)()));
         }
 

@@ -8,9 +8,9 @@ using Xunit;
 
 namespace HybridDb.Tests.Events
 {
-    public class ReadEventsByIdsTests : EventStoreTests
+    public class ReadEventsByCommitIdsTests : EventStoreTests
     {
-        public ReadEventsByIdsTests()
+        public ReadEventsByCommitIdsTests()
         {
             UseEventStore();
         }
@@ -30,7 +30,7 @@ namespace HybridDb.Tests.Events
                 return tx.CommitId;
             });
 
-            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByIds(new EventTable("events"), id1, id2)).ToList(), IsolationLevel.Snapshot);
+            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), id1, id2)).ToList(), IsolationLevel.Snapshot);
             commits.Count.ShouldBe(2);
             commits[0].Id.ShouldBe(id1);
             commits[1].Id.ShouldBe(id2);
@@ -39,14 +39,14 @@ namespace HybridDb.Tests.Events
         [Fact]
         public void LoadEmptyListOfCommits()
         {
-            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByIds(new EventTable("events"))).ToList(), IsolationLevel.Snapshot);
+            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"))).ToList(), IsolationLevel.Snapshot);
             commits.ShouldBeEmpty();
         }
 
         [Fact]
         public void LoadEmptyCommitFromEmptyGuid()
         {
-            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByIds(new EventTable("events"), Guid.Empty)).ToList(), IsolationLevel.Snapshot);
+            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), Guid.Empty)).ToList(), IsolationLevel.Snapshot);
 
             commits.Count.ShouldBe(1);
             commits[0].Id.ShouldBe(Guid.Empty);
@@ -66,7 +66,7 @@ namespace HybridDb.Tests.Events
 
             var id2 = Guid.NewGuid();
 
-            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByIds(new EventTable("events"), id1, id2)).ToList(), IsolationLevel.Snapshot);
+            var commits = store.Transactionally(tx => tx.Execute(new ReadEventsByCommitIds(new EventTable("events"), id1, id2)).ToList(), IsolationLevel.Snapshot);
 
             commits.Count.ShouldBe(2);
             commits[0].Id.ShouldBe(id1);

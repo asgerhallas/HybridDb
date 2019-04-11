@@ -6,9 +6,9 @@ using HybridDb.Commands;
 
 namespace HybridDb.Events.Commands
 {
-    public class ReadEventsByIds : Command<IEnumerable<Commit<byte[]>>>
+    public class ReadEventsByCommitIds : Command<IEnumerable<Commit<byte[]>>>
     {
-        public ReadEventsByIds(EventTable table, params Guid[] ids)
+        public ReadEventsByCommitIds(EventTable table, params Guid[] ids)
         {
             Table = table;
             Ids = ids;
@@ -17,7 +17,7 @@ namespace HybridDb.Events.Commands
         public EventTable Table { get; }
         public Guid[] Ids { get; }
 
-        public static IEnumerable<Commit<byte[]>> Execute(DocumentTransaction tx, ReadEventsByIds command)
+        public static IEnumerable<Commit<byte[]>> Execute(DocumentTransaction tx, ReadEventsByCommitIds command)
         {
             if (!command.Ids.Any()) return Enumerable.Empty<Commit<byte[]>>();
 
