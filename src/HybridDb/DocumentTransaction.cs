@@ -20,7 +20,7 @@ namespace HybridDb
 
         readonly ManagedConnection managedConnection;
 
-        public DocumentTransaction(DocumentStore store, IsolationLevel level, StoreStats storeStats)
+        public DocumentTransaction(DocumentStore store, Guid commitId, IsolationLevel level, StoreStats storeStats)
         {
             Store = store;
 
@@ -34,7 +34,7 @@ namespace HybridDb
                 SqlTransaction = SqlConnection.BeginTransaction(level);
             }
 
-            CommitId = Guid.NewGuid();
+            CommitId = commitId;
         }
 
         public void Dispose()

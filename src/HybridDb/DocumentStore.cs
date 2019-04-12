@@ -105,6 +105,7 @@ namespace HybridDb
             return new DocumentSession(this, tx);
         }
 
-        public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => new DocumentTransaction(this, level, Stats);
+        public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted) => new DocumentTransaction(this, commitId, level, Stats);
+        public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);
     }
 }
