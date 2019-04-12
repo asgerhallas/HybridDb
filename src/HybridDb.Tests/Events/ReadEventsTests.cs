@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
@@ -138,6 +140,38 @@ namespace HybridDb.Tests.Events
                 }
             });
         }
+
+        [Fact]
+        public void FactMethodName()
+        {
+            using (var connection = new SqlConnection("data source=.;Integrated Security=True"))
+            {
+                connection.Open();
+
+                connection.Execute("create table ##asgers ( Id int, rv rowversion )");
+
+                var a = BigEndianToUInt64(connection.Query<byte[]>("select tempdb..min_active_rowversion()").Single());
+
+                var x = BigEndianToUInt64(connection.Query<byte[]>("insert into ##asgers (Id)  output Inserted.rv values (1)").Single());
+                var y = BigEndianToUInt64(connection.Query<byte[]>("insert into ##asgers (Id)  output Inserted.rv values (1)").Single());
+
+                var b = BigEndianToUInt64(connection.Query<byte[]>("select tempdb..min_active_rowversion()").Single());
+            }
+
+        }
+
+        static ulong BigEndianToUInt64(byte[] bigEndianBinary)
+        {
+            ulong result = 0;
+            for (var i = 0; i < 8; i++)
+            {
+                result <<= 8;
+                result |= bigEndianBinary[i];
+            }
+
+            return result;
+        }
+
 
         List<Commit<byte[]>> Execute(ReadEvents command) => 
             store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(command).ToList());
