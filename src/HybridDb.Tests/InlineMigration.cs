@@ -9,15 +9,15 @@ namespace HybridDb.Tests
     public class InlineMigration : Migration
     {
         readonly List<DocumentMigrationCommand> documentCommands;
-        readonly List<SchemaMigrationCommand> schemaCommands;
+        readonly List<DdlCommand> schemaCommands;
 
         public InlineMigration(int version) : base(version)
         {
             documentCommands = new List<DocumentMigrationCommand>();
-            schemaCommands = new List<SchemaMigrationCommand>();
+            schemaCommands = new List<DdlCommand>();
         }
 
-        public InlineMigration(int version, params SchemaMigrationCommand[] commands) : this(version)
+        public InlineMigration(int version, params DdlCommand[] commands) : this(version)
         {
             schemaCommands = commands.ToList();
         }
@@ -27,7 +27,7 @@ namespace HybridDb.Tests
             documentCommands = commands.ToList();
         }
 
-        public override IEnumerable<SchemaMigrationCommand> MigrateSchema()
+        public override IEnumerable<DdlCommand> MigrateSchema()
         {
             return schemaCommands;
         }

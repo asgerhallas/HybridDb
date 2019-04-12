@@ -36,7 +36,7 @@ namespace HybridDb.Config
             return column;
         }
 
-        public virtual SchemaMigrationCommand GetCreateCommand() => new CreateTable(this);
+        public virtual DdlCommand GetCreateCommand() => new CreateTable(this);
 
         public override string ToString() => Name;
     }

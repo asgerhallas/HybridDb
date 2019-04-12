@@ -1,8 +1,8 @@
 namespace HybridDb.Migrations.Schema
 {
-    public abstract class SchemaMigrationCommand
+    public abstract class DdlCommand
     {
-        protected SchemaMigrationCommand()
+        protected DdlCommand()
         {
             Unsafe = false;
             RequiresReprojectionOf = null;

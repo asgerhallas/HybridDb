@@ -2,7 +2,7 @@
 
 namespace HybridDb.Events.Commands
 {
-    public class CreateEventTable : SchemaMigrationCommand
+    public class CreateEventTable : DdlCommand
     {
         public EventTable EventTable { get; }
 

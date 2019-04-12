@@ -9,7 +9,7 @@ namespace HybridDb
         void Clear();
         bool IsLoaded<T>(string key);
         IDocumentStore DocumentStore { get; }
-        void Defer(Command command);
+        void Defer(DmlCommand command);
         void Evict(object entity);
         Guid? GetEtagFor(object entity);
         Dictionary<string, List<string>> GetMetadataFor(object entity);

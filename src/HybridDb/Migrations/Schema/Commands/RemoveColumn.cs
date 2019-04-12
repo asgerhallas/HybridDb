@@ -2,7 +2,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class RemoveColumn : SchemaMigrationCommand
+    public class RemoveColumn : DdlCommand
     {
         public RemoveColumn(Table table, string name)
         {

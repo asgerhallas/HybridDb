@@ -8,6 +8,6 @@ namespace HybridDb.Events
     {
         public EventTable(string name) : base(name) { }
 
-        public override SchemaMigrationCommand GetCreateCommand() => new CreateEventTable(this);
+        public override DdlCommand GetCreateCommand() => new CreateEventTable(this);
     }
 }

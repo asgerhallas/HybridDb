@@ -3,7 +3,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class CreateTable : SchemaMigrationCommand
+    public class CreateTable : DdlCommand
     {
         public CreateTable(Table table) => Table = table;
 

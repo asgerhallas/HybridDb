@@ -2,7 +2,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class RenameColumn : SchemaMigrationCommand
+    public class RenameColumn : DdlCommand
     {
         public RenameColumn(Table table, string oldColumnName, string newColumnName)
         {

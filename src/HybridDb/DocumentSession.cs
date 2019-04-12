@@ -14,13 +14,13 @@ namespace HybridDb
         readonly Dictionary<EntityKey, ManagedEntity> entities;
         readonly IDocumentStore store;
         readonly DocumentTransaction enlistedTransaction;
-        readonly List<Command> deferredCommands;
+        readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
         bool saving = false;
 
         internal DocumentSession(IDocumentStore store, DocumentTransaction enlistedTransaction = null)
         {
-            deferredCommands = new List<Command>();
+            deferredCommands = new List<DmlCommand>();
             entities = new Dictionary<EntityKey, ManagedEntity>();
             migrator = new DocumentMigrator(store.Configuration);
 
@@ -96,7 +96,7 @@ namespace HybridDb
             return query;
         }
 
-        public void Defer(Command command)
+        public void Defer(DmlCommand command)
         {
             deferredCommands.Add(command);
         }
@@ -183,7 +183,7 @@ namespace HybridDb
 
             saving = true;
 
-            var commands = new Dictionary<ManagedEntity, Command>();
+            var commands = new Dictionary<ManagedEntity, DmlCommand>();
             foreach (var managedEntity in entities.Values.ToList())
             {
                 var key = managedEntity.Key;

@@ -13,7 +13,7 @@ namespace HybridDb.Migrations
 
         public int Version { get; private set; }
 
-        public virtual IEnumerable<SchemaMigrationCommand> MigrateSchema()
+        public virtual IEnumerable<DdlCommand> MigrateSchema()
         {
             yield break;
         }

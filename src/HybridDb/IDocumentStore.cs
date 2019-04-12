@@ -17,7 +17,7 @@ namespace HybridDb
 
         void Initialize();
 
-        void Execute(SchemaMigrationCommand command);
+        void Execute(DdlCommand command);
         IDocumentSession OpenSession(DocumentTransaction tx = null);
         DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted);
     }

@@ -2,7 +2,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class AddColumn : SchemaMigrationCommand
+    public class AddColumn : DdlCommand
     {
         public AddColumn(string tablename, Column column)
         {

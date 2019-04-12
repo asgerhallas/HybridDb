@@ -7,9 +7,9 @@ namespace HybridDb.Migrations.Schema
 {
     public class SchemaDiffer : ISchemaDiffer
     {
-        public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration)
+        public IReadOnlyList<DdlCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration)
         {
-            var commands = new List<SchemaMigrationCommand>();
+            var commands = new List<DdlCommand>();
 
             foreach (var table in configuration.Tables.Values)
             {

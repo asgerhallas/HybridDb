@@ -309,22 +309,22 @@ namespace HybridDb.Tests.Migrations
                 new Column("SchemaVersion", typeof(int)))));
 
         void Setup<T>(Func<DocumentStore, Action<T>> match) =>
-            configuration.Decorate<Func<DocumentStore, SchemaMigrationCommand, Action>>((container, decoratee) => (documentStore, command) => () =>
+            configuration.Decorate<Func<DocumentStore, DdlCommand, Action>>((container, decoratee) => (documentStore, command) => () =>
                 Switch.On(command)
                     .Match(match(documentStore))
                     .Else(_ => decoratee(documentStore, command)()));
 
         public class FakeSchemaDiffer : ISchemaDiffer
         {
-            readonly SchemaMigrationCommand[] commands;
+            readonly DdlCommand[] commands;
 
-            public FakeSchemaDiffer(params SchemaMigrationCommand[] commands) => this.commands = commands;
+            public FakeSchemaDiffer(params DdlCommand[] commands) => this.commands = commands;
 
-            public IReadOnlyList<SchemaMigrationCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration) => 
+            public IReadOnlyList<DdlCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration) => 
                 commands.ToList();
         }
 
-        public class ThrowingCommand : SchemaMigrationCommand
+        public class ThrowingCommand : DdlCommand
         {
             public static void Execute(DocumentStore store, ThrowingCommand command) => throw new InvalidOperationException();
 
@@ -336,7 +336,7 @@ namespace HybridDb.Tests.Migrations
             public UnsafeThrowingCommand() => Unsafe = true;
         }
 
-        public class CountingCommand : SchemaMigrationCommand
+        public class CountingCommand : DdlCommand
         {
             public int NumberOfTimesCalled { get; private set; }
 
@@ -344,7 +344,7 @@ namespace HybridDb.Tests.Migrations
             public override string ToString() => "";
         }
         
-        public class SlowCommand : SchemaMigrationCommand
+        public class SlowCommand : DdlCommand
         {
             public static void Execute(DocumentStore store, SlowCommand command) => Thread.Sleep(5000);
 

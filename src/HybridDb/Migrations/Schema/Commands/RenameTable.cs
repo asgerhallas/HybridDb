@@ -1,6 +1,6 @@
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class RenameTable : SchemaMigrationCommand
+    public class RenameTable : DdlCommand
     {
         public RenameTable(string oldTableName, string newTableName)
         {

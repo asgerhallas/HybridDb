@@ -95,7 +95,7 @@ namespace HybridDb.Config
             EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
 
-            Register<Func<DocumentStore, SchemaMigrationCommand, Action>>(container => (store, command) => () =>
+            Register<Func<DocumentStore, DdlCommand, Action>>(container => (store, command) => () =>
                 Switch.On(command)
                     .Match<CreateTable>(createTable => DdlCommandExecutors.Execute(store, createTable))
                     .Match<RemoveTable>(removeTable => DdlCommandExecutors.Execute(store, removeTable))
@@ -106,7 +106,7 @@ namespace HybridDb.Config
                     .Match<SqlMigrationCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(store, sqlMigrationCommand))
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
-            Register<Func<DocumentTransaction, Command, Func<object>>>(container => (tx, command) => () => 
+            Register<Func<DocumentTransaction, DmlCommand, Func<object>>>(container => (tx, command) => () => 
                 Switch<object>.On(command)
                     .Match<InsertCommand>(insertCommand => InsertCommand.Execute(tx, insertCommand))
                     .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
@@ -302,12 +302,12 @@ namespace HybridDb.Config
 
             tables.TryAdd("events", new EventTable("events"));
 
-            Decorate<Func<DocumentStore, SchemaMigrationCommand, Action>>((container, decoratee) => (store, command) => () =>
+            Decorate<Func<DocumentStore, DdlCommand, Action>>((container, decoratee) => (store, command) => () =>
                 Switch.On(command)
                     .Match<CreateEventTable>(createEventTable => CreateEventTable.CreateEventTableExecutor(store, createEventTable))
                     .Else(_ => decoratee(store, command)()));
 
-            Decorate<Func<DocumentTransaction, Command, Func<object>>>((container, decoratee) => (tx, command) => () => 
+            Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((container, decoratee) => (tx, command) => () => 
                 Switch<object>.On(command)
                     .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
@@ -360,11 +360,11 @@ namespace HybridDb.Config
             });
         }
 
-        public Action GetDdlCommandExecutor(DocumentStore store, SchemaMigrationCommand command) => 
-            Resolve<Func<DocumentStore, SchemaMigrationCommand, Action>>()(store, command);
+        public Action GetDdlCommandExecutor(DocumentStore store, DdlCommand command) => 
+            Resolve<Func<DocumentStore, DdlCommand, Action>>()(store, command);
 
-        public Func<object> GetDmlCommandExecutor(DocumentTransaction tx, Command command) => 
-            Resolve<Func<DocumentTransaction, Command, Func<object>>>()(tx, command);
+        public Func<object> GetDmlCommandExecutor(DocumentTransaction tx, DmlCommand command) => 
+            Resolve<Func<DocumentTransaction, DmlCommand, Func<object>>>()(tx, command);
 
         // ok... den simple udgave er at have executors liggende på commanden
         // med dette kan vi godt udvide med nye commands, men ikke nye stores/txes

@@ -149,7 +149,7 @@ namespace HybridDb.Migrations.Schema
             }
         }
 
-        IEnumerable<string> ExecuteCommand(SchemaMigrationCommand command)
+        IEnumerable<string> ExecuteCommand(DdlCommand command)
         {
             if (command.Unsafe)
             {

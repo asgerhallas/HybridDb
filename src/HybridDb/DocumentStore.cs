@@ -90,7 +90,7 @@ namespace HybridDb
             IsInitialized = true;
         }
 
-        public void Execute(SchemaMigrationCommand command)
+        public void Execute(DdlCommand command)
         {
             Configuration.GetDdlCommandExecutor(this, command)();
         }

@@ -1,6 +1,6 @@
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class RemoveTable : SchemaMigrationCommand
+    public class RemoveTable : DdlCommand
     {
         public RemoveTable(string tablename)
         {

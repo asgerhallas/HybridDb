@@ -5,7 +5,7 @@ using HybridDb.Config;
 
 namespace HybridDb
 {
-    public abstract class Command
+    public abstract class DmlCommand
     {
         public static IDictionary<Column, object> ConvertAnonymousToProjections(Table table, object projections) =>
             projections as IDictionary<Column, object> ?? (
@@ -34,5 +34,5 @@ namespace HybridDb
         }
     }
 
-    public abstract class Command<TResult> : Command { }
+    public abstract class Command<TResult> : DmlCommand { }
 }

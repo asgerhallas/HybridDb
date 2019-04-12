@@ -2,7 +2,7 @@ using System;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class SqlMigrationCommand : SchemaMigrationCommand
+    public class SqlMigrationCommand : DdlCommand
     {
         public SqlMigrationCommand(string description, Action<SqlBuilder, IDatabase> builder) : this(description, null, builder) { }
 

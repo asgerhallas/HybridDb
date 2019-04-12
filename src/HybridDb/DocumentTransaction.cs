@@ -55,9 +55,9 @@ namespace HybridDb
         public SqlConnection SqlConnection { get; }
         public SqlTransaction SqlTransaction { get; }
 
-        public object Execute(Command command) => Store.Configuration.GetDmlCommandExecutor(this, command)();
+        public object Execute(DmlCommand command) => Store.Configuration.GetDmlCommandExecutor(this, command)();
 
-        public T Execute<T>(Command<T> command) => (T)Execute((Command)command);
+        public T Execute<T>(Command<T> command) => (T)Execute((DmlCommand)command);
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {

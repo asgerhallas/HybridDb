@@ -120,7 +120,7 @@ namespace HybridDb.Tests.Performance
                 {
                     store.Initialize();
 
-                    var commands = new List<Command>();
+                    var commands = new List<DmlCommand>();
                     for (var i = 0; i < 10; i++)
                     {
                         commands.Add(new InsertCommand(
