@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    public class AppendEvent : Command<EventData<byte[]>>
+    public class AppendEvent : Command<(long, EventData<byte[]>)>
     {
         public AppendEvent(Table table, Generation generation, EventData<byte[]> @event)
         {
@@ -21,7 +21,7 @@ namespace HybridDb.Events.Commands
         public Generation Generation { get; }
         public EventData<byte[]> Event { get; }
 
-        public static EventData<byte[]> Execute(DocumentTransaction tx, AppendEvent command)
+        public static (long, EventData<byte[]>) Execute(DocumentTransaction tx, AppendEvent command)
         {
             if (command.Event.SequenceNumber == SequenceNumber.Any)
                 throw new InvalidOperationException("SequenceNumber.Any is not currently supported.");
@@ -34,8 +34,8 @@ namespace HybridDb.Events.Commands
 
             var parameters = new DynamicParameters();
 
-            parameters.Add("@EventId", command.Event.EventId);
             parameters.Add("@CommitId", tx.CommitId);
+            parameters.Add("@EventId", command.Event.EventId);
             parameters.Add("@StreamId", command.Event.StreamId);
             parameters.Add("@SequenceNumber", command.Event.SequenceNumber);
             parameters.Add("@Name", command.Event.Name);
@@ -50,9 +50,9 @@ namespace HybridDb.Events.Commands
 
             try
             {
-                var (position, seq) = tx.SqlConnection.Query<long, long, (long globSeq, long seq)>(sql, ValueTuple.Create, parameters, tx.SqlTransaction, splitOn: "*").First();
+                var (position, sequenceNumber) = tx.SqlConnection.Query<long, long, (long position, long sequenceNumber)>(sql, ValueTuple.Create, parameters, tx.SqlTransaction, splitOn: "*").First();
 
-                return command.Event.WithSeq(seq);
+                return (position, command.Event.WithSeq(sequenceNumber));
             }
             catch (SqlException sqlException)
             {
