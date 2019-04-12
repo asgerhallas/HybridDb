@@ -20,5 +20,6 @@ namespace HybridDb
         void Execute(DdlCommand command);
         IDocumentSession OpenSession(DocumentTransaction tx = null);
         DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted);
+        DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted);
     }
 }
