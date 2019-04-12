@@ -466,4 +466,23 @@ namespace HybridDb.Serialization
             }
         }
     }
+
+    // Important: Do not move these classes out into own files... they are affected by the pragma condition in the top of this file
+    public interface IContractMutator
+    {
+        void Mutate(JsonContract contract);
+    }
+
+    public abstract class ContractMutator<T> : IContractMutator where T : JsonContract
+    {
+        public abstract void Mutate(T contract);
+
+        public void Mutate(JsonContract contract)
+        {
+            if (contract is T tContract)
+            {
+                Mutate(tContract);
+            }
+        }
+    }
 }
