@@ -104,7 +104,7 @@ namespace HybridDb.Config
                     .Match<RemoveColumn>(removeColumn => DdlCommandExecutors.Execute(store, removeColumn))
                     .Match<RenameColumn>(renameColumn => DdlCommandExecutors.Execute(store, renameColumn))
                     .Match<SqlMigrationCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(store, sqlMigrationCommand))
-                    .OrThrow());
+                    .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
             Register<Func<DocumentTransaction, Command, Func<object>>>(container => (tx, command) => () => 
                 Switch<object>.On(command)
@@ -305,7 +305,7 @@ namespace HybridDb.Config
             Decorate<Func<DocumentStore, SchemaMigrationCommand, Action>>((container, decoratee) => (store, command) => () =>
                 Switch.On(command)
                     .Match<CreateEventTable>(createEventTable => CreateEventTable.CreateEventTableExecutor(store, createEventTable))
-                    .Else(_ => decoratee(store, command)));
+                    .Else(_ => decoratee(store, command)()));
 
             Decorate<Func<DocumentTransaction, Command, Func<object>>>((container, decoratee) => (tx, command) => () => 
                 Switch<object>.On(command)

@@ -205,7 +205,7 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            Setup<ThrowingCommand>(documentStore => throwingCommand => ThrowingCommand.Execute(documentStore, throwingCommand));
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
             UseMigrations(new InlineMigration(1, new CountingCommand()));
 
