@@ -95,17 +95,15 @@ namespace HybridDb.Config
             EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
 
-            Register<Func<IDocumentStore, Action<SchemaMigrationCommand>>>(x => store =>
-                Switch<Action<SchemaMigrationCommand>>.On(store)
-                    .Match<DocumentStore>(documentStore => command => Switch.On(command)
-                        .Match<CreateTable>(createTable => DdlCommandExecutors.Execute(documentStore, createTable))
-                        .Match<RemoveTable>(removeTable => DdlCommandExecutors.Execute(documentStore, removeTable))
-                        .Match<RenameTable>(renameTable => DdlCommandExecutors.Execute(documentStore, renameTable))
-                        .Match<AddColumn>(addColumn => DdlCommandExecutors.Execute(documentStore, addColumn))
-                        .Match<RemoveColumn>(removeColumn => DdlCommandExecutors.Execute(documentStore, removeColumn))
-                        .Match<RenameColumn>(renameColumn => DdlCommandExecutors.Execute(documentStore, renameColumn))
-                        .Match<SqlMigrationCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(documentStore, sqlMigrationCommand))
-                        .OrThrow())
+            Register<Func<DocumentStore, SchemaMigrationCommand, Action>>(container => (store, command) => () =>
+                Switch.On(command)
+                    .Match<CreateTable>(createTable => DdlCommandExecutors.Execute(store, createTable))
+                    .Match<RemoveTable>(removeTable => DdlCommandExecutors.Execute(store, removeTable))
+                    .Match<RenameTable>(renameTable => DdlCommandExecutors.Execute(store, renameTable))
+                    .Match<AddColumn>(addColumn => DdlCommandExecutors.Execute(store, addColumn))
+                    .Match<RemoveColumn>(removeColumn => DdlCommandExecutors.Execute(store, removeColumn))
+                    .Match<RenameColumn>(renameColumn => DdlCommandExecutors.Execute(store, renameColumn))
+                    .Match<SqlMigrationCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(store, sqlMigrationCommand))
                     .OrThrow());
 
             Register<Func<DocumentTransaction, Command, Func<object>>>(container => (tx, command) => () => 
@@ -304,15 +302,13 @@ namespace HybridDb.Config
 
             tables.TryAdd("events", new EventTable("events"));
 
-            Decorate<Func<IDocumentStore, Action<SchemaMigrationCommand>>>((container, decoratee) => store =>
-                Switch<Action<SchemaMigrationCommand>>.On(store)
-                    .Match<DocumentStore>(documentStore => command => Switch.On(command)
-                        .Match<CreateEventTable>(createEventTable => CreateEventTable.CreateEventTableExecutor(documentStore, createEventTable))
-                        .Else(_ => decoratee(store)(command)))
-                    .Else(_ => decoratee(store)));
+            Decorate<Func<DocumentStore, SchemaMigrationCommand, Action>>((container, decoratee) => (store, command) => () =>
+                Switch.On(command)
+                    .Match<CreateEventTable>(createEventTable => CreateEventTable.CreateEventTableExecutor(store, createEventTable))
+                    .Else(_ => decoratee(store, command)));
 
-            Decorate<Func<DocumentTransaction, Command, Func<object>>>((container, decoratee) => (tx, command) =>
-                () => Switch<object>.On(command)
+            Decorate<Func<DocumentTransaction, Command, Func<object>>>((container, decoratee) => (tx, command) => () => 
+                Switch<object>.On(command)
                     .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
                     .Match<ReadEvents>(readEvents => ReadEvents.Execute(tx, readEvents))
@@ -364,8 +360,8 @@ namespace HybridDb.Config
             });
         }
 
-        public Action<SchemaMigrationCommand> GetDdlCommandExecutor(IDocumentStore store) => 
-            Resolve<Func<IDocumentStore, Action<SchemaMigrationCommand>>>()(store);
+        public Action GetDdlCommandExecutor(DocumentStore store, SchemaMigrationCommand command) => 
+            Resolve<Func<DocumentStore, SchemaMigrationCommand, Action>>()(store, command);
 
         public Func<object> GetDmlCommandExecutor(DocumentTransaction tx, Command command) => 
             Resolve<Func<DocumentTransaction, Command, Func<object>>>()(tx, command);

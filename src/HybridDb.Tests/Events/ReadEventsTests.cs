@@ -141,42 +141,6 @@ namespace HybridDb.Tests.Events
             });
         }
 
-        [Fact]
-        public void FactMethodName()
-        {
-            using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=TempDb"))
-            {
-                connection.Open();
-
-                connection.Execute("create table ##mytable ( Id int, rv rowversion )");
-
-                var a = ToUInt64(connection.Query<byte[]>("select min_active_rowversion()").Single()); // => 20001
-
-                var x = ToUInt64(connection.Query<byte[]>("insert into ##mytable (Id) output Inserted.rv values (1)").Single()); // => 22647
-
-                var b = ToUInt64(connection.Query<byte[]>("select min_active_rowversion()").Single()); // => 20001
-            }
-
-            using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=TempDb"))
-            {
-                connection.Open();
-            }
-
-        }
-
-        static ulong ToUInt64(byte[] bigEndianBinary)
-        {
-            ulong result = 0;
-            for (var i = 0; i < 8; i++)
-            {
-                result <<= 8;
-                result |= bigEndianBinary[i];
-            }
-
-            return result;
-        }
-
-
         List<Commit<byte[]>> Execute(ReadEvents command) => 
             store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(command).ToList());
     }

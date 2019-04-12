@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Events.Commands;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
+using ShinySwitch;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;
@@ -158,6 +160,8 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
+
             var command = new CountingCommand();
 
             UseMigrations(new InlineMigration(1, command));
@@ -170,10 +174,13 @@ namespace HybridDb.Tests.Migrations
             command.NumberOfTimesCalled.ShouldBe(1);
         }
 
+
         [Fact]
         public void NextRunContinuesAtNextVersion()
         {
             CreateMetadataTable();
+
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
             var command = new CountingCommand();
 
@@ -182,6 +189,9 @@ namespace HybridDb.Tests.Migrations
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             Reset();
+
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
+            Setup<ThrowingCommand>(documentStore => throwingCommand => ThrowingCommand.Execute(documentStore, throwingCommand));
 
             UseMigrations(new InlineMigration(1, new ThrowingCommand()), new InlineMigration(2, command));
 
@@ -194,6 +204,8 @@ namespace HybridDb.Tests.Migrations
         public void ThrowsIfSchemaVersionIsAhead()
         {
             CreateMetadataTable();
+
+            Setup<ThrowingCommand>(documentStore => throwingCommand => ThrowingCommand.Execute(documentStore, throwingCommand));
 
             UseMigrations(new InlineMigration(1, new CountingCommand()));
 
@@ -265,9 +277,12 @@ namespace HybridDb.Tests.Migrations
             UseRealTables();
             CreateMetadataTable();
 
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
+            Setup<SlowCommand>(documentStore => slowCommand => SlowCommand.Execute(documentStore, slowCommand));
+
             store.Initialize();
 
-            var countingCommand = new CountingCommand();
+            var command = new CountingCommand();
 
             Func<SchemaMigrationRunner> runnerFactory = () => 
                 new SchemaMigrationRunner(store, new SchemaDiffer());
@@ -276,7 +291,7 @@ namespace HybridDb.Tests.Migrations
                 new AddColumn("Other", new Column("Asger", typeof(int))),
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
                 new SlowCommand(),
-                countingCommand));
+                command));
 
             store.Execute(new CreateTable(new DocumentTable("Other")));
 
@@ -286,12 +301,18 @@ namespace HybridDb.Tests.Migrations
                 runnerFactory().Run();
             });
 
-            countingCommand.NumberOfTimesCalled.ShouldBe(1);
+            command.NumberOfTimesCalled.ShouldBe(1);
         }
 
         void CreateMetadataTable() => store.Execute(
             new CreateTable(new Table("HybridDb",
                 new Column("SchemaVersion", typeof(int)))));
+
+        void Setup<T>(Func<DocumentStore, Action<T>> match) =>
+            configuration.Decorate<Func<DocumentStore, SchemaMigrationCommand, Action>>((container, decoratee) => (documentStore, command) => () =>
+                Switch.On(command)
+                    .Match(match(documentStore))
+                    .Else(_ => decoratee(documentStore, command)()));
 
         public class FakeSchemaDiffer : ISchemaDiffer
         {
@@ -305,51 +326,29 @@ namespace HybridDb.Tests.Migrations
 
         public class ThrowingCommand : SchemaMigrationCommand
         {
-            //public override void Execute(IDatabase database)
-            //{
-            //    throw new InvalidOperationException();
-            //}
+            public static void Execute(DocumentStore store, ThrowingCommand command) => throw new InvalidOperationException();
 
-            public override string ToString()
-            {
-                return "";
-            }
+            public override string ToString() => "";
         }
 
         public class UnsafeThrowingCommand : ThrowingCommand
         {
-            public UnsafeThrowingCommand()
-            {
-                Unsafe = true;
-            }
+            public UnsafeThrowingCommand() => Unsafe = true;
         }
 
         public class CountingCommand : SchemaMigrationCommand
         {
             public int NumberOfTimesCalled { get; private set; }
 
-            //public override void Execute(IDatabase database)
-            //{
-            //    NumberOfTimesCalled++;
-            //}
-
-            public override string ToString()
-            {
-                return "";
-            }
+            public static void Execute(DocumentStore store, CountingCommand command) => command.NumberOfTimesCalled++;
+            public override string ToString() => "";
         }
         
         public class SlowCommand : SchemaMigrationCommand
         {
-            //public override void Execute(IDatabase database)
-            //{
-            //    Thread.Sleep(5000);
-            //}
+            public static void Execute(DocumentStore store, SlowCommand command) => Thread.Sleep(5000);
 
-            public override string ToString()
-            {
-                return "";
-            }
+            public override string ToString() => "";
         }
     }
 }

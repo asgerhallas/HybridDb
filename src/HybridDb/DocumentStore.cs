@@ -92,7 +92,7 @@ namespace HybridDb
 
         public void Execute(SchemaMigrationCommand command)
         {
-            Configuration.GetDdlCommandExecutor(this)(command);
+            Configuration.GetDdlCommandExecutor(this, command)();
         }
 
         public IDocumentSession OpenSession(DocumentTransaction tx = null)
