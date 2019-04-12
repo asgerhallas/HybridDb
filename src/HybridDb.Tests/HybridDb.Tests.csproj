@@ -142,7 +142,6 @@
     <Compile Include="Performance\QueryPerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DatabaseQuerySchemaTests.cs" />
-    <Compile Include="DatabaseTableModeTests.cs" />
     <Compile Include="ZipBackupDecoratorTests.cs" />
   </ItemGroup>
   <ItemGroup>

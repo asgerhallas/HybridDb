@@ -669,14 +669,14 @@ namespace HybridDb.Tests
                 x.Document<Case>();
             }
 
-            using (var globalStore1 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables, connectionString, configurator))
+            using (var globalStore1 = DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString, configurator))
             {
                 globalStore1.Initialize();
 
                 var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTesting(TableMode.UseGlobalTempTables, connectionString, configurator))
+                using (var globalStore2 = DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString, configurator))
                 {
                     globalStore2.Initialize();
 

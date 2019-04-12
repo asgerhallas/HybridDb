@@ -144,23 +144,27 @@ namespace HybridDb.Tests.Events
         [Fact]
         public void FactMethodName()
         {
-            using (var connection = new SqlConnection("data source=.;Integrated Security=True"))
+            using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=TempDb"))
             {
                 connection.Open();
 
-                connection.Execute("create table ##asgers ( Id int, rv rowversion )");
+                connection.Execute("create table ##mytable ( Id int, rv rowversion )");
 
-                var a = BigEndianToUInt64(connection.Query<byte[]>("select tempdb..min_active_rowversion()").Single());
+                var a = ToUInt64(connection.Query<byte[]>("select min_active_rowversion()").Single()); // => 20001
 
-                var x = BigEndianToUInt64(connection.Query<byte[]>("insert into ##asgers (Id)  output Inserted.rv values (1)").Single());
-                var y = BigEndianToUInt64(connection.Query<byte[]>("insert into ##asgers (Id)  output Inserted.rv values (1)").Single());
+                var x = ToUInt64(connection.Query<byte[]>("insert into ##mytable (Id) output Inserted.rv values (1)").Single()); // => 22647
 
-                var b = BigEndianToUInt64(connection.Query<byte[]>("select tempdb..min_active_rowversion()").Single());
+                var b = ToUInt64(connection.Query<byte[]>("select min_active_rowversion()").Single()); // => 20001
+            }
+
+            using (var connection = new SqlConnection("data source=.;Integrated Security=True;Initial Catalog=TempDb"))
+            {
+                connection.Open();
             }
 
         }
 
-        static ulong BigEndianToUInt64(byte[] bigEndianBinary)
+        static ulong ToUInt64(byte[] bigEndianBinary)
         {
             ulong result = 0;
             for (var i = 0; i < 8; i++)

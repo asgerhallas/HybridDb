@@ -9,9 +9,8 @@ namespace HybridDb.Tests
     public class DatabaseQuerySchemaTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void ReturnsAllTables(TableMode mode)
         {
             Use(mode);
@@ -26,9 +25,8 @@ namespace HybridDb.Tests
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void ReturnsAllColumns(TableMode mode)
         {
             Use(mode);

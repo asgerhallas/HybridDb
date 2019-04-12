@@ -10,9 +10,8 @@ namespace HybridDb.Tests.Migrations.Commands
     public class CreateTableTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void CreatesTable(TableMode mode)
         {
             Use(mode);
@@ -24,9 +23,8 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void CreatesColumns(TableMode mode)
         {
             Use(mode);
@@ -39,12 +37,10 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables, typeof(int), null)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(int), null)]
-        [InlineData(TableMode.UseRealTables, typeof(int), null)]
-        [InlineData(TableMode.UseLocalTempTables, typeof(string), 255)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(string), 255)]
-        [InlineData(TableMode.UseRealTables, typeof(string), 255)]
+        [InlineData(TableMode.GlobalTempTables, typeof(int), null)]
+        [InlineData(TableMode.RealTables, typeof(int), null)]
+        [InlineData(TableMode.GlobalTempTables, typeof(string), 255)]
+        [InlineData(TableMode.RealTables, typeof(string), 255)]
         public void CreatesPrimaryKeyColumn(TableMode mode, Type type, int? length)
         {
             Use(mode);
@@ -62,9 +58,8 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
         public void CanCreateColumnWithDefaultValue(TableMode mode)
         {
             Use(mode);

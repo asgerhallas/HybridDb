@@ -10,9 +10,8 @@ namespace HybridDb.Tests.Migrations.Commands
     public class AddColumnTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void AddsColumn(TableMode mode)
         {
             Use(mode);
@@ -25,21 +24,17 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables, typeof(int), false)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(int), false)]
-        [InlineData(TableMode.UseRealTables, typeof(int), false)]
-        [InlineData(TableMode.UseLocalTempTables, typeof(double), false)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(double), false)]
-        [InlineData(TableMode.UseRealTables, typeof(double), false)]
-        [InlineData(TableMode.UseLocalTempTables, typeof(string), true)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(string), true)]
-        [InlineData(TableMode.UseRealTables, typeof(string), true)]
-        [InlineData(TableMode.UseLocalTempTables, typeof(decimal), false)]
-        [InlineData(TableMode.UseGlobalTempTables, typeof(decimal), false)]
-        [InlineData(TableMode.UseRealTables, typeof(decimal), false)]
+        [InlineData(TableMode.GlobalTempTables, typeof(int), false)]
+        [InlineData(TableMode.RealTables, typeof(int), false)]
+        [InlineData(TableMode.GlobalTempTables, typeof(double), false)]
+        [InlineData(TableMode.RealTables, typeof(double), false)]
+        [InlineData(TableMode.GlobalTempTables, typeof(string), true)]
+        [InlineData(TableMode.RealTables, typeof(string), true)]
+        [InlineData(TableMode.GlobalTempTables, typeof(decimal), false)]
+        [InlineData(TableMode.RealTables, typeof(decimal), false)]
         public void ColumnIsOfCorrectType(TableMode mode, Type type, bool nullable)
         {
-            Use(TableMode.UseRealTables);
+            Use(TableMode.RealTables);
             store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
             store.Execute(new AddColumn("Entities", new Column("Col2", type)));
@@ -49,9 +44,8 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void SetsColumnAsNullableAndUsesUnderlyingTypeWhenNullable(TableMode mode)
         {
             Use(mode);
@@ -65,9 +59,8 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void CanSetColumnAsPrimaryKey(TableMode mode)
         {
             Use(mode);
@@ -80,9 +73,8 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory]
-        [InlineData(TableMode.UseLocalTempTables)]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
         public void CanAddColumnWithDefaultValue(TableMode mode)
         {
             Use(mode);

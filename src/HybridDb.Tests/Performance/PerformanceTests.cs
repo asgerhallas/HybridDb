@@ -112,7 +112,7 @@ namespace HybridDb.Tests.Performance
             public SystemModifierFixture()
             {
                 using (var store = DocumentStore.ForTesting(
-                    TableMode.UseLocalTempTables,
+                    TableMode.GlobalTempTables,
                     connectionString,
                     c => c.Document<LocalEntity>()
                         .With(x => x.SomeData)

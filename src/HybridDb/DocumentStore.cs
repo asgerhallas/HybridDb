@@ -19,14 +19,11 @@ namespace HybridDb
 
             switch (mode)
             {
-                case TableMode.UseRealTables:
+                case TableMode.RealTables:
                     Database = new SqlServerUsingRealTables(this, connectionString);
                     break;
-                case TableMode.UseLocalTempTables:
-                //    Database = new SqlServerUsingLocalTempTables(this, connectionString);
-                //    break;
-                case TableMode.UseGlobalTempTables:
-                    Database = new SqlServerUsingGlobalTempTables(this, connectionString);
+                case TableMode.GlobalTempTables:
+                    Database = new SqlServerUsingGlobalTempTables(this, connectionString + ";Initial Catalog=TempDb");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
@@ -47,7 +44,7 @@ namespace HybridDb
             configure = configure ?? (x => { });
             var configuration = new Configuration();
             configure(configuration);
-            return new DocumentStore(configuration, TableMode.UseRealTables, connectionString, false);
+            return new DocumentStore(configuration, TableMode.RealTables, connectionString, false);
         }
 
         public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null) => ForTesting(mode, null, configure);

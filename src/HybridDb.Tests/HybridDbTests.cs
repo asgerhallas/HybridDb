@@ -31,7 +31,7 @@ namespace HybridDb.Tests
             
             disposables = new ConcurrentStack<Action>();
 
-            UseLocalTempTables();
+            UseGlobalTempTables();
         }
 
         protected virtual DocumentStore store { get; set; }
@@ -49,13 +49,10 @@ namespace HybridDb.Tests
         {
             switch (mode)
             {
-                case TableMode.UseRealTables:
+                case TableMode.RealTables:
                     UseRealTables();
                     break;
-                case TableMode.UseLocalTempTables:
-                    UseLocalTempTables();
-                    break;
-                case TableMode.UseGlobalTempTables:
+                case TableMode.GlobalTempTables:
                     UseGlobalTempTables();
                     break;
                 default:
@@ -63,16 +60,10 @@ namespace HybridDb.Tests
             }
         }
 
-        protected void UseLocalTempTables()
-        {
-            connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.UseLocalTempTables, connectionString, true));
-        }
-
         protected void UseGlobalTempTables()
         {
             connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.UseGlobalTempTables, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.GlobalTempTables, connectionString, true));
         }
 
         protected void UseRealTables()
@@ -99,7 +90,7 @@ namespace HybridDb.Tests
 
             connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
 
-            store = Using(new DocumentStore(configuration, TableMode.UseRealTables, connectionString, true));
+            store = Using(new DocumentStore(configuration, TableMode.RealTables, connectionString, true));
 
             disposables.Push(() =>
             {

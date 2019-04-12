@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void RemovesColumn()
         {
-            Use(TableMode.UseRealTables);
+            Use(TableMode.RealTables);
 
             var table = new Table("Entities", new Column("FirstColumn", typeof (int)));
             store.Execute(new CreateTable(table));
@@ -23,8 +23,7 @@ namespace HybridDb.Tests.Migrations.Commands
         }
 
         [Theory(Skip = "Bug in SQL server 2012 prevents us from removing temp tables")]
-        [InlineData(TableMode.UseGlobalTempTables)]
-        [InlineData(TableMode.UseLocalTempTables)]
+        [InlineData(TableMode.GlobalTempTables)]
         public void RemovesTempTableColumn(TableMode mode)
         {
             Use(mode);

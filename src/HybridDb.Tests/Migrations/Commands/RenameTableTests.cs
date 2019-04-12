@@ -10,7 +10,7 @@ namespace HybridDb.Tests.Migrations.Commands
     public class RenameTableTests : HybridDbTests
     {
         [Theory]
-        [InlineData(TableMode.UseRealTables)]
+        [InlineData(TableMode.RealTables)]
         public void RenamesTable(TableMode mode)
         {
             Use(mode);
