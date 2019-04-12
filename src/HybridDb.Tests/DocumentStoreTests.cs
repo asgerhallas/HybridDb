@@ -21,14 +21,16 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            store.Insert(table, id, new {Field = "Asger", Document = documentAsByteArray});
 
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string) row.Id).ShouldBe(id);
-            ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
-            Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
-            ((string) row.Field).ShouldBe("Asger");
+            var row = store.Query(table, out _).Single();
+
+            //var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
+            ((string) row["Id"]).ShouldBe(id);
+            ((Guid) row["Etag"]).ShouldNotBe(Guid.Empty);
+            Encoding.ASCII.GetString((byte[]) row["Document"]).ShouldBe("asger");
+            ((string) row["Field"]).ShouldBe("Asger");
         }
 
         [Fact]
@@ -37,14 +39,14 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
             
             var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new {Field = "Asger"});
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var etag = store.Insert(table, id, new {Field = "Asger"});
 
-            store.Update(table.Table, id, etag, new {Field = "Lars"});
+            store.Update(table, id, etag, new {Field = "Lars"});
 
-            var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid) row.Etag).ShouldNotBe(etag);
-            ((string) row.Field).ShouldBe("Lars");
+            var row = store.Query(table, out _).Single();
+            ((Guid) row["Etag"]).ShouldNotBe(etag);
+            ((string) row["Field"]).ShouldBe("Lars");
         }
 
         [Fact]
@@ -298,14 +300,14 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
             
             var id1 = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
             var etagThatMakesItFail = Guid.NewGuid();
             try
             {
                 store.Transactionally(tx =>
                 {
-                    tx.Execute(new InsertCommand(table.Table, id1, new { Field = "A" }));
-                    return tx.Execute(new UpdateCommand(table.Table, id1, etagThatMakesItFail, new { Field = "B" }, false));
+                    tx.Execute(new InsertCommand(table, id1, new { Field = "A" }));
+                    return tx.Execute(new UpdateCommand(table, id1, etagThatMakesItFail, new { Field = "B" }, false));
                 });
             }
             catch (ConcurrencyException)
@@ -313,7 +315,7 @@ namespace HybridDb.Tests
                 // ignore the exception and ensure that nothing was inserted
             }
 
-            store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            store.Query(table, out _).Count().ShouldBe(0);
         }
 
         [Fact]
@@ -645,15 +647,15 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             using (new TransactionScope())
             {
-                store.Insert(table.Table, NewId(), new { });
-                store.Insert(table.Table, NewId(), new { });
+                store.Insert(table, NewId(), new { });
+                store.Insert(table, NewId(), new { });
             }
 
-            store.Database.RawQuery<dynamic>("select * from #Entities").Count().ShouldBe(0);
+            store.Query(table, out _).Count().ShouldBe(0);
         }
 
         [Fact]
