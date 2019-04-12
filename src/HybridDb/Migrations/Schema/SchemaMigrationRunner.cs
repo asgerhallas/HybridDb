@@ -37,6 +37,8 @@ namespace HybridDb.Migrations.Schema
             var database = store.Database;
             var configuration = store.Configuration;
 
+            store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
+
             using (var tx = new TransactionScope(
                 TransactionScopeOption.RequiresNew, 
                 new TransactionOptions { IsolationLevel = IsolationLevel.Serializable, Timeout = TimeSpan.FromMinutes(10) }, 

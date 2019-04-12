@@ -14,8 +14,6 @@ namespace HybridDb.Events.Commands
         {
             var tableName = store.Database.FormatTableName(command.EventTable.Name);
 
-            //store.Database.RawExecute($"ALTER DATABASE \"{store.Database}\" SET ALLOW_SNAPSHOT_ISOLATION ON;", schema: true);
-
             store.Database.RawExecute($@"
                 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName}')
                 BEGIN                       
