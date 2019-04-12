@@ -54,20 +54,20 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
             var id = NewId();
             using (var session = store.OpenSession())
             {
                 // the initial migrations might issue some requests
                 var initialNumberOfRequest = store.Stats.NumberOfRequests;
 
-                session.Advanced.Defer(new InsertCommand(table.Table, id, new { }));
+                session.Advanced.Defer(new InsertCommand(table, id, new { }));
                 store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
                 session.SaveChanges();
                 store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
             }
 
-            var entity = store.Database.RawQuery<dynamic>($"select * from #Entities where Id = '{id}'").SingleOrDefault();
+            var entity = store.Query(table, out _, where: $"Id = '{id}'").SingleOrDefault();
             Assert.NotNull(entity);
         }
 
@@ -81,6 +81,7 @@ namespace HybridDb.Tests
         public void CanStoreDocument()
         {
             Document<Entity>();
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             using (var session = store.OpenSession())
             {
@@ -88,10 +89,10 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
+            var entity = store.Query(table, out _).SingleOrDefault();
             Assert.NotNull(entity);
-            Assert.NotNull(entity.Document);
-            Assert.NotEqual(0, entity.Document.Length);
+            Assert.NotNull(entity["Document"]);
+            Assert.NotEqual(0, ((byte[]) entity["Document"]).Length);
         }
 
         [Fact]
@@ -108,8 +109,10 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var entity = store.Database.RawQuery<dynamic>("select * from #Entities").SingleOrDefault();
-            Assert.Null(entity.TheChildNestedProperty);
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var entity = store.Query(table, out _).SingleOrDefault();
+            Assert.True(entity.Keys.Contains("TheChildNestedProperty"));
+            Assert.Null(entity["TheChildNestedProperty"]);
         }
 
         [Fact]
@@ -139,8 +142,10 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            var retrivedId = store.Database.RawQuery<string>("select Id from #Entities").SingleOrDefault();
-            retrivedId.ShouldBe(id);
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var retrievedId = store.Query(table, out _, select: "Id").SingleOrDefault();
+
+            retrievedId["Id"].ShouldBe(id);
         }
 
         [Fact]
