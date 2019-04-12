@@ -15,7 +15,7 @@
     <tags></tags>
     <dependencies>
       <dependency id="HybridDb" version="$version$" />
-      <dependency id="Newtonsoft.Json" version="10.0.3" />
+      <dependency id="Newtonsoft.Json" version="11.0.2" />
     </dependencies>
   </metadata>
   <files>
