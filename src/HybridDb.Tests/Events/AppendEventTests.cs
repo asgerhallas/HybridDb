@@ -52,12 +52,6 @@ namespace HybridDb.Tests.Events
         }
 
         [Fact]
-        public void FailsIfSequenceNumberIsAny()
-        {
-            Should.Throw<InvalidOperationException>(() => store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", SequenceNumber.Any))));
-        }
-
-        [Fact]
         public void FailsIfSequenceNumberIsNegative()
         {
             Should.Throw<InvalidOperationException>(() => store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", SequenceNumber.Any - 1))));
@@ -94,5 +88,82 @@ namespace HybridDb.Tests.Events
 
             events.ShouldBeEmpty();
         }
+
+        [Fact]
+        public void SequenceNumberAny_BeginningOfStream()
+        {
+            store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                .Event.SequenceNumber.ShouldBe(0);
+        }
+
+        [Fact]
+        public void SequenceNumberAny_ExistingStream()
+        {
+            store.Execute(
+                CreateAppendEventCommand(CreateEventData("stream-1", 0)),
+                CreateAppendEventCommand(CreateEventData("stream-1", 1)),
+                CreateAppendEventCommand(CreateEventData("stream-1", 2)));
+
+            store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                .Event.SequenceNumber.ShouldBe(3);
+        }
+
+        [Fact]
+        public void SequenceNumberAny_MultipleInSameTx()
+        {
+            store.Execute(
+                CreateAppendEventCommand(CreateEventData("stream-1", 0)),
+                CreateAppendEventCommand(CreateEventData("stream-1", 1)));
+
+            store.Transactionally(tx =>
+            {
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(2);
+
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(3);
+            });
+        }
+
+        [Fact]
+        public void SequenceNumberAny_MixedWithAssignedSequenceNumbers()
+        {
+            store.Execute(
+                CreateAppendEventCommand(CreateEventData("stream-1", 0)),
+                CreateAppendEventCommand(CreateEventData("stream-1", 1)));
+
+            store.Transactionally(tx =>
+            {
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(2);
+
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 3)))
+                    .Event.SequenceNumber.ShouldBe(3);
+
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(4);
+            });
+        }
+
+        [Fact]
+        public void SequenceNumberAny_OnMultipleStreams()
+        {
+            store.Execute(
+                CreateAppendEventCommand(CreateEventData("stream-1", 0)),
+                CreateAppendEventCommand(CreateEventData("stream-2", 0)));
+
+            store.Transactionally(tx =>
+            {
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-1", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(1);
+
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-2", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(1);
+
+                tx.Execute(CreateAppendEventCommand(CreateEventData("stream-3", SequenceNumber.Any)))
+                    .Event.SequenceNumber.ShouldBe(0);
+            });
+        }
+
     }
 }

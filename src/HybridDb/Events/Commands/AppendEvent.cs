@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    public class AppendEvent : Command<(long, EventData<byte[]>)>
+    public class AppendEvent : Command<(long Position, EventData<byte[]> Event)>
     {
         public AppendEvent(Table table, Generation generation, EventData<byte[]> @event)
         {
@@ -23,11 +23,8 @@ namespace HybridDb.Events.Commands
 
         public static (long, EventData<byte[]>) Execute(DocumentTransaction tx, AppendEvent command)
         {
-            if (command.Event.SequenceNumber == SequenceNumber.Any)
-                throw new InvalidOperationException("SequenceNumber.Any is not currently supported.");
-
-            if (command.Event.SequenceNumber < SequenceNumber.BeginningOfStream)
-                throw new InvalidOperationException("SequenceNumber must be 0 or a positive integer.");
+            if (command.Event.SequenceNumber < SequenceNumber.Any)
+                throw new InvalidOperationException("SequenceNumber must be SequenceNumber.Any, SequenceNumber.BeginningOfStream or a positive integer.");
 
             if (string.IsNullOrWhiteSpace(command.Event.StreamId))
                 throw new InvalidOperationException("StreamId must be set.");
@@ -43,10 +40,16 @@ namespace HybridDb.Events.Commands
             parameters.Add("@Metadata", JsonConvert.SerializeObject(command.Event.Metadata.Values));
             parameters.Add("@Data", command.Event.Data);
 
+            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
+
+            var sequenceNumberSql = command.Event.SequenceNumber == SequenceNumber.Any
+                ? $"(SELECT COALESCE(MAX(SequenceNumber), -1) + 1 FROM {tablename} WHERE StreamId = @StreamId)"
+                : "@SequenceNumber";
+
             var sql = $@"
-                INSERT INTO {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
+                INSERT INTO {tablename} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
                 OUTPUT Inserted.Position, Inserted.SequenceNumber
-                VALUES (@EventId, @CommitId, @StreamId, @SequenceNumber, @Name, @Generation, @Metadata, @Data)";
+                VALUES (@EventId, @CommitId, @StreamId, {sequenceNumberSql}, @Name, @Generation, @Metadata, @Data)";
 
             try
             {

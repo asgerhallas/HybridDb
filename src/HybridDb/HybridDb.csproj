@@ -173,7 +173,9 @@
     <Compile Include="ColumnNameBuilder.cs" />
     <Compile Include="Commands\DocumentWriteCommand.cs" />
     <Compile Include="Config\AssemblyQualifiedNameTypeMapper.cs" />
+    <Compile Include="Config\ConfigurationContainer.cs" />
     <Compile Include="Config\DisableNullCheckInjection.cs" />
+    <Compile Include="Config\IContainerActivator.cs" />
     <Compile Include="Config\ITypeMapper.cs" />
     <Compile Include="Config\MaxLength.cs" />
     <Compile Include="Config\Option.cs" />
