@@ -264,6 +264,7 @@ namespace HybridDb.Config
                     .Match<ReadEvents>(readEvents => ReadEvents.Execute(tx, readEvents))
                     .Match<ReadEventsByCommitIds>(readEvents => ReadEventsByCommitIds.Execute(tx, readEvents))
                     .Match<GetPosition>(getPosition => GetPosition.Execute(tx, getPosition))
+                    .Match<LoadParentCommit>(loadParentCommit => LoadParentCommit.Execute(tx, loadParentCommit))
                     .Else(() => decoratee(tx, command)()));
         }
 
