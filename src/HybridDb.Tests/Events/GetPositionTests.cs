@@ -29,14 +29,16 @@ namespace HybridDb.Tests.Events
                 tx.Execute(CreateAppendEventCommand(CreateEventData("another-id", 1)));
             });
 
-            var position = store.Transactionally(x => x.Execute(new GetPosition(new EventTable("events"), commitId)));
+            var position = store.Transactionally(x => x.Execute(new GetPositionOf(new EventTable("events"), commitId)));
+
             position.ShouldBe(new Position(0, 1));
         }
 
         [Fact]
         public void GetPositionOfNonExistingCommit()
         {
-            var position = store.Transactionally(x => x.Execute(new GetPosition(new EventTable("events"), Guid.NewGuid())));
+            var position = store.Transactionally(x => x.Execute(new GetPositionOf(new EventTable("events"), Guid.NewGuid())));
+
             position.ShouldBe(new Position(-1L, -1L));
         }
     }
