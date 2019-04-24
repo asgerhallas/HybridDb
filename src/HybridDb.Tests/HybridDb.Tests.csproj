@@ -112,6 +112,7 @@
     <Compile Include="Events\AppendEventTests.cs" />
     <Compile Include="Events\EventStoreTests.cs" />
     <Compile Include="Events\GetPositionTests.cs" />
+    <Compile Include="Events\LoadParentCommitTests.cs" />
     <Compile Include="Events\ReadEventsByCommitIdsTests.cs" />
     <Compile Include="Events\ReadEventsTests.cs" />
     <Compile Include="Events\ReadStreamTests.cs" />

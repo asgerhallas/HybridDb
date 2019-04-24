@@ -88,7 +88,7 @@ namespace HybridDb.Config
 
             lock (gate)
             {
-                documentDesigns.Insert(0, new DocumentDesign(this, GetOrAddTable("Documents"), typeof(object), "object"));
+                documentDesigns.Insert(0, new DocumentDesign(this, GetOrAddDocumentTable("Documents"), typeof(object), "object"));
 
                 initialized = true;
             }
@@ -114,7 +114,7 @@ namespace HybridDb.Config
                 if (existing == null)
                 {
                     return AddDesign(new DocumentDesign(
-                        this, GetOrAddTable(tablename ?? GetTableNameByConventionFor(type)),
+                        this, GetOrAddDocumentTable(tablename ?? GetTableNameByConventionFor(type)),
                         type, TypeMapper.ToDiscriminator(type)));
                 }
 
@@ -134,7 +134,7 @@ namespace HybridDb.Config
                 if (tablename != null && tablename != existing.Table.Name)
                 {
                     return AddDesign(new DocumentDesign(
-                        this, GetOrAddTable(tablename),
+                        this, GetOrAddDocumentTable(tablename),
                         type, TypeMapper.ToDiscriminator(type)));
                 }
 
@@ -202,6 +202,21 @@ namespace HybridDb.Config
             }
         }
 
+        public Table GetOrAddTable(Table table)
+        {
+            if (table == null) throw new ArgumentNullException(nameof(table));
+
+            return tables.GetOrAdd(table.Name, name =>
+            {
+                if (initialized)
+                {
+                    throw new InvalidOperationException($"You can not register the table '{name}' after store has been initialized.");
+                }
+
+                return table;
+            });
+        }
+
         public void UseLogger(ILogger logger)
         {
             Logger = logger;
@@ -264,6 +279,7 @@ namespace HybridDb.Config
                     .Match<ReadEvents>(readEvents => ReadEvents.Execute(tx, readEvents))
                     .Match<ReadEventsByCommitIds>(readEvents => ReadEventsByCommitIds.Execute(tx, readEvents))
                     .Match<GetPositionOf>(getPosition => GetPositionOf.Execute(tx, getPosition))
+                    .Match<LoadParentCommit>(loadParentCommit => LoadParentCommit.Execute(tx, loadParentCommit))
                     .Else(() => decoratee(tx, command)()));
         }
 
@@ -295,19 +311,11 @@ namespace HybridDb.Config
             return design;
         }
 
-        DocumentTable GetOrAddTable(string tablename)
+        DocumentTable GetOrAddDocumentTable(string tablename)
         {
             if (tablename == null) throw new ArgumentNullException(nameof(tablename));
 
-            return (DocumentTable) tables.GetOrAdd(tablename, name =>
-            {
-                if (initialized)
-                {
-                    throw new InvalidOperationException($"You can not register the table '{tablename}' after store has been initialized.");
-                }
-
-                return new DocumentTable(name);
-            });
+            return (DocumentTable) GetOrAddTable(new DocumentTable(tablename));
         }
 
         public Action GetDdlCommandExecutor(DocumentStore store, DdlCommand command) => 
@@ -315,14 +323,5 @@ namespace HybridDb.Config
 
         public Func<object> GetDmlCommandExecutor(DocumentTransaction tx, DmlCommand command) => 
             Resolve<Func<DocumentTransaction, DmlCommand, Func<object>>>()(tx, command);
-
-        // ok... den simple udgave er at have executors liggende på commanden
-        // med dette kan vi godt udvide med nye commands, men ikke nye stores/txes
-        // hvis vi gerne vil intercepte en command, så ville det være godt hvis man havde en executor
-        // som vi kan decorate - vi kan ikke nemt decorate den command, der sendes, da det ikke er os der bestemmer hvilken instans den er
-        // dette er sandsynligvis kun nødvendigt for dml commands - ikke dll
-        // interception kan bruges til logging, stats og er generelt bare godt design til formålet
-
-        // se om vi kan få det til at virke med generics
     }
 }
