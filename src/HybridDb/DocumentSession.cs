@@ -292,25 +292,12 @@ namespace HybridDb
             return entity;
         }
 
-        internal T Transactionally<T>(Func<DocumentTransaction, T> func)
-        {
-            if (enlistedTransaction != null)
-                return func(enlistedTransaction);
+        internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
+            enlistedTransaction != null 
+                ? func(enlistedTransaction) 
+                : store.Transactionally(func);
 
-            using (var tx = store.BeginTransaction())
-            {
-                var result = func(tx);
-
-                tx.Complete();
-
-                return result;
-            }
-        }
-
-        public void Clear()
-        {
-            entities.Clear();
-        }
+        public void Clear() => entities.Clear();
 
         public bool IsLoaded<T>(string key) => entities.ContainsKey(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key));
 
