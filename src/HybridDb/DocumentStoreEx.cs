@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridDb.Commands;
 using HybridDb.Config;
 
@@ -81,10 +82,10 @@ namespace HybridDb
             Transactionally(store, IsolationLevel.ReadCommitted, func);
 
         public static void Transactionally(this IDocumentStore store, IsolationLevel isolationLevel, Action<DocumentTransaction> func) =>
-            store.Transactionally<object>(isolationLevel, tx =>
+            store.Transactionally(isolationLevel, tx =>
             {
                 func(tx);
-                return null;
+                return (object)null;
             });
 
         public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func) => 
@@ -99,6 +100,37 @@ namespace HybridDb
                 tx.Complete();
 
                 return result;
+            }
+        }
+
+        public static Task<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, Task<T>> func) => 
+            Transactionally(store, IsolationLevel.ReadCommitted, func);
+
+        public static async Task<T> Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, Task<T>> func)
+        {
+            using (var tx = store.BeginTransaction(isolationLevel))
+            {
+                var result = await func(tx);
+
+                tx.Complete();
+
+                return result;
+            }
+        }
+
+        public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, IEnumerable<T>> func) => 
+            Transactionally(store, IsolationLevel.ReadCommitted, func);
+
+        public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, IEnumerable<T>> func)
+        {
+            using (var tx = store.BeginTransaction(isolationLevel))
+            {
+                foreach (var x in func(tx))
+                {
+                    yield return x;
+                }
+
+                tx.Complete();
             }
         }
     }
