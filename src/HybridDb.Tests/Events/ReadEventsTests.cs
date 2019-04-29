@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Events
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, "c")));
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 2, "d")));
 
-            var commits = Execute(new ReadEvents(new EventTable("events"), 0));
+            var commits = Execute(new ReadEvents(new EventTable("events"), 0, false));
 
             commits
                 .SelectMany(x => x.Events.Select(e => e.Name))
@@ -54,14 +54,14 @@ namespace HybridDb.Tests.Events
                 {
                     // get latest completed updates
                     // the query should not return anything when the race condition is fixed
-                    tx3.Execute(new ReadEvents(new EventTable("events"), 0)).ShouldBeEmpty();
+                    tx3.Execute(new ReadEvents(new EventTable("events"), 0, false)).ShouldBeEmpty();
                 });
             });
 
             store.Transactionally(IsolationLevel.Snapshot, tx4 =>
             {
                 // now that both updates are fully complete, expect to see them both - nothing skipped.
-                tx4.Execute(new ReadEvents(new EventTable("events"), 0)).Count().ShouldBe(2);
+                tx4.Execute(new ReadEvents(new EventTable("events"), 0, false)).Count().ShouldBe(2);
             });
         }
 
@@ -74,7 +74,7 @@ namespace HybridDb.Tests.Events
 
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, "test123")));
 
-            var commits = Execute(new ReadEvents(new EventTable("events"), 0));
+            var commits = Execute(new ReadEvents(new EventTable("events"), 0, false));
 
             var stream1 = commits[0].Events;
             var stream2 = commits[1].Events;
@@ -91,11 +91,11 @@ namespace HybridDb.Tests.Events
         [Fact]
         public void DoesNotFailOnEmptyStream()
         {
-            Should.NotThrow(() => Execute(new ReadEvents(new EventTable("events"), 0)));
+            Should.NotThrow(() => Execute(new ReadEvents(new EventTable("events"), 0, false)));
 
             // this is actually the most common scenario for this error
             // when projectors try to catch up but there are no new commits
-            Should.NotThrow(() => Execute(new ReadEvents(new EventTable("events"), 100)));
+            Should.NotThrow(() => Execute(new ReadEvents(new EventTable("events"), 100, false)));
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace HybridDb.Tests.Events
         {
             store.Execute(Enumerable.Range(0, 1000).Select(i => CreateAppendEventCommand(CreateEventData("stream-1", i))));
 
-            Parallel.For(0, 100, i => Execute(new ReadEvents(new EventTable("events"), 0)));
+            Parallel.For(0, 100, i => Execute(new ReadEvents(new EventTable("events"), 0, false)));
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace HybridDb.Tests.Events
 
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-2", 0, "myspecialevent")));
 
-            var domainEvents = Execute(new ReadEvents(new EventTable("events"), 2));
+            var domainEvents = Execute(new ReadEvents(new EventTable("events"), 2, false));
 
             domainEvents.Single().Events.Single().Name.ShouldBe("myspecialevent");
         }
@@ -129,7 +129,7 @@ namespace HybridDb.Tests.Events
 
             store.Transactionally(IsolationLevel.Snapshot, tx =>
             {
-                using (var enumerator = tx.Execute(new ReadEvents(new EventTable("events"), 0)).SelectMany(x => x.Events).GetEnumerator())
+                using (var enumerator = tx.Execute(new ReadEvents(new EventTable("events"), 0, false)).SelectMany(x => x.Events).GetEnumerator())
                 {
                     enumerator.MoveNext().ShouldBe(true);
 

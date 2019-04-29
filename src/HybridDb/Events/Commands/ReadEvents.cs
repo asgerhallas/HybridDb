@@ -3,22 +3,22 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using Dapper;
-using HybridDb.Commands;
-using HybridDb.Linq;
 using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
     public class ReadEvents : Command<IEnumerable<Commit<byte[]>>>
     {
-        public ReadEvents(EventTable table, long fromPositionIncluding)
+        public ReadEvents(EventTable table, long fromPositionIncluding, bool readPastActiveTransactions)
         {
             Table = table;
             FromPositionIncluding = fromPositionIncluding;
+            ReadPastActiveTransactions = readPastActiveTransactions;
         }
 
         public EventTable Table { get; }
         public long FromPositionIncluding { get; }
+        public bool ReadPastActiveTransactions { get; }
 
         public static IEnumerable<Commit<byte[]>> Execute(DocumentTransaction tx, ReadEvents command)
         {
@@ -30,7 +30,7 @@ namespace HybridDb.Events.Commands
             var sql = $@"
                 SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
                 FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE Position >= @fromPosition AND RowVersion < min_active_rowversion()
+                WHERE Position >= @fromPosition {(!command.ReadPastActiveTransactions ? "AND RowVersion < min_active_rowversion()" : "")}
                 ORDER BY Position ASC";
 
             var currentCommitId = Guid.Empty;

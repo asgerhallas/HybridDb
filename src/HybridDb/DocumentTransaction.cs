@@ -17,7 +17,6 @@ namespace HybridDb
     public class DocumentTransaction : IDisposable
     {
         readonly StoreStats storeStats;
-
         readonly ManagedConnection managedConnection;
 
         public DocumentTransaction(DocumentStore store, Guid commitId, IsolationLevel level, StoreStats storeStats)
@@ -55,9 +54,7 @@ namespace HybridDb
         public SqlConnection SqlConnection { get; }
         public SqlTransaction SqlTransaction { get; }
 
-        public object Execute(DmlCommand command) => Store.Configuration.GetDmlCommandExecutor(this, command)();
-
-        public T Execute<T>(Command<T> command) => (T)Execute((DmlCommand)command);
+        public T Execute<T>(Command<T> command) => Store.Execute(this, command);
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {

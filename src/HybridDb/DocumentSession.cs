@@ -232,7 +232,7 @@ namespace HybridDb
             {
                 foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
                 {
-                    tx.Execute(command);
+                    store.Execute(tx, command);
                 }
 
                 return tx.CommitId;

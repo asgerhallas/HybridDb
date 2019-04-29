@@ -90,11 +90,6 @@ namespace HybridDb
             IsInitialized = true;
         }
 
-        public void Execute(DdlCommand command)
-        {
-            Configuration.GetDdlCommandExecutor(this, command)();
-        }
-
         public IDocumentSession OpenSession(DocumentTransaction tx = null)
         {
             if (!IsInitialized)
@@ -107,5 +102,10 @@ namespace HybridDb
 
         public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted) => new DocumentTransaction(this, commitId, level, Stats);
         public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);
-    }
+
+        public void Execute(DdlCommand command) => Configuration.GetDdlCommandExecutor(this, command)();
+        public object Execute(DocumentTransaction tx, DmlCommand command) => Configuration.GetDmlCommandExecutor(tx, command)();
+        public T Execute<T>(DocumentTransaction tx, Command<T> command) => (T)Configuration.GetDmlCommandExecutor(tx, command)();
+
+   }
 }
