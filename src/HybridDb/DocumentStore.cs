@@ -49,7 +49,7 @@ namespace HybridDb
             DocumentMigration = new DocumentMigrationRunner().Run(this);
         }
 
-        public static IDocumentStore Create(Action<Configuration> configure)
+        public static DocumentStore Create(Action<Configuration> configure)
         {
             var configuration = new Configuration();
 
@@ -58,9 +58,9 @@ namespace HybridDb
             return new DocumentStore(TableMode.RealTables, configuration);
         }
 
-        public static IDocumentStore Create(Configuration configuration = null) => new DocumentStore(TableMode.RealTables, configuration ?? new Configuration());
+        public static DocumentStore Create(Configuration configuration = null) => new DocumentStore(TableMode.RealTables, configuration ?? new Configuration());
 
-        public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure)
+        public static DocumentStore ForTesting(TableMode mode, Action<Configuration> configure)
         {
             var configuration = new Configuration();
 
@@ -69,7 +69,7 @@ namespace HybridDb
             return ForTesting(mode, configuration);
         }
 
-        public static IDocumentStore ForTesting(TableMode mode, Configuration configuration = null) => new DocumentStore(mode, configuration ?? new Configuration());
+        public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null) => new DocumentStore(mode, configuration ?? new Configuration());
 
         public void Dispose() => Database.Dispose();
 

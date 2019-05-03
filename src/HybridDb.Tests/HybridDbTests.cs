@@ -36,7 +36,17 @@ namespace HybridDb.Tests
             UseGlobalTempTables();
         }
 
-        protected DocumentStore store => activeStore.Value;
+        protected DocumentStore store
+        {
+            get
+            {
+                var s = activeStore.Value;
+
+                s.DocumentMigration.Wait();
+
+                return s;
+            }
+        }
 
         protected static string GetConnectionString()
         {

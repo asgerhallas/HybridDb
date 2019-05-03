@@ -787,16 +787,19 @@ namespace HybridDb.Tests
             ResetConfiguration();
 
             Document<Entity>();
+
+            InitializeStore();
+
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
-            var numberOfRequests = store.Stats.NumberOfCommands;
+            var numberOfCommands = store.Stats.NumberOfCommands;
             using (var session = store.OpenSession())
             {
                 session.Load<Entity>(id);
                 session.SaveChanges();
             }
 
-            (store.Stats.NumberOfCommands - numberOfRequests).ShouldBe(1);
+            (store.Stats.NumberOfCommands - numberOfCommands).ShouldBe(1);
         }
 
         [Fact]
@@ -832,7 +835,9 @@ namespace HybridDb.Tests
 
             ResetConfiguration();
             Document<Entity>();
+
             InitializeStore();
+
             UseMigrations(new InlineMigration(1), new InlineMigration(2));
 
             using (var session = store.OpenSession())

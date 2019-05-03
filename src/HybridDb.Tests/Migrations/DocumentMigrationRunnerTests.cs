@@ -234,8 +234,6 @@ namespace HybridDb.Tests.Migrations
 
             InitializeStore();
 
-            store.DocumentMigration.Wait();
-
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                 .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));

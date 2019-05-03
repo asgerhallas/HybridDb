@@ -105,6 +105,8 @@ namespace HybridDb.Tests.Bugs
                         .With(x => x.Complex.A);
                 });
 
+                realstore.DocumentMigration.Wait();
+
                 realstore.Dispose();
             });
         }
