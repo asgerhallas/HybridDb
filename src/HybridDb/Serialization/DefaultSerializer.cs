@@ -141,23 +141,23 @@ namespace HybridDb.Serialization
         }
 
 
-        public virtual byte[] Serialize(object obj)
+        public virtual string Serialize(object obj)
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new StreamWriter(stream, Encoding.UTF8))
+            using (var stream = new StringWriter())
+            using (var writer = new JsonTextWriter(stream))
             {
                 CreateSerializer().Serialize(writer, obj);
 
                 writer.Flush();
 
-                return stream.ToArray();
+                return stream.ToString();
             }
         }
 
-        public virtual object Deserialize(byte[] data, Type type)
+        public virtual object Deserialize(string data, Type type)
         {
-            using (var stream = new MemoryStream(data))
-            using (var reader = new StreamReader(stream, Encoding.UTF8))
+            using (var stream = new StringReader(data))
+            using (var reader = new JsonTextReader(stream))
             {
                 return CreateSerializer().Deserialize(reader, type);
             }

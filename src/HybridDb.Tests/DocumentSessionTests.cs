@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -90,7 +91,7 @@ namespace HybridDb.Tests
             var entity = store.Query(table, out _).SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity["Document"]);
-            Assert.NotEqual(0, ((byte[]) entity["Document"]).Length);
+            Assert.NotEqual(0, ((string) entity["Document"]).Length);
         }
 
         [Fact]
@@ -886,7 +887,7 @@ namespace HybridDb.Tests
                 // backup on save
                 backupWriter.Files.Count.ShouldBe(1);
                 backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
-                    .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
+                    .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" })));
             }
 
             // try it again (todo: move to seperate test)
@@ -911,7 +912,7 @@ namespace HybridDb.Tests
                 // backup on save
                 backupWriter.Files.Count.ShouldBe(2);
                 backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_1.bak"]
-                    .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger1" }));
+                    .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger1" })));
             }
         }
 

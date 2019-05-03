@@ -68,15 +68,14 @@ namespace HybridDb.Tests.Performance
 
     //        public Fixture()
     //        {
-    //            store = (DocumentStore) Using(
+    //            store = Using(
     //                DocumentStore.ForTesting(
-    //                    TableMode.UseTempTables,
+    //                    TableMode.GlobalTempTables,
     //                    connectionString,
     //                    c => c.Document<LocalEntity>()
     //                        .With(x => x.SomeData)
     //                        .With(x => x.SomeNumber)));
 
-    //            store.Initialize();
 
     //            var commands = new List<DatabaseCommand>();
     //            for (int i = 0; i < 10000; i++)
@@ -84,7 +83,7 @@ namespace HybridDb.Tests.Performance
     //                commands.Add(new InsertCommand(
     //                    store.Configuration.GetDesignFor<LocalEntity>().Table,
     //                    Guid.NewGuid().ToString(),
-    //                    new {SomeNumber = i, SomeData = "ABC"}));
+    //                    new { SomeNumber = i, SomeData = "ABC" }));
     //            }
 
     //            var startNew = Stopwatch.StartNew();

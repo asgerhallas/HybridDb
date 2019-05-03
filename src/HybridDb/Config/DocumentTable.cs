@@ -11,8 +11,8 @@ namespace HybridDb.Config
             EtagColumn = Add(new Column("Etag", typeof(Guid)));
             CreatedAtColumn = Add(new Column("CreatedAt", typeof(DateTimeOffset)));
             ModifiedAtColumn = Add(new Column("ModifiedAt", typeof(DateTimeOffset)));
-            DocumentColumn = Add(new Column("Document", typeof(byte[])));
-            MetadataColumn = Add(new Column("Metadata", typeof(byte[])));
+            DocumentColumn = Add(new Column("Document", typeof(string)));
+            MetadataColumn = Add(new Column("Metadata", typeof(string)));
             DiscriminatorColumn = Add(new Column("Discriminator", typeof(string), length: 850));
             AwaitsReprojectionColumn = Add(new Column("AwaitsReprojection", typeof(bool)));
             VersionColumn = Add(new Column("Version", typeof(int)));

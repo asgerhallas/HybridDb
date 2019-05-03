@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using FakeItEasy;
 using HybridDb.Commands;
@@ -236,7 +237,7 @@ namespace HybridDb.Tests.Migrations
 
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
-                .ShouldBe(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" }));
+                .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" })));
         }
 
 

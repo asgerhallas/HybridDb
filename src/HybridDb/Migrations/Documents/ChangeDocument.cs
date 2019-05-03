@@ -4,14 +4,14 @@ namespace HybridDb.Migrations.Documents
 {
     public class ChangeDocument<T> : DocumentMigrationCommand
     {
-        readonly Func<IDocumentSession, ISerializer, byte[], byte[]> change;
+        readonly Func<IDocumentSession, ISerializer, string, string> change;
 
-        public ChangeDocument(Func<ISerializer, byte[], byte[]> change)
+        public ChangeDocument(Func<ISerializer, string, string> change)
         {
             this.change = (_, serializer, json) => change(serializer, json);
         }
 
-        public ChangeDocument(Func<IDocumentSession, ISerializer, byte[], byte[]> change)
+        public ChangeDocument(Func<IDocumentSession, ISerializer, string, string> change)
         {
             this.change = change;
         }
@@ -21,7 +21,7 @@ namespace HybridDb.Migrations.Documents
             return typeof (T).IsAssignableFrom(type);
         }
 
-        public override byte[] Execute(IDocumentSession session, ISerializer serializer, byte[] json)
+        public override string Execute(IDocumentSession session, ISerializer serializer, string json)
         {
             return change(session, serializer, json);
         }

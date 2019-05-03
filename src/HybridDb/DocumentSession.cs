@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -191,8 +192,8 @@ namespace HybridDb
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
                 var configuredVersion = (int)projections[design.Table.VersionColumn];
-                var document = (byte[])projections[design.Table.DocumentColumn];
-                var metadataDocument = (byte[])projections[design.Table.MetadataColumn];
+                var document = (string)projections[design.Table.DocumentColumn];
+                var metadataDocument = (string)projections[design.Table.MetadataColumn];
 
                 var expectedEtag = managedEntity.Etag;
 
@@ -214,7 +215,7 @@ namespace HybridDb
 
                         if (configuredVersion != managedEntity.Version)
                         {
-                            store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", managedEntity.Document);
+                            store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", Encoding.UTF8.GetBytes(managedEntity.Document));
                         }
 
                         managedEntity.Version = configuredVersion;
@@ -260,7 +261,7 @@ namespace HybridDb
                     : null;
             }
 
-            var document = (byte[])row[table.DocumentColumn];
+            var document = (string)row[table.DocumentColumn];
             var currentDocumentVersion = (int) row[table.VersionColumn];
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, document, currentDocumentVersion);
             var actualEntityType = entity.GetType();
@@ -270,7 +271,7 @@ namespace HybridDb
                 throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{actualEntityType}'.");
             }
 
-            var metadataDocument = (byte[])row[table.MetadataColumn];
+            var metadataDocument = (string)row[table.MetadataColumn];
             var metadata = metadataDocument != null
                 ? (Dictionary<string, List<string>>) store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>)) 
                 : null;

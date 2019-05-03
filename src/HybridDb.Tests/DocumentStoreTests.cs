@@ -13,7 +13,8 @@ namespace HybridDb.Tests
 {
     public class DocumentStoreTests : HybridDbTests
     {
-        readonly byte[] documentAsByteArray = { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
+        //readonly byte[] documentAsByteArray = { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
+        readonly string documentAsByteArray = "asger";
 
         [Fact]
         public void CanInsert()
@@ -29,7 +30,7 @@ namespace HybridDb.Tests
             //var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
             ((string) row["Id"]).ShouldBe(id);
             ((Guid) row["Etag"]).ShouldNotBe(Guid.Empty);
-            Encoding.ASCII.GetString((byte[]) row["Document"]).ShouldBe("asger");
+            ((string) row["Document"]).ShouldBe("asger");
             ((string) row["Field"]).ShouldBe("Asger");
         }
 
@@ -56,7 +57,7 @@ namespace HybridDb.Tests
             
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new {Field = "Asger", Document = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'}});
+            store.Insert(table.Table, id, new {Field = "Asger", Document = "asger"});
 
             Should.NotThrow(() => store.Update(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}, lastWriteWins: true));
         }

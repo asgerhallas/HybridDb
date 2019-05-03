@@ -15,7 +15,7 @@ namespace HybridDb.Tests
 
             var id = NewId();
             var design = configuration.GetDesignFor<Entity>();
-            Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, new byte[0], 1))
+            Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, "", 1))
                 .Message.ShouldBe($"Document HybridDb.Tests.HybridDbTests+Entity/{id} version is ahead of configuration. Document is version 1, but configuration is version 0.");
         }
 

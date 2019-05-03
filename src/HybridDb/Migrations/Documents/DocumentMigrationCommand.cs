@@ -5,6 +5,6 @@ namespace HybridDb.Migrations.Documents
     public abstract class DocumentMigrationCommand
     {
         public abstract bool ForType(Type type);
-        public abstract byte[] Execute(IDocumentSession session, ISerializer serializer, byte[] json);
+        public abstract string Execute(IDocumentSession session, ISerializer serializer, string json);
     }
 }
