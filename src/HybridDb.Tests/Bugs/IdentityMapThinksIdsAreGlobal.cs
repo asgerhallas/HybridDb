@@ -10,10 +10,12 @@ namespace HybridDb.Tests.Bugs
 
         public IdentityMapThinksIdsAreGlobal()
         {
-            documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString));
-            documentStore.Configuration.Document<Doc1>().Key(x => x.Id);
-            documentStore.Configuration.Document<Doc2>().Key(x => x.Id);
-            documentStore.Initialize();
+            documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
+            {
+                c.UseConnectionString(connectionString);
+                c.Document<Doc1>().Key(x => x.Id);
+                c.Document<Doc2>().Key(x => x.Id);
+            }));
         }
 
         [Fact]

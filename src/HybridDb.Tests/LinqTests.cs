@@ -618,8 +618,8 @@ namespace HybridDb.Tests
 
         Query<T> Query<T>() where T : class
         {
-            var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString);
-            var session = new DocumentSession(store);
+            var session = new DocumentSession(Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c => c.UseConnectionString(connectionString))));
+
             return new Query<T>(new QueryProvider(session, null));
         }
 

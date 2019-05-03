@@ -12,8 +12,6 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.Property);
 
-            store.Initialize();
-
             var queryProvider = new QueryProvider(
                 (DocumentSession) store.OpenSession(),
                 store.Configuration.GetOrCreateDesignFor(typeof(Entity)));

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTests : HybridDbAutoInitializeTests
+    public class DocumentSessionTests : HybridDbTests
     {
         [Fact]
         public void CanEvictEntity()
@@ -56,15 +56,13 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
             var id = NewId();
+
             using (var session = store.OpenSession())
             {
-                // the initial migrations might issue some requests
-                var initialNumberOfRequest = store.Stats.NumberOfRequests;
-
                 session.Advanced.Defer(new InsertCommand(table, id, new { }));
-                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 0);
+                store.Stats.NumberOfCommands.ShouldBe(0);
                 session.SaveChanges();
-                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 1);
+                store.Stats.NumberOfCommands.ShouldBe(1);
             }
 
             var entity = store.Query(table, out _, where: $"Id = '{id}'").SingleOrDefault();
@@ -403,18 +401,15 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                // the initial migrations might issue some requests
-                var initialNumberOfRequest = store.Stats.NumberOfRequests;
-
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges(); // 1
+                session.SaveChanges();
                 session.Advanced.Clear();
 
-                var document = session.Load<Entity>(id); // 2
+                var document = session.Load<Entity>(id);
                 document.Property = "Lars";
-                session.SaveChanges(); // 3
+                session.SaveChanges();
 
-                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 3);
+                store.Stats.NumberOfCommands.ShouldBe(2);
                 session.Advanced.Clear();
                 session.Load<Entity>(id).Property.ShouldBe("Lars");
             }
@@ -428,17 +423,14 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                // the initial migrations might issue some requests
-                var initialNumberOfRequest = store.Stats.NumberOfRequests;
-
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.SaveChanges(); // 1
+                session.SaveChanges();
                 session.Advanced.Clear();
 
-                session.Load<Entity>(id); // 2
+                session.Load<Entity>(id);
                 session.SaveChanges(); // Should not issue a request
 
-                store.Stats.NumberOfRequests.ShouldBe(initialNumberOfRequest + 2);
+                store.Stats.NumberOfCommands.ShouldBe(1);
             }
         }
 
@@ -730,7 +722,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             Document<Entity>();
             DisableDocumentMigrationsInBackground();
@@ -759,7 +751,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             Document<AbstractEntity>().With(x => x.Number);
             Document<DerivedEntity>();
@@ -792,19 +784,19 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             Document<Entity>();
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
-            var numberOfRequests = store.Stats.NumberOfRequests;
+            var numberOfRequests = store.Stats.NumberOfCommands;
             using (var session = store.OpenSession())
             {
                 session.Load<Entity>(id);
                 session.SaveChanges();
             }
 
-            (store.Stats.NumberOfRequests - numberOfRequests).ShouldBe(1);
+            (store.Stats.NumberOfCommands - numberOfRequests).ShouldBe(1);
         }
 
         [Fact]
@@ -838,7 +830,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
             Document<Entity>();
             InitializeStore();
             UseMigrations(new InlineMigration(1), new InlineMigration(2));
@@ -869,7 +861,7 @@ namespace HybridDb.Tests
 
             var backupWriter = new FakeBackupWriter();
 
-            Reset();
+            ResetConfiguration();
 
             UseBackupWriter(backupWriter);
             Document<Entity>();
@@ -893,7 +885,7 @@ namespace HybridDb.Tests
             }
 
             // try it again (todo: move to seperate test)
-            Reset();
+            ResetConfiguration();
 
             UseBackupWriter(backupWriter);
             Document<Entity>();

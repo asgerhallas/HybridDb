@@ -27,8 +27,6 @@ namespace HybridDb.Tests.Migrations
         {
             Document<Entity>().With(x => x.Number);
 
-            store.Initialize();
-
             var id = NewId();
             var table = new DocumentTable("Entities");
             store.Insert(table, id, new
@@ -58,8 +56,6 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
                 new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
 
-            store.Initialize();
-
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
             store.Insert(table, id, new
@@ -84,8 +80,6 @@ namespace HybridDb.Tests.Migrations
             var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
 
             Document<Entity>().With(x => x.Number);
-
-            store.Initialize();
 
             var documentTable = new DocumentTable("Entities");
 
@@ -124,8 +118,6 @@ namespace HybridDb.Tests.Migrations
             UseRealTables();
 
             Document<Entity>().With(x => x.Number);
-
-            store.Initialize();
 
             var id = NewId();
             var table = new DocumentTable("Entities");
@@ -171,8 +163,6 @@ namespace HybridDb.Tests.Migrations
             DisableDocumentMigrationsInBackground();
             Document<Entity>().With(x => x.Number);
 
-            store.Initialize();
-
             new DocumentMigrationRunner().Run(store).Wait();
 
             store.Stats.NumberOfRequests.ShouldBe(0);
@@ -184,8 +174,6 @@ namespace HybridDb.Tests.Migrations
             DisableMigrations();
             Document<Entity>().With(x => x.Number);
 
-            store.Initialize();
-
             new DocumentMigrationRunner().Run(store).Wait();
 
             store.Stats.NumberOfRequests.ShouldBe(0);
@@ -196,8 +184,6 @@ namespace HybridDb.Tests.Migrations
         {
             Document<Entity>().With(x => x.Number);
 
-            store.Initialize();
-
             var id = NewId();
             using (var session = store.OpenSession())
             {
@@ -205,18 +191,15 @@ namespace HybridDb.Tests.Migrations
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
             Document<Entity>().With(x => x.Number);
 
             var logEventSink = new ListSink();
             UseLogger(new LoggerConfiguration().WriteTo.Sink(logEventSink).CreateLogger());
 
-            store.Initialize();
+            InitializeStore();
 
-            UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((x, y) =>
-            {
-                throw new Exception();
-            })));
+            UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((x, y) => throw new Exception())));
 
             Should.NotThrow(() =>
             {
@@ -236,22 +219,22 @@ namespace HybridDb.Tests.Migrations
             var id = NewId();
             Document<Entity>();
 
-            store.Initialize();
-
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
             Document<Entity>();
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
 
-            store.Initialize();
+            InitializeStore();
+
+            store.DocumentMigration.Wait();
 
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]

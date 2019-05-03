@@ -8,8 +8,7 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void ShouldHaveRightPrecisionAndScale()
         {
-            store.Configuration.Document<ClassWithDecimal>().With(x => x.MyDecimal);
-            store.Initialize();
+            configuration.Document<ClassWithDecimal>().With(x => x.MyDecimal);
 
             using (var documentSession = store.OpenSession())
             {
@@ -21,7 +20,7 @@ namespace HybridDb.Tests.Bugs
                 documentSession.SaveChanges();
             }
 
-            store.Get(store.Configuration.GetDesignFor<ClassWithDecimal>().Table, "id")["MyDecimal"].ShouldBe(123.456m);
+            store.Get(configuration.GetDesignFor<ClassWithDecimal>().Table, "id")["MyDecimal"].ShouldBe(123.456m);
         }
 
         public class ClassWithDecimal

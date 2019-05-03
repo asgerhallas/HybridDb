@@ -10,7 +10,8 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void Fails()
         {
-            var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString);
+            var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, x => x.UseConnectionString(connectionString));
+
             store.Configuration.Document<Entity>().With(x => x.SomeEnumerable.Count());
 
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerableCount"];

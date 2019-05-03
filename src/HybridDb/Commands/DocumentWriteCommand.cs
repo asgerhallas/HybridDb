@@ -8,6 +8,7 @@ namespace HybridDb.Commands
         public static void Execute(DocumentTransaction tx, SqlDatabaseCommand preparedCommand)
         {
             tx.Store.Stats.NumberOfRequests++;
+            tx.Store.Stats.NumberOfCommands++;
 
             // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
             // params are added some where in the stack) so we cut it some slack and say 2000.

@@ -10,12 +10,7 @@ namespace HybridDb
     {
         Configuration Configuration { get; }
         StoreStats Stats { get; }
-
-        bool IsInitialized { get; }
-        bool Testing { get; }
         TableMode TableMode { get; }
-
-        void Initialize();
 
         IDocumentSession OpenSession(DocumentTransaction tx = null);
         DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted);

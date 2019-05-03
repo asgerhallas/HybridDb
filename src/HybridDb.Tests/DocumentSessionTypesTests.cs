@@ -7,7 +7,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTypesTests : HybridDbAutoInitializeTests
+    public class DocumentSessionTypesTests : HybridDbTests
     {
         [Fact]
         public void CanLoadByInterface()
@@ -197,7 +197,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             Document<AbstractEntity>();
 
@@ -217,7 +217,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {
@@ -225,7 +225,7 @@ namespace HybridDb.Tests
                 load.ShouldBeOfType<DerivedEntity>();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {
@@ -245,7 +245,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {
@@ -270,7 +270,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             Document<DerivedEntity>();
 
@@ -295,7 +295,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {
@@ -318,7 +318,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {
@@ -338,7 +338,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {
@@ -375,7 +375,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             Document<AbstractEntity>().With(x => x.Property);
 
@@ -398,7 +398,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             configuration.TryGetDesignFor(typeof(DerivedEntity)).ShouldBe(null);
             configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldBe(null);
@@ -407,20 +407,18 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 // filters out results that is not subtype of DerivedEntity
-                QueryStats stats;
-                session.Query<DerivedEntity>().Statistics(out stats).ToList().Count.ShouldBe(2);
+                session.Query<DerivedEntity>().Statistics(out var stats).ToList().Count.ShouldBe(2);
                 stats.TotalResults.ShouldBe(3);
             }
 
-            configuration.TryGetDesignFor(typeof(DerivedEntity)).ShouldNotBe(null);
-            configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldNotBe(null);
-            configuration.TryGetDesignFor(typeof(OtherEntity)).ShouldNotBe(null);
+            configuration.TryGetDesignFor(typeof(DerivedEntity)).DocumentType.ShouldBe(typeof(DerivedEntity));
+            configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).DocumentType.ShouldBe(typeof(MoreDerivedEntity1));
+            configuration.TryGetDesignFor(typeof(OtherEntity)).DocumentType.ShouldBe(typeof(OtherEntity));
 
             using (var session = store.OpenSession())
             {
                 // second time around it should filter by discriminators
-                QueryStats stats;
-                session.Query<DerivedEntity>().Statistics(out stats).ToList().Count.ShouldBe(2);
+                session.Query<DerivedEntity>().Statistics(out var stats).ToList().Count.ShouldBe(2);
                 stats.TotalResults.ShouldBe(2);
             }
         }
@@ -436,7 +434,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             configuration.TryGetDesignFor(typeof(DerivedEntity)).ShouldBe(null);
             configuration.TryGetDesignFor(typeof(MoreDerivedEntity1)).ShouldBe(null);
@@ -482,7 +480,7 @@ namespace HybridDb.Tests
                 session.SaveChanges();
             }
 
-            Reset();
+            ResetConfiguration();
 
             using (var session = store.OpenSession())
             {

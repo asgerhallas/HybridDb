@@ -5,7 +5,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentStore_QueryChangesTests : HybridDbAutoInitializeTests
+    public class DocumentStore_QueryChangesTests : HybridDbTests
     {
         [Fact]
         public void QueueInserts()

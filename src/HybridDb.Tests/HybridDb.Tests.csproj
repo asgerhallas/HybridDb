@@ -106,7 +106,6 @@
     <Compile Include="DefaultSerializerTests.cs" />
     <Compile Include="DocumentDesignerTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
-    <Compile Include="DocumentSession_WithoutInitializeTests.cs" />
     <Compile Include="DocumentSessionTypesTests.cs" />
     <Compile Include="DocumentStore_QueryChangesTests.cs" />
     <Compile Include="Events\AppendEventTests.cs" />
@@ -128,7 +127,6 @@
     <Compile Include="Migrations\Commands\RenameColumnTests.cs" />
     <Compile Include="Migrations\Commands\RenameTableTests.cs" />
     <Compile Include="Migrations\DocumentMigrationRunnerTests.cs" />
-    <Compile Include="HybridDbAutoInitializeTests.cs" />
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
     <Compile Include="QueryProviderTests.cs" />

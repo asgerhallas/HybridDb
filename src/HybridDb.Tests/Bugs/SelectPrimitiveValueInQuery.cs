@@ -6,7 +6,7 @@ using Xunit;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class SelectPrimitiveValueInQuery : HybridDbAutoInitializeTests
+    public class SelectPrimitiveValueInQuery : HybridDbTests
     {
         [Fact]
         public void ShouldBeAble()

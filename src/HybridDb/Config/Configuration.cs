@@ -28,6 +28,8 @@ namespace HybridDb.Config
 
         public Configuration()
         {
+            ConnectionString = "data source=.;Integrated Security=True";
+
             tables = new ConcurrentDictionary<string, Table>();
             documentDesigns = new List<DocumentDesign>();
 
@@ -64,6 +66,7 @@ namespace HybridDb.Config
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
         }
 
+        public string ConnectionString { get; private set; }
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
         public ITypeMapper TypeMapper { get; private set; }
@@ -88,6 +91,7 @@ namespace HybridDb.Config
 
             lock (gate)
             {
+                // add this first in the collection, but after all other designs has been registered, so no registered document falls back to Document table
                 documentDesigns.Insert(0, new DocumentDesign(this, GetOrAddDocumentTable("Documents"), typeof(object), "object"));
 
                 initialized = true;
@@ -217,10 +221,9 @@ namespace HybridDb.Config
             });
         }
 
-        public void UseLogger(ILogger logger)
-        {
-            Logger = logger;
-        }
+        public void UseConnectionString(string connectionString) => ConnectionString = connectionString;
+
+        public void UseLogger(ILogger logger) => Logger = logger;
 
         public void UseSerializer(ISerializer serializer)
         {

@@ -65,7 +65,7 @@ namespace HybridDb
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null)
         {
-            var upperBoundary = !tx.Store.Testing || tx.Store.TableMode == TableMode.RealTables 
+            var upperBoundary = /*!tx.Store.Testing || tx.Store.TableMode == TableMode.RealTables */ true
                 ? $"and {table.TimestampColumn.Name} < min_active_rowversion()" 
                 : "";
 

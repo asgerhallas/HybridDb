@@ -11,7 +11,7 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class DocumentStoreTests : HybridDbAutoInitializeTests
+    public class DocumentStoreTests : HybridDbTests
     {
         readonly byte[] documentAsByteArray = { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
 
@@ -667,21 +667,18 @@ namespace HybridDb.Tests
 
             void configurator(Configuration x)
             {
+                x.UseConnectionString(connectionString);
                 x.UseTableNamePrefix(prefix);
                 x.Document<Case>();
             }
 
-            using (var globalStore1 = DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString, configurator))
+            using (var globalStore1 = DocumentStore.ForTesting(TableMode.GlobalTempTables, configurator))
             {
-                globalStore1.Initialize();
-
                 var id = NewId();
                 globalStore1.Insert(globalStore1.Configuration.GetDesignFor<Case>().Table, id, new { });
 
-                using (var globalStore2 = DocumentStore.ForTesting(TableMode.GlobalTempTables, connectionString, configurator))
+                using (var globalStore2 = DocumentStore.ForTesting(TableMode.GlobalTempTables, configurator))
                 {
-                    globalStore2.Initialize();
-
                     globalStore2.Get(globalStore2.Configuration.GetDesignFor<Case>().Table, id).ShouldNotBe(null);
                 }
 

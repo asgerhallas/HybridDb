@@ -50,15 +50,16 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNothingGivenNoMigrations()
         {
-            CreateMetadataTable();
+            var schemaBefore = store.Database.QuerySchema();
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
 
-            var schema = store.Database.QuerySchema();
-            schema.Count.ShouldBe(1);
-            schema.ShouldContainKey("HybridDb"); // the metadata table and nothing else
+            var schemaAfter = store.Database.QuerySchema();
+            schemaAfter.Count.ShouldBe(schemaBefore.Count);
+            schemaAfter.ShouldContainKey("HybridDb");
+            schemaAfter.ShouldContainKey("Documents");
         }
 
         [Fact]
@@ -188,7 +189,7 @@ namespace HybridDb.Tests.Migrations
 
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
-            Reset();
+            ResetConfiguration();
 
             Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
             Setup<ThrowingCommand>(documentStore => throwingCommand => ThrowingCommand.Execute(documentStore, throwingCommand));
@@ -211,7 +212,7 @@ namespace HybridDb.Tests.Migrations
 
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
-            Reset();
+            ResetConfiguration();
 
             Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run())
                 .Message.ShouldBe("Database schema is ahead of configuration. Schema is version 1, but configuration is version 0.");
@@ -246,8 +247,6 @@ namespace HybridDb.Tests.Migrations
             Document<DerivedEntity>();
             Document<OtherEntity>();
 
-            store.Initialize();
-
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity());
@@ -280,7 +279,7 @@ namespace HybridDb.Tests.Migrations
             Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
             Setup<SlowCommand>(documentStore => slowCommand => SlowCommand.Execute(documentStore, slowCommand));
 
-            store.Initialize();
+            InitializeStore();
 
             var command = new CountingCommand();
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
@@ -10,95 +11,77 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
-        internal DocumentStore(Configuration configuration, TableMode mode, string connectionString, bool testing)
+        internal DocumentStore(TableMode mode, Configuration configuration)
         {
             Configuration = configuration;
             Logger = configuration.Logger;
-            Testing = testing;
             TableMode = mode;
 
             switch (mode)
             {
                 case TableMode.RealTables:
-                    Database = new SqlServerUsingRealTables(this, connectionString);
+                    Database = new SqlServerUsingRealTables(this, configuration.ConnectionString);
                     break;
                 case TableMode.GlobalTempTables:
-                    Database = new SqlServerUsingGlobalTempTables(this, connectionString + ";Initial Catalog=TempDb");
+                    Database = new SqlServerUsingGlobalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
+
+            Configuration.Initialize();
+            Database.Initialize();
+
+            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
+            DocumentMigration = new DocumentMigrationRunner().Run(this);
         }
 
         internal DocumentStore(DocumentStore store, Configuration configuration)
         {
             Configuration = configuration;
             Logger = configuration.Logger;
-            Testing = store.Testing;
             TableMode = store.TableMode;
             Database = store.Database;
+
+            Configuration.Initialize();
+
+            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
+            DocumentMigration = new DocumentMigrationRunner().Run(this);
         }
 
-        public static IDocumentStore Create(string connectionString, Action<Configuration> configure = null)
+        public static IDocumentStore Create(Action<Configuration> configure)
         {
-            configure = configure ?? (x => { });
             var configuration = new Configuration();
-            configure(configuration);
-            return new DocumentStore(configuration, TableMode.RealTables, connectionString, false);
+
+            configure(configuration); 
+
+            return new DocumentStore(TableMode.RealTables, configuration);
         }
 
-        public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure = null) => ForTesting(mode, null, configure);
+        public static IDocumentStore Create(Configuration configuration = null) => new DocumentStore(TableMode.RealTables, configuration ?? new Configuration());
 
-        public static IDocumentStore ForTesting(TableMode mode, Configuration configuration) => ForTesting(mode, null, configuration);
-
-        public static IDocumentStore ForTesting(TableMode mode, string connectionString, Action<Configuration> configure = null)
+        public static IDocumentStore ForTesting(TableMode mode, Action<Configuration> configure)
         {
-            configure = configure ?? (x => { });
             var configuration = new Configuration();
+
             configure(configuration);
-            return ForTesting(mode, connectionString, configuration);
+
+            return ForTesting(mode, configuration);
         }
 
-        public static IDocumentStore ForTesting(TableMode mode, string connectionString, Configuration configuration) => 
-            new DocumentStore(configuration, mode, connectionString ?? "data source=.;Integrated Security=True", true);
+        public static IDocumentStore ForTesting(TableMode mode, Configuration configuration = null) => new DocumentStore(mode, configuration ?? new Configuration());
 
         public void Dispose() => Database.Dispose();
 
         public IDatabase Database { get; }
         public ILogger Logger { get; private set; }
         public Configuration Configuration { get; }
-        public bool IsInitialized { get; private set; }
-        public bool Testing { get; }
         public TableMode TableMode { get; }
+        public Task DocumentMigration { get; }
 
         public StoreStats Stats { get; } = new StoreStats();
 
-        public void Initialize()
-        {
-            if (IsInitialized)
-                return;
-
-            Configuration.Initialize();
-            Database.Initialize();
-
-            Logger = Configuration.Logger;
-
-            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
-            var documentMigration = new DocumentMigrationRunner().Run(this);
-            if (Testing) documentMigration.Wait();
-
-            IsInitialized = true;
-        }
-
-        public IDocumentSession OpenSession(DocumentTransaction tx = null)
-        {
-            if (!IsInitialized)
-            {
-                throw new InvalidOperationException("You must call Initialize() on the store before opening a session.");
-            }
-
-            return new DocumentSession(this, tx);
-        }
+        public IDocumentSession OpenSession(DocumentTransaction tx = null) => new DocumentSession(this, tx);
 
         public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted) => new DocumentTransaction(this, commitId, level, Stats);
         public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);

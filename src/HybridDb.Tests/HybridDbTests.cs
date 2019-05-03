@@ -22,6 +22,8 @@ namespace HybridDb.Tests
         protected readonly ILogger logger;
         protected string connectionString;
 
+        Lazy<DocumentStore> activeStore;
+
         protected HybridDbTests()
         {
             logger = new LoggerConfiguration()
@@ -34,7 +36,7 @@ namespace HybridDb.Tests
             UseGlobalTempTables();
         }
 
-        protected virtual DocumentStore store { get; set; }
+        protected DocumentStore store => activeStore.Value;
 
         protected static string GetConnectionString()
         {
@@ -56,14 +58,17 @@ namespace HybridDb.Tests
                     UseGlobalTempTables();
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("mode");
+                    throw new ArgumentOutOfRangeException(nameof(mode));
             }
         }
 
         protected void UseGlobalTempTables()
         {
             connectionString = GetConnectionString();
-            store = Using(new DocumentStore(configuration, TableMode.GlobalTempTables, connectionString, true));
+
+            configuration.UseConnectionString(connectionString);
+
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.GlobalTempTables, configuration)));
         }
 
         protected void UseRealTables()
@@ -90,8 +95,8 @@ namespace HybridDb.Tests
 
             connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
 
-            store = Using(new DocumentStore(configuration, TableMode.RealTables, connectionString, true));
-
+            configuration.UseConnectionString(connectionString);
+            
             disposables.Push(() =>
             {
                 SqlConnection.ClearAllPools();
@@ -102,13 +107,25 @@ namespace HybridDb.Tests
                     connection.Execute($"DROP DATABASE {uniqueDbName}");
                 }
             });
+
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration)));
         }
 
-        protected void Reset()
+        protected void InitializeStore()
+        {
+            var _ = store;
+        }
+
+        /// <summary>
+        /// Resets configuration, but not the database. Can be used to test new configurations against existing data.
+        /// </summary>
+        protected void ResetConfiguration()
         {
             configuration = new Configuration();
 
-            store = Using(new DocumentStore(store, configuration));
+            var currentStore = store;
+
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration))); 
         }
 
         protected T Using<T>(T disposable) where T : IDisposable

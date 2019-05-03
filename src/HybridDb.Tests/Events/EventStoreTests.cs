@@ -4,7 +4,7 @@ using HybridDb.Events.Commands;
 
 namespace HybridDb.Tests.Events
 {
-    public class EventStoreTests : HybridDbAutoInitializeTests
+    public class EventStoreTests : HybridDbTests
     {
         protected static AppendEvent CreateAppendEventCommand(EventData<byte[]> eventData) => new AppendEvent(new EventTable("events"), "1.0", eventData);
 

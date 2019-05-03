@@ -16,6 +16,7 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
+
             store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
 
             store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
