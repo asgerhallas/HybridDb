@@ -50,32 +50,22 @@ namespace HybridDb
 
         public static IEnumerable<IDictionary<string, object>> Query(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
-            int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null)
-        {
-            return store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, includeDeleted, parameters)
+            int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null) =>
+            store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, includeDeleted, parameters)
                 .Select(x => (IDictionary<string, object>) x.Data);
-        }
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            this IDocumentStore store, DocumentTable table, byte[] since, string select = null)
-        {
-            return store.Transactionally(tx => tx.Query<TProjection>(table, since, @select));
-        }
+            this IDocumentStore store, DocumentTable table, byte[] since, string select = null) =>
+            store.Transactionally(tx => tx.Query<TProjection>(table, since, @select));
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null)
-        {
-            var upperBoundary = /*!tx.Store.Testing || tx.Store.TableMode == TableMode.RealTables */ true
-                ? $"and {table.TimestampColumn.Name} < min_active_rowversion()" 
-                : "";
-
-            return tx.Query<TProjection>(table, @select,
-                @where: $"{table.TimestampColumn.Name} > @Since {upperBoundary}",
+            this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null) =>
+            tx.Query<TProjection>(table, @select,
+                @where: $"{table.TimestampColumn.Name} > @Since and {table.TimestampColumn.Name} < min_active_rowversion()",
                 @orderby: $"{table.TimestampColumn.Name} ASC",
                 includeDeleted: true,
                 parameters: new {Since = since}
             ).rows;
-        }
 
         public static void Transactionally(this IDocumentStore store, Action<DocumentTransaction> func) =>
             Transactionally(store, IsolationLevel.ReadCommitted, func);

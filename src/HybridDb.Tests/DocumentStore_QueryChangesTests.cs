@@ -2,6 +2,7 @@
 using System.Transactions;
 using Shouldly;
 using Xunit;
+using Xunit.Extensions;
 
 namespace HybridDb.Tests
 {
@@ -131,8 +132,10 @@ namespace HybridDb.Tests
             results2[1].LastOperation.ShouldBe(Operation.Deleted);
         }
 
-        [Fact]
-        public void Bug_RaceConditionWithSnapshotAndRowVersion()
+        [Theory]
+        [InlineData(TableMode.RealTables)]
+        [InlineData(TableMode.GlobalTempTables)]
+        public void Bug_RaceConditionWithSnapshotAndRowVersion(TableMode mode)
         {
             //Nummeret til rowversion kolonnen tildeles ved starten af tx, hvilket betyder at ovenstående giver følgende situation:
 
@@ -150,7 +153,7 @@ namespace HybridDb.Tests
             var snapshot = new TransactionOptions {IsolationLevel = IsolationLevel.Snapshot};
             var readCommitted = new TransactionOptions {IsolationLevel = IsolationLevel.ReadCommitted};
 
-            UseRealTables();
+            Use(mode);
             UseTableNamePrefix(nameof(Bug_RaceConditionWithSnapshotAndRowVersion));
 
             Document<Entity>().With(x => x.Property);
