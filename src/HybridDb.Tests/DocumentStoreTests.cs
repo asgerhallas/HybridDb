@@ -728,6 +728,14 @@ namespace HybridDb.Tests
             });
         }
 
+        [Fact]
+        public void Bug_InsertLargeDocument()
+        {
+            Document<object>();
+
+            store.Insert(store.Configuration.GetDesignFor<object>().Table, "a", new {Document = new string('*', 10_000_000)});
+        }
+
         public class Case
         {
             public Guid Id { get; private set; }
