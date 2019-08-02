@@ -15,7 +15,7 @@ namespace HybridDb.Migrations.Documents
             var configuration = store.Configuration;
 
             if (!configuration.RunDocumentMigrationsOnStartup)
-                return Task.FromResult(0);
+                return Task.CompletedTask;
 
             return Task.Factory.StartNew(() =>
             {
@@ -23,11 +23,7 @@ namespace HybridDb.Migrations.Documents
 
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    var baseDesign = configuration.TryGetDesignByTablename(table.Name);
-                    if (baseDesign == null)
-                    {
-                        throw new InvalidOperationException($"Design not found for table '{table.Name}'");
-                    }
+                    var baseDesign = configuration.TryGetDesignByTablename(table.Name) ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
 
                     var running = true;
 
@@ -35,7 +31,7 @@ namespace HybridDb.Migrations.Documents
                     {
                         var rows = store
                             .Query(table, out var stats,
-                                @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
+                                where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
                                 @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
                                 take: 500,
                                 parameters: new { AwaitsReprojection = true, version = configuration.ConfiguredVersion })
@@ -45,59 +41,64 @@ namespace HybridDb.Migrations.Documents
 
                         logger.Information($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
 
-                        foreach (var row in rows)
+                        using (var tx = store.BeginTransaction())
                         {
-                            var key = (string)row[table.IdColumn];
-                            var currentDocumentVersion = (int)row[table.VersionColumn];
-                            var discriminator = ((string)row[table.DiscriminatorColumn]).Trim();
-                            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
-
-                            var shouldUpdate = false;
-
-                            if ((bool)row[table.AwaitsReprojectionColumn])
+                            foreach (var row in rows)
                             {
-                                shouldUpdate = true;
-                                logger.Debug("Reprojection document {0}/{1}.",
-                                    concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
-                            }
+                                var key = (string) row[table.IdColumn];
+                                var currentDocumentVersion = (int) row[table.VersionColumn];
+                                var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
+                                var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
 
-                            if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
-                            {
-                                shouldUpdate = true;
-                            }
+                                var shouldUpdate = false;
 
-                            if (shouldUpdate)
-                            {
-                                try
+                                if ((bool) row[table.AwaitsReprojectionColumn])
                                 {
-                                    using (var session = new DocumentSession(store, null))
+                                    shouldUpdate = true;
+                                    logger.Debug("Reprojection document {0}/{1}.",
+                                        concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
+                                }
+
+                                if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
+                                {
+                                    shouldUpdate = true;
+                                }
+
+                                if (shouldUpdate)
+                                {
+                                    try
                                     {
-                                        session.Load(concreteDesign.DocumentType, key);
-                                        session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                        using (var session = new DocumentSession(store, tx))
+                                        {
+                                            session.Load(concreteDesign.DocumentType, key);
+                                            session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
+                                        }
+                                    }
+                                    catch (ConcurrencyException) { }
+                                    catch (SqlException) { }
+                                    catch (Exception exception)
+                                    {
+                                        logger.Error(exception,
+                                            "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
+                                            concreteDesign.DocumentType.FullName, key, concreteDesign.Table.Name);
+
+                                        running = false;
                                     }
                                 }
-                                catch (ConcurrencyException) { }
-                                catch (SqlException) { }
-                                catch (Exception exception)
+                                else
                                 {
-                                    logger.Error(exception, 
-                                        "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
-                                        concreteDesign.DocumentType.FullName, key, concreteDesign.Table.Name);
+                                    logger.Debug("Document did not change.");
 
-                                    running = false;
+                                    var projection = new Dictionary<string, object>
+                                    {
+                                        {table.VersionColumn, configuration.ConfiguredVersion}
+                                    };
+
+                                    store.Update(table, key, (Guid) row[table.EtagColumn], projection);
                                 }
                             }
-                            else
-                            {
-                                logger.Debug("Document did not change.");
 
-                                var projection = new Dictionary<string, object>
-                                {
-                                    {table.VersionColumn, configuration.ConfiguredVersion}
-                                };
-
-                                store.Update(table, key, (Guid)row[table.EtagColumn], projection);
-                            }
+                            tx.Complete();
                         }
                     }
                 }

@@ -85,7 +85,7 @@ namespace HybridDb
             var design = configuration.GetOrCreateDesignFor(typeof(T));
 
             var include = design.DecendentsAndSelf.Keys.ToArray();
-            var exclude = design.Base.DecendentsAndSelf.Keys.Except(include).ToArray();
+            var exclude = design.Root.DecendentsAndSelf.Keys.Except(include).ToArray();
 
             // Include T and known subtybes, exclude known supertypes.
             // Unknown discriminators will be included and filtered result-side

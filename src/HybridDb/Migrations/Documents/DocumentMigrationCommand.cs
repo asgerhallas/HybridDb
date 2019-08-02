@@ -4,7 +4,15 @@ namespace HybridDb.Migrations.Documents
 {
     public abstract class DocumentMigrationCommand
     {
-        public abstract bool ForType(Type type);
+        protected DocumentMigrationCommand(Type type, string idPrefix)
+        {
+            Type = type;
+            IdPrefix = idPrefix;
+        }
+
+        public Type Type { get; }
+        public string IdPrefix { get; }
+
         public abstract string Execute(IDocumentSession session, ISerializer serializer, string json);
     }
 }

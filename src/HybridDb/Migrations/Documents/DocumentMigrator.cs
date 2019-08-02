@@ -22,7 +22,7 @@ namespace HybridDb.Migrations.Documents
             return configuration.Migrations
                 .Where(x => x.Version > currentDocumentVersion)
                 .SelectMany(x => x.MigrateDocument())
-                .Where(x => x.ForType(design.DocumentType));
+                .Where(x => x.Type.IsAssignableFrom(design.DocumentType));
         }
 
         public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, string document, int currentDocumentVersion)

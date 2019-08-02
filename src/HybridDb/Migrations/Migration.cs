@@ -6,12 +6,9 @@ namespace HybridDb.Migrations
 {
     public abstract class Migration
     {
-        protected Migration(int version)
-        {
-            Version = version;
-        }
+        protected Migration(int version) => Version = version;
 
-        public int Version { get; private set; }
+        public int Version { get; }
 
         public virtual IEnumerable<DdlCommand> MigrateSchema()
         {

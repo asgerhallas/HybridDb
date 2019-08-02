@@ -66,25 +66,12 @@ namespace HybridDb.Migrations.Schema
                     connection.Complete();
                 }
 
-                // create metadata table if it does not exist
-                var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
-                configuration.tables.TryAdd(metadata.Name, metadata);
-                store.Execute(new CreateTable(metadata));
+                TryCreateMetadataTable(configuration);
 
-                // get schema version
-                var hybridDbTableName = database.FormatTableNameAndEscape("HybridDb");
-
-                var currentSchemaVersion = database.RawQuery<int>($"select top 1 SchemaVersion from {hybridDbTableName}", schema: true).SingleOrDefault();
-
-                if (currentSchemaVersion > store.Configuration.ConfiguredVersion)
-                {
-                    throw new InvalidOperationException(
-                        $"Database schema is ahead of configuration. Schema is version {currentSchemaVersion}, " +
-                        $"but configuration is version {store.Configuration.ConfiguredVersion}.");
-                }
+                var schemaVersion = GetSchemaVersion(database, configuration);
 
                 // get the diff and run commands to get to configured schema
-                var schema = currentSchemaVersion == 0
+                var schema = schemaVersion == -1
                     ? new Dictionary<string, List<string>>()
                     : database.QuerySchema();
 
@@ -100,25 +87,9 @@ namespace HybridDb.Migrations.Schema
                     }
                 }
 
-                // run provided migrations only if we are using real tables
                 if (database is SqlServerUsingRealTables)
                 {
-                    if (currentSchemaVersion < configuration.ConfiguredVersion)
-                    {
-                        var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > currentSchemaVersion).ToList();
-                        logger.Information("Migrates schema from version {0} to {1}.", currentSchemaVersion, configuration.ConfiguredVersion);
-
-                        foreach (var migration in migrationsToRun)
-                        {
-                            var migrationCommands = migration.MigrateSchema();
-                            foreach (var command in migrationCommands)
-                            {
-                                requiresReprojection.AddRange(ExecuteCommand(command));
-                            }
-
-                            currentSchemaVersion++;
-                        }
-                    }
+                    schemaVersion = RunConfiguredMigrations(schemaVersion, configuration, requiresReprojection);
                 }
                 else
                 {
@@ -137,16 +108,65 @@ namespace HybridDb.Migrations.Schema
                         new {AwaitsReprojection = true});
                 }
 
-                // update the schema version
-                database.RawExecute($@"
-                    if not exists (select * from {hybridDbTableName}) 
-                        insert into {hybridDbTableName} (SchemaVersion) values (@version); 
-                    else
-                        update {hybridDbTableName} set SchemaVersion=@version",
-                    new {version = currentSchemaVersion}, schema: true);
+                UpdateSchemaVersion(database, schemaVersion);
 
                 tx.Complete();
             }
+        }
+
+        int RunConfiguredMigrations(int schemaVersion, Configuration configuration, List<string> requiresReprojection)
+        {
+            if (schemaVersion < configuration.ConfiguredVersion)
+            {
+                var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > schemaVersion).ToList();
+                logger.Information("Migrates schema from version {0} to {1}.", schemaVersion, configuration.ConfiguredVersion);
+
+                foreach (var migration in migrationsToRun)
+                {
+                    var migrationCommands = migration.MigrateSchema();
+                    foreach (var command in migrationCommands)
+                    {
+                        requiresReprojection.AddRange(ExecuteCommand(command));
+                    }
+
+                    schemaVersion++;
+                }
+            }
+
+            return schemaVersion;
+        }
+
+        void TryCreateMetadataTable(Configuration configuration)
+        {
+            var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int), defaultValue: -1));
+            configuration.tables.TryAdd(metadata.Name, metadata);
+            store.Execute(new CreateTable(metadata));
+        }
+
+        static int GetSchemaVersion(IDatabase database, Configuration configuration)
+        {
+            var schemaVersion = database.RawQuery<int>($"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}", schema: true).SingleOrDefault();
+
+            if (schemaVersion > configuration.ConfiguredVersion)
+            {
+                throw new InvalidOperationException(
+                    $"Database schema is ahead of configuration. Schema is version {schemaVersion}, " +
+                    $"but configuration is version {configuration.ConfiguredVersion}.");
+            }
+
+            return schemaVersion;
+        }
+
+        static void UpdateSchemaVersion(IDatabase database, int schemaVersion)
+        {
+            var hybridDbTableName = database.FormatTableNameAndEscape("HybridDb");
+
+            database.RawExecute($@"
+                if not exists (select * from {hybridDbTableName}) 
+                    insert into {hybridDbTableName} (SchemaVersion) values (@version); 
+                else
+                    update {hybridDbTableName} set SchemaVersion=@version",
+                new {version = Math.Max(schemaVersion, 0)}, schema: true);
         }
 
         IEnumerable<string> ExecuteCommand(DdlCommand command)

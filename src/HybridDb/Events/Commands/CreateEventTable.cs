@@ -25,7 +25,7 @@ namespace HybridDb.Events.Commands
 	                    [StreamId] [nvarchar](850) NOT NULL,
 	                    [SequenceNumber] [bigint] NOT NULL,
                         [Name] [nvarchar](850) NOT NULL,
-                        [Generation] [nvarchar](10) NOT NULL,
+                        [Generation] [int] NOT NULL,
 	                    [Metadata] [nvarchar](max) NULL,
 	                    [Data] [varbinary](max) NULL,
 

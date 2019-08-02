@@ -10,7 +10,7 @@ namespace HybridDb.Events.Commands
 {
     public class AppendEvent : Command<(long Position, EventData<byte[]> Event)>
     {
-        public AppendEvent(Table table, Generation generation, EventData<byte[]> @event)
+        public AppendEvent(Table table, int generation, EventData<byte[]> @event)
         {
             Table = table;
             Generation = generation;
@@ -18,7 +18,7 @@ namespace HybridDb.Events.Commands
         }
 
         public Table Table { get; }
-        public Generation Generation { get; }
+        public int Generation { get; }
         public EventData<byte[]> Event { get; }
 
         public static (long, EventData<byte[]>) Execute(DocumentTransaction tx, AppendEvent command)

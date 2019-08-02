@@ -23,7 +23,7 @@ namespace HybridDb.Commands
 
         public static Guid Execute(DocumentTransaction tx, UpdateCommand command)
         {
-            var values = ConvertAnonymousToProjections(command.Table, command.Projections);
+            var values = ConvertAnonymousToProjections(command.Table, command.Projections); 
 
             values[command.Table.EtagColumn] = tx.CommitId;
             values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;

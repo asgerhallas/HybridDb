@@ -195,7 +195,6 @@
     <Compile Include="Events\Direction.cs" />
     <Compile Include="Events\EventData.cs" />
     <Compile Include="Events\EventTable.cs" />
-    <Compile Include="Events\Generation.cs" />
     <Compile Include="Events\Commands\AppendEvent.cs" />
     <Compile Include="Events\IReadOnlyMetadata.cs" />
     <Compile Include="Events\Metadata.cs" />

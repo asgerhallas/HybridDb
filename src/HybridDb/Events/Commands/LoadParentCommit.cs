@@ -50,7 +50,7 @@ namespace HybridDb.Events.Commands
 
             // if no parent commit is found, the initial, transient commit is parent
             if (!rows.Any())
-                return new Commit<byte[]>(Guid.Empty, "1.0", -1, -1);
+                return new Commit<byte[]>(Guid.Empty, 1, -1, -1);
 
             var lastRow = rows.Last();
             return Commit.Create(

@@ -12,7 +12,7 @@ namespace HybridDb.Events
         public string StreamId { get; set; }
         public long SequenceNumber { get; set; }
         public string Name { get; set; }
-        public string Generation { get; set; }
+        public int Generation { get; set; }
         public string Metadata { get; set; }
         public byte[] Data { get; set; }
 
