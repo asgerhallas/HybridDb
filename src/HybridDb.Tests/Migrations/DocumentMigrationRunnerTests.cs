@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -11,8 +10,6 @@ using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using Serilog;
-using Serilog.Core;
-using Serilog.Events;
 using Shouldly;
 using Xunit;
 using Xunit.Extensions;
@@ -205,9 +202,6 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
             Document<Entity>().With(x => x.Number);
 
-            var logEventSink = new ListSink();
-            UseLogger(new LoggerConfiguration().WriteTo.Sink(logEventSink).CreateLogger());
-
             InitializeStore();
 
             UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((x, y) => throw new Exception())));
@@ -217,8 +211,8 @@ namespace HybridDb.Tests.Migrations
                 new DocumentMigrationRunner().Run(store).Wait(1000);
             });
 
-            var numberOfErrors = logEventSink.Captures
-                .Count(x => x == $"Unrecoverable exception while migrating document of type '\"HybridDb.Tests.HybridDbTests+Entity\"' with id '\"{id}\"'. Stopping migrator for table '\"Entities\"'.");
+            var numberOfErrors = log
+                .Count(x => x.RenderMessage() == $"Unrecoverable exception while migrating document of type '\"HybridDb.Tests.HybridDbTests+Entity\"' with id '\"{id}\"'. Stopping migrator for table '\"Entities\"'.");
 
             // it does not retry exception
             numberOfErrors.ShouldBe(1);
@@ -248,16 +242,6 @@ namespace HybridDb.Tests.Migrations
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                 .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" })));
-        }
-
-
-        public class ListSink : ILogEventSink
-        {
-            public ListSink() => Captures = new List<string>();
-
-            public List<string> Captures { get; set; }
-
-            public void Emit(LogEvent logEvent) => Captures.Add(logEvent.RenderMessage());
         }
     }
 }

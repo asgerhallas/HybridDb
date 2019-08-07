@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -20,19 +21,11 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         // Måske skal ManagedEntity have Design på sig?
 
         [Fact]
-        public void Test()
+        public void MoveAndEncode()
         {
             UseRealTables();
 
-            var commands = File.ReadAllText("Migrations\\Updates\\script.sql").Split(new [] {"GO"}, StringSplitOptions.RemoveEmptyEntries);
-
-            using (var cnn = new SqlConnection(connectionString))
-            {
-                foreach (var command in commands)
-                {
-                    cnn.Execute(command);
-                }
-            }
+            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql");
 
             var before = store.Query(new DocumentTable("Cases"), out _).Single();
 
@@ -59,20 +52,53 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             after["Metadata"].ShouldBe(Encoding.UTF8.GetString((byte[])before["Metadata"]));
         }
 
-        public class A { }
+        [Fact]
+        public void HandleANullDocumentAndMetadata()
+        {
+            UseRealTables();
+
+            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql");
+
+            ResetConfiguration();
+
+            UseTypeMapper(new OtherTypeMapper());
+            UseMigrations(new HybridDb_1_x_x_to_2_x_x_Part1(1));
+
+            // Match the serializer with the one used in the sample data set
+            var serializer = new DefaultSerializer();
+            serializer.EnableAutomaticBackReferences();
+            UseSerializer(serializer);
+
+            Document<JObject>("Cases");
+
+            InitializeStore();
+
+            log.Where(x => x.Exception != null).ShouldBeEmpty();
+
+            var after = store.Query(new DocumentTable("Cases"), out _).Single();
+
+            after["Document"].ShouldBe("{}");
+            after["Metadata"].ShouldBe(null);
+        }
+
+        void Setup(string filename)
+        {
+            var commands = File.ReadAllText($"Migrations\\BuiltIn\\{filename}").Split(new[] {"GO"}, StringSplitOptions.RemoveEmptyEntries);
+
+            using (var cnn = new SqlConnection(connectionString))
+            {
+                foreach (var command in commands)
+                {
+                    cnn.Execute(command);
+                }
+            }
+
+        }
 
         public class OtherTypeMapper : ITypeMapper
         {
-            public string ToDiscriminator(Type type)
-            {
-                return type.Name;
-            }
-
-            public Type ToType(string discriminator)
-            {
-                return typeof(JObject);
-            }
+            public string ToDiscriminator(Type type) => type.Name;
+            public Type ToType(string discriminator) => typeof(JObject);
         }
-
     }
 }

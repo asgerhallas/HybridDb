@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace HybridDb.Migrations.Documents
 {
-    public class ChangeDocument<T> : DocumentMigrationCommand
+    public class ChangeDocument<T> : RowMigrationCommand
     {
         readonly Func<IDocumentSession, ISerializer, string, string> change;
 

@@ -18,6 +18,7 @@ namespace HybridDb.Tests
     {
         readonly ConcurrentStack<Action> disposables;
 
+        protected readonly List<LogEvent> log = new List<LogEvent>();
         protected readonly ILogger logger;
         protected string connectionString;
 
@@ -28,8 +29,11 @@ namespace HybridDb.Tests
             logger = new LoggerConfiguration()
                 .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
                 .WriteTo.ColoredConsole()
+                .WriteTo.Sink(new ListSink(log))
                 .CreateLogger();
-            
+
+            UseLogger(logger);
+
             disposables = new ConcurrentStack<Action>();
 
             UseGlobalTempTables();
@@ -130,9 +134,12 @@ namespace HybridDb.Tests
         /// </summary>
         protected void ResetConfiguration()
         {
+            var currentStore = store;
+
             configuration = new Configuration();
 
-            var currentStore = store;
+            configuration.UseConnectionString(connectionString);
+            configuration.UseLogger(logger);
 
             activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration))); 
         }

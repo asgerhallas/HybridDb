@@ -34,20 +34,4 @@ namespace HybridDb.Migrations.Documents
 
         public abstract IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row);
     }
-
-    public class UpdateProjectionsMigration : RowMigrationCommand
-    {
-        public UpdateProjectionsMigration() : base(null, null) { }
-
-        public override string Where => "AwaitsReprojection = @AwaitsReprojection";
-
-        public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row) => row;
-    }
-
-    public abstract class DocumentMigrationCommand : RowMigrationCommand
-    {
-        protected DocumentMigrationCommand(Type type, string idPrefix) : base(type, idPrefix)
-        {
-        }
-    }
 }

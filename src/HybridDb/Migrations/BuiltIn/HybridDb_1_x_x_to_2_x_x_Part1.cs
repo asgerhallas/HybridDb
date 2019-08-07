@@ -43,8 +43,18 @@ namespace HybridDb.Migrations.BuiltIn
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
             {
-                row["Document"] = Encoding.UTF8.GetString((byte[])row["Document_pre_v2"]);
-                row["Metadata"] = Encoding.UTF8.GetString((byte[])row["Metadata_pre_v2"]);
+                var prevDocument = row["Document_pre_v2"];
+                if (prevDocument != null)
+                {
+                    row["Document"] = Encoding.UTF8.GetString((byte[])prevDocument);
+                }
+
+                var prevMetadata = row["Metadata_pre_v2"];
+                if (prevMetadata != null)
+                {
+                    row["Metadata"] = Encoding.UTF8.GetString((byte[])prevMetadata);
+                }
+
                 return row;
             }
         }

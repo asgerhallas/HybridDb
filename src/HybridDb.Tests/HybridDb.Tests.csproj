@@ -128,6 +128,7 @@
     <Compile Include="Migrations\Commands\RenameTableTests.cs" />
     <Compile Include="Migrations\DocumentMigrationRunnerTests.cs" />
     <Compile Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests.cs" />
+    <Compile Include="ListSink.cs" />
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
     <Compile Include="QueryProviderTests.cs" />
@@ -160,7 +161,10 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Migrations\BuiltIn\script.sql">
+    <Content Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

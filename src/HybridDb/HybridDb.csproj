@@ -206,9 +206,10 @@
     <Compile Include="IDatabase.cs" />
     <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\Documents\ChangeDocument.cs" />
+    <Compile Include="Migrations\Documents\UpdateProjectionsMigration.cs" />
     <Compile Include="Migrations\Schema\DdlCommandExecutors.cs" />
     <Compile Include="Migrations\Schema\Commands\SqlCommand.cs" />
-    <Compile Include="Migrations\Documents\DocumentMigrationCommand.cs" />
+    <Compile Include="Migrations\Documents\RowMigrationCommand.cs" />
     <Compile Include="Migrations\Documents\DocumentMigrationRunner.cs" />
     <Compile Include="Migrations\Documents\DocumentMigrator.cs" />
     <Compile Include="Migrations\Documents\FileBackupWriter.cs" />
