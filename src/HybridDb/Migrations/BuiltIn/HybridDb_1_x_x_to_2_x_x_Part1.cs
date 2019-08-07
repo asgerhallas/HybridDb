@@ -1,18 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 
-namespace HybridDb.Tests.Migrations.Updates
+namespace HybridDb.Migrations.BuiltIn
 {
-    public class Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column : Migration
+    /// <summary>
+    /// Conversion of Document and Metadata column from varbinary to nvarchar(max).
+    /// </summary>
+    public class HybridDb_1_x_x_to_2_x_x_Part1 : Migration
     {
-        public Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column(int version) : base(version)
+        public HybridDb_1_x_x_to_2_x_x_Part1(int version) : base(version)
         {
 
         }

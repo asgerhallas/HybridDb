@@ -5,14 +5,15 @@ using System.Linq;
 using System.Text;
 using Dapper;
 using HybridDb.Config;
+using HybridDb.Migrations.BuiltIn;
 using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
 
-namespace HybridDb.Tests.Migrations.Updates
+namespace HybridDb.Tests.Migrations.BuiltIn
 {
-    public class Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column_Tests : HybridDbTests
+    public class HybridDb_1_x_x_to_2_x_x_Part1_Tests : HybridDbTests
     {
         // TODO: Test at et dokument, der loades uden configureret design via migration ikke forsøges gemt i 
         // databasen i en forkert tabel (Documents) og derved lader migrations gå i uendelig løkke. 
@@ -38,7 +39,7 @@ namespace HybridDb.Tests.Migrations.Updates
             ResetConfiguration();
 
             UseTypeMapper(new OtherTypeMapper());
-            UseMigrations(new Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column(1));
+            UseMigrations(new HybridDb_1_x_x_to_2_x_x_Part1(1));
 
             // Match the serializer with the one used in the sample data set
             var serializer = new DefaultSerializer();
