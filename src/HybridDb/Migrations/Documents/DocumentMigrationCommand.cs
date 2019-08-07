@@ -8,7 +8,6 @@ namespace HybridDb.Migrations.Documents
     // 3. Lav en row-class eller hjælper til at få cells ud af en row via statiske navne på den table man arbejder på 
     // 4. Kan man lave migrations på ting der ikke er document tables?
     // 6. Skal vi overveje at fjerne Migration, og så bare give versioner direkte til migration commands?
-    // 7. Vi skal fjerne det at en command skal være registreret i configuration for at virke
 
     public abstract class RowMigrationCommand
     {

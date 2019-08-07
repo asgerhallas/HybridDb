@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Dapper;
 using HybridDb.Config;
+using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
@@ -38,6 +39,11 @@ namespace HybridDb.Tests.Migrations.Updates
 
             UseTypeMapper(new OtherTypeMapper());
             UseMigrations(new Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column(1));
+
+            // Match the serializer with the one used in the sample data set
+            var serializer = new DefaultSerializer();
+            serializer.EnableAutomaticBackReferences();
+            UseSerializer(serializer);
 
             Document<JObject>("Cases");
 
