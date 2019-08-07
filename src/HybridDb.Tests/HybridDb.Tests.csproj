@@ -127,7 +127,7 @@
     <Compile Include="Migrations\Commands\RenameColumnTests.cs" />
     <Compile Include="Migrations\Commands\RenameTableTests.cs" />
     <Compile Include="Migrations\DocumentMigrationRunnerTests.cs" />
-    <Compile Include="Migrations\Updates\Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column_Tests.cs" />
+    <Compile Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests.cs" />
     <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
     <Compile Include="Migrations\SchemaDifferTests.cs" />
     <Compile Include="QueryProviderTests.cs" />
@@ -160,7 +160,7 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Migrations\Updates\script.sql">
+    <Content Include="Migrations\BuiltIn\script.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

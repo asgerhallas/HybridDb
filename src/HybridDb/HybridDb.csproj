@@ -262,7 +262,7 @@
     <Compile Include="MemberInfoEx.cs" />
     <Compile Include="Migrations\Schema\DdlCommand.cs" />
     <Compile Include="Migrations\Documents\ZipBackupDecorator.cs" />
-    <Compile Include="Migrations\Updates\Hdb_1_x_x_to_2_x_x_varbinary_to_nvarchar_document_column.cs" />
+    <Compile Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1.cs" />
     <Compile Include="Operation.cs" />
     <Compile Include="QueryResult.cs" />
     <Compile Include="QueryStats.cs" />
