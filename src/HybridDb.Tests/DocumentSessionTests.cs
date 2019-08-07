@@ -10,6 +10,7 @@ using HybridDb.Config;
 using HybridDb.Linq;
 using Shouldly;
 using Xunit;
+using Xunit.Extensions;
 
 namespace HybridDb.Tests
 {
@@ -711,8 +712,10 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact]
-        public void AppliesMigrationsOnLoad()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AppliesMigrationsOnLoad(bool disableDocumentMigrationsOnStartup)
         {
             Document<Entity>();
 
@@ -726,8 +729,10 @@ namespace HybridDb.Tests
             ResetConfiguration();
 
             Document<Entity>();
-            DisableDocumentMigrationsInBackground();
+
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
+
+            if (disableDocumentMigrationsOnStartup) DisableDocumentMigrationsOnStartup();
 
             using (var session = store.OpenSession())
             {
@@ -736,8 +741,10 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact]
-        public void AppliesMigrationsOnQuery()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AppliesMigrationsOnQuery(bool disableDocumentMigrationsOnStartup)
         {
             Document<AbstractEntity>().With(x => x.Number);
             Document<DerivedEntity>();
@@ -762,6 +769,8 @@ namespace HybridDb.Tests
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
                 new InlineMigration(2, new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
+
+            if (disableDocumentMigrationsOnStartup) DisableDocumentMigrationsOnStartup();
 
             using (var session = store.OpenSession())
             {
@@ -871,7 +880,7 @@ namespace HybridDb.Tests
 
             UseBackupWriter(backupWriter);
             Document<Entity>();
-            DisableDocumentMigrationsInBackground();
+            DisableDocumentMigrationsOnStartup();
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
@@ -895,7 +904,7 @@ namespace HybridDb.Tests
 
             UseBackupWriter(backupWriter);
             Document<Entity>();
-            DisableDocumentMigrationsInBackground();
+            DisableDocumentMigrationsOnStartup();
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })),
                 new InlineMigration(2, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "2"; })));
@@ -923,7 +932,7 @@ namespace HybridDb.Tests
 
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
-            DisableDocumentMigrationsInBackground();
+            DisableDocumentMigrationsOnStartup();
 
             var id = NewId();
             using (var session = store.OpenSession())

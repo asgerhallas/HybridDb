@@ -15,6 +15,7 @@ using HybridDb.Serialization;
 using Serilog;
 using ShinySwitch;
 using static Indentional.Indent;
+using SqlCommand = HybridDb.Migrations.Schema.Commands.SqlCommand;
 
 namespace HybridDb.Config
 {
@@ -55,7 +56,7 @@ namespace HybridDb.Config
                     .Match<AddColumn>(addColumn => DdlCommandExecutors.Execute(store, addColumn))
                     .Match<RemoveColumn>(removeColumn => DdlCommandExecutors.Execute(store, removeColumn))
                     .Match<RenameColumn>(renameColumn => DdlCommandExecutors.Execute(store, renameColumn))
-                    .Match<SqlMigrationCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(store, sqlMigrationCommand))
+                    .Match<SqlCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(store, sqlMigrationCommand))
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
             Register<Func<DocumentTransaction, DmlCommand, Func<object>>>(container => (tx, command) => () => 

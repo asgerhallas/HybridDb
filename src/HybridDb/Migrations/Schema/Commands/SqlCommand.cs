@@ -2,11 +2,11 @@ using System;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
-    public class SqlMigrationCommand : DdlCommand
+    public class SqlCommand : DdlCommand
     {
-        public SqlMigrationCommand(string description, Action<SqlBuilder, IDatabase> builder) : this(description, null, builder) { }
+        public SqlCommand(string description, Action<SqlBuilder, IDatabase> builder) : this(description, null, builder) { }
 
-        public SqlMigrationCommand(string description, string requiresReprojectionOf, Action<SqlBuilder, IDatabase> builder)
+        public SqlCommand(string description, string requiresReprojectionOf, Action<SqlBuilder, IDatabase> builder)
         {
             Builder = builder;
 

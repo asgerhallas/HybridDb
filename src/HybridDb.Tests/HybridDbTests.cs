@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using Newtonsoft.Json.Linq;
 using Serilog;

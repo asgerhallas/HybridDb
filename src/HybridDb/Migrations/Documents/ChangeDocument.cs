@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -11,6 +12,10 @@ namespace HybridDb.Migrations.Documents
 
         public ChangeDocument(Func<IDocumentSession, ISerializer, string, string> change) : base(typeof(T), null) => this.change = change;
 
-        public override string Execute(IDocumentSession session, ISerializer serializer, string json) => change(session, serializer, json);
+        public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
+        {
+            row["Document"] = change(session, serializer, (string) row["Document"]);
+            return row;
+        }
     }
 }

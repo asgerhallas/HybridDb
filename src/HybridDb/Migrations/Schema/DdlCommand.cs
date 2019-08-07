@@ -12,6 +12,5 @@ namespace HybridDb.Migrations.Schema
         public string RequiresReprojectionOf { get; protected set; }
 
         public new abstract string ToString();
-
     }
 }

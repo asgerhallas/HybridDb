@@ -1,5 +1,5 @@
 using System;
-using HybridDb.Migrations;
+using System.Collections.Generic;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
@@ -9,17 +9,6 @@ namespace HybridDb.Tests
     public class DocumentMigratorTests : HybridDbTests
     {
         [Fact]
-        public void ThrowsIfADocumentIsNewerThanExpected()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-            var design = configuration.GetDesignFor<Entity>();
-            Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, "", 1))
-                .Message.ShouldBe($"Document HybridDb.Tests.HybridDbTests+Entity/{id} version is ahead of configuration. Document is version 1, but configuration is version 0.");
-        }
-
-        [Fact]
         public void AppliesDocumentChangeMigration()
         {
             Document<Entity>();
@@ -28,9 +17,23 @@ namespace HybridDb.Tests
             var design = configuration.GetDesignFor<Entity>();
             var document = configuration.Serializer.Serialize(new Entity { Property = "Asger" });
 
-            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, NewId(), document, 0);
+            var id = NewId();
+
+            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Peter");
+        }
+
+        [Fact]
+        public void ThrowsIfADocumentIsNewerThanExpected()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            var design = configuration.GetDesignFor<Entity>();
+
+            Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, "", 1, design.Discriminator)))
+                .Message.ShouldBe($"Document HybridDb.Tests.HybridDbTests+Entity/{id} version is ahead of configuration. Document is version 1, but configuration is version 0.");
         }
 
         [Fact]
@@ -42,7 +45,8 @@ namespace HybridDb.Tests
             var design = configuration.GetDesignFor<Entity>();
             var document = configuration.Serializer.Serialize(new Entity { Property = "Asger" });
 
-            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, NewId(), document, 0);
+            var id = NewId();
+            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Asger");
         }
@@ -57,12 +61,21 @@ namespace HybridDb.Tests
                 new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
             var design = configuration.GetDesignFor<Entity>();
-            var document = configuration.Serializer.Serialize(new Entity { Property = "Asger" });
+            var document = configuration.Serializer.Serialize(new Entity {Property = "Asger"});
 
-            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, NewId(), document, 0);
+            var id = NewId();
+            var entity = (Entity) new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Asger123");
         }
 
+        static IDictionary<string, object> Row(string id, string document, int version, string discriminator) =>
+            new Dictionary<string, object>
+            {
+                ["Id"] = id,
+                ["Document"] = document,
+                ["Version"] = version,
+                ["Discriminator"] = discriminator
+            };
     }
 }

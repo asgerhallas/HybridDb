@@ -17,21 +17,18 @@ namespace HybridDb.Migrations.Documents
             logger = configuration.Logger;
         }
 
-        public IEnumerable<DocumentMigrationCommand> ApplicableCommands(DocumentDesign design, int currentDocumentVersion)
+        public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, IDictionary<string, object> row)
         {
-            return configuration.Migrations
-                .Where(x => x.Version > currentDocumentVersion)
-                .SelectMany(x => x.MigrateDocument())
-                .Where(x => x.Type.IsAssignableFrom(design.DocumentType));
-        }
+            var migratedRow = configuration.Migrations
+                .SelectMany(x => x.MigrateDocument(), (migration, command) => (Migration: migration, Command: command))
+                .Aggregate(row, (currentRow, nextCommand) =>
+                    nextCommand.Command.IsApplicable(nextCommand.Migration.Version, configuration, currentRow)
+                        ? nextCommand.Command.Execute(session, configuration.Serializer, currentRow)
+                        : currentRow);
 
-        public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, string document, int currentDocumentVersion)
-        {
+            var currentDocumentVersion = (int)row[design.Table.VersionColumn];
+
             var configuredVersion = configuration.ConfiguredVersion;
-            if (configuredVersion == currentDocumentVersion)
-            {
-                return configuration.Serializer.Deserialize(document, design.DocumentType);
-            }
 
             if (configuredVersion < currentDocumentVersion)
             {
@@ -40,12 +37,7 @@ namespace HybridDb.Migrations.Documents
                     $"Document is version {currentDocumentVersion}, but configuration is version {configuredVersion}.");
             }
 
-            logger.Debug("Migrating document {0}/{1} from version {2} to {3}.", 
-                design.DocumentType.FullName, id, currentDocumentVersion, configuration.ConfiguredVersion);
-
-            document = ApplicableCommands(design, currentDocumentVersion)
-                .Aggregate(document, (currentDocument, command) => 
-                    command.Execute(session, configuration.Serializer, currentDocument));
+            var document = (string)migratedRow[design.Table.DocumentColumn];
 
             return configuration.Serializer.Deserialize(document, design.DocumentType);
         }

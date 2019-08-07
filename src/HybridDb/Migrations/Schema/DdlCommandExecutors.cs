@@ -76,7 +76,7 @@ namespace HybridDb.Migrations.Schema
                 .ToString());
         }
 
-        public static void Execute(DocumentStore store, SqlMigrationCommand command)
+        public static void Execute(DocumentStore store, SqlCommand command)
         {
             var sql = new SqlBuilder();
             command.Builder(sql, store.Database);

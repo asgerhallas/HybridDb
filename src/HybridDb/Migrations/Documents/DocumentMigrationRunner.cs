@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Linq;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -23,54 +24,49 @@ namespace HybridDb.Migrations.Documents
 
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
-                    var baseDesign = configuration.TryGetDesignByTablename(table.Name) ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
+                    var commands = configuration.Migrations
+                        .SelectMany(x => x.MigrateDocument(), (migration, command) => (migration, command))
+                        .Concat((null, new UpdateProjectionsMigration()));
 
-                    var running = true;
-
-                    while (running)
+                    foreach (var migrationAndCommand in commands)
                     {
-                        var rows = store
-                            .Query(table, out var stats,
-                                where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
-                                @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
-                                take: 500,
-                                parameters: new { AwaitsReprojection = true, version = configuration.ConfiguredVersion })
-                            .ToList();
+                        var (migration, command) = migrationAndCommand;
 
-                        if (stats.TotalResults == 0) break;
+                        var matchesTable = command.Type == null || configuration.TryGetDesignFor(command.Type)?.Table == table;
 
-                        logger.Information($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
+                        if (!matchesTable) continue;
 
-                        using (var tx = store.BeginTransaction())
+                        var baseDesign = configuration.TryGetDesignByTablename(table.Name) ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
+
+                        while (true)
                         {
-                            foreach (var row in rows)
+                            var rows = store
+                                .Query(table, out var stats, @select: "*", @where: command.Where, take: 500,
+                                    parameters: new
+                                    {
+                                        AwaitsReprojection = true,
+                                        version = migration?.Version,
+                                        idPrefix = command.IdPrefix
+                                    })
+                                .ToList();
+
+                            if (stats.TotalResults == 0) break;
+
+                            logger.Information($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
+
+                            using (var tx = store.BeginTransaction())
                             {
-                                var key = (string) row[table.IdColumn];
-                                var currentDocumentVersion = (int) row[table.VersionColumn];
-                                var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
-                                var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
-
-                                var shouldUpdate = false;
-
-                                if ((bool) row[table.AwaitsReprojectionColumn])
+                                foreach (var row in rows)
                                 {
-                                    shouldUpdate = true;
-                                    logger.Debug("Reprojection document {0}/{1}.",
-                                        concreteDesign.DocumentType.FullName, key, currentDocumentVersion, configuration.ConfiguredVersion);
-                                }
+                                    var key = (string) row[table.IdColumn];
+                                    var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
+                                    var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
 
-                                if (migrator.ApplicableCommands(concreteDesign, currentDocumentVersion).Any())
-                                {
-                                    shouldUpdate = true;
-                                }
-
-                                if (shouldUpdate)
-                                {
                                     try
                                     {
                                         using (var session = new DocumentSession(store, tx))
                                         {
-                                            session.Load(concreteDesign.DocumentType, key);
+                                            session.ConvertToEntityAndPutUnderManagement(concreteDesign, row);
                                             session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                         }
                                     }
@@ -82,25 +78,16 @@ namespace HybridDb.Migrations.Documents
                                             "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
                                             concreteDesign.DocumentType.FullName, key, concreteDesign.Table.Name);
 
-                                        running = false;
+                                        goto nextTable;
                                     }
                                 }
-                                else
-                                {
-                                    logger.Debug("Document did not change.");
 
-                                    var projection = new Dictionary<string, object>
-                                    {
-                                        {table.VersionColumn, configuration.ConfiguredVersion}
-                                    };
-
-                                    store.Update(table, key, (Guid) row[table.EtagColumn], projection);
-                                }
+                                tx.Complete();
                             }
-
-                            tx.Complete();
                         }
                     }
+
+                    nextTable:;
                 }
 
             }, TaskCreationOptions.LongRunning);

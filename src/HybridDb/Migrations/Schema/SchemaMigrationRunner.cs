@@ -83,7 +83,7 @@ namespace HybridDb.Migrations.Schema
 
                     foreach (var command in commands)
                     {
-                        requiresReprojection.AddRange(ExecuteCommand(command));
+                        requiresReprojection.AddRange(ExecuteCommand(command, false));
                     }
                 }
 
@@ -123,10 +123,11 @@ namespace HybridDb.Migrations.Schema
 
                 foreach (var migration in migrationsToRun)
                 {
-                    var migrationCommands = migration.MigrateSchema();
+                    var migrationCommands = migration.MigrateSchema(configuration);
+
                     foreach (var command in migrationCommands)
                     {
-                        requiresReprojection.AddRange(ExecuteCommand(command));
+                        requiresReprojection.AddRange(ExecuteCommand(command, true));
                     }
 
                     schemaVersion++;
@@ -169,9 +170,9 @@ namespace HybridDb.Migrations.Schema
                 new {version = Math.Max(schemaVersion, 0)}, schema: true);
         }
 
-        IEnumerable<string> ExecuteCommand(DdlCommand command)
+        IEnumerable<string> ExecuteCommand(DdlCommand command, bool allowUnsafe)
         {
-            if (command.Unsafe)
+            if (command.Unsafe && !allowUnsafe)
             {
                 logger.Warning("Unsafe migration command '{0}' was skipped.", command.ToString());
                 yield break;

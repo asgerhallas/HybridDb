@@ -46,6 +46,6 @@ namespace HybridDb
 
         internal void DisableMigrations() => configuration.DisableMigrationsOnStartup();
 
-        protected void DisableDocumentMigrationsInBackground() => configuration.DisableDocumentMigrationsOnStartup();
+        protected void DisableDocumentMigrationsOnStartup() => configuration.DisableDocumentMigrationsOnStartup();
     }
 }

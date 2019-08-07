@@ -63,7 +63,7 @@ namespace HybridDb
 
             var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[design.Table.DiscriminatorColumn]);
 
-            // The discriminator does map to a type that is assignable to the expected type.
+            // The discriminator does not map to a type that is assignable to the expected type.
             if (!type.IsAssignableFrom(concreteDesign.DocumentType))
             {
                 throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{concreteDesign.DocumentType}', which is not assignable to '{type}'.");
@@ -213,7 +213,7 @@ namespace HybridDb
 
                         commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections, lastWriteWins));
 
-                        if (configuredVersion != managedEntity.Version)
+                        if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
                         {
                             store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", Encoding.UTF8.GetBytes(managedEntity.Document));
                         }
@@ -263,7 +263,7 @@ namespace HybridDb
 
             var document = (string)row[table.DocumentColumn];
             var currentDocumentVersion = (int) row[table.VersionColumn];
-            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, document, currentDocumentVersion);
+            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, row);
             var actualEntityType = entity.GetType();
 
             if (actualEntityType != concreteDesign.DocumentType)

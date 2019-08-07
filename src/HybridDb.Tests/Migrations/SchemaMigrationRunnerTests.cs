@@ -4,8 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Events.Commands;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using ShinySwitch;
@@ -144,16 +142,38 @@ namespace HybridDb.Tests.Migrations
         
 
         [Fact]
-        public void DoesNotRunUnsafeSchemaMigrations()
+        public void UnsafeSchemaMigrations_NoRunWhenInferred()
         {
             CreateMetadataTable();
 
-            UseMigrations(new InlineMigration(1, new UnsafeThrowingCommand()));
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
-            var runner = new SchemaMigrationRunner(store,
-                new FakeSchemaDiffer(new UnsafeThrowingCommand()));
+            var command = new UnsafeCountingCommand();
 
-            Should.NotThrow(() => runner.Run());
+            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer(command));
+
+            runner.Run();
+
+            command.NumberOfTimesCalled.ShouldBe(0);
+
+        }
+
+        [Fact]
+        public void UnsafeSchemaMigrations_RunsWhenProvided()
+        {
+            CreateMetadataTable();
+
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
+
+            var command = new UnsafeCountingCommand();
+
+            UseMigrations(new InlineMigration(1, command));
+
+            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+
+            runner.Run();
+
+            command.NumberOfTimesCalled.ShouldBe(1);
         }
 
         [Fact]
@@ -297,7 +317,7 @@ namespace HybridDb.Tests.Migrations
             Parallel.For(1, 10, x =>
             {
                 Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
-                runnerFactory().Run();
+                runnerFactory().Run(); 
             });
 
             command.NumberOfTimesCalled.ShouldBe(1);
@@ -325,14 +345,9 @@ namespace HybridDb.Tests.Migrations
 
         public class ThrowingCommand : DdlCommand
         {
-            public static void Execute(DocumentStore store, ThrowingCommand command) => throw new InvalidOperationException();
+            public static void Execute(DocumentStore store, ThrowingCommand command) => throw new InvalidOperationException("ThrowingCommand");
 
             public override string ToString() => "";
-        }
-
-        public class UnsafeThrowingCommand : ThrowingCommand
-        {
-            public UnsafeThrowingCommand() => Unsafe = true;
         }
 
         public class CountingCommand : DdlCommand
@@ -342,7 +357,12 @@ namespace HybridDb.Tests.Migrations
             public static void Execute(DocumentStore store, CountingCommand command) => command.NumberOfTimesCalled++;
             public override string ToString() => "";
         }
-        
+
+        public class UnsafeCountingCommand : CountingCommand
+        {
+            public UnsafeCountingCommand() => Unsafe = true;
+        }
+
         public class SlowCommand : DdlCommand
         {
             public static void Execute(DocumentStore store, SlowCommand command) => Thread.Sleep(5000);

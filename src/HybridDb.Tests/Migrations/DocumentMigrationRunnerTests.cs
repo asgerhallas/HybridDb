@@ -52,13 +52,9 @@ namespace HybridDb.Tests.Migrations
             Document<Entity>().With(x => x.Number);
             Document<OtherEntity>().With(x => x.Number);
 
-            // add migration for same version and one for other document
-            UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
-                new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
-
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
+
             store.Insert(table, id, new
             {
                 AwaitsReprojection = false,
@@ -67,12 +63,26 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity())
             });
 
-            new DocumentMigrationRunner().Run(store).Wait();
+            ResetConfiguration();
 
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            // add migration for same version and one for other document
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
+                new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
+
+            InitializeStore();
+
+            // 3 UpdateProjections (DocumentTables)
+            // + 2 for inline migrations
+            store.Stats.NumberOfQueries.ShouldBe(5);
             store.Stats.NumberOfGets.ShouldBe(0);
+            store.Stats.NumberOfCommands.ShouldBe(0);
 
             var row = store.Get(table, id);
-            row[table.VersionColumn].ShouldBe(2);
+            row[table.VersionColumn].ShouldBe(1);
         }
 
         [Fact(Skip = "sideshow")]
@@ -161,7 +171,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotStartBackgroundProcessWhenTurnedOff()
         {
-            DisableDocumentMigrationsInBackground();
+            DisableDocumentMigrationsOnStartup();
             Document<Entity>().With(x => x.Number);
 
             new DocumentMigrationRunner().Run(store).Wait();

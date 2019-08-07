@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 
@@ -10,12 +11,12 @@ namespace HybridDb.Migrations
 
         public int Version { get; }
 
-        public virtual IEnumerable<DdlCommand> MigrateSchema()
+        public virtual IEnumerable<DdlCommand> MigrateSchema(Configuration configuration)
         {
             yield break;
         }
 
-        public virtual IEnumerable<DocumentMigrationCommand> MigrateDocument()
+        public virtual IEnumerable<RowMigrationCommand> MigrateDocument()
         {
             yield break;
         }
