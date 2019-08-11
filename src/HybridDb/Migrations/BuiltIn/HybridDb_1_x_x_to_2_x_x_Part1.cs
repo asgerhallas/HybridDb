@@ -13,9 +13,7 @@ namespace HybridDb.Migrations.BuiltIn
     /// </summary>
     public class HybridDb_1_x_x_to_2_x_x_Part1 : Migration
     {
-        public HybridDb_1_x_x_to_2_x_x_Part1(int version) : base(version)
-        {
-
+        public HybridDb_1_x_x_to_2_x_x_Part1(int version) : base(version) { 
         }
 
         public override IEnumerable<DdlCommand> MigrateSchema(Configuration configuration)

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,34 +19,25 @@ namespace HybridDb.Migrations.Documents
 
             return Task.Factory.StartNew(() =>
             {
-                var migrator = new DocumentMigrator(configuration);
-
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
                     var commands = configuration.Migrations
-                        .SelectMany(x => x.MigrateDocument(), (migration, command) => (migration, command))
-                        .Concat((null, new UpdateProjectionsMigration()));
+                        .SelectMany(x => x.MigrateDocument(), (migration, command) => (Migration: migration, Command: command))
+                        .Concat((null, new UpdateProjectionsMigration()))
+                        .Where(x => x.Command.Matches(configuration, table));
 
                     foreach (var migrationAndCommand in commands)
                     {
                         var (migration, command) = migrationAndCommand;
 
-                        var matchesTable = command.Type == null || configuration.TryGetDesignFor(command.Type)?.Table == table;
-
-                        if (!matchesTable) continue;
-
                         var baseDesign = configuration.TryGetDesignByTablename(table.Name) ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
 
                         while (true)
                         {
+                            var @where = command.Matches(migration?.Version);
+
                             var rows = store
-                                .Query(table, out var stats, @select: "*", @where: command.Where, take: 500,
-                                    parameters: new
-                                    {
-                                        AwaitsReprojection = true,
-                                        version = migration?.Version,
-                                        idPrefix = command.IdPrefix
-                                    })
+                                .Query(table, out var stats, @select: "*", @where: @where.ToString(), take: 500, parameters: @where.Parameters)
                                 .ToList();
 
                             if (stats.TotalResults == 0) break;

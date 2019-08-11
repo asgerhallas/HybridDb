@@ -2,20 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
-using Serilog;
 
 namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrator
     {
         readonly Configuration configuration;
-        readonly ILogger logger;
 
-        public DocumentMigrator(Configuration configuration)
-        {
-            this.configuration = configuration;
-            logger = configuration.Logger;
-        }
+        public DocumentMigrator(Configuration configuration) => this.configuration = configuration;
 
         public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, IDictionary<string, object> row)
         {

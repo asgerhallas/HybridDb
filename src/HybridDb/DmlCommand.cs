@@ -30,7 +30,7 @@ namespace HybridDb
 
         public static void AddTo(IDictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
         {
-            parameters[name] = new Parameter { Name = name, Value = value, DbType = dbType };
+            parameters[name] = new Parameter(name, value) { DbType = dbType };
         }
     }
 

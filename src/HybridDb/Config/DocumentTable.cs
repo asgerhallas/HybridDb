@@ -1,8 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Net.Http.Headers;
 
 namespace HybridDb.Config
 {
+    public class Row
+    {
+
+    }
+
+    public class Row<T> : Row
+    {
+        readonly IDictionary<string, object> data;
+
+        public Row(IDictionary<string, object> data) => this.data = data;
+
+        public TValue Get<TValue>(Func<T, TValue> getter);
+    }
+
     public class DocumentTable : Table
     {
         public DocumentTable(string name) : base(name)

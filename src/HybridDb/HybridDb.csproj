@@ -42,9 +42,8 @@
       <HintPath>..\packages\Dapper.1.50.4\lib\net451\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Indentional, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Indentional.1.0.3\lib\net45\Indentional.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Indentional, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Indentional.1.0.46\lib\netstandard2.0\Indentional.dll</HintPath>
     </Reference>
     <Reference Include="Inflector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Inflector.1.0.0.0\lib\net45\Inflector.dll</HintPath>
@@ -61,8 +60,8 @@
       <HintPath>..\packages\Serilog.2.3.0\lib\net46\Serilog.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="ShinySwitch, Version=1.0.73.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ShinySwitch.1.0.73\lib\net45\ShinySwitch.dll</HintPath>
+    <Reference Include="ShinySwitch, Version=1.0.75.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ShinySwitch.1.0.75\lib\net45\ShinySwitch.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.AppContext, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">

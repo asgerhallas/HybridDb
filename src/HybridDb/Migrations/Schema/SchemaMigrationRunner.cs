@@ -7,6 +7,7 @@ using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Serilog;
+using static Indentional.Indent;
 using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migrations.Schema
@@ -32,142 +33,160 @@ namespace HybridDb.Migrations.Schema
             if (!store.Configuration.RunSchemaMigrationsOnStartup)
                 return;
 
-            var requiresReprojection = new List<string>();
-
-            var database = store.Database;
-            var configuration = store.Configuration;
-
             store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
 
-            using (var tx = new TransactionScope(
-                TransactionScopeOption.RequiresNew, 
-                new TransactionOptions { IsolationLevel = IsolationLevel.Serializable, Timeout = TimeSpan.FromMinutes(10) }, 
-                TransactionScopeAsyncFlowOption.Suppress))
+            using (var tx = BeginTransaction())
             {
-                using (var connection = database.Connect(true))
+                LockDatabase();
+
+                TryCreateMetadataTable();
+
+                var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
+
+                if (schemaVersion > store.Configuration.ConfiguredVersion)
                 {
-                    var parameters = new DynamicParameters();
-                    parameters.Add("@Resource", "HybridDb");
-                    parameters.Add("@DbPrincipal", "public");
-                    parameters.Add("@LockMode", "Exclusive");
-                    parameters.Add("@LockOwner", "Transaction");
-                    parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
-                    parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
-
-                    connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
-
-                    var result = parameters.Get<int>("@Result");
-
-                    if (result < 0)
-                    {
-                        throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
-                    }
-
-                    connection.Complete();
+                    throw new InvalidOperationException(_($@"
+                        Database schema is ahead of configuration. Schema is version {schemaVersion}, 
+                        but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
                 }
 
-                TryCreateMetadataTable(configuration);
+                var requiresReprojection = new List<string>();
 
-                var schemaVersion = GetSchemaVersion(database, configuration);
+                requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
+                requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
 
-                // get the diff and run commands to get to configured schema
-                var schema = schemaVersion == -1
-                    ? new Dictionary<string, List<string>>()
-                    : database.QuerySchema();
-
-                var commands = differ.CalculateSchemaChanges(schema, configuration);
-
-                if (commands.Any())
-                {
-                    logger.Information("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
-
-                    foreach (var command in commands)
-                    {
-                        requiresReprojection.AddRange(ExecuteCommand(command, false));
-                    }
-                }
-
-                if (database is SqlServerUsingRealTables)
-                {
-                    schemaVersion = RunConfiguredMigrations(schemaVersion, configuration, requiresReprojection);
-                }
-                else
-                {
-                    logger.Information("Skips provided migrations when not using real tables.");
-                }
-
-                // flag each document of tables that need to run a re-projection
-                foreach (var tablename in requiresReprojection)
-                {
-                    // TODO: Only set RequireReprojection on command if it is documenttable - can it be done?
-                    var design = configuration.TryGetDesignByTablename(tablename);
-                    if (design == null) continue;
-
-                    database.RawExecute(
-                        $"update {database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection",
-                        new {AwaitsReprojection = true});
-                }
-
-                UpdateSchemaVersion(database, schemaVersion);
+                MarkDocumentsForReprojections(requiresReprojection);
 
                 tx.Complete();
             }
         }
 
-        int RunConfiguredMigrations(int schemaVersion, Configuration configuration, List<string> requiresReprojection)
-        {
-            if (schemaVersion < configuration.ConfiguredVersion)
-            {
-                var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > schemaVersion).ToList();
-                logger.Information("Migrates schema from version {0} to {1}.", schemaVersion, configuration.ConfiguredVersion);
 
-                foreach (var migration in migrationsToRun)
+        static TransactionScope BeginTransaction() => 
+            new TransactionScope(
+                TransactionScopeOption.RequiresNew, 
+                new TransactionOptions
                 {
-                    var migrationCommands = migration.MigrateSchema(configuration);
+                    IsolationLevel = IsolationLevel.Serializable,
+                    Timeout = TimeSpan.FromMinutes(10)
+                }, 
+                TransactionScopeAsyncFlowOption.Suppress);
 
-                    foreach (var command in migrationCommands)
-                    {
-                        requiresReprojection.AddRange(ExecuteCommand(command, true));
-                    }
+        void LockDatabase()
+        {
+            using (var connection = store.Database.Connect(true))
+            {
+                var parameters = new DynamicParameters();
+                parameters.Add("@Resource", "HybridDb");
+                parameters.Add("@DbPrincipal", "public");
+                parameters.Add("@LockMode", "Exclusive");
+                parameters.Add("@LockOwner", "Transaction");
+                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
+                parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
 
-                    schemaVersion++;
+                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+
+                var result = parameters.Get<int>("@Result");
+
+                if (result < 0)
+                {
+                    throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
+                }
+
+                connection.Complete();
+            }
+        }
+
+        void TryCreateMetadataTable()
+        {
+            var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
+
+            store.Configuration.tables.TryAdd(metadata.Name, metadata);
+
+            store.Execute(new CreateTable(metadata));
+
+            var hybridDbTableName = store.Database.FormatTableNameAndEscape(metadata.Name);
+
+            store.Database.RawExecute($@"
+                if not exists (select * from {hybridDbTableName})
+                    insert into {hybridDbTableName} (SchemaVersion) values (-1);", 
+                schema: true);
+        }
+
+        int GetAndUpdateSchemaVersion(int nextSchemaVersion)
+        {
+            var currentSchemaVersion = store.Database.RawQuery<int>($@"
+                update {store.Database.FormatTableNameAndEscape("HybridDb")}
+                set [SchemaVersion] = @nextSchemaVersion
+                output DELETED.SchemaVersion", 
+                new { nextSchemaVersion }, 
+                schema: true
+            ).SingleOrDefault();
+
+            return currentSchemaVersion;
+        }
+
+        IEnumerable<string> RunAutoMigrations(int schemaVersion)
+        {
+            var schema = schemaVersion == -1 // fresh database
+                ? new Dictionary<string, List<string>>()
+                : store.Database.QuerySchema();
+
+            var commands = differ.CalculateSchemaChanges(schema, store.Configuration);
+
+            if (!commands.Any()) yield break;
+
+            logger.Information("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
+
+            foreach (var command in commands)
+            {
+                foreach (var tablename in ExecuteCommand(command, false))
+                {
+                    yield return tablename;
                 }
             }
-
-            return schemaVersion;
         }
 
-        void TryCreateMetadataTable(Configuration configuration)
+        IEnumerable<string> RunConfiguredMigrations(int schemaVersion)
         {
-            var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int), defaultValue: -1));
-            configuration.tables.TryAdd(metadata.Name, metadata);
-            store.Execute(new CreateTable(metadata));
-        }
-
-        static int GetSchemaVersion(IDatabase database, Configuration configuration)
-        {
-            var schemaVersion = database.RawQuery<int>($"select top 1 SchemaVersion from {database.FormatTableNameAndEscape("HybridDb")}", schema: true).SingleOrDefault();
-
-            if (schemaVersion > configuration.ConfiguredVersion)
+            if (!(store.Database is SqlServerUsingRealTables))
             {
-                throw new InvalidOperationException(
-                    $"Database schema is ahead of configuration. Schema is version {schemaVersion}, " +
-                    $"but configuration is version {configuration.ConfiguredVersion}.");
+                logger.Information("Skips provided migrations when not using real tables.");
+                yield break;
             }
 
-            return schemaVersion;
+            if (schemaVersion >= store.Configuration.ConfiguredVersion) yield break;
+
+            var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > schemaVersion).ToList();
+
+            logger.Information("Migrates schema from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
+
+            foreach (var migration in migrationsToRun)
+            {
+                var migrationCommands = migration.MigrateSchema(store.Configuration);
+
+                foreach (var command in migrationCommands)
+                {
+                    foreach (var tablename in ExecuteCommand(command, true))
+                    {
+                        yield return tablename;
+                    }
+                }
+            }
         }
 
-        static void UpdateSchemaVersion(IDatabase database, int schemaVersion)
+        void MarkDocumentsForReprojections(List<string> requiresReprojection)
         {
-            var hybridDbTableName = database.FormatTableNameAndEscape("HybridDb");
+            foreach (var tablename in requiresReprojection)
+            {
+                var design = store.Configuration.TryGetDesignByTablename(tablename);
+                if (design == null) continue;
 
-            database.RawExecute($@"
-                if not exists (select * from {hybridDbTableName}) 
-                    insert into {hybridDbTableName} (SchemaVersion) values (@version); 
-                else
-                    update {hybridDbTableName} set SchemaVersion=@version",
-                new {version = Math.Max(schemaVersion, 0)}, schema: true);
+                store.Database.RawExecute(
+                    $"update {store.Database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection",
+                    new { AwaitsReprojection = true },
+                    schema: true);
+            }
         }
 
         IEnumerable<string> ExecuteCommand(DdlCommand command, bool allowUnsafe)

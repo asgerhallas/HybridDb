@@ -203,7 +203,7 @@ namespace HybridDb
 
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters) =>
             from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
-            select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
+            select new Parameter("@" + projection.Key, projection.Value);
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
         {

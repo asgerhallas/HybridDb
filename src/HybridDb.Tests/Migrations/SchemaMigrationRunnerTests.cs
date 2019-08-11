@@ -235,7 +235,7 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run())
-                .Message.ShouldBe("Database schema is ahead of configuration. Schema is version 1, but configuration is version 0.");
+                .Message.ShouldBe("Database schema is ahead of configuration. Schema is version 1, but the highest migration version number is 0.");
         }
 
         [Fact]
@@ -294,7 +294,7 @@ namespace HybridDb.Tests.Migrations
         public void HandlesConcurrentRuns()
         {
             UseRealTables();
-            CreateMetadataTable();
+            //CreateMetadataTable();
 
             Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
             Setup<SlowCommand>(documentStore => slowCommand => SlowCommand.Execute(documentStore, slowCommand));
@@ -317,6 +317,7 @@ namespace HybridDb.Tests.Migrations
             Parallel.For(1, 10, x =>
             {
                 Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                if (string.IsNullOrEmpty(Thread.CurrentThread.Name)) Thread.CurrentThread.Name = $"Test thread {x}";
                 runnerFactory().Run(); 
             });
 
