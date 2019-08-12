@@ -20,5 +20,12 @@ namespace HybridDb.Migrations.Schema.Commands
         public string Description { get; }
 
         public override string ToString() => Description;
+
+        public override void Execute(DocumentStore store)
+        {
+            var sql = new SqlBuilder();
+            Builder(sql, store.Database);
+            store.Database.RawExecute(sql.ToString());
+        }
     }
 }

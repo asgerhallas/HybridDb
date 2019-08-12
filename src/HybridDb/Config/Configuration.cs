@@ -48,16 +48,7 @@ namespace HybridDb.Config
             EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
 
-            Register<Func<DocumentStore, DdlCommand, Action>>(container => (store, command) => () =>
-                Switch.On(command)
-                    .Match<CreateTable>(createTable => DdlCommandExecutors.Execute(store, createTable))
-                    .Match<RemoveTable>(removeTable => DdlCommandExecutors.Execute(store, removeTable))
-                    .Match<RenameTable>(renameTable => DdlCommandExecutors.Execute(store, renameTable))
-                    .Match<AddColumn>(addColumn => DdlCommandExecutors.Execute(store, addColumn))
-                    .Match<RemoveColumn>(removeColumn => DdlCommandExecutors.Execute(store, removeColumn))
-                    .Match<RenameColumn>(renameColumn => DdlCommandExecutors.Execute(store, renameColumn))
-                    .Match<SqlCommand>(sqlMigrationCommand => DdlCommandExecutors.Execute(store, sqlMigrationCommand))
-                    .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
+            Register<Func<DocumentStore, DdlCommand, Action>>(container => (store, command) => () => command.Execute(store));
 
             Register<Func<DocumentTransaction, DmlCommand, Func<object>>>(container => (tx, command) => () => 
                 Switch<object>.On(command)
@@ -270,11 +261,6 @@ namespace HybridDb.Config
             EventStore = true;
 
             tables.TryAdd("events", new EventTable("events"));
-
-            Decorate<Func<DocumentStore, DdlCommand, Action>>((container, decoratee) => (store, command) => () =>
-                Switch.On(command)
-                    .Match<CreateEventTable>(createEventTable => CreateEventTable.CreateEventTableExecutor(store, createEventTable))
-                    .Else(_ => decoratee(store, command)()));
 
             Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((container, decoratee) => (tx, command) => () => 
                 Switch<object>.On(command)

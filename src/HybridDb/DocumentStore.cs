@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using Serilog;

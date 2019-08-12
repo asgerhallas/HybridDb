@@ -201,12 +201,13 @@
     <Compile Include="Events\Commands\ReadEvents.cs" />
     <Compile Include="Events\Commands\ReadStream.cs" />
     <Compile Include="Events\SequenceNumber.cs" />
+    <Compile Include="Helpers.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
     <Compile Include="ManagedEntity.cs" />
     <Compile Include="Migrations\Documents\ChangeDocument.cs" />
     <Compile Include="Migrations\Documents\UpdateProjectionsMigration.cs" />
-    <Compile Include="Migrations\Schema\DdlCommandExecutors.cs" />
+    <Compile Include="Migrations\Schema\DdlCommandEx.cs" />
     <Compile Include="Migrations\Schema\Commands\SqlCommand.cs" />
     <Compile Include="Migrations\Documents\RowMigrationCommand.cs" />
     <Compile Include="Migrations\Documents\DocumentMigrationRunner.cs" />

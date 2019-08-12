@@ -146,8 +146,6 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
-
             var command = new UnsafeCountingCommand();
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer(command));
@@ -162,8 +160,6 @@ namespace HybridDb.Tests.Migrations
         public void UnsafeSchemaMigrations_RunsWhenProvided()
         {
             CreateMetadataTable();
-
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
             var command = new UnsafeCountingCommand();
 
@@ -180,8 +176,6 @@ namespace HybridDb.Tests.Migrations
         public void DoesNotRunSchemaMigrationTwice()
         {
             CreateMetadataTable();
-
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
             var command = new CountingCommand();
 
@@ -201,8 +195,6 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
-
             var command = new CountingCommand();
 
             UseMigrations(new InlineMigration(1, command));
@@ -210,9 +202,6 @@ namespace HybridDb.Tests.Migrations
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             ResetConfiguration();
-
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
-            Setup<ThrowingCommand>(documentStore => throwingCommand => ThrowingCommand.Execute(documentStore, throwingCommand));
 
             UseMigrations(new InlineMigration(1, new ThrowingCommand()), new InlineMigration(2, command));
 
@@ -225,8 +214,6 @@ namespace HybridDb.Tests.Migrations
         public void ThrowsIfSchemaVersionIsAhead()
         {
             CreateMetadataTable();
-
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
             UseMigrations(new InlineMigration(1, new CountingCommand()));
 
@@ -242,8 +229,6 @@ namespace HybridDb.Tests.Migrations
         public void ThrowsIfMultipleMigrationsAreProvidedAtTheSameTime()
         {
             CreateMetadataTable();
-
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
 
             UseMigrations(new InlineMigration(1, new CountingCommand()), new InlineMigration(2, new CountingCommand()));
 
@@ -306,10 +291,6 @@ namespace HybridDb.Tests.Migrations
         public void HandlesConcurrentRuns()
         {
             UseRealTables();
-            //CreateMetadataTable();
-
-            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
-            Setup<SlowCommand>(documentStore => slowCommand => SlowCommand.Execute(documentStore, slowCommand));
 
             InitializeStore();
 
@@ -358,7 +339,7 @@ namespace HybridDb.Tests.Migrations
 
         public class ThrowingCommand : DdlCommand
         {
-            public static void Execute(DocumentStore store, ThrowingCommand command) => throw new InvalidOperationException("ThrowingCommand");
+            public override void Execute(DocumentStore store) => throw new InvalidOperationException("ThrowingCommand");
 
             public override string ToString() => "";
         }
@@ -367,7 +348,7 @@ namespace HybridDb.Tests.Migrations
         {
             public int NumberOfTimesCalled { get; private set; }
 
-            public static void Execute(DocumentStore store, CountingCommand command) => command.NumberOfTimesCalled++;
+            public override void Execute(DocumentStore store) => NumberOfTimesCalled++;
             public override string ToString() => "";
         }
 
@@ -378,7 +359,7 @@ namespace HybridDb.Tests.Migrations
 
         public class SlowCommand : DdlCommand
         {
-            public static void Execute(DocumentStore store, SlowCommand command) => Thread.Sleep(5000);
+            public override void Execute(DocumentStore store) => Thread.Sleep(5000);
 
             public override string ToString() => "";
         }

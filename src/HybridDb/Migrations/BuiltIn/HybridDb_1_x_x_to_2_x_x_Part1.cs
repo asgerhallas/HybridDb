@@ -15,31 +15,28 @@ namespace HybridDb.Migrations.BuiltIn
     /// Before doing that make sure all document migrations are fully completed, as deleting these
     /// columns for documents that has not been migrated to the new format will result ind data loss!
     /// </summary>
-    public class HybridDb_1_x_x_to_2_x_x_Part1 : Migration
+    public class HybridDb_1_x_x_to_2_x_x_Part1
     {
-        public HybridDb_1_x_x_to_2_x_x_Part1(int version) : base(version) { 
-        }
-
-        public override IEnumerable<DdlCommand> Upfront(Configuration configuration)
+        public class UpfrontCommand : DdlCommand
         {
-            foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
+            public override void Execute(DocumentStore store)
             {
-                yield return new RenameColumn(table, "Document", "Document_pre_v2");
-                yield return new AddColumn(table.Name, new Column("Document", typeof(string), length: -1));
+                foreach (var table in store.Configuration.Tables.Values.OfType<DocumentTable>())
+                {
+                    store.Execute(new RenameColumn(table, "Document", "Document_pre_v2"));
+                    store.Execute(new AddColumn(table.Name, new Column("Document", typeof(string), length: -1)));
 
-                yield return new RenameColumn(table, "Metadata", "Metadata_pre_v2");
-                yield return new AddColumn(table.Name, new Column("Metadata", typeof(string), length: -1));
+                    store.Execute(new RenameColumn(table, "Metadata", "Metadata_pre_v2"));
+                    store.Execute(new AddColumn(table.Name, new Column("Metadata", typeof(string), length: -1)));
+                }
             }
+
+            public override string ToString() => "Move old document and metadata format to a temporary column.";
         }
 
-        public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
+        public class BackgroundCommand : DocumentRowMigrationCommand
         {
-            yield return new MigrationCommand();
-        }
-
-        public class MigrationCommand : DocumentRowMigrationCommand
-        {
-            public MigrationCommand() : base(null, null) { }
+            public BackgroundCommand() : base(null, null) { }
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
             {

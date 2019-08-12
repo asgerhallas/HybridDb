@@ -11,6 +11,7 @@ using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
@@ -32,7 +33,9 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             ResetConfiguration();
 
             UseTypeMapper(new OtherTypeMapper());
-            UseMigrations(new HybridDb_1_x_x_to_2_x_x_Part1(1));
+            UseMigrations(new InlineMigration(1, 
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()), 
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand())));
 
             // Match the serializer with the one used in the sample data set
             var serializer = new DefaultSerializer();
@@ -62,7 +65,9 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             ResetConfiguration();
 
             UseTypeMapper(new OtherTypeMapper());
-            UseMigrations(new HybridDb_1_x_x_to_2_x_x_Part1(1));
+            UseMigrations(new InlineMigration(1,
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand())));
 
             // Match the serializer with the one used in the sample data set
             var serializer = new DefaultSerializer();

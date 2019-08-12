@@ -18,5 +18,13 @@ namespace HybridDb.Migrations.Schema.Commands
         public string NewColumnName { get; }
 
         public override string ToString() => $"Rename column {OldColumnName} on table {Table.Name} to {NewColumnName}";
+
+        public override void Execute(DocumentStore store)
+        {
+            store.Database.RawExecute(new SqlBuilder()
+                .Append(store.Database is SqlServerUsingRealTables, "", "tempdb..")
+                .Append($"sp_rename '{store.Database.FormatTableNameAndEscape(Table.Name)}.{OldColumnName}', '{NewColumnName}', 'COLUMN'")
+                .ToString());
+        }
     }
 }

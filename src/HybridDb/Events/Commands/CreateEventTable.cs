@@ -10,9 +10,9 @@ namespace HybridDb.Events.Commands
 
         public override string ToString() => "Create event table";
 
-        public static void CreateEventTableExecutor(DocumentStore store, CreateEventTable command)
+        public override void Execute(DocumentStore store)
         {
-            var tableName = store.Database.FormatTableName(command.EventTable.Name);
+            var tableName = store.Database.FormatTableName(EventTable.Name);
 
             store.Database.RawExecute($@"
                 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName}')

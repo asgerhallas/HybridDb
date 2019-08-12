@@ -12,10 +12,10 @@ namespace HybridDb.Tests
         readonly List<RowMigrationCommand> documentCommands;
         readonly List<DdlCommand> schemaCommands;
 
-        public InlineMigration(int version, List<DdlCommand> upfront, List<RowMigrationCommand> background) : base(version)
+        public InlineMigration(int version, IEnumerable<DdlCommand> upfront, IEnumerable<RowMigrationCommand> background) : base(version)
         {
-            schemaCommands = upfront;
-            documentCommands = background;
+            schemaCommands = upfront.ToList();
+            documentCommands = background.ToList();
         }
 
         public InlineMigration(int version) : this(version, new List<DdlCommand>(), new List<RowMigrationCommand>()) { }
