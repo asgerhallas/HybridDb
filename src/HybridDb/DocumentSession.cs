@@ -61,7 +61,7 @@ namespace HybridDb
             
             if (row == null) return null;
 
-            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[design.Table.DiscriminatorColumn]);
+            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
 
             // The discriminator does not map to a type that is assignable to the expected type.
             if (!type.IsAssignableFrom(concreteDesign.DocumentType))
@@ -191,9 +191,9 @@ namespace HybridDb
                 var design = store.Configuration.GetExactDesignFor(managedEntity.Entity.GetType());
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
-                var configuredVersion = (int)projections[design.Table.VersionColumn];
-                var document = (string)projections[design.Table.DocumentColumn];
-                var metadataDocument = (string)projections[design.Table.MetadataColumn];
+                var configuredVersion = (int)projections[DocumentTable.VersionColumn];
+                var document = (string)projections[DocumentTable.DocumentColumn];
+                var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
                 var expectedEtag = managedEntity.Etag;
 
@@ -252,7 +252,7 @@ namespace HybridDb
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
             var table = concreteDesign.Table;
-            var key = (string)row[table.IdColumn];
+            var key = (string)row[DocumentTable.IdColumn];
 
             if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out var managedEntity))
             {
@@ -261,8 +261,8 @@ namespace HybridDb
                     : null;
             }
 
-            var document = (string)row[table.DocumentColumn];
-            var currentDocumentVersion = (int) row[table.VersionColumn];
+            var document = (string)row[DocumentTable.DocumentColumn];
+            var currentDocumentVersion = (int) row[DocumentTable.VersionColumn];
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, row);
             var actualEntityType = entity.GetType();
 
@@ -271,7 +271,7 @@ namespace HybridDb
                 throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{actualEntityType}'.");
             }
 
-            var metadataDocument = (string)row[table.MetadataColumn];
+            var metadataDocument = (string)row[DocumentTable.MetadataColumn];
             var metadata = metadataDocument != null
                 ? (Dictionary<string, List<string>>) store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>)) 
                 : null;
@@ -283,7 +283,7 @@ namespace HybridDb
                 Document = document,
                 Metadata = metadata,
                 MetadataDocument = metadataDocument,
-                Etag = (Guid) row[table.EtagColumn],
+                Etag = (Guid) row[DocumentTable.EtagColumn],
                 Version = currentDocumentVersion,
                 State = EntityState.Loaded,
                 Table = table

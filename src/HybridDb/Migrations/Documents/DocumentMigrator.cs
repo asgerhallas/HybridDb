@@ -13,14 +13,16 @@ namespace HybridDb.Migrations.Documents
 
         public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, IDictionary<string, object> row)
         {
+            // TODO: This can be optimized to not find and filter the migrations for every row
             var migratedRow = configuration.Migrations
-                .SelectMany(x => x.MigrateDocument(), (migration, command) => (Migration: migration, Command: command))
+                .SelectMany(x => x.Background(configuration), (migration, command) => (Migration: migration, Command: command))
+                .Where(x => x.Command.Matches(configuration, design.Table))
                 .Aggregate(row, (currentRow, nextCommand) =>
-                    nextCommand.Command.IsApplicable(nextCommand.Migration.Version, configuration, currentRow)
+                    nextCommand.Command.Matches(nextCommand.Migration.Version, configuration, currentRow)
                         ? nextCommand.Command.Execute(session, configuration.Serializer, currentRow)
                         : currentRow);
 
-            var currentDocumentVersion = (int)row[design.Table.VersionColumn];
+            var currentDocumentVersion = row.Get(DocumentTable.VersionColumn);
 
             var configuredVersion = configuration.ConfiguredVersion;
 
@@ -31,7 +33,7 @@ namespace HybridDb.Migrations.Documents
                     $"Document is version {currentDocumentVersion}, but configuration is version {configuredVersion}.");
             }
 
-            var document = (string)migratedRow[design.Table.DocumentColumn];
+            var document = migratedRow.Get(DocumentTable.DocumentColumn);
 
             return configuration.Serializer.Deserialize(document, design.DocumentType);
         }

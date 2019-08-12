@@ -97,9 +97,9 @@ namespace HybridDb.Tests
             var etag = store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
 
             var row = store.Get(table.Table, id);
-            row[table.Table.IdColumn].ShouldBe(id);
-            row[table.Table.EtagColumn].ShouldBe(etag);
-            row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
+            row[DocumentTable.IdColumn].ShouldBe(id);
+            row[DocumentTable.EtagColumn].ShouldBe(etag);
+            row[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
             row[table.Table["Field"]].ShouldBe("Asger");
             row[table.Table["ComplexToString"]].ShouldBe("AB");
         }
@@ -114,9 +114,9 @@ namespace HybridDb.Tests
             var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             var row = store.Get(new DocumentTable("Entities"), id);
-            row[table.Table.IdColumn].ShouldBe(id);
-            row[table.Table.EtagColumn].ShouldBe(etag);
-            row[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
+            row[DocumentTable.IdColumn].ShouldBe(id);
+            row[DocumentTable.EtagColumn].ShouldBe(etag);
+            row[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
             row[table.Table["Field"]].ShouldBe("Asger");
         }
 
@@ -152,15 +152,15 @@ namespace HybridDb.Tests
             var rows = store.Query(table.Table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
 
             rows.Count().ShouldBe(2);
-            var first = rows.Single(x => (string)x[table.Table.IdColumn] == id1);
-            first[table.Table.EtagColumn].ShouldBe(etag1);
-            first[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
+            var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
+            first[DocumentTable.EtagColumn].ShouldBe(etag1);
+            first[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
             first[table.Table["Field"]].ShouldBe("Asger");
 
-            var second = rows.Single(x => (string)x[table.Table.IdColumn] == id2);
-            second[table.Table.IdColumn].ShouldBe(id2);
-            second[table.Table.EtagColumn].ShouldBe(etag2);
-            second[table.Table.DocumentColumn].ShouldBe(documentAsByteArray);
+            var second = rows.Single(x => (string)x[DocumentTable.IdColumn] == id2);
+            second[DocumentTable.IdColumn].ShouldBe(id2);
+            second[DocumentTable.EtagColumn].ShouldBe(etag2);
+            second[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
             second[table.Table["Field"]].ShouldBe("Hans");
         }
 

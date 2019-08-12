@@ -61,7 +61,7 @@ namespace HybridDb
             storeStats.NumberOfRequests++;
             storeStats.NumberOfGets++;
 
-            var sql = $"select * from {Store.Database.FormatTableNameAndEscape(table.Name)} where {table.IdColumn.Name} = @Id and {table.LastOperationColumn.Name} <> @Op";
+            var sql = $"select * from {Store.Database.FormatTableNameAndEscape(table.Name)} where {DocumentTable.IdColumn.Name} = @Id and {DocumentTable.LastOperationColumn.Name} <> @Op";
 
             return (IDictionary<string, object>) SqlConnection.Query(sql, new {Id = key, Op = Operation.Deleted}, SqlTransaction).SingleOrDefault();
         }
@@ -86,8 +86,8 @@ namespace HybridDb
             if (!includeDeleted)
             {
                 where = string.IsNullOrEmpty(where)
-                    ? $"{table.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters
-                    : $"({where}) AND ({table.LastOperationColumn.Name} <> {Operation.Deleted:D})";
+                    ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters
+                    : $"({where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
             }
 
             var timer = Stopwatch.StartNew();
@@ -104,9 +104,9 @@ namespace HybridDb
                     .Append(";");
 
                 sql.Append(@"with temp as (select *")
-                    .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {table.LastOperationColumn.Name} as __LastOperation")
-                    .Append($", {table.TimestampColumn.Name} as __RowVersion")
+                    .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
+                    .Append($", {DocumentTable.LastOperationColumn.Name} as __LastOperation")
+                    .Append($", {DocumentTable.TimestampColumn.Name} as __RowVersion")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                     .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
@@ -120,9 +120,9 @@ namespace HybridDb
             else
             {
                 sql.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
-                    .Append($", {table.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {table.LastOperationColumn.Name} AS __LastOperation")
-                    .Append($", {table.TimestampColumn.Name} AS __RowVersion")
+                    .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
+                    .Append($", {DocumentTable.LastOperationColumn.Name} AS __LastOperation")
+                    .Append($", {DocumentTable.TimestampColumn.Name} AS __RowVersion")
                     .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");

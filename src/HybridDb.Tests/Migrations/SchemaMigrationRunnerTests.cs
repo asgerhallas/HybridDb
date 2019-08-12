@@ -239,6 +239,18 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
+        public void ThrowsIfMultipleMigrationsAreProvidedAtTheSameTime()
+        {
+            CreateMetadataTable();
+
+            Setup<CountingCommand>(documentStore => countingCommand => CountingCommand.Execute(documentStore, countingCommand));
+
+            UseMigrations(new InlineMigration(1, new CountingCommand()), new InlineMigration(2, new CountingCommand()));
+
+            Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run());
+        }
+
+        [Fact]
         public void RollsBackOnExceptions()
         {
             CreateMetadataTable();

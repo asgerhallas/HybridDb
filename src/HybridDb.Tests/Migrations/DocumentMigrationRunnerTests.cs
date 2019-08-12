@@ -40,7 +40,7 @@ namespace HybridDb.Tests.Migrations
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
             row["AwaitsReprojection"].ShouldBe(false);
-            row[table.VersionColumn].ShouldBe(0);
+            row[DocumentTable.VersionColumn].ShouldBe(0);
         }
 
         [Fact]
@@ -79,7 +79,7 @@ namespace HybridDb.Tests.Migrations
             store.Stats.NumberOfCommands.ShouldBe(0);
 
             var row = store.Get(table, id);
-            row[table.VersionColumn].ShouldBe(1);
+            row[DocumentTable.VersionColumn].ShouldBe(1);
         }
 
         [Fact(Skip = "sideshow")]

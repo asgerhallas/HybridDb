@@ -22,7 +22,7 @@ namespace HybridDb.Migrations.Documents
                 foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                 {
                     var commands = configuration.Migrations
-                        .SelectMany(x => x.MigrateDocument(), (migration, command) => (Migration: migration, Command: command))
+                        .SelectMany(x => x.Background(configuration), (migration, command) => (Migration: migration, Command: command))
                         .Concat((null, new UpdateProjectionsMigration()))
                         .Where(x => x.Command.Matches(configuration, table));
 
@@ -48,8 +48,8 @@ namespace HybridDb.Migrations.Documents
                             {
                                 foreach (var row in rows)
                                 {
-                                    var key = (string) row[table.IdColumn];
-                                    var discriminator = ((string) row[table.DiscriminatorColumn]).Trim();
+                                    var key = (string) row[DocumentTable.IdColumn];
+                                    var discriminator = ((string) row[DocumentTable.DiscriminatorColumn]).Trim();
                                     var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
 
                                     try

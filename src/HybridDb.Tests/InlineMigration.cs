@@ -12,18 +12,17 @@ namespace HybridDb.Tests
         readonly List<RowMigrationCommand> documentCommands;
         readonly List<DdlCommand> schemaCommands;
 
-        public InlineMigration(int version) : base(version)
+        public InlineMigration(int version, List<DdlCommand> upfront, List<RowMigrationCommand> background) : base(version)
         {
-            documentCommands = new List<RowMigrationCommand>();
-            schemaCommands = new List<DdlCommand>();
+            schemaCommands = upfront;
+            documentCommands = background;
         }
 
-        public InlineMigration(int version, params DdlCommand[] commands) : this(version) => schemaCommands = commands.ToList();
+        public InlineMigration(int version) : this(version, new List<DdlCommand>(), new List<RowMigrationCommand>()) { }
+        public InlineMigration(int version, params DdlCommand[] commands) : this(version, commands.ToList(), new List<RowMigrationCommand>()) { }
+        public InlineMigration(int version, params RowMigrationCommand[] commands) : this(version, new List<DdlCommand>(), commands.ToList()) { }
 
-        public InlineMigration(int version, params RowMigrationCommand[] commands) : this(version) => documentCommands = commands.ToList();
-
-        public override IEnumerable<DdlCommand> MigrateSchema(Configuration configuration) => schemaCommands;
-
-        public override IEnumerable<RowMigrationCommand> MigrateDocument() => documentCommands;
+        public override IEnumerable<DdlCommand> Upfront(Configuration configuration) => schemaCommands;
+        public override IEnumerable<RowMigrationCommand> Background(Configuration configuration) => documentCommands;
     }
 }

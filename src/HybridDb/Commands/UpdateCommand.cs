@@ -25,24 +25,24 @@ namespace HybridDb.Commands
         {
             var values = ConvertAnonymousToProjections(command.Table, command.Projections); 
 
-            values[command.Table.EtagColumn] = tx.CommitId;
-            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.LastOperationColumn] = Operation.Updated;
+            values[DocumentTable.EtagColumn] = tx.CommitId;
+            values[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
+            values[DocumentTable.LastOperationColumn] = Operation.Updated;
 
             var sql = new SqlBuilder()
                 .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
                 .Append($"set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name)}")
-                .Append($"where {command.Table.IdColumn.Name}=@Id")
-                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name}=@ExpectedEtag")
+                .Append($"where {DocumentTable.IdColumn.Name}=@Id")
+                .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")
                 .ToString();
 
             var parameters = MapProjectionsToParameters(values);
 
-            AddTo(parameters, "@Id", command.Id, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+            AddTo(parameters, "@Id", command.Id, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
 
             if (!command.LastWriteWins)
             {
-                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
+                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(DocumentTable.EtagColumn).DbType, null);
             }
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand

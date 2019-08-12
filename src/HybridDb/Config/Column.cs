@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data;
-using System.Linq;
 
 namespace HybridDb.Config
 {
@@ -98,5 +97,11 @@ namespace HybridDb.Config
         }
 
         public static implicit operator string(Column self) => self.Name;
+    }
+
+    public class Column<T> : Column
+    {
+        public Column(string name, int? length = null, object defaultValue = null, bool isPrimaryKey = false) : base(name, typeof(T), length, defaultValue, isPrimaryKey) { }
+        public Column(string name, SqlDbType? dbType, int? length = null, object defaultValue = null, bool isPrimaryKey = false) : base(name, dbType, typeof(T), length, defaultValue, isPrimaryKey) { }
     }
 }

@@ -27,19 +27,19 @@ namespace HybridDb.Commands
 
             var sql = new SqlBuilder()
                 .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {command.Table.IdColumn.Name} = @NewId")
-                .Append($", {command.Table.LastOperationColumn.Name} = {(byte)Operation.Deleted}")
-                .Append($"where {command.Table.IdColumn.Name} = @Id")
-                .Append(!command.LastWriteWins, $"and {command.Table.EtagColumn.Name} = @ExpectedEtag")
+                .Append($"set {DocumentTable.IdColumn.Name} = @NewId")
+                .Append($", {DocumentTable.LastOperationColumn.Name} = {(byte)Operation.Deleted}")
+                .Append($"where {DocumentTable.IdColumn.Name} = @Id")
+                .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name} = @ExpectedEtag")
                 .ToString();
 
             var parameters = new Dictionary<string, Parameter>();
-            AddTo(parameters, "@Id", command.Key, SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
-            AddTo(parameters, "@NewId", $"{command.Key}/{Guid.NewGuid()}", SqlTypeMap.Convert(command.Table.IdColumn).DbType, null);
+            AddTo(parameters, "@Id", command.Key, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
+            AddTo(parameters, "@NewId", $"{command.Key}/{Guid.NewGuid()}", SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
 
             if (!command.LastWriteWins)
             {
-                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(command.Table.EtagColumn).DbType, null);
+                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(DocumentTable.EtagColumn).DbType, null);
             }
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand

@@ -13,16 +13,11 @@ namespace HybridDb.Migrations.Documents
     {
         public abstract bool Matches(Configuration configuration, Table table);
         public abstract SqlBuilder Matches(int? version);
+        public abstract bool Matches(int version, Configuration configuration, IDictionary<string, object> row);
+        public abstract IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row);
     }
 
-
-    public abstract class RowMigrationCommand<T> : RowMigrationCommand
-    {
-        public abstract bool IsApplicable(int version, Configuration configuration, Row<T> row);
-        public abstract IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, Row<T> row);
-    }
-
-    public abstract class DocumentRowMigrationCommand : RowMigrationCommand<DocumentTable>
+    public abstract class DocumentRowMigrationCommand : RowMigrationCommand
     {
         protected DocumentRowMigrationCommand(Type type, string idPrefix)
         {
@@ -42,16 +37,14 @@ namespace HybridDb.Migrations.Documents
             .Append(version != null, "Version < @version", new Parameter("version", version))
             .Append(!string.IsNullOrEmpty(IdPrefix), " and Id LIKE @idPrefix + '%'", new Parameter("idPrefix", IdPrefix));
 
-        public override bool IsApplicable(int version, Configuration configuration, Row<DocumentTable> row)
+        public override bool Matches(int version, Configuration configuration, IDictionary<string, object> row)
         {
-            var rowId = (string)row.Get(x => x.IdColumn);
-            var rowType = configuration.TypeMapper.ToType((string)row[DocumentTable.IdColumn]);
+            var rowId = row.Get(DocumentTable.IdColumn);
+            var rowType = configuration.TypeMapper.ToType(row.Get(DocumentTable.DiscriminatorColumn));
 
-            return (int)row["Version"] < version &&
+            return row.Get(DocumentTable.VersionColumn) < version &&
                    (string.IsNullOrEmpty(IdPrefix) || rowId.StartsWith(IdPrefix)) &&
                    (Type == null || Type.IsAssignableFrom(rowType));
         }
-
-        //public abstract IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, Row<DocumentTable> row);
     }
 }

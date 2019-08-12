@@ -11,12 +11,12 @@ namespace HybridDb.Migrations
 
         public int Version { get; }
 
-        public virtual IEnumerable<DdlCommand> MigrateSchema(Configuration configuration)
+        public virtual IEnumerable<DdlCommand> Upfront(Configuration configuration)
         {
             yield break;
         }
 
-        public virtual IEnumerable<RowMigrationCommand> MigrateDocument()
+        public virtual IEnumerable<RowMigrationCommand> Background(Configuration configuration)
         {
             yield break;
         }

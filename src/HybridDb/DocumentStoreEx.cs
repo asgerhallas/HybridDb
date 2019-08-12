@@ -61,8 +61,8 @@ namespace HybridDb
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null) =>
             tx.Query<TProjection>(table, @select,
-                @where: $"{table.TimestampColumn.Name} > @Since and {table.TimestampColumn.Name} < min_active_rowversion()",
-                @orderby: $"{table.TimestampColumn.Name} ASC",
+                @where: $"{DocumentTable.TimestampColumn.Name} > @Since and {DocumentTable.TimestampColumn.Name} < min_active_rowversion()",
+                @orderby: $"{DocumentTable.TimestampColumn.Name} ASC",
                 includeDeleted: true,
                 parameters: new {Since = since}
             ).rows;

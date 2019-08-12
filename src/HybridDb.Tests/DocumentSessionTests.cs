@@ -767,8 +767,9 @@ namespace HybridDb.Tests
             Document<MoreDerivedEntity2>();
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; })),
-                new InlineMigration(2, new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
+                new InlineMigration(1, 
+                    new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; }),
+                    new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
 
             if (disableDocumentMigrationsOnStartup) DisableDocumentMigrationsOnStartup();
 
@@ -816,7 +817,7 @@ namespace HybridDb.Tests
         public void AddsVersionOnInsert()
         {
             Document<Entity>();
-            UseMigrations(new InlineMigration(1), new InlineMigration(2));
+            UseMigrations(new InlineMigration(1));
 
             var id = NewId();
             using (var session = store.OpenSession())
@@ -827,7 +828,7 @@ namespace HybridDb.Tests
 
             var table = configuration.GetDesignFor<Entity>().Table;
             var row = store.Get(table, id);
-            ((int)row[table.VersionColumn]).ShouldBe(2);
+            ((int)row[DocumentTable.VersionColumn]).ShouldBe(1);
         }
 
         [Fact]
@@ -858,7 +859,7 @@ namespace HybridDb.Tests
             }
 
             var row = store.Get(table, id);
-            ((int)row[table.VersionColumn]).ShouldBe(2);
+            ((int)row[DocumentTable.VersionColumn]).ShouldBe(2);
         }
 
         [Fact]

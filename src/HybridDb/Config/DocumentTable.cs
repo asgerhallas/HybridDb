@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Net.Http.Headers;
 
 namespace HybridDb.Config
 {
@@ -10,42 +9,52 @@ namespace HybridDb.Config
 
     }
 
-    public class Row<T> : Row
+    public static class RowEx
     {
-        readonly IDictionary<string, object> data;
+        public static TValue Get<TValue>(this IDictionary<string, object> row, string name) => (TValue) row[name];
 
-        public Row(IDictionary<string, object> data) => this.data = data;
+        public static TValue Get<TValue>(this IDictionary<string, object> row, Column<TValue> column) => (TValue)row[column.Name];
 
-        public TValue Get<TValue>(Func<T, TValue> getter);
+        public static void Set<TValue>(this IDictionary<string, object> row, Column<TValue> column, TValue value) => row[column.Name] = value;
     }
 
     public class DocumentTable : Table
     {
-        public DocumentTable(string name) : base(name)
+        static readonly List<Column> commonColumns = new List<Column>();
+
+        static DocumentTable()
         {
-            IdColumn = Add(new Column("Id", typeof(string), length: 850, isPrimaryKey: true));
-            EtagColumn = Add(new Column("Etag", typeof(Guid)));
-            CreatedAtColumn = Add(new Column("CreatedAt", typeof(DateTimeOffset)));
-            ModifiedAtColumn = Add(new Column("ModifiedAt", typeof(DateTimeOffset)));
-            DocumentColumn = Add(new Column("Document", typeof(string), length: -1));
-            MetadataColumn = Add(new Column("Metadata", typeof(string)));
-            DiscriminatorColumn = Add(new Column("Discriminator", typeof(string), length: 850));
-            AwaitsReprojectionColumn = Add(new Column("AwaitsReprojection", typeof(bool)));
-            VersionColumn = Add(new Column("Version", typeof(int)));
-            TimestampColumn = Add(new Column("Timestamp", SqlDbType.Timestamp, typeof(int)));
-            LastOperationColumn = Add(new Column("LastOperation", SqlDbType.TinyInt, typeof(byte)));
+            IdColumn = AddFixed(new Column<string>("Id", length: 850, isPrimaryKey: true));
+            EtagColumn = AddFixed(new Column<Guid>("Etag"));
+            CreatedAtColumn = AddFixed(new Column<DateTimeOffset>("CreatedAt"));
+            ModifiedAtColumn = AddFixed(new Column<DateTimeOffset>("ModifiedAt"));
+            DocumentColumn = AddFixed(new Column<string>("Document", length: -1));
+            MetadataColumn = AddFixed(new Column<string>("Metadata"));
+            DiscriminatorColumn = AddFixed(new Column<string>("Discriminator", length: 850));
+            AwaitsReprojectionColumn = AddFixed(new Column<bool>("AwaitsReprojection"));
+            VersionColumn = AddFixed(new Column<int>("Version"));
+            TimestampColumn = AddFixed(new Column<int>("Timestamp", SqlDbType.Timestamp));
+            LastOperationColumn = AddFixed(new Column<byte>("LastOperation", SqlDbType.TinyInt));
         }
 
-        public Column IdColumn { get; }
-        public Column EtagColumn { get; }
-        public Column CreatedAtColumn { get; }
-        public Column ModifiedAtColumn { get; }
-        public Column DocumentColumn { get; }
-        public Column MetadataColumn { get; }
-        public Column DiscriminatorColumn { get; }
-        public Column AwaitsReprojectionColumn { get; }
-        public Column VersionColumn { get; }
-        public Column TimestampColumn { get; }
-        public Column LastOperationColumn { get; }
+        public DocumentTable(string name) : base(name, commonColumns) {}
+
+        public static Column<string> IdColumn { get; }
+        public static Column<Guid> EtagColumn { get; }
+        public static Column<DateTimeOffset> CreatedAtColumn { get; }
+        public static Column<DateTimeOffset> ModifiedAtColumn { get; }
+        public static Column<string> DocumentColumn { get; }
+        public static Column<string> MetadataColumn { get; }
+        public static Column<string> DiscriminatorColumn { get; }
+        public static Column<bool> AwaitsReprojectionColumn { get; }
+        public static Column<int> VersionColumn { get; }
+        public static Column<int> TimestampColumn { get; }
+        public static Column<byte> LastOperationColumn { get; }
+
+        static Column<T> AddFixed<T>(Column<T> column)
+        {
+            commonColumns.Add(column);
+            return column;
+        }
     }
 }

@@ -15,9 +15,9 @@ namespace HybridDb.Config
             Table = table;
             Discriminator = discriminator;
 
-            if (Table.DiscriminatorColumn.Length > -1 && discriminator.Length > Table.DiscriminatorColumn.Length)
+            if (DocumentTable.DiscriminatorColumn.Length > -1 && discriminator.Length > DocumentTable.DiscriminatorColumn.Length)
             {
-                throw new InvalidOperationException($"Discriminator '{discriminator}' is too long for column. Maximum length is {Table.DiscriminatorColumn.Length}.");
+                throw new InvalidOperationException($"Discriminator '{discriminator}' is too long for column. Maximum length is {DocumentTable.DiscriminatorColumn.Length}.");
             }
 
             decendentsAndSelf = new Dictionary<string, DocumentDesign> {{Discriminator, this}};
@@ -26,14 +26,14 @@ namespace HybridDb.Config
 
             Projections = new Dictionary<string, Projection>
             {
-                [Table.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator),
-                [Table.DocumentColumn] = Projection.From<byte[]>(document => configuration.Serializer.Serialize(document)),
-                [Table.MetadataColumn] = Projection.From<byte[]>((document, metadata) =>
+                [DocumentTable.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator),
+                [DocumentTable.DocumentColumn] = Projection.From<byte[]>(document => configuration.Serializer.Serialize(document)),
+                [DocumentTable.MetadataColumn] = Projection.From<byte[]>((document, metadata) =>
                     metadata != null
                         ? configuration.Serializer.Serialize(metadata)
                         : null),
-                [Table.VersionColumn] = Projection.From<int>(_ => configuration.ConfiguredVersion),
-                [Table.AwaitsReprojectionColumn] = Projection.From<bool>(_ => false)
+                [DocumentTable.VersionColumn] = Projection.From<int>(_ => configuration.ConfiguredVersion),
+                [DocumentTable.AwaitsReprojectionColumn] = Projection.From<bool>(_ => false)
             };
         }
 
@@ -43,7 +43,7 @@ namespace HybridDb.Config
             Root = parent.Root;
             Parent = parent;
             Projections = parent.Projections.ToDictionary();
-            Projections[Table.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator);
+            Projections[DocumentTable.DiscriminatorColumn] = Projection.From<string>(_ => Discriminator);
         
             Parent.AddChild(this);
         }

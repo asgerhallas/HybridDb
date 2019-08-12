@@ -30,7 +30,7 @@ namespace HybridDb.Config
 
         public Column this[string name] => columns.TryGetValue(name, out var value) ? value : null;
 
-        public Column Add(Column column)
+        public Column<T> Add<T>(Column<T> column)
         {
             columns.Add(column.Name, column);
             return column;

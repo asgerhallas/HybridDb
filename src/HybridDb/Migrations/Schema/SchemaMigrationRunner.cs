@@ -159,11 +159,22 @@ namespace HybridDb.Migrations.Schema
 
             var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > schemaVersion).ToList();
 
+            if (migrationsToRun.Count > 1)
+            {
+                throw new InvalidOperationException(_($@"
+                    You can only deploy one migration at a time for safety. If you were to deploy multiple migrations,
+                    all upfront commands would run before any background commands, and the second migration's upfront commands
+                    could potentially rely on the first migration's background commands - that might not have run to end yet.
+                    
+                    Please merge multiple migrations into one and ensure that all upfront commands can safely be run before the 
+                    background commands."));
+            }
+
             logger.Information("Migrates schema from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
 
             foreach (var migration in migrationsToRun)
             {
-                var migrationCommands = migration.MigrateSchema(store.Configuration);
+                var migrationCommands = migration.Upfront(store.Configuration);
 
                 foreach (var command in migrationCommands)
                 {

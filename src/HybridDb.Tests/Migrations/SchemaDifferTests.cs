@@ -90,7 +90,7 @@ namespace HybridDb.Tests.Migrations
         public void FindMissingColumn()
         {
             var table = new DocumentTable("Entities");
-            table.Add(new Column("Number", typeof(int)));
+            table.Add(new Column<int>("Number"));
 
             schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
@@ -106,7 +106,7 @@ namespace HybridDb.Tests.Migrations
         public void FindColumnTypeChange()
         {
             var table = new DocumentTable("Entities");
-            table.Add(new Column("Number", typeof(int)));
+            table.Add(new Column<int>("Number"));
 
             schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 

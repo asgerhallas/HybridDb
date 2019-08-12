@@ -21,11 +21,11 @@ namespace HybridDb.Commands
         {
             var values = ConvertAnonymousToProjections(command.Table, command.Projections);
 
-            values[command.Table.IdColumn] = command.Id;
-            values[command.Table.EtagColumn] = tx.CommitId;
-            values[command.Table.CreatedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.ModifiedAtColumn] = DateTimeOffset.Now;
-            values[command.Table.LastOperationColumn] = Operation.Inserted;
+            values[DocumentTable.IdColumn] = command.Id;
+            values[DocumentTable.EtagColumn] = tx.CommitId;
+            values[DocumentTable.CreatedAtColumn] = DateTimeOffset.Now;
+            values[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
+            values[DocumentTable.LastOperationColumn] = Operation.Inserted;
 
             var sql = $@"
                 insert into {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} 

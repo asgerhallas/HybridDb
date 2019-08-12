@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using HybridDb.Config;
 
 namespace HybridDb.Migrations.Documents
 {
-    public class ChangeDocument<T> : RowMigrationCommand
+    public class ChangeDocument<T> : DocumentRowMigrationCommand
     {
         readonly Func<IDocumentSession, ISerializer, string, string> change;
 
@@ -14,7 +15,7 @@ namespace HybridDb.Migrations.Documents
 
         public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
         {
-            row["Document"] = change(session, serializer, (string) row["Document"]);
+            row.Set(DocumentTable.DocumentColumn, change(session, serializer, row.Get(DocumentTable.DocumentColumn)));
             return row;
         }
     }

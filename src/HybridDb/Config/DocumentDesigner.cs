@@ -42,7 +42,7 @@ namespace HybridDb.Config
 
             var column = design.Table[name];
 
-            if (design.Table.IdColumn.Equals(column))
+            if (DocumentTable.IdColumn.Equals(column))
             {
                 throw new ArgumentException("You can not make a projection for IdColumn. Use Document.Key() method instead.");
             }
@@ -53,8 +53,8 @@ namespace HybridDb.Config
                     .OfType<MaxLength>()
                     .FirstOrDefault();
 
-                column = new Column(name, typeof(TReturn), lengthOption?.Length);
-                design.Table.Add(column);
+                column = new Column<TReturn>(name, lengthOption?.Length);
+                design.Table.Add((Column<TReturn>) column);
             }
 
             Func<object, object> compiledProjector;
