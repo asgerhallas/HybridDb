@@ -262,13 +262,13 @@ namespace HybridDb
             }
 
             var document = (string)row[DocumentTable.DocumentColumn];
-            var currentDocumentVersion = (int) row[DocumentTable.VersionColumn];
-            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, key, row);
-            var actualEntityType = entity.GetType();
+            var documentVersion = (int) row[DocumentTable.VersionColumn];
 
-            if (actualEntityType != concreteDesign.DocumentType)
+            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, row);
+
+            if (entity.GetType() != concreteDesign.DocumentType)
             {
-                throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{actualEntityType}'.");
+                throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{entity.GetType()}'.");
             }
 
             var metadataDocument = (string)row[DocumentTable.MetadataColumn];
@@ -284,7 +284,7 @@ namespace HybridDb
                 Metadata = metadata,
                 MetadataDocument = metadataDocument,
                 Etag = (Guid) row[DocumentTable.EtagColumn],
-                Version = currentDocumentVersion,
+                Version = documentVersion,
                 State = EntityState.Loaded,
                 Table = table
             };

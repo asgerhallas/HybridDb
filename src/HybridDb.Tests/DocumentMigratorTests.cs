@@ -19,7 +19,7 @@ namespace HybridDb.Tests
 
             var id = NewId();
 
-            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, document, 0, design.Discriminator));
+            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Peter");
         }
@@ -32,7 +32,7 @@ namespace HybridDb.Tests
             var id = NewId();
             var design = configuration.GetDesignFor<Entity>();
 
-            Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, "", 1, design.Discriminator)))
+            Should.Throw<InvalidOperationException>(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(id, "", 1, design.Discriminator)))
                 .Message.ShouldBe($"Document HybridDb.Tests.HybridDbTests+Entity/{id} version is ahead of configuration. Document is version 1, but configuration is version 0.");
         }
 
@@ -46,7 +46,7 @@ namespace HybridDb.Tests
             var document = configuration.Serializer.Serialize(new Entity { Property = "Asger" });
 
             var id = NewId();
-            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, document, 0, design.Discriminator));
+            var entity = (Entity)new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Asger");
         }
@@ -64,7 +64,7 @@ namespace HybridDb.Tests
             var document = configuration.Serializer.Serialize(new Entity {Property = "Asger"});
 
             var id = NewId();
-            var entity = (Entity) new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, id, Row(id, document, 0, design.Discriminator));
+            var entity = (Entity) new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Asger123");
         }

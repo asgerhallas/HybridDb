@@ -8,16 +8,16 @@ namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrator
     {
-        static readonly ConcurrentDictionary<DocumentDesign, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache =
-            new ConcurrentDictionary<DocumentDesign, IEnumerable<(Migration Migration, RowMigrationCommand Command)>>();
+        static readonly ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache =
+            new ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>>();
 
         readonly Configuration configuration;
 
         public DocumentMigrator(Configuration configuration) => this.configuration = configuration;
 
-        public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, IDictionary<string, object> row)
+        public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, IDictionary<string, object> row)
         {
-            var migrations = cache.GetOrAdd(design, key => configuration.Migrations
+            var migrations = cache.GetOrAdd(design.Table, key => configuration.Migrations
                 .SelectMany(x => x.Background(configuration), (migration, command) => (Migration: migration, Command: command))
                 .Where(x => x.Command.Matches(configuration, design.Table)));
 
@@ -34,7 +34,7 @@ namespace HybridDb.Migrations.Documents
             if (configuredVersion < currentDocumentVersion)
             {
                 throw new InvalidOperationException(
-                    $"Document {design.DocumentType.FullName}/{id} version is ahead of configuration. " +
+                    $"Document {design.DocumentType.FullName}/{row.Get(DocumentTable.IdColumn)} version is ahead of configuration. " +
                     $"Document is version {currentDocumentVersion}, but configuration is version {configuredVersion}.");
             }
 
