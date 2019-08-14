@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
@@ -7,16 +8,20 @@ namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrator
     {
+        static readonly ConcurrentDictionary<DocumentDesign, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache =
+            new ConcurrentDictionary<DocumentDesign, IEnumerable<(Migration Migration, RowMigrationCommand Command)>>();
+
         readonly Configuration configuration;
 
         public DocumentMigrator(Configuration configuration) => this.configuration = configuration;
 
         public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, string id, IDictionary<string, object> row)
         {
-            // TODO: This can be optimized to not find and filter the migrations for every row
-            var migratedRow = configuration.Migrations
+            var migrations = cache.GetOrAdd(design, key => configuration.Migrations
                 .SelectMany(x => x.Background(configuration), (migration, command) => (Migration: migration, Command: command))
-                .Where(x => x.Command.Matches(configuration, design.Table))
+                .Where(x => x.Command.Matches(configuration, design.Table)));
+
+            var migratedRow = migrations
                 .Aggregate(row, (currentRow, nextCommand) =>
                     nextCommand.Command.Matches(nextCommand.Migration.Version, configuration, currentRow)
                         ? nextCommand.Command.Execute(session, configuration.Serializer, currentRow)

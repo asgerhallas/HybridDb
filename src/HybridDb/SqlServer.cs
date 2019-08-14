@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Transactions;
 using Dapper;
-using HybridDb.Config;
 
 namespace HybridDb
 {
