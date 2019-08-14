@@ -8,12 +8,12 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public SqlCommand(string description, string requiresReprojectionOf, Action<SqlBuilder, IDatabase> builder)
         {
+            Safe = true;
+
             Builder = builder;
 
             Description = description;
             RequiresReprojectionOf = requiresReprojectionOf;
-
-            Unsafe = false;
         }
 
         public Action<SqlBuilder, IDatabase> Builder { get; }

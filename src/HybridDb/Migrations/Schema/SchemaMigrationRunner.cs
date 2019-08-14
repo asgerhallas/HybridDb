@@ -30,7 +30,7 @@ namespace HybridDb.Migrations.Schema
 
         public void Run()
         {
-            if (!store.Configuration.RunSchemaMigrationsOnStartup)
+            if (!store.Configuration.RunUpfrontMigrations)
                 return;
 
             store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
@@ -174,9 +174,7 @@ namespace HybridDb.Migrations.Schema
 
             foreach (var migration in migrationsToRun)
             {
-                var migrationCommands = migration.Upfront(store.Configuration);
-
-                foreach (var command in migrationCommands)
+                foreach (var command in migration.Upfront(store.Configuration))
                 {
                     foreach (var tablename in ExecuteCommand(command, true))
                     {
@@ -186,7 +184,7 @@ namespace HybridDb.Migrations.Schema
             }
         }
 
-        void MarkDocumentsForReprojections(List<string> requiresReprojection)
+        void MarkDocumentsForReprojections(IEnumerable<string> requiresReprojection)
         {
             foreach (var tablename in requiresReprojection)
             {
@@ -202,7 +200,7 @@ namespace HybridDb.Migrations.Schema
 
         IEnumerable<string> ExecuteCommand(DdlCommand command, bool allowUnsafe)
         {
-            if (command.Unsafe && !allowUnsafe)
+            if (!command.Safe && !allowUnsafe)
             {
                 logger.Warning("Unsafe migration command '{0}' was skipped.", command.ToString());
                 yield break;

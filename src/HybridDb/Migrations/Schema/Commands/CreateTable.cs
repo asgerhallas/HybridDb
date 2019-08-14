@@ -6,7 +6,11 @@ namespace HybridDb.Migrations.Schema.Commands
 {
     public class CreateTable : DdlCommand
     {
-        public CreateTable(Table table) => Table = table;
+        public CreateTable(Table table)
+        {
+            Safe = true;
+            Table = table;
+        }
 
         public Table Table { get; }
 

@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new SqlCommand("is always safe", (sql, db) => { }).Unsafe.ShouldBe(false);
+            new SqlCommand("is always safe", (sql, db) => { }).Safe.ShouldBe(true);
         }
 
         [Fact]

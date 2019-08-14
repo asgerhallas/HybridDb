@@ -36,19 +36,19 @@ namespace HybridDb.Commands
                 .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")
                 .ToString();
 
-            var parameters = MapProjectionsToParameters(values);
+            var parameters = Parameters.FromProjections(values);
 
-            AddTo(parameters, "@Id", command.Id, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
+            parameters.Add("@Id", command.Id, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
 
             if (!command.LastWriteWins)
             {
-                AddTo(parameters, "@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(DocumentTable.EtagColumn).DbType, null);
+                parameters.Add("@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(DocumentTable.EtagColumn).DbType, null);
             }
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
                 Sql = sql,
-                Parameters = parameters.Values.ToList(),
+                Parameters = parameters,
                 ExpectedRowCount = 1
             });
 

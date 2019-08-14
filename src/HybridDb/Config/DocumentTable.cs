@@ -4,20 +4,6 @@ using System.Data;
 
 namespace HybridDb.Config
 {
-    public class Row
-    {
-
-    }
-
-    public static class RowEx
-    {
-        public static TValue Get<TValue>(this IDictionary<string, object> row, string name) => (TValue) row[name];
-
-        public static TValue Get<TValue>(this IDictionary<string, object> row, Column<TValue> column) => (TValue)row[column.Name];
-
-        public static void Set<TValue>(this IDictionary<string, object> row, Column<TValue> column, TValue value) => row[column.Name] = value;
-    }
-
     public class DocumentTable : Table
     {
         static readonly List<Column> commonColumns = new List<Column>();

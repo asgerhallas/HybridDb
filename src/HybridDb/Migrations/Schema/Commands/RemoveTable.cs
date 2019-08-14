@@ -4,7 +4,8 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public RemoveTable(string tablename)
         {
-            Unsafe = true;
+            Safe = false;
+
             Tablename = tablename;
         }
 

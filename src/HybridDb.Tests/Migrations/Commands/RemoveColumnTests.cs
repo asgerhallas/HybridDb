@@ -43,7 +43,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [InlineData("OtherName", true)]
         public void IsAlwaysUnsafe(string columnName, bool isUnsafe)
         {
-            new RemoveColumn(new Table("Entities"), columnName).Unsafe.ShouldBe(isUnsafe);
+            new RemoveColumn(new Table("Entities"), columnName).Safe.ShouldBe(!isUnsafe);
         }
 
         [Fact]

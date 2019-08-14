@@ -90,7 +90,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Unsafe.ShouldBe(false);
+            new CreateTable(new Table("Entities", new Column("Col1", typeof(string)))).Safe.ShouldBe(true);
         }
     }
 }

@@ -67,7 +67,7 @@ namespace HybridDb.Tests.Migrations
             var command = (RemoveTable)migrator.CalculateSchemaChanges(schema, configuration).Single();
 
             command.Tablename.ShouldBe("Entities");
-            command.Unsafe.ShouldBe(true);
+            command.Safe.ShouldBe(false);
         }
 
         [Fact]

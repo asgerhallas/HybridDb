@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using HybridDb.Config;
 
@@ -15,23 +14,6 @@ namespace HybridDb
                 select new KeyValuePair<Column, object>(column, projection.Value)
             ).ToDictionary();
 
-        public static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections)
-        {
-            var parameters = new Dictionary<string, Parameter>();
-            foreach (var projection in projections)
-            {
-                var column = projection.Key;
-                var sqlColumn = SqlTypeMap.Convert(column);
-                AddTo(parameters, "@" + column.Name, projection.Value, sqlColumn.DbType, sqlColumn.Length);
-            }
-
-            return parameters;
-        }
-
-        public static void AddTo(IDictionary<string, Parameter> parameters, string name, object value, SqlDbType? dbType, string size)
-        {
-            parameters[name] = new Parameter(name, value) { DbType = dbType };
-        }
     }
 
     public abstract class Command<TResult> : DmlCommand { }

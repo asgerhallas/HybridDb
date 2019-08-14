@@ -53,8 +53,7 @@ namespace HybridDb.Config
                     .OfType<MaxLength>()
                     .FirstOrDefault();
 
-                column = new Column<TReturn>(name, lengthOption?.Length);
-                design.Table.Add((Column<TReturn>) column);
+                column = design.Table.Add(new Column<TReturn>(name, lengthOption?.Length));
             }
 
             Func<object, object> compiledProjector;

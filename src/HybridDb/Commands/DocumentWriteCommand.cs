@@ -17,8 +17,7 @@ namespace HybridDb.Commands
                 throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
             }
 
-            var fastParameters = new FastDynamicParameters(preparedCommand.Parameters);
-            var rowcount = tx.SqlConnection.Execute(preparedCommand.Sql, fastParameters, tx.SqlTransaction);
+            var rowcount = tx.SqlConnection.Execute(preparedCommand.Sql, preparedCommand.Parameters, tx.SqlTransaction);
 
             if (rowcount != preparedCommand.ExpectedRowCount)
             {

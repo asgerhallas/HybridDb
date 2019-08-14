@@ -37,8 +37,10 @@ namespace HybridDb
 
         public int RawExecute(string sql, object parameters = null, bool schema = false)
         {
-            if (parameters is IEnumerable<Parameter> hdbParams)
-                parameters = new FastDynamicParameters(hdbParams);
+            if (parameters is IEnumerable<SqlParameter> sqlParameters)
+            {
+                parameters = new Parameters(sqlParameters);
+            }
 
             store.Logger.Debug(sql);
 
@@ -53,8 +55,10 @@ namespace HybridDb
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false)
         {
-            if (parameters is IEnumerable<Parameter> hdbParams)
-                parameters = new FastDynamicParameters(hdbParams);
+            if (parameters is IEnumerable<SqlParameter> sqlParameters)
+            {
+                parameters = new Parameters(sqlParameters);
+            }
 
             store.Logger.Debug(sql);
 

@@ -168,7 +168,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotStartBackgroundProcessWhenTurnedOff()
         {
-            DisableDocumentMigrationsOnStartup();
+            DisableBackgroundMigrations();
             Document<Entity>().With(x => x.Number);
 
             new DocumentMigrationRunner().Run(store).Wait();

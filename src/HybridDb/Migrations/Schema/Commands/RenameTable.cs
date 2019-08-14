@@ -4,6 +4,8 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public RenameTable(string oldTableName, string newTableName)
         {
+            Safe = true;
+
             OldTableName = oldTableName;
             NewTableName = newTableName;
         }

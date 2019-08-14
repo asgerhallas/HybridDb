@@ -179,6 +179,8 @@
     <Compile Include="Config\MaxLength.cs" />
     <Compile Include="Config\Option.cs" />
     <Compile Include="Config\Projection.cs" />
+    <Compile Include="Migrations\Documents\DocumentRowMigrationCommand.cs" />
+    <Compile Include="RowEx.cs" />
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
     <Compile Include="DocumentStoreEx.cs" />
@@ -267,8 +269,7 @@
     <Compile Include="Operation.cs" />
     <Compile Include="QueryResult.cs" />
     <Compile Include="QueryStats.cs" />
-    <Compile Include="Parameter.cs" />
-    <Compile Include="FastDynamicParameters.cs" />
+    <Compile Include="Parameters.cs" />
     <Compile Include="Config\Column.cs" />
     <Compile Include="Config\DocumentDesign.cs" />
     <Compile Include="NullCheckInjector.cs" />

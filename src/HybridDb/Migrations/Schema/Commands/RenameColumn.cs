@@ -6,7 +6,7 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public RenameColumn(Table table, string oldColumnName, string newColumnName)
         {
-            Unsafe = oldColumnName == "Document";
+            Safe = oldColumnName != "Document";
 
             Table = table;
             OldColumnName = oldColumnName;

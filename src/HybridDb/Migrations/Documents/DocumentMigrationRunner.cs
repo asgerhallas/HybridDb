@@ -14,7 +14,7 @@ namespace HybridDb.Migrations.Documents
             var logger = store.Configuration.Logger;
             var configuration = store.Configuration;
 
-            if (!configuration.RunDocumentMigrationsOnStartup)
+            if (!configuration.RunBackgroundMigrations)
                 return Task.CompletedTask;
 
             return Task.Factory.StartNew(() =>

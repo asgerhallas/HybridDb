@@ -4,11 +4,11 @@ namespace HybridDb.Migrations.Schema
     {
         protected DdlCommand()
         {
-            Unsafe = false;
+            Safe = false;
             RequiresReprojectionOf = null;
         }
 
-        public bool Unsafe { get; protected set; }
+        public bool Safe { get; protected set; }
         public string RequiresReprojectionOf { get; protected set; }
 
         public abstract void Execute(DocumentStore store);

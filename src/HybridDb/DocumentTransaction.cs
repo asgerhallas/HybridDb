@@ -86,7 +86,7 @@ namespace HybridDb
             if (!includeDeleted)
             {
                 where = string.IsNullOrEmpty(where)
-                    ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters
+                    ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
                     : $"({where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
             }
 
@@ -173,8 +173,7 @@ namespace HybridDb
 
         IEnumerable<QueryResult<T>> InternalQuery<T>(SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
         {
-            var normalizedParameters = new FastDynamicParameters(
-                parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
+            var normalizedParameters = parameters as Parameters ?? Parameters.FromAnonymousObject(parameters);
 
             if (hasTotalsQuery)
             {
@@ -200,10 +199,6 @@ namespace HybridDb
                 return rows;
             }
         }
-
-        static IEnumerable<Parameter> ConvertToParameters<T>(object parameters) =>
-            from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
-            select new Parameter("@" + projection.Key, projection.Value);
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
         {
@@ -250,7 +245,7 @@ namespace HybridDb
     public class SqlDatabaseCommand
     {
         public string Sql { get; set; }
-        public List<Parameter> Parameters { get; set; }
+        public Parameters Parameters { get; set; }
         public int ExpectedRowCount { get; set; }
     }
 }

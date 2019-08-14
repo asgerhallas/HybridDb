@@ -32,7 +32,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsUnsafe()
         {
-            new RemoveTable("Entities").Unsafe.ShouldBe(true);
+            new RemoveTable("Entities").Safe.ShouldBe(false);
         }
     }
 }

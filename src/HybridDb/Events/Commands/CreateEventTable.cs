@@ -6,7 +6,12 @@ namespace HybridDb.Events.Commands
     {
         public EventTable EventTable { get; }
 
-        public CreateEventTable(EventTable eventTable) => EventTable = eventTable;
+        public CreateEventTable(EventTable eventTable)
+        {
+            Safe = true;
+
+            EventTable = eventTable;
+        }
 
         public override string ToString() => "Create event table";
 

@@ -6,7 +6,7 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public RemoveColumn(Table table, string name)
         {
-            Unsafe = true;
+            Safe = false;
 
             Table = table;
             Name = name;

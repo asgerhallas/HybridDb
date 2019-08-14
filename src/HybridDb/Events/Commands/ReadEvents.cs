@@ -34,7 +34,7 @@ namespace HybridDb.Events.Commands
                 ORDER BY Position ASC";
 
             var currentCommitId = Guid.Empty;
-            var currentGeneration = 0;
+            var currentGeneration = -1;
             var currentPosition = -1L;
             var events = new List<EventData<byte[]>>();
 

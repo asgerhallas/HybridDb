@@ -17,6 +17,8 @@ namespace HybridDb.Migrations.BuiltIn
     /// </summary>
     public class HybridDb_1_x_x_to_2_x_x_Part1
     {
+        HybridDb_1_x_x_to_2_x_x_Part1() {}
+
         public class UpfrontCommand : DdlCommand
         {
             public override void Execute(DocumentStore store)

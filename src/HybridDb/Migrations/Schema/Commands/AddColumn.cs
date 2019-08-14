@@ -6,6 +6,7 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public AddColumn(string tablename, Column column)
         {
+            Safe = true;
             RequiresReprojectionOf = tablename;
 
             Tablename = tablename;

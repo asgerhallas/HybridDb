@@ -33,7 +33,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [InlineData("OtherName", false)]
         public void CommandSafetyDependsOnColumnName(string columnName, bool isUnsafe)
         {
-            new RenameColumn(new Table("Entities"), columnName, "SomeColumn").Unsafe.ShouldBe(isUnsafe);
+            new RenameColumn(new Table("Entities"), columnName, "SomeColumn").Safe.ShouldBe(!isUnsafe);
         }
 
         [Fact]
@@ -45,7 +45,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new RenameColumn(new Table("Entities"), "c1", "c2").Unsafe.ShouldBe(false);
+            new RenameColumn(new Table("Entities"), "c1", "c2").Safe.ShouldBe(true);
         }
     }
 }

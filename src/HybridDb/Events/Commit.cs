@@ -22,7 +22,7 @@ namespace HybridDb.Events
         public static Commit<T> Create<T>(Guid id, int generation, long end, IReadOnlyList<EventData<T>> events) => 
             new Commit<T>(id, generation, end + 1 - events.Count, end, events);
 
-        public static Commit<T> Empty<T>() => new Commit<T>(Guid.Empty, 1, -1, -1);
+        public static Commit<T> Empty<T>() => new Commit<T>(Guid.Empty, 0, -1, -1);
     }
 
     public class Commit<T> : Commit

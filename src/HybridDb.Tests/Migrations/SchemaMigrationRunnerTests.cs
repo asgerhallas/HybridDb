@@ -189,7 +189,6 @@ namespace HybridDb.Tests.Migrations
             command.NumberOfTimesCalled.ShouldBe(1);
         }
 
-
         [Fact]
         public void NextRunContinuesAtNextVersion()
         {
@@ -339,6 +338,8 @@ namespace HybridDb.Tests.Migrations
 
         public class ThrowingCommand : DdlCommand
         {
+            public ThrowingCommand() => Safe = true;
+
             public override void Execute(DocumentStore store) => throw new InvalidOperationException("ThrowingCommand");
 
             public override string ToString() => "";
@@ -346,6 +347,8 @@ namespace HybridDb.Tests.Migrations
 
         public class CountingCommand : DdlCommand
         {
+            public CountingCommand() => Safe = true;
+
             public int NumberOfTimesCalled { get; private set; }
 
             public override void Execute(DocumentStore store) => NumberOfTimesCalled++;
@@ -354,11 +357,13 @@ namespace HybridDb.Tests.Migrations
 
         public class UnsafeCountingCommand : CountingCommand
         {
-            public UnsafeCountingCommand() => Unsafe = true;
+            public UnsafeCountingCommand() => Safe = false;
         }
 
         public class SlowCommand : DdlCommand
         {
+            public SlowCommand() => Safe = true;
+
             public override void Execute(DocumentStore store) => Thread.Sleep(5000);
 
             public override string ToString() => "";

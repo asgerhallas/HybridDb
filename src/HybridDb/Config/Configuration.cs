@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Commands;
@@ -10,12 +9,10 @@ using HybridDb.Events.Commands;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
-using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Serialization;
 using Serilog;
 using ShinySwitch;
 using static Indentional.Indent;
-using SqlCommand = HybridDb.Migrations.Schema.Commands.SqlCommand;
 
 namespace HybridDb.Config
 {
@@ -40,8 +37,8 @@ namespace HybridDb.Config
             TypeMapper = new AssemblyQualifiedNameTypeMapper();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
-            RunSchemaMigrationsOnStartup = true;
-            RunDocumentMigrationsOnStartup = true;
+            RunUpfrontMigrations = true;
+            RunBackgroundMigrations = true;
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
             Queued = false;
@@ -64,8 +61,8 @@ namespace HybridDb.Config
         public ITypeMapper TypeMapper { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
-        public bool RunSchemaMigrationsOnStartup { get; private set; }
-        public bool RunDocumentMigrationsOnStartup { get; private set; }
+        public bool RunUpfrontMigrations { get; private set; }
+        public bool RunBackgroundMigrations { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
@@ -275,13 +272,17 @@ namespace HybridDb.Config
 
         public void UseColumnNameConventions(Func<Expression, string> convention) => ColumnNameConvention = convention;
 
-        internal void DisableMigrationsOnStartup()
+        internal void DisableMigrations()
         {
-            RunSchemaMigrationsOnStartup = false;
-            RunDocumentMigrationsOnStartup = false;
+            RunUpfrontMigrations = false;
+            RunBackgroundMigrations = false;
         }
 
-        public void DisableDocumentMigrationsOnStartup() => RunDocumentMigrationsOnStartup = false;
+        /// <summary>
+        /// This will disable the background process that loads and migrates rows/documents,
+        /// but a document will still be migrated when it is loaded into a session.
+        /// </summary>
+        public void DisableBackgroundMigrations() => RunBackgroundMigrations = false;
 
         static string KeyResolver(object entity)
         {

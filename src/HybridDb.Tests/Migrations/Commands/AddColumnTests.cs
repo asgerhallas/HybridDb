@@ -109,7 +109,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new AddColumn("Entities", new Column("Col", typeof(int))).Unsafe.ShouldBe(false);
+            new AddColumn("Entities", new Column("Col", typeof(int))).Safe.ShouldBe(true);
         }
 
         [Fact]

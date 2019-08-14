@@ -33,7 +33,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Fact]
         public void IsSafe()
         {
-            new RenameTable("Entities", "OtherEntities").Unsafe.ShouldBe(false);
+            new RenameTable("Entities", "OtherEntities").Safe.ShouldBe(true);
         }
     }
 }

@@ -32,12 +32,12 @@ namespace HybridDb.Commands
                 ({string.Join(", ", from column in values.Keys select column.Name)}) 
                 values ({string.Join(", ", from column in values.Keys select "@" + column.Name)});";
 
-            var parameters = MapProjectionsToParameters(values);
+            var parameters = Parameters.FromProjections(values);
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
                 Sql = sql,
-                Parameters = parameters.Values.ToList(),
+                Parameters = parameters,
                 ExpectedRowCount = 1
             });
 

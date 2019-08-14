@@ -732,7 +732,7 @@ namespace HybridDb.Tests
 
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
-            if (disableDocumentMigrationsOnStartup) DisableDocumentMigrationsOnStartup();
+            if (disableDocumentMigrationsOnStartup) DisableBackgroundMigrations();
 
             using (var session = store.OpenSession())
             {
@@ -771,7 +771,7 @@ namespace HybridDb.Tests
                     new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; }),
                     new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
 
-            if (disableDocumentMigrationsOnStartup) DisableDocumentMigrationsOnStartup();
+            if (disableDocumentMigrationsOnStartup) DisableBackgroundMigrations();
 
             using (var session = store.OpenSession())
             {
@@ -881,7 +881,7 @@ namespace HybridDb.Tests
 
             UseBackupWriter(backupWriter);
             Document<Entity>();
-            DisableDocumentMigrationsOnStartup();
+            DisableBackgroundMigrations();
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
@@ -900,12 +900,12 @@ namespace HybridDb.Tests
                     .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" })));
             }
 
-            // try it again (todo: move to seperate test)
+            // try it again
             ResetConfiguration();
 
             UseBackupWriter(backupWriter);
             Document<Entity>();
-            DisableDocumentMigrationsOnStartup();
+            DisableBackgroundMigrations();
             UseMigrations(
                 new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })),
                 new InlineMigration(2, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "2"; })));
@@ -933,7 +933,7 @@ namespace HybridDb.Tests
 
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
-            DisableDocumentMigrationsOnStartup();
+            DisableBackgroundMigrations();
 
             var id = NewId();
             using (var session = store.OpenSession())

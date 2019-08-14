@@ -46,15 +46,17 @@ namespace HybridDb.Events.Commands
                   )
                   ORDER BY Position";
 
-            var rows = tx.SqlConnection.Query<Row>(sql, new { id = command.CommitId }, transaction: tx.SqlTransaction).ToList();
+            var rows = tx.SqlConnection.Query<Row>(sql, new {id = command.CommitId}, transaction: tx.SqlTransaction).ToList();
 
             // if no parent commit is found, the initial, transient commit is parent
             if (!rows.Any())
-                return new Commit<byte[]>(Guid.Empty, 1, -1, -1);
+            {
+                return new Commit<byte[]>(Guid.Empty, 0, -1, -1);
+            }
 
             var lastRow = rows.Last();
-            return Commit.Create(
-                lastRow.CommitId, lastRow.Generation, lastRow.Position, rows.Select(Row.ToEvent).ToList());
+
+            return Commit.Create(lastRow.CommitId, lastRow.Generation, lastRow.Position, rows.Select(Row.ToEvent).ToList());
         }
     }
 }

@@ -54,7 +54,7 @@ namespace HybridDb.Tests.Events
 
             commits.Count.ShouldBe(1);
             commits[0].Id.ShouldBe(Guid.Empty);
-            commits[0].Generation.ShouldBe(1);
+            commits[0].Generation.ShouldBe(0);
             commits[0].Begin.ShouldBe(-1);
             commits[0].End.ShouldBe(-1);
         }
