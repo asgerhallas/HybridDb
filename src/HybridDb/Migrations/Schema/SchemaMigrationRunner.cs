@@ -25,7 +25,7 @@ namespace HybridDb.Migrations.Schema
             this.differ = differ;
 
             logger = store.Configuration.Logger;
-            migrations = store.Configuration.Migrations;
+            migrations = store.Configuration.Migrations.ToList();
         }
 
         public void Run()

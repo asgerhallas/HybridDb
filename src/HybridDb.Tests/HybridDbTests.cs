@@ -21,6 +21,7 @@ namespace HybridDb.Tests
         protected readonly List<LogEvent> log = new List<LogEvent>();
         protected readonly ILogger logger;
         protected string connectionString;
+        bool autoInitialize = true;
 
         Lazy<DocumentStore> activeStore;
 
@@ -45,7 +46,10 @@ namespace HybridDb.Tests
             {
                 var s = activeStore.Value;
 
-                s.DocumentMigration.Wait();
+                if (s.IsInitialized)
+                {
+                    s.DocumentMigration.Wait();
+                }
 
                 return s;
             }
@@ -59,6 +63,8 @@ namespace HybridDb.Tests
                 ? "Server=(local)\\SQL2014;Database=master;User ID=sa;Password=Password12!"
                 : "data source =.; Integrated Security = True";
         }
+
+        protected void NoInitialize() => autoInitialize = false;
 
         protected void Use(TableMode mode, string prefix = null)
         {
@@ -81,7 +87,7 @@ namespace HybridDb.Tests
 
             configuration.UseConnectionString(connectionString);
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.GlobalTempTables, configuration, true)));
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.GlobalTempTables, configuration, autoInitialize)));
         }
 
         protected void UseRealTables()
@@ -121,7 +127,7 @@ namespace HybridDb.Tests
                 }
             });
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration, true)));
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration, autoInitialize)));
         }
 
         protected void InitializeStore()
@@ -141,7 +147,17 @@ namespace HybridDb.Tests
             configuration.UseConnectionString(connectionString);
             configuration.UseLogger(logger);
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration))); 
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize))); 
+        }
+
+        /// <summary>
+        /// Resets store, but not configuration or database. Can be used to test a new store with same configuration and database.
+        /// </summary>
+        protected void ResetStore()
+        {
+            var currentStore = store;
+
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize))); 
         }
 
         protected T Using<T>(T disposable) where T : IDisposable

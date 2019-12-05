@@ -34,7 +34,7 @@ namespace HybridDb
             if (initialize) Initialize();
         }
 
-        internal DocumentStore(DocumentStore store, Configuration configuration)
+        internal DocumentStore(DocumentStore store, Configuration configuration, bool initialize)
         {
             Configuration = configuration;
             Logger = configuration.Logger;
@@ -42,7 +42,8 @@ namespace HybridDb
             Database = store.Database;
 
             Configuration.Initialize();
-            Initialize();
+
+            if (initialize) Initialize();
         }
 
         public static DocumentStore Create(Action<Configuration> configure, bool initialize = true)
@@ -84,10 +85,15 @@ namespace HybridDb
         {
             if (IsInitialized) throw new InvalidOperationException("Store is already initialized.");
 
+            // No use of the store for handling documents is allowed before this is run.
             new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
-            DocumentMigration = new DocumentMigrationRunner().Run(this);
 
+            // Set as initialized before invoking document migrations, to avoid errors when the runner
+            // tries to open sessions and execute commands. Concurrent use of the store for handling
+            // documents is permitted from this time on.
             IsInitialized = true;
+
+            DocumentMigration = new DocumentMigrationRunner().Run(this);
         }
 
         public IDocumentSession OpenSession(DocumentTransaction tx = null)
@@ -107,7 +113,7 @@ namespace HybridDb
 
         public void Execute(DdlCommand command)
         {
-            AssertInitialized();
+            if (IsInitialized) throw new InvalidOperationException("Changing database schema is not allowed after store initialization.");
 
             Configuration.GetDdlCommandExecutor(this, command)();
         }

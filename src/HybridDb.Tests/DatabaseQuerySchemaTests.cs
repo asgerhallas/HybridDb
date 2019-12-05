@@ -13,6 +13,7 @@ namespace HybridDb.Tests
         [InlineData(TableMode.RealTables)]
         public void ReturnsAllTables(TableMode mode)
         {
+            NoInitialize();
             Use(mode);
 
             store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));
@@ -29,6 +30,7 @@ namespace HybridDb.Tests
         [InlineData(TableMode.RealTables)]
         public void ReturnsAllColumns(TableMode mode)
         {
+            NoInitialize();
             Use(mode);
 
             store.Execute(new CreateTable(new Table("Entities1", new Column("test", typeof(int)))));

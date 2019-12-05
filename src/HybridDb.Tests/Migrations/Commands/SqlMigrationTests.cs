@@ -9,6 +9,8 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class SqlMigrationTests : HybridDbTests
     {
+        public SqlMigrationTests() => NoInitialize();
+
         [Theory]
         [InlineData(TableMode.GlobalTempTables)]
         [InlineData(TableMode.RealTables)]

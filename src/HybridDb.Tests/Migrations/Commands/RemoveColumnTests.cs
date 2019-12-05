@@ -8,6 +8,8 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class RemoveColumnTests : HybridDbTests
     {
+        public RemoveColumnTests() => NoInitialize();
+
         [Fact]
         public void RemovesColumn()
         {

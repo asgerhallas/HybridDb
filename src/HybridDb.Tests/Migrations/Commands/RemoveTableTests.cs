@@ -9,6 +9,8 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class RemoveTableTests : HybridDbTests
     {
+        public RemoveTableTests() => NoInitialize();
+
         [Theory]
         [InlineData(TableMode.GlobalTempTables)]
         [InlineData(TableMode.RealTables)]

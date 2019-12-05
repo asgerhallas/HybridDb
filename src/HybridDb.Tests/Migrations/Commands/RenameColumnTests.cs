@@ -9,6 +9,8 @@ namespace HybridDb.Tests.Migrations.Commands
 {
     public class RenameColumnTests : HybridDbTests
     {
+        public RenameColumnTests() => NoInitialize();
+
         [Theory]
         [InlineData(TableMode.GlobalTempTables)]
         [InlineData(TableMode.RealTables)]

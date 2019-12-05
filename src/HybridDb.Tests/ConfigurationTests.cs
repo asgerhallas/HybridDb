@@ -191,14 +191,26 @@ namespace HybridDb.Tests
         [Fact]
         public void ThrowsIfMigrationsDoesNotStartFromOne()
         {
-            Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(2), new InlineMigration(3) }))
+            Should.Throw<ArgumentException>(() =>
+                {
+                    configuration.UseMigrations(new List<Migration> {new InlineMigration(2), new InlineMigration(3)});
+
+                    // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                    configuration.Migrations.ToList();
+                })
                 .Message.ShouldBe("Missing migration for version 1.");
         }
 
         [Fact]
         public void ThrowsIfMigrationVersionHasHoles()
         {
-            Should.Throw<ArgumentException>(() => configuration.UseMigrations(new List<Migration> { new InlineMigration(1), new InlineMigration(3) }))
+            Should.Throw<ArgumentException>(() =>
+                {
+                    configuration.UseMigrations(new List<Migration> {new InlineMigration(1), new InlineMigration(3)});
+                    
+                    // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                    configuration.Migrations.ToList();
+                })
                 .Message.ShouldBe("Missing migration for version 2.");
         }
 

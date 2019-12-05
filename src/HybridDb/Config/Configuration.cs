@@ -59,11 +59,11 @@ namespace HybridDb.Config
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
         public ITypeMapper TypeMapper { get; private set; }
-        public IReadOnlyList<Migration> Migrations { get; private set; }
+        public IEnumerable<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
         public bool RunUpfrontMigrations { get; private set; }
         public bool RunBackgroundMigrations { get; private set; }
-        public int ConfiguredVersion { get; private set; }
+
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
         public bool Queued { get; private set; }
@@ -71,6 +71,8 @@ namespace HybridDb.Config
         public Func<Expression, string> ColumnNameConvention { get; private set; }
         public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
+
+        public int ConfiguredVersion => Migrations.Any() ? Migrations.Last().Version : 0;
 
         static string GetTableNameByConventionFor(Type type) => Inflector.Inflector.Pluralize(type.Name);
 
@@ -230,7 +232,7 @@ namespace HybridDb.Config
             }
         }
 
-        public void UseMigrations(IReadOnlyList<Migration> migrations)
+        public void UseMigrations(IEnumerable<Migration> migrations)
         {
             Migrations = migrations.OrderBy(x => x.Version).Where((x, i) =>
             {
@@ -240,9 +242,7 @@ namespace HybridDb.Config
                     return true;
 
                 throw new ArgumentException($"Missing migration for version {expectedVersion}.");
-            }).ToList();
-
-            ConfiguredVersion = Migrations.Any() ? Migrations.Last().Version : 0;
+            });
         }
 
         public void UseBackupWriter(IBackupWriter backupWriter) => BackupWriter = backupWriter;

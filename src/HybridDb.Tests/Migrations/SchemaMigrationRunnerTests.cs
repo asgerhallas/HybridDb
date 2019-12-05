@@ -17,6 +17,7 @@ namespace HybridDb.Tests.Migrations
     {
         public SchemaMigrationRunnerTests()
         {
+            NoInitialize();
             UseRealTables();
         }
 
@@ -48,16 +49,15 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNothingGivenNoMigrations()
         {
-            var schemaBefore = store.Database.QuerySchema();
-
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
 
             var schemaAfter = store.Database.QuerySchema();
-            schemaAfter.Count.ShouldBe(schemaBefore.Count);
+
+            // Documents table is not created because of the fake differ
+            schemaAfter.Count.ShouldBe(1);
             schemaAfter.ShouldContainKey("HybridDb");
-            schemaAfter.ShouldContainKey("Documents");
         }
 
         [Fact]
@@ -263,6 +263,8 @@ namespace HybridDb.Tests.Migrations
             Document<DerivedEntity>();
             Document<OtherEntity>();
 
+            store.Initialize();
+
             using (var session = store.OpenSession())
             {
                 session.Store(new Entity());
@@ -274,6 +276,8 @@ namespace HybridDb.Tests.Migrations
                 session.SaveChanges();
             }
 
+            ResetStore();
+
             var runner = new SchemaMigrationRunner(store, 
                 new FakeSchemaDiffer(
                     new AddColumn("Entities", new Column("NewCol", typeof(int))),
@@ -281,9 +285,9 @@ namespace HybridDb.Tests.Migrations
             
             runner.Run();
 
-            store.Database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x);
-            store.Database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x);
-            store.Database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => !x);
+            store.Database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x == true);
+            store.Database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x == true);
+            store.Database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => x == false);
         }
 
         [Fact]

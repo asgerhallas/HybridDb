@@ -623,7 +623,7 @@ namespace HybridDb.Tests
             return new Query<T>(new QueryProvider(session, null));
         }
 
-        public new class Entity
+        public class Entity
         {
             public string Field;
 
