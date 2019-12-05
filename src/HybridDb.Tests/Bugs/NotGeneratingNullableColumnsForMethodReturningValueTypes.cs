@@ -18,7 +18,7 @@ namespace HybridDb.Tests.Bugs
             column.Nullable.ShouldBe(true);
         }
 
-        public class Entity
+        public new class Entity
         {
             public IEnumerable<object> SomeEnumerable { get; set; }
         }

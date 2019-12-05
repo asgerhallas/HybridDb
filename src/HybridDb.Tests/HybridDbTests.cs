@@ -81,7 +81,7 @@ namespace HybridDb.Tests
 
             configuration.UseConnectionString(connectionString);
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.GlobalTempTables, configuration)));
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.GlobalTempTables, configuration, true)));
         }
 
         protected void UseRealTables()
@@ -121,7 +121,7 @@ namespace HybridDb.Tests
                 }
             });
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration)));
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration, true)));
         }
 
         protected void InitializeStore()

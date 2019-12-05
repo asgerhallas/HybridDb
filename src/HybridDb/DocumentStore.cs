@@ -10,7 +10,7 @@ namespace HybridDb
 {
     public class DocumentStore : IDocumentStore
     {
-        internal DocumentStore(TableMode mode, Configuration configuration)
+        internal DocumentStore(TableMode mode, Configuration configuration, bool initialize)
         {
             Configuration = configuration;
             Logger = configuration.Logger;
@@ -31,8 +31,7 @@ namespace HybridDb
             Configuration.Initialize();
             Database.Initialize();
 
-            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
-            DocumentMigration = new DocumentMigrationRunner().Run(this);
+            if (initialize) Initialize();
         }
 
         internal DocumentStore(DocumentStore store, Configuration configuration)
@@ -43,23 +42,22 @@ namespace HybridDb
             Database = store.Database;
 
             Configuration.Initialize();
-
-            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
-            DocumentMigration = new DocumentMigrationRunner().Run(this);
+            Initialize();
         }
 
-        public static DocumentStore Create(Action<Configuration> configure)
+        public static DocumentStore Create(Action<Configuration> configure, bool initialize = true)
         {
             var configuration = new Configuration();
 
-            configure(configuration); 
+            configure(configuration);
 
-            return new DocumentStore(TableMode.RealTables, configuration);
+            return new DocumentStore(TableMode.RealTables, configuration, initialize);
         }
 
-        public static DocumentStore Create(Configuration configuration = null) => new DocumentStore(TableMode.RealTables, configuration ?? new Configuration());
+        public static DocumentStore Create(Configuration configuration = null, bool initialize = true) => 
+            new DocumentStore(TableMode.RealTables, configuration ?? new Configuration(), initialize);
 
-        public static DocumentStore ForTesting(TableMode mode, Action<Configuration> configure)
+        public static DocumentStore ForTesting(TableMode mode, Action<Configuration> configure, bool initialize = true)
         {
             var configuration = new Configuration();
 
@@ -68,26 +66,69 @@ namespace HybridDb
             return ForTesting(mode, configuration);
         }
 
-        public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null) => new DocumentStore(mode, configuration ?? new Configuration());
+        public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) => 
+            new DocumentStore(mode, configuration ?? new Configuration(), initialize);
 
         public void Dispose() => Database.Dispose();
 
         public IDatabase Database { get; }
-        public ILogger Logger { get; private set; }
+        public ILogger Logger { get;  }
         public Configuration Configuration { get; }
         public TableMode TableMode { get; }
-        public Task DocumentMigration { get; }
-
         public StoreStats Stats { get; } = new StoreStats();
 
-        public IDocumentSession OpenSession(DocumentTransaction tx = null) => new DocumentSession(this, tx);
+        public bool IsInitialized { get; private set; }
+        public Task DocumentMigration { get; private set; }
 
-        public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted) => new DocumentTransaction(this, commitId, level, Stats);
+        public void Initialize()
+        {
+            if (IsInitialized) throw new InvalidOperationException("Store is already initialized.");
+
+            new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
+            DocumentMigration = new DocumentMigrationRunner().Run(this);
+
+            IsInitialized = true;
+        }
+
+        public IDocumentSession OpenSession(DocumentTransaction tx = null)
+        {
+            AssertInitialized();
+
+            return new DocumentSession(this, tx);
+        }
+
         public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);
+        public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted)
+        {
+            AssertInitialized();
 
-        public void Execute(DdlCommand command) => Configuration.GetDdlCommandExecutor(this, command)();
-        public object Execute(DocumentTransaction tx, DmlCommand command) => Configuration.GetDmlCommandExecutor(tx, command)();
-        public T Execute<T>(DocumentTransaction tx, Command<T> command) => (T)Configuration.GetDmlCommandExecutor(tx, command)();
+            return new DocumentTransaction(this, commitId, level, Stats);
+        }
 
+        public void Execute(DdlCommand command)
+        {
+            AssertInitialized();
+
+            Configuration.GetDdlCommandExecutor(this, command)();
+        }
+
+        public object Execute(DocumentTransaction tx, DmlCommand command)
+        {
+            AssertInitialized();
+
+            return Configuration.GetDmlCommandExecutor(tx, command)();
+        }
+
+        public T Execute<T>(DocumentTransaction tx, Command<T> command)
+        {
+            AssertInitialized();
+
+            return (T) Configuration.GetDmlCommandExecutor(tx, command)();
+        }
+
+        void AssertInitialized()
+        {
+            if (!IsInitialized) throw new InvalidOperationException("Store is not initialized. Please call Initialize().");
+        }
    }
 }

@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Bugs
                 .Nullable.ShouldBe(true);
         }
 
-        public class Entity
+        public new class Entity
         {
             public Guid? SomeNullableGuid { get; set; }
         }

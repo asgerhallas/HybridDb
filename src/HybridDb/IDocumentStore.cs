@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 
 namespace HybridDb
@@ -11,6 +10,8 @@ namespace HybridDb
         Configuration Configuration { get; }
         StoreStats Stats { get; }
         TableMode TableMode { get; }
+
+        void Initialize();
 
         IDocumentSession OpenSession(DocumentTransaction tx = null);
         DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted);

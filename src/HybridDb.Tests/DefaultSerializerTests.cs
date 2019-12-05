@@ -585,12 +585,13 @@ namespace HybridDb.Tests
 
         public class WithSomePrivates
         {
-            public WithSomePrivates()
-            {
+            public WithSomePrivates() => 
                 PrivateSetProperty = 42;
-            }
 
+#pragma warning disable 414
             string privateField = "lars";
+#pragma warning restore 414
+
             public string field = "asger";
             public int PrivateSetProperty { get; private set; }
         }
