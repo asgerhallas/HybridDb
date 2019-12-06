@@ -28,9 +28,6 @@ namespace HybridDb
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
 
-            Configuration.Initialize();
-            Database.Initialize();
-
             if (initialize) Initialize();
         }
 
@@ -40,8 +37,6 @@ namespace HybridDb
             Logger = configuration.Logger;
             TableMode = store.TableMode;
             Database = store.Database;
-
-            Configuration.Initialize();
 
             if (initialize) Initialize();
         }
@@ -84,6 +79,9 @@ namespace HybridDb
         public void Initialize()
         {
             if (IsInitialized) throw new InvalidOperationException("Store is already initialized.");
+
+            Configuration.Initialize();
+            Database.Initialize();
 
             // No use of the store for handling documents is allowed before this is run.
             new SchemaMigrationRunner(this, new SchemaDiffer()).Run();

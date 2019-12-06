@@ -20,6 +20,7 @@ namespace HybridDb
 
         public override void Initialize()
         {
+            // already initialized?
             if (prefix != null) return;
 
             if (string.IsNullOrEmpty(store.Configuration.TableNamePrefix))
