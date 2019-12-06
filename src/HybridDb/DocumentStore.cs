@@ -59,7 +59,7 @@ namespace HybridDb
 
             configure(configuration);
 
-            return ForTesting(mode, configuration);
+            return ForTesting(mode, configuration, initialize);
         }
 
         public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) => 
