@@ -254,11 +254,11 @@ namespace HybridDb.Config
 
         public void UseQueues() => Queued = true;
 
-        public void UseEventStore()
+        public void UseEventStore(string tableName = "events")
         {
             EventStore = true;
 
-            tables.TryAdd("events", new EventTable("events"));
+            tables.TryAdd(tableName, new EventTable(tableName));
 
             Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((container, decoratee) => (tx, command) => () => 
                 Switch<object>.On(command)

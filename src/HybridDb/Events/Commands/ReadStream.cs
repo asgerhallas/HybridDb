@@ -41,11 +41,6 @@ namespace HybridDb.Events.Commands
             // see https://github.com/StackExchange/dapper-dot-net/issues/288
             var idParameter = new DbString {Value = command.StreamId, IsAnsi = false, IsFixedLength = false, Length = 850};
 
-            if (tx.SqlTransaction.IsolationLevel != IsolationLevel.Snapshot)
-            {
-                throw new InvalidOperationException("Reads from event store is best done in snapshot isolation so they don't block writes.");
-            }
-
             var currentCommitId = Guid.Empty;
             var currentGeneration = -1;
             var currentPosition = -1L;
