@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using Dapper;
+using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    public class ReadStream : Command<IEnumerable<EventData<byte[]>>>
+    public class ReadStream : Command<IEnumerable<Commit<byte[]>>>
     {
         public ReadStream(EventTable table, string streamId, long fromStreamSeq, long toPosition = long.MaxValue, Direction direction = Direction.Forward)
         {
@@ -22,7 +24,7 @@ namespace HybridDb.Events.Commands
         public long ToPosition { get; }
         public Direction Direction { get; }
 
-        public static IEnumerable<EventData<byte[]>> Execute(DocumentTransaction tx, ReadStream command)
+        public static IEnumerable<Commit<byte[]>> Execute(DocumentTransaction tx, ReadStream command)
         {
             if (tx.SqlTransaction.IsolationLevel != IsolationLevel.Snapshot)    
             {
@@ -39,9 +41,43 @@ namespace HybridDb.Events.Commands
             // see https://github.com/StackExchange/dapper-dot-net/issues/288
             var idParameter = new DbString {Value = command.StreamId, IsAnsi = false, IsFixedLength = false, Length = 850};
 
+            if (tx.SqlTransaction.IsolationLevel != IsolationLevel.Snapshot)
+            {
+                throw new InvalidOperationException("Reads from event store is best done in snapshot isolation so they don't block writes.");
+            }
+
+            var currentCommitId = Guid.Empty;
+            var currentGeneration = -1;
+            var currentPosition = -1L;
+            var events = new List<EventData<byte[]>>();
+
             foreach (var row in tx.SqlConnection.Query<Row>(sql, new { Id = idParameter, command.FromStreamSeq, command.ToPosition }, tx.SqlTransaction, buffered: false))
             {
-                yield return Row.ToEvent(row);
+                // first row
+                if (currentCommitId == Guid.Empty)
+                    currentCommitId = row.CommitId;
+
+                // next commit begun, return the current
+                if (row.CommitId != currentCommitId)
+                {
+                    yield return Commit.Create(currentCommitId, currentGeneration, currentPosition, events);
+
+                    currentCommitId = row.CommitId;
+                    events = new List<EventData<byte[]>>();
+                }
+
+                currentGeneration = row.Generation;
+                currentPosition = row.Position;
+
+                // still same commit
+                var metadata = new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata));
+
+                events.Add(new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber, metadata, row.Data));
+            }
+
+            if (events.Any())
+            {
+                yield return Commit.Create(currentCommitId, currentGeneration, currentPosition, events);
             }
         }
     }

@@ -131,6 +131,9 @@ namespace HybridDb.Tests.Events
                 .ShouldBe(new long[] { 10, 11, 12, 13, 14, 15 });
         }
 
-        List<EventData<byte[]>> Execute(ReadStream command) => store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(command).ToList());
+        List<EventData<byte[]>> Execute(ReadStream command) => store.Transactionally(IsolationLevel.Snapshot, tx => tx
+            .Execute(command)
+            .SelectMany(x => x.Events)
+            .ToList());
     }
 }

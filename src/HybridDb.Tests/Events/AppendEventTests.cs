@@ -20,7 +20,10 @@ namespace HybridDb.Tests.Events
         {
             store.Execute(CreateAppendEventCommand(CreateEventData("stream-1", 0)));
 
-            var @event = store.Transactionally(IsolationLevel.Snapshot, tx => tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0)).Single());
+            var @event = store.Transactionally(IsolationLevel.Snapshot, tx =>
+                tx.Execute(new ReadStream(new EventTable("events"), "stream-1", 0))
+                    .SelectMany(x => x.Events)
+                    .Single());
 
             @event.StreamId.ShouldBe("stream-1");
             @event.SequenceNumber.ShouldBe(0);
