@@ -41,39 +41,7 @@ namespace HybridDb.Events.Commands
             // see https://github.com/StackExchange/dapper-dot-net/issues/288
             var idParameter = new DbString {Value = command.StreamId, IsAnsi = false, IsFixedLength = false, Length = 850};
 
-            var currentCommitId = Guid.Empty;
-            var currentGeneration = -1;
-            var currentPosition = -1L;
-            var events = new List<EventData<byte[]>>();
-
-            foreach (var row in tx.SqlConnection.Query<Row>(sql, new { Id = idParameter, command.FromStreamSeq, command.ToPosition }, tx.SqlTransaction, buffered: false))
-            {
-                // first row
-                if (currentCommitId == Guid.Empty)
-                    currentCommitId = row.CommitId;
-
-                // next commit begun, return the current
-                if (row.CommitId != currentCommitId)
-                {
-                    yield return Commit.Create(currentCommitId, currentGeneration, currentPosition, events);
-
-                    currentCommitId = row.CommitId;
-                    events = new List<EventData<byte[]>>();
-                }
-
-                currentGeneration = row.Generation;
-                currentPosition = row.Position;
-
-                // still same commit
-                var metadata = new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata));
-
-                events.Add(new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber, metadata, row.Data));
-            }
-
-            if (events.Any())
-            {
-                yield return Commit.Create(currentCommitId, currentGeneration, currentPosition, events);
-            }
+            return tx.SqlConnection.Query<Row>(sql, new {Id = idParameter, command.FromStreamSeq, command.ToPosition}, tx.SqlTransaction, buffered: false).Batch();
         }
     }
 }

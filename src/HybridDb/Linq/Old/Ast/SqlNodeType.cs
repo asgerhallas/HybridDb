@@ -1,0 +1,32 @@
+﻿namespace HybridDb.Linq.Old.Ast
+{
+    public enum SqlNodeType
+    {
+        Query,
+        Select,
+        Where,
+        Not,
+        And,
+        Or,
+        Equal,
+        NotEqual,
+        LikeStartsWith,
+        LikeEndsWith,
+        LikeContains,
+        In,
+        Is,
+        IsNot,
+        Constant,
+        Column,
+        ColumnPrefix,
+        LessThan,
+        LessThanOrEqual,
+        GreaterThan,
+        GreaterThanOrEqual,
+        BitwiseAnd,
+        BitwiseOr,
+        Project,
+        Ordering,
+        OrderBy,
+    }
+}

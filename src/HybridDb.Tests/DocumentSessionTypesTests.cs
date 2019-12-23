@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Linq;
+using HybridDb.Linq.Old;
 using Shouldly;
 using Xunit;
 

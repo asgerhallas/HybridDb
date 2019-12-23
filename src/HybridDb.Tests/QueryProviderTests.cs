@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq;
+using HybridDb.Linq.Old;
 using Xunit;
 
 namespace HybridDb.Tests

@@ -5,6 +5,7 @@ using System.Text;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq;
+using HybridDb.Linq.Old;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 
@@ -208,7 +209,7 @@ namespace HybridDb
                     case EntityState.Loaded:
                         if (!forceWriteUnchangedDocument && 
                             SafeSequenceEqual(managedEntity.Document, document) && 
-                            SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument)) 
+                            SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
 
                         commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections, lastWriteWins));

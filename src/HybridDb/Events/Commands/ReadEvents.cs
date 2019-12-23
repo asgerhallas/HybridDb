@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using Dapper;
-using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
@@ -33,39 +31,7 @@ namespace HybridDb.Events.Commands
                 WHERE Position >= @fromPosition {(!command.ReadPastActiveTransactions ? "AND RowVersion < min_active_rowversion()" : "")}
                 ORDER BY Position ASC";
 
-            var currentCommitId = Guid.Empty;
-            var currentGeneration = -1;
-            var currentPosition = -1L;
-            var events = new List<EventData<byte[]>>();
-
-            foreach (var row in tx.SqlConnection.Query<Row>(sql, new {fromPosition = command.FromPositionIncluding}, tx.SqlTransaction, buffered: false))
-            {
-                // first row
-                if (currentCommitId == Guid.Empty)
-                    currentCommitId = row.CommitId;
-
-                // next commit begun, return the current
-                if (row.CommitId != currentCommitId)
-                {
-                    yield return Commit.Create(currentCommitId, currentGeneration, currentPosition, events);
-
-                    currentCommitId = row.CommitId;
-                    events = new List<EventData<byte[]>>();
-                }
-
-                currentGeneration = row.Generation;
-                currentPosition = row.Position;
-
-                // still same commit
-                var metadata = new Metadata(JsonConvert.DeserializeObject<Dictionary<string, string>>(row.Metadata));
-
-                events.Add(new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber, metadata, row.Data));
-            }
-
-            if (events.Any())
-            {
-                yield return Commit.Create(currentCommitId, currentGeneration, currentPosition, events);
-            }
+            return tx.SqlConnection.Query<Row>(sql, new {fromPosition = command.FromPositionIncluding}, tx.SqlTransaction, buffered: false).Batch();
         }
     }
 }

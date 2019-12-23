@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq;
+using HybridDb.Linq.Old;
 
 namespace HybridDb.Migrations.Documents
 {
