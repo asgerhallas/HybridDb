@@ -1,10 +1,14 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Migrations.BuiltIn
 {
@@ -36,9 +40,44 @@ namespace HybridDb.Migrations.BuiltIn
             public override string ToString() => "Move old document and metadata format to a temporary column.";
         }
 
-        public class BackgroundCommand : DocumentRowMigrationCommand
+        /// <summary>
+        /// Use when migrating from HybridDb version earlier than 0.10.64 to version 2 and later
+        /// </summary>
+        public class BackgroundCommand_Before_0_10_64 : DocumentRowMigrationCommand
         {
-            public BackgroundCommand() : base(null, null) { }
+            public BackgroundCommand_Before_0_10_64() : base(null, null) { }
+
+            public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
+            {
+                var prevDocument = row.Get<byte[]>("Document_pre_v2");
+                if (prevDocument != null)
+                {
+                    using (var inStream = new MemoryStream(prevDocument))
+                    using (var bsonReader = new BsonReader(inStream))
+                    {
+                        var jObj = new JsonSerializer().Deserialize(bsonReader, typeof(JObject));
+
+                        row.Set(DocumentTable.DocumentColumn, serializer.Serialize(jObj));
+
+                    }
+                }
+
+                var prevMetadata = row.Get<byte[]>("Metadata_pre_v2");
+                if (prevMetadata != null)
+                {
+                    row.Set(DocumentTable.MetadataColumn, Encoding.UTF8.GetString(prevMetadata));
+                }
+
+                return row;
+            }
+        }
+
+        /// <summary>
+        /// Use when migrating from HybridDb version 0.10.64 or later to version 2 and later
+        /// </summary>
+        public class BackgroundCommand_0_10_64_And_Later : DocumentRowMigrationCommand
+        {
+            public BackgroundCommand_0_10_64_And_Later() : base(null, null) { }
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
             {
