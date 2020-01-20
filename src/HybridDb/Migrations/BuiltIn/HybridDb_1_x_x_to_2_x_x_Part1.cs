@@ -57,8 +57,7 @@ namespace HybridDb.Migrations.BuiltIn
                     {
                         var jObj = new JsonSerializer().Deserialize(bsonReader, typeof(JObject));
 
-                        row.Set(DocumentTable.DocumentColumn, serializer.Serialize(jObj));
-
+                        row.Set(DocumentTable.DocumentColumn, JsonConvert.SerializeObject(jObj));
                     }
                 }
 

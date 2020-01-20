@@ -17,10 +17,12 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 {
     public class HybridDb_1_x_x_to_2_x_x_Part1_Tests : HybridDbTests
     {
+        // To export data for use in these tests, use "Tasks > Generate Scripts" in SQL Management Studio.
+        // Under "Advanced" select "Schema and data" for "Types of data to script"
+
         // TODO: Test at et dokument, der loades uden configureret design via migration ikke forsøges gemt i 
         // databasen i en forkert tabel (Documents) og derved lader migrations gå i uendelig løkke. 
         // Måske skal ManagedEntity have Design på sig?
-
         [Fact]
         public void MoveAndEncode()
         {
@@ -53,6 +55,40 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             after["Metadata"].ShouldNotBe(null);
             after["Metadata"].ShouldBe(Encoding.UTF8.GetString((byte[])before["Metadata"]));
+        }
+
+        [Fact(Skip = "Skip for now. Needs better setup and assertion.")]
+        public void Test3()
+        {
+            UseRealTables();
+
+            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql");
+
+            UseTypeMapper(new OtherTypeMapper());
+            Document<JObject>("BuildingParts");
+
+            var before = store.Query(new DocumentTable("BuildingParts"), out _).Single();
+
+            ResetConfiguration();
+
+            UseTypeMapper(new OtherTypeMapper());
+            UseMigrations(new InlineMigration(1,
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_Before_0_10_64())));
+
+            // Match the serializer with the one used in the sample data set
+            var serializer = new DefaultSerializer();
+            serializer.EnableAutomaticBackReferences();
+            UseSerializer(serializer);
+
+            Document<JObject>("BuildingParts");
+
+            InitializeStore();
+
+            var after = store.Query(new DocumentTable("BuildingParts"), out _).Single();
+
+            after["Document"].ShouldNotBe(null);
+            after["Document"].ShouldBe(Encoding.UTF8.GetString((byte[])before["Document"]));
         }
 
         [Fact]
