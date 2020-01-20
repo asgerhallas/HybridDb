@@ -24,7 +24,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         // databasen i en forkert tabel (Documents) og derved lader migrations gå i uendelig løkke. 
         // Måske skal ManagedEntity have Design på sig?
         [Fact]
-        public void MoveAndEncode()
+        public void BackgroundCommand_0_10_64_And_Later_MoveAndEncode()
         {
             UseRealTables();
 
@@ -57,42 +57,8 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             after["Metadata"].ShouldBe(Encoding.UTF8.GetString((byte[])before["Metadata"]));
         }
 
-        [Fact(Skip = "Skip for now. Needs better setup and assertion.")]
-        public void Test3()
-        {
-            UseRealTables();
-
-            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql");
-
-            UseTypeMapper(new OtherTypeMapper());
-            Document<JObject>("BuildingParts");
-
-            var before = store.Query(new DocumentTable("BuildingParts"), out _).Single();
-
-            ResetConfiguration();
-
-            UseTypeMapper(new OtherTypeMapper());
-            UseMigrations(new InlineMigration(1,
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_Before_0_10_64())));
-
-            // Match the serializer with the one used in the sample data set
-            var serializer = new DefaultSerializer();
-            serializer.EnableAutomaticBackReferences();
-            UseSerializer(serializer);
-
-            Document<JObject>("BuildingParts");
-
-            InitializeStore();
-
-            var after = store.Query(new DocumentTable("BuildingParts"), out _).Single();
-
-            after["Document"].ShouldNotBe(null);
-            after["Document"].ShouldBe(Encoding.UTF8.GetString((byte[])before["Document"]));
-        }
-
         [Fact]
-        public void HandleANullDocumentAndMetadata()
+        public void BackgroundCommand_0_10_64_And_Later_HandleANullDocumentAndMetadata()
         {
             UseRealTables();
 
@@ -120,6 +86,39 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             after["Document"].ShouldBe("{}");
             after["Metadata"].ShouldBe(null);
+        }
+
+        [Fact]
+        public void BackgroundCommand_Before_0_10_64()
+        {
+            UseRealTables();
+
+            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql");
+
+            UseTypeMapper(new OtherTypeMapper());
+            Document<JObject>("BuildingParts");
+
+            var before = store.Query(new DocumentTable("BuildingParts"), out _).Single();
+
+            ResetStore();
+
+            UseMigrations(new InlineMigration(1,
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
+                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_Before_0_10_64())));
+
+            // Match the serializer with the one used in the sample data set
+            var serializer = new DefaultSerializer();
+            serializer.EnableAutomaticBackReferences();
+            UseSerializer(serializer);
+
+            InitializeStore();
+
+            var after = store.Query(new DocumentTable("BuildingParts"), out _).Single();
+
+            var expectedDocument = File.ReadAllText("Migrations\\BuiltIn\\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3_Result.json");
+
+            after["Document"].ShouldNotBe(null);
+            after["Document"].ShouldBe(expectedDocument);
         }
 
         void Setup(string filename)
