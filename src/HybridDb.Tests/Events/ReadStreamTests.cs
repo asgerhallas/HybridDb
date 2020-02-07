@@ -7,12 +7,13 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Events
 {
     public class ReadStreamTests : EventStoreTests
     {
-        public ReadStreamTests()
+        public ReadStreamTests(ITestOutputHelper output) : base(output)
         {
             UseEventStore();
         }

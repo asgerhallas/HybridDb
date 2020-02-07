@@ -12,12 +12,15 @@ using HybridDb.Migrations.Documents;
 using Serilog;
 using Shouldly;
 using Xunit;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations
 {
     public class DocumentMigrationRunnerTests : HybridDbTests
     {
+        public DocumentMigrationRunnerTests(ITestOutputHelper output) : base(output) { }
+
         [Theory]
         [InlineData(true, 42)]
         [InlineData(false, 0)]

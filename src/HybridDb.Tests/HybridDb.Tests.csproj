@@ -1,201 +1,37 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B4D2D6CA-5E86-48D5-B12F-6CAAE847015C}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HybridDb.Tests</RootNamespace>
-    <AssemblyName>HybridDb.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
-    <TargetFrameworkProfile />
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Dapper, Version=1.50.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Dapper.1.50.4\lib\net451\Dapper.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="DeepEqual, Version=2.0.0.0, Culture=neutral, PublicKeyToken=95e562839177c33d, processorArchitecture=MSIL">
-      <HintPath>..\packages\DeepEqual.2.0.0\lib\net462\DeepEqual.dll</HintPath>
-    </Reference>
-    <Reference Include="FakeItEasy, Version=4.0.0.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
-      <HintPath>..\packages\FakeItEasy.4.6.0\lib\net45\FakeItEasy.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
-      <HintPath>..\packages\Serilog.2.3.0\lib\net46\Serilog.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Serilog.Sinks.ColoredConsole, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
-      <HintPath>..\packages\Serilog.Sinks.ColoredConsole.2.0.0\lib\net45\Serilog.Sinks.ColoredConsole.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="ShinySwitch, Version=1.0.73.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ShinySwitch.1.0.73\lib\net45\ShinySwitch.dll</HintPath>
-    </Reference>
-    <Reference Include="ShouldBeLike, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ShouldBeLike.1.0.1\lib\netstandard2.0\ShouldBeLike.dll</HintPath>
-    </Reference>
-    <Reference Include="Shouldly, Version=3.0.2.0, Culture=neutral, PublicKeyToken=6042cbcb05cbc941, processorArchitecture=MSIL">
-      <HintPath>..\packages\Shouldly.3.0.2\lib\net451\Shouldly.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Collections.Immutable.1.3.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Diagnostics.DiagnosticSource.4.3.0\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.IO.Compression, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.IO.Compression.4.3.0\lib\net46\System.IO.Compression.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="System.Net.Http, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Net.Http.4.3.0\lib\net46\System.Net.Http.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
+    <PackageReference Include="FakeItEasy" Version="5.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="ShouldBeLike" Version="1.0.2" />
+    <PackageReference Include="Shouldly" Version="3.0.2" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.console" Version="2.4.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="Bugs\DeadlockIssueOnMigrations.cs" />
-    <Compile Include="Bugs\DecimalTruncated.cs" />
-    <Compile Include="Bugs\FailsOnNullSafeAccessToNonNullableProperty.cs" />
-    <Compile Include="Bugs\IdentityMapThinksIdsAreGlobal.cs" />
-    <Compile Include="Bugs\NotGeneratingNullableColumnsForMethodReturningValueTypes.cs" />
-    <Compile Include="Bugs\SelectPrimitiveValueInQuery.cs" />
-    <Compile Include="ConfigurationTests.cs" />
-    <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
-    <Compile Include="Config\ColumnTests.cs" />
-    <Compile Include="Config\SqlTypeMapTests.cs" />
-    <Compile Include="DefaultSerializerTests.cs" />
-    <Compile Include="DocumentDesignerTests.cs" />
-    <Compile Include="DocumentMigratorTests.cs" />
-    <Compile Include="DocumentSessionTypesTests.cs" />
-    <Compile Include="DocumentStore_QueryChangesTests.cs" />
-    <Compile Include="Events\AppendEventTests.cs" />
-    <Compile Include="Events\EventStoreTests.cs" />
-    <Compile Include="Events\GetPositionTests.cs" />
-    <Compile Include="Events\LoadParentCommitTests.cs" />
-    <Compile Include="Events\ReadEventsByCommitIdsTests.cs" />
-    <Compile Include="Events\ReadEventsTests.cs" />
-    <Compile Include="Events\ReadStreamTests.cs" />
-    <Compile Include="FakeBackupWriter.cs" />
-    <Compile Include="FileBackupWriterTests.cs" />
-    <Compile Include="HybridDbTests.cs" />
-    <Compile Include="InlineMigration.cs" />
-    <Compile Include="Linq\Plugins\CastEnumsTests.cs" />
-    <Compile Include="Linq\Compilers\ColumnNameCompilerTests.cs" />
-    <Compile Include="Linq\Compilers\CompilerTests.cs" />
-    <Compile Include="Linq\Plugins\InMethodTests.cs" />
-    <Compile Include="Linq\Compilers\LinqCompilerIntegrationTests.cs" />
-    <Compile Include="Linq\Compilers\NormalizeComparisonsTests.cs" />
-    <Compile Include="Linq\Compilers\PreProcessors_PropagateImplicitBooleansTests.cs" />
-    <Compile Include="Linq\Compilers\PreProcessors_ReduceConstantMemberAccessTests.cs" />
-    <Compile Include="Linq\RootCompilerTests.cs" />
-    <Compile Include="Linq\Compilers\SqlEmitterTests.cs" />
-    <Compile Include="Migrations\Commands\SqlMigrationTests.cs" />
-    <Compile Include="Migrations\Commands\AddColumnTests.cs" />
-    <Compile Include="Migrations\Commands\CreateTableTests.cs" />
-    <Compile Include="Migrations\Commands\RemoveColumnTests.cs" />
-    <Compile Include="Migrations\Commands\RemoveTableTests.cs" />
-    <Compile Include="Migrations\Commands\RenameColumnTests.cs" />
-    <Compile Include="Migrations\Commands\RenameTableTests.cs" />
-    <Compile Include="Migrations\DocumentMigrationRunnerTests.cs" />
-    <Compile Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests.cs" />
-    <Compile Include="ListSink.cs" />
-    <Compile Include="Migrations\SchemaMigrationRunnerTests.cs" />
-    <Compile Include="Migrations\SchemaDifferTests.cs" />
-    <Compile Include="QueryProviderTests.cs" />
-    <Compile Include="NullCheckInjectorTests.cs" />
-    <Compile Include="DocumentSessionTests.cs" />
-    <Compile Include="DocumentStoreTests.cs" />
-    <Compile Include="LinqIntegrationTests.cs" />
-    <Compile Include="LinqTests.cs" />
-    <Compile Include="Performance\BinaryComparisonPerformance.cs" />
-    <Compile Include="Performance\PerformanceTests.cs" />
-    <Compile Include="Performance\QueryPerformanceTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="DatabaseQuerySchemaTests.cs" />
-    <Compile Include="ZipBackupDecoratorTests.cs" />
+    <ProjectReference Include="..\HybridDb\HybridDb.csproj" />
   </ItemGroup>
+
   <ItemGroup>
-    <None Include="app.config" />
-    <None Include="packages.config" />
-    <None Include="Performance\large.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HybridDb\HybridDb.csproj">
-      <Project>{97E49DA1-C846-4900-BA32-E17C0163A331}</Project>
-      <Name>HybridDb</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

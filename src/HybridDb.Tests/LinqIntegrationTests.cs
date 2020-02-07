@@ -5,6 +5,7 @@ using HybridDb.Linq.Old;
 using HybridDb.Serialization;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
@@ -12,7 +13,7 @@ namespace HybridDb.Tests
     {
         readonly IDocumentSession session;
 
-        public LinqIntegrationTests()
+        public LinqIntegrationTests(ITestOutputHelper output) : base(output)
         {
             Document<Entity>()
                 .With(x => x.Property)

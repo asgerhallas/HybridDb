@@ -3,11 +3,14 @@ using System.Linq.Expressions;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class QueryProviderTests : HybridDbTests
     {
+        public QueryProviderTests(ITestOutputHelper output) : base(output) { }
+
         [Fact(Skip="Not yet implemented")]
         public void CanExecuteUntypedExpression()
         {

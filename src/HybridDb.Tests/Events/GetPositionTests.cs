@@ -3,12 +3,13 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Events
 {
     public class GetPositionTests : EventStoreTests
     {
-        public GetPositionTests()
+        public GetPositionTests(ITestOutputHelper output) : base(output)
         {
             UseEventStore();
         }

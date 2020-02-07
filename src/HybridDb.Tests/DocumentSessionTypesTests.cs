@@ -5,11 +5,14 @@ using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class DocumentSessionTypesTests : HybridDbTests
     {
+        public DocumentSessionTypesTests(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void CanLoadByInterface()
         {

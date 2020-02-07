@@ -7,13 +7,14 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb.Tests.Events
 {
     public class ReadEventsTests : EventStoreTests
     {
-        public ReadEventsTests()
+        public ReadEventsTests(ITestOutputHelper output) : base(output)
         {
             UseEventStore();
         }

@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class DocumentMigratorTests : HybridDbTests
     {
+        public DocumentMigratorTests(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void AppliesDocumentChangeMigration()
         {

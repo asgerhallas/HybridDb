@@ -2,12 +2,15 @@
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class DatabaseQuerySchemaTests : HybridDbTests
     {
+        public DatabaseQuerySchemaTests(ITestOutputHelper output) : base(output) { }
+
         [Theory]
         [InlineData(TableMode.GlobalTempTables)]
         [InlineData(TableMode.RealTables)]

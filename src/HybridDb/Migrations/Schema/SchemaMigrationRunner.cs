@@ -46,8 +46,8 @@ namespace HybridDb.Migrations.Schema
                 if (schemaVersion > store.Configuration.ConfiguredVersion)
                 {
                     throw new InvalidOperationException(_($@"
-                        Database schema is ahead of configuration. Schema is version {schemaVersion}, 
-                        but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
+                    Database schema is ahead of configuration. Schema is version {schemaVersion}, 
+                    but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
                 }
 
                 var requiresReprojection = new List<string>();

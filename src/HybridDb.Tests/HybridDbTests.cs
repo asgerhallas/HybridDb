@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
 using Shouldly;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
@@ -18,6 +19,7 @@ namespace HybridDb.Tests
     {
         readonly ConcurrentStack<Action> disposables;
 
+        protected readonly ITestOutputHelper output;
         protected readonly List<LogEvent> log = new List<LogEvent>();
         protected readonly ILogger logger;
         protected string connectionString;
@@ -25,8 +27,10 @@ namespace HybridDb.Tests
 
         Lazy<DocumentStore> activeStore;
 
-        protected HybridDbTests()
+        protected HybridDbTests(ITestOutputHelper output)
         {
+            this.output = output;
+
             logger = new LoggerConfiguration()
                 .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
                 .WriteTo.ColoredConsole()
@@ -92,7 +96,9 @@ namespace HybridDb.Tests
 
         protected void UseRealTables()
         {
-            var uniqueDbName = "HybridDbTests_" + Guid.NewGuid().ToString().Replace("-", "_");
+            var uniqueDbName = $"HybridDbTests_{Guid.NewGuid().ToString().Replace("-", "_")}";
+
+            output.WriteLine("Database name: " + uniqueDbName);
 
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
             {

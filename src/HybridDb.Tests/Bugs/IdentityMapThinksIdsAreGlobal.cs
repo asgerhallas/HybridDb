@@ -1,4 +1,5 @@
 ﻿using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
@@ -8,7 +9,7 @@ namespace HybridDb.Tests.Bugs
 
         const string ThisIsAKnownId = "this is a known ID";
 
-        public IdentityMapThinksIdsAreGlobal()
+        public IdentityMapThinksIdsAreGlobal(ITestOutputHelper output) : base(output)
         {
             documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
             {

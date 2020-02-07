@@ -6,6 +6,7 @@ using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations
 {
@@ -14,7 +15,7 @@ namespace HybridDb.Tests.Migrations
         readonly Dictionary<string, List<string>> schema;
         readonly SchemaDiffer migrator;
 
-        public SchemaDifferTests()
+        public SchemaDifferTests(ITestOutputHelper output) : base(output)
         {
             schema = new Dictionary<string, List<string>>();
             migrator = new SchemaDiffer();

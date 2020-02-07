@@ -11,12 +11,15 @@ using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Shouldly;
 using Xunit;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class DocumentSessionTests : HybridDbTests
     {
+        public DocumentSessionTests(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void CanEvictEntity()
         {

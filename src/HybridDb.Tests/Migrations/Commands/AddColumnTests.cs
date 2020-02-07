@@ -3,13 +3,14 @@ using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
     public class AddColumnTests : HybridDbTests
     {
-        public AddColumnTests() => NoInitialize();
+        public AddColumnTests(ITestOutputHelper output) : base(output) => NoInitialize();
 
         [Theory]
         [InlineData(TableMode.GlobalTempTables)]

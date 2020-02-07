@@ -8,6 +8,7 @@ using HybridDb.Commands;
 using HybridDb.Config;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
@@ -15,6 +16,8 @@ namespace HybridDb.Tests
     {
         //readonly byte[] documentAsByteArray = { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
         readonly string documentAsByteArray = "asger";
+
+        public DocumentStoreTests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
         public void CanInsert()

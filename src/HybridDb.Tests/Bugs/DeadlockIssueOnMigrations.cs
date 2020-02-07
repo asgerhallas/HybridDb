@@ -2,11 +2,14 @@ using System;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
     public class DeadlockIssueOnMigrations : HybridDbTests
     {
+        public DeadlockIssueOnMigrations(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void ShouldTryNotToDeadlockOnSchemaMigationsForTempDb()
         {
@@ -64,7 +67,7 @@ namespace HybridDb.Tests.Bugs
         public void ShouldTryNotToDeadlockOnSchemaMigationsForRealTables()
         {
             UseRealTables();
-
+                
             Parallel.For(0, 10, i =>
             {
                 var realstore = DocumentStore.Create(c =>

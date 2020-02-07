@@ -11,6 +11,7 @@ using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
@@ -20,6 +21,8 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         // TODO: Test at et dokument, der loades uden configureret design via migration ikke forsøges gemt i 
         // databasen i en forkert tabel (Documents) og derved lader migrations gå i uendelig løkke. 
         // Måske skal ManagedEntity have Design på sig?
+
+        public HybridDb_1_x_x_to_2_x_x_Part1_Tests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
         public void MoveAndEncode()

@@ -9,13 +9,13 @@ using HybridDb.Migrations.Schema.Commands;
 using ShinySwitch;
 using Shouldly;
 using Xunit;
-using Xunit.Extensions;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations
 {
     public class SchemaMigrationRunnerTests : HybridDbTests
     {
-        public SchemaMigrationRunnerTests()
+        public SchemaMigrationRunnerTests(ITestOutputHelper output) : base(output)
         {
             NoInitialize();
             UseRealTables();
@@ -293,7 +293,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns()
         {
-            UseRealTables();
+            output.WriteLine("XXX");
 
             InitializeStore();
 
@@ -312,7 +312,7 @@ namespace HybridDb.Tests.Migrations
 
             Parallel.For(1, 10, x =>
             {
-                Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                output.WriteLine(Thread.CurrentThread.ManagedThreadId.ToString());
                 if (string.IsNullOrEmpty(Thread.CurrentThread.Name)) Thread.CurrentThread.Name = $"Test thread {x}";
                 runnerFactory().Run(); 
             });

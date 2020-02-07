@@ -6,11 +6,14 @@ using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class LinqTests : HybridDbTests
     {
+        public LinqTests(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void CanQueryUsingQueryComprehensionSyntax()
         {

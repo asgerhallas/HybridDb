@@ -4,11 +4,14 @@ using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
     public class SelectPrimitiveValueInQuery : HybridDbTests
     {
+        public SelectPrimitiveValueInQuery(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void ShouldBeAble()
         {

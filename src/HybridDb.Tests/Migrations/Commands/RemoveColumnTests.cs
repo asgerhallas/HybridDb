@@ -2,13 +2,14 @@ using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
     public class RemoveColumnTests : HybridDbTests
     {
-        public RemoveColumnTests() => NoInitialize();
+        public RemoveColumnTests(ITestOutputHelper output) : base(output) => NoInitialize();
 
         [Fact]
         public void RemovesColumn()

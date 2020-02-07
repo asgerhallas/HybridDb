@@ -3,12 +3,13 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Events
 {
     public class LoadParentCommitTests : EventStoreTests
     {
-        public LoadParentCommitTests()
+        public LoadParentCommitTests(ITestOutputHelper output) : base(output)
         {
             UseEventStore();
         }

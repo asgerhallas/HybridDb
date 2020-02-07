@@ -5,10 +5,11 @@ using System.Linq;
 using System.Threading;
 using HybridDb.Commands;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Performance
 {
-    public class PerformanceTests : IUseFixture<PerformanceTests.SystemModifierFixture>
+    public class PerformanceTests : IClassFixture<PerformanceTests.SystemModifierFixture>
     {
         protected decimal systemModifier;
 
@@ -109,7 +110,7 @@ namespace HybridDb.Tests.Performance
 
         public class SystemModifierFixture : HybridDbTests
         {
-            public SystemModifierFixture()
+            public SystemModifierFixture(ITestOutputHelper output) : base(output)
             {
                 using (var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
                 {

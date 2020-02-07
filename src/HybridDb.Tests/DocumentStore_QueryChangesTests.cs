@@ -2,12 +2,14 @@
 using System.Transactions;
 using Shouldly;
 using Xunit;
-using Xunit.Extensions;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
     public class DocumentStore_QueryChangesTests : HybridDbTests
     {
+        public DocumentStore_QueryChangesTests(ITestOutputHelper output) : base(output) { }
+
         [Fact]
         public void QueueInserts()
         {
