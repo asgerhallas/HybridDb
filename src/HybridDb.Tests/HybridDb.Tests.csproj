@@ -32,6 +32,12 @@
     <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3_Result.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
