@@ -33,7 +33,7 @@ namespace HybridDb.Tests
 
             logger = new LoggerConfiguration()
                 .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
-                .WriteTo.ColoredConsole()
+                .WriteTo.Console()
                 .WriteTo.Sink(new ListSink(log))
                 .CreateLogger();
 
@@ -65,7 +65,7 @@ namespace HybridDb.Tests
 
             return isAppveyor
                 ? "Server=(local)\\SQL2014;Database=master;User ID=sa;Password=Password12!"
-                : "data source =.; Integrated Security = True";
+                : "Data Source=.; Integrated Security=True";
         }
 
         protected void NoInitialize() => autoInitialize = false;
@@ -98,17 +98,15 @@ namespace HybridDb.Tests
         {
             var uniqueDbName = $"HybridDbTests_{Guid.NewGuid().ToString().Replace("-", "_")}";
 
-            output.WriteLine("Database name: " + uniqueDbName);
-
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
             {
                 connection.Open();
 
                 connection.Execute(string.Format(@"
-                        IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
-                        BEGIN
-                            CREATE DATABASE {0}
-                        END", uniqueDbName));
+                    IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
+                    BEGIN
+                        CREATE DATABASE {0}
+                    END", uniqueDbName));
             }
 
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
@@ -124,11 +122,14 @@ namespace HybridDb.Tests
             
             disposables.Push(() =>
             {
-                SqlConnection.ClearAllPools();
-
                 using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
                 {
                     connection.Open();
+
+                    // Disposed connections are not actually closed, but returned to the connection pool. Thus there might
+                    // still be an open connection to the database when trying to remove it. We use the below command
+                    // to drop all connections before dropping the database. See the test HowAnEscalationToMSDTCCameToBe for details.
+                    connection.Execute($"ALTER DATABASE {uniqueDbName} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
                     connection.Execute($"DROP DATABASE {uniqueDbName}");
                 }
             });

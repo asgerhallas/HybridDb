@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -14,6 +16,8 @@ namespace HybridDb.Migrations.Schema
 {
     public class SchemaMigrationRunner
     {
+        static object locker = new object();
+
         readonly ILogger logger;
         readonly DocumentStore store;
         readonly IReadOnlyList<Migration> migrations;
@@ -32,35 +36,37 @@ namespace HybridDb.Migrations.Schema
         {
             if (!store.Configuration.RunUpfrontMigrations)
                 return;
-
-            store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
-
-            using (var tx = BeginTransaction())
+            
+            lock (locker)
             {
-                LockDatabase();
+                store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
 
-                TryCreateMetadataTable();
-
-                var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
-
-                if (schemaVersion > store.Configuration.ConfiguredVersion)
+                using (var tx = BeginTransaction())
                 {
-                    throw new InvalidOperationException(_($@"
+                    LockDatabase();
+
+                    TryCreateMetadataTable();
+
+                    var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
+
+                    if (schemaVersion > store.Configuration.ConfiguredVersion)
+                    {
+                        throw new InvalidOperationException(_($@"
                     Database schema is ahead of configuration. Schema is version {schemaVersion}, 
                     but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
+                    }
+
+                    var requiresReprojection = new List<string>();
+
+                    requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
+                    requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
+
+                    MarkDocumentsForReprojections(requiresReprojection);
+
+                    tx.Complete();
                 }
-
-                var requiresReprojection = new List<string>();
-
-                requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
-                requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
-
-                MarkDocumentsForReprojections(requiresReprojection);
-
-                tx.Complete();
             }
         }
-
 
         static TransactionScope BeginTransaction() => 
             new TransactionScope(
