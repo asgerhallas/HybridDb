@@ -2,6 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
+    <Description>Newtonsoft.Json serializer for HybridDb.</Description>
+    <Copyright>Copyright 2013</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIconUrl>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIconUrl>
+    <IncludeSymbols>true</IncludeSymbols>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
