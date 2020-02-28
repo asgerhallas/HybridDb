@@ -64,7 +64,7 @@ namespace HybridDb.Tests
             var isAppveyor = Environment.GetEnvironmentVariable("APPVEYOR") != null;
 
             return isAppveyor
-                ? "Server=(local)\\SQL2014;Database=master;User ID=sa;Password=Password12!"
+                ? "Server=(local)\\SQL2017;Database=master;User ID=sa;Password=Password12!"
                 : "Data Source=.; Integrated Security=True";
         }
 
