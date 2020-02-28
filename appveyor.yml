@@ -13,11 +13,8 @@
     assembly_version: '{version}'
     assembly_file_version: '{version}'
     assembly_informational_version: '{version}'
-  before_build:
-  - nuget restore
-  build:
-    project: HybridDb.sln
-    verbosity: minimal
+  build_script:
+  - dotnet build
   after_build:
   - cmd: >-
       dotnet pack src\HybridDb\HybridDb.csproj /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
