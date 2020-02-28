@@ -11,8 +11,10 @@
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
   after_build:
   - cmd: >-
-    dotnet pack -p:Version=%APPVEYOR_BUILD_VERSION%
-
+      dotnet test --no-build
+    
+      dotnet pack -p:Version=%APPVEYOR_BUILD_VERSION%
+      
   artifacts:
   - path: '*/**/*.nupkg'
   deploy:
