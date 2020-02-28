@@ -21,6 +21,7 @@
   after_build:
   - cmd: >-
       dotnet pack src\HybridDb\HybridDb.csproj /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+      
       dotnet pack src\HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.csproj -Version %APPVEYOR_BUILD_VERSION%
   artifacts:
   - path: '*/**/*.nupkg'
