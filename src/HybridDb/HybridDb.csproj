@@ -6,7 +6,7 @@
     <Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
     <Copyright>Copyright 2013</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIconUrl>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIconUrl>
+    <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon>
     <IncludeSymbols>true</IncludeSymbols>
   </PropertyGroup>
 
