@@ -6,7 +6,7 @@
   configuration: Release
   platform: Any CPU
   image: Visual Studio 2019
-  services: mssql2014
+  services: mssql2017
   assembly_info:
     patch: true
     file: '**\AssemblyInfo.*'
