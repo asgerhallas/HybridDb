@@ -24,7 +24,8 @@ namespace HybridDb.Tests.Linq.Compilers
                 () => test.Property.Property
             ));
 
-            expression.ShouldBeOfType<Expression<Func<A>>>()
+            // Assertion is like this, because of this: https://stackoverflow.com/questions/60452684/net-core-and-type-equality
+            (expression as Expression<Func<A>>)
                 .Body.ShouldBeOfType<ConstantExpression>()
                 .Value.ShouldBe(test.Property.Property);
         }
