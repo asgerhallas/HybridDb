@@ -6,7 +6,7 @@
     <Description>Newtonsoft.Json serializer for HybridDb.</Description>
     <Copyright>Copyright 2013</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon>
+    <!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
     <IncludeSymbols>true</IncludeSymbols>
   </PropertyGroup>
 
