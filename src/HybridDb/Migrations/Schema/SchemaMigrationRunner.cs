@@ -8,7 +8,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using static Indentional.Indent;
 using IsolationLevel = System.Transactions.IsolationLevel;
 
@@ -142,7 +142,7 @@ namespace HybridDb.Migrations.Schema
 
             if (!commands.Any()) yield break;
 
-            logger.Information("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
+            logger.LogInformation("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
 
             foreach (var command in commands)
             {
@@ -157,7 +157,7 @@ namespace HybridDb.Migrations.Schema
         {
             if (!(store.Database is SqlServerUsingRealTables))
             {
-                logger.Information("Skips provided migrations when not using real tables.");
+                logger.LogInformation("Skips provided migrations when not using real tables.");
                 yield break;
             }
 
@@ -176,7 +176,7 @@ namespace HybridDb.Migrations.Schema
                     background commands."));
             }
 
-            logger.Information("Migrates schema from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
+            logger.LogInformation("Migrates schema from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
 
             foreach (var migration in migrationsToRun)
             {
@@ -208,11 +208,11 @@ namespace HybridDb.Migrations.Schema
         {
             if (!command.Safe && !allowUnsafe)
             {
-                logger.Warning("Unsafe migration command '{0}' was skipped.", command.ToString());
+                logger.LogWarning("Unsafe migration command '{0}' was skipped.", command.ToString());
                 yield break;
             }
 
-            logger.Information("Executing migration command '{0}'.", command.ToString());
+            logger.LogInformation("Executing migration command '{0}'.", command.ToString());
 
             store.Execute(command);
 

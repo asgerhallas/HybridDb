@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using Dapper;
+using Microsoft.Extensions.Logging;
 
 namespace HybridDb
 {
@@ -39,7 +40,7 @@ namespace HybridDb
                 parameters = new Parameters(sqlParameters);
             }
 
-            store.Logger.Debug(sql);
+            store.Logger.LogDebug(sql);
 
             using (var connection = Connect(schema))
             {
@@ -57,7 +58,7 @@ namespace HybridDb
                 parameters = new Parameters(sqlParameters);
             }
 
-            store.Logger.Debug(sql);
+            store.Logger.LogDebug(sql);
 
             using (var connection = Connect(schema))
             {

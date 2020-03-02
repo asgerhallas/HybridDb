@@ -1,17 +1,12 @@
 using System;
-using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
-using Serilog;
 using Shouldly;
-using Xunit;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -214,8 +209,8 @@ namespace HybridDb.Tests.Migrations
                 new DocumentMigrationRunner().Run(store).Wait(1000);
             });
 
-            var numberOfErrors = log
-                .Count(x => x.RenderMessage() == $"Unrecoverable exception while migrating document of type '\"HybridDb.Tests.HybridDbTests+Entity\"' with id '\"{id}\"'. Stopping migrator for table '\"Entities\"'.");
+            var numberOfErrors = log.Count(x =>
+                x.RenderMessage() == $"Unrecoverable exception while migrating document of type '\"HybridDb.Tests.HybridDbTests+Entity\"' with id '\"{id}\"'. Stopping migrator for table '\"Entities\"'.");
 
             // it does not retry exception
             numberOfErrors.ShouldBe(1);

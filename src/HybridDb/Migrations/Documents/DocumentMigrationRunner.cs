@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
+using Microsoft.Extensions.Logging;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -43,7 +44,7 @@ namespace HybridDb.Migrations.Documents
 
                             if (stats.TotalResults == 0) break;
 
-                            logger.Information($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
+                            logger.LogInformation($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
 
                             using (var tx = store.BeginTransaction())
                             {
@@ -65,7 +66,7 @@ namespace HybridDb.Migrations.Documents
                                     catch (SqlException) { }
                                     catch (Exception exception)
                                     {
-                                        logger.Error(exception,
+                                        logger.LogError(exception,
                                             "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
                                             concreteDesign.DocumentType.FullName, key, concreteDesign.Table.Name);
 

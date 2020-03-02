@@ -13,7 +13,7 @@ namespace HybridDb.Tests.Linq.Compilers
         public void ReduceConstantMemberAccess()
         {
             var test = new A
-            {
+                {
                 Property = new A
                 {
                     Property = new A()

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Transactions;
 using Dapper;
+using Microsoft.Extensions.Logging;
 
 namespace HybridDb
 {
@@ -104,7 +105,7 @@ OPTION (FORCE ORDER);",
         {
             if (numberOfManagedConnections > 0)
             {
-                store.Logger.Warning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+                store.Logger.LogWarning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
             }
 
             ambientConnectionForTesting?.Dispose();

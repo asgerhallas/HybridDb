@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb

@@ -5,7 +5,7 @@ using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Serialization;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace HybridDb
 {

@@ -10,8 +10,11 @@ using HybridDb.Migrations.Documents;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
+using Serilog.Sinks.XUnit;
 using Shouldly;
 using Xunit.Abstractions;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace HybridDb.Tests
 {
@@ -31,15 +34,17 @@ namespace HybridDb.Tests
         {
             this.output = output;
 
-            logger = new LoggerConfiguration()
-                .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
-                .WriteTo.Console()
-                .WriteTo.Sink(new ListSink(log))
-                .CreateLogger();
+            disposables = new ConcurrentStack<Action>();
+
+            logger = Using(new SerilogLoggerProvider(
+                new LoggerConfiguration()
+                    .WriteTo.TestOutput(output, Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
+                    .WriteTo.Sink(new ListSink(log))
+                    .CreateLogger(),
+                dispose: true
+            )).CreateLogger("HybridDb");
 
             UseLogger(logger);
-
-            disposables = new ConcurrentStack<Action>();
 
             UseGlobalTempTables();
         }

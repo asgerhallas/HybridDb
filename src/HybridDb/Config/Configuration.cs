@@ -10,7 +10,8 @@ using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using HybridDb.Serialization;
-using Serilog;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ShinySwitch;
 using static Indentional.Indent;
 
@@ -31,7 +32,7 @@ namespace HybridDb.Config
             tables = new ConcurrentDictionary<string, Table>();
             documentDesigns = new List<DocumentDesign>();
 
-            Logger = Log.Logger;
+            Logger = NullLoggerProvider.Instance.CreateLogger("HybridDb");
 
             Serializer = new DefaultSerializer();
             TypeMapper = new AssemblyQualifiedNameTypeMapper();
