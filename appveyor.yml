@@ -13,7 +13,7 @@
   - cmd: >-
       nuget install ILRepack
 
-      ILRepack\tools\ilrepack.exe /out:HybridDb.dll HybridDb.dll %userprofile%\.nuget\packages\newtonsoft.json\12.0.3\lib\netstandard2.0\Newtonsoft.Json.dll /internalize
+      ILRepack\2.0.18\tools\ilrepack.exe /out:HybridDb.dll HybridDb.dll %userprofile%\.nuget\packages\newtonsoft.json\12.0.3\lib\netstandard2.0\Newtonsoft.Json.dll /internalize
       
       dotnet test --no-build
 
