@@ -11,8 +11,12 @@
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
   after_build:
   - cmd: >-
+      nuget install ILRepack
+
+      ILRepack\tools\ilrepack.exe /out:HybridDb.dll HybridDb.dll %userprofile%\.nuget\packages\newtonsoft.json\12.0.3\lib\netstandard2.0\Newtonsoft.Json.dll /internalize
+      
       dotnet test --no-build
-    
+
       dotnet pack -p:Version=%APPVEYOR_BUILD_VERSION%
       
   artifacts:
