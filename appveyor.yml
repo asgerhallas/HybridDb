@@ -5,7 +5,7 @@
       - appveyor-setup
   version: 2.0.{build}-alpha
   configuration: Release
-  platform: Any CPU
+  # platform: Any CPU
   image: Visual Studio 2019
   services: mssql2017
   build_script:

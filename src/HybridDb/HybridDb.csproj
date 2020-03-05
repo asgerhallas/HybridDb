@@ -24,7 +24,7 @@
     <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />
   </ItemGroup>
 
-  <Target Name="ILRepack">
-    <Exec Command='$(PkgILRepack)\tools\ilrepack.exe /out:"$(OutDir)" "$(OutDir)" "$(PkgNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll" /internalize' />
-  </Target>
+  <PropertyGroup Name="ILRepack">
+    <Exec Command='$(PkgILRepack)\tools\ilrepack.exe /out:"$(OutDir)\HybridDb.dll" "$(OutDir)\HybridDb.dll" "$(PkgNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll" /internalize' />
+  </PropertyGroup>
 </Project>
