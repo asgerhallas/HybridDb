@@ -25,6 +25,6 @@
   </ItemGroup>
 
   <Target Name="ILRepack">
-    <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /out:$(TargetPath) $(TargetPath) $(PkgNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll /internalize" />
+    <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll&quot;" />
   </Target>
 </Project>
