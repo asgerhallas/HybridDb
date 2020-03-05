@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.4" />
+    <PackageReference Include="Dapper" Version="2.0.30" />
     <PackageReference Include="Indentional" Version="1.0.45" />
     <PackageReference Include="Inflector" Version="1.0.0">
       <NoWarn>NU1701</NoWarn>
