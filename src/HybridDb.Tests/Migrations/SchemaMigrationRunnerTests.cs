@@ -225,13 +225,19 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void ThrowsIfMultipleMigrationsAreProvidedAtTheSameTime()
+        public void MultipleMigrationsAtTheSameTime()
         {
             CreateMetadataTable();
 
-            UseMigrations(new InlineMigration(1, new CountingCommand()), new InlineMigration(2, new CountingCommand()));
+            var countingCommand = new CountingCommand();
 
-            Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run());
+            UseMigrations(
+                new InlineMigration(1, countingCommand), 
+                new InlineMigration(2, countingCommand));
+
+            Should.NotThrow(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run());
+
+            countingCommand.NumberOfTimesCalled.ShouldBe(2);
         }
 
         [Fact]
