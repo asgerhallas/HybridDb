@@ -14,6 +14,10 @@
     <DefineConstants>TRACE;NEWTONSOFT</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>TRACE;NEWTONSOFT</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="..\HybridDb\Serialization\DefaultSerializer.cs" Link="DefaultSerializer.cs" />
   </ItemGroup>

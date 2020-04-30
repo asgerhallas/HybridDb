@@ -2,17 +2,15 @@
   branches:
     only:
       - master
+      - appveyor-setup
   version: 2.0.{build}-alpha
   configuration: Release
-  platform: Any CPU
   image: Visual Studio 2019
   services: mssql2017
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
   after_build:
   - cmd: >-
-      dotnet msbuild -target:ILRepack -property:Configuration=Release .\src\HybridDb
-
       dotnet test --no-build
 
       dotnet pack -p:Version=%APPVEYOR_BUILD_VERSION%

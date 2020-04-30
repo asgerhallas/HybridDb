@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="1.60.6" />
+    <PackageReference Include="Dapper" Version="2.0.30" />
     <PackageReference Include="Indentional" Version="1.0.45" />
     <PackageReference Include="Inflector" Version="1.0.0">
       <NoWarn>NU1701</NoWarn>
@@ -20,11 +20,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.2" />
     <PackageReference Include="ShinySwitch" Version="1.0.76" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" PrivateAssets="All" GeneratePathProperty="true" />
-    <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
-
-  <Target Name="ILRepack">
-    <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgNewtonsoft_Json)\lib\netstandard2.0\Newtonsoft.Json.dll&quot;" />
-  </Target>
 </Project>
