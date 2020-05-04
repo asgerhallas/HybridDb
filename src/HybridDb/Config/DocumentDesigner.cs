@@ -38,7 +38,7 @@ namespace HybridDb.Config
         {
             if (typeof (TReturn) == typeof (string))
             {
-                options = options.Concat(new MaxLength(1024)).ToArray();
+                options = options.Concat(new MaxLength(850)).ToArray();
             }
 
             var column = design.Table[name];
