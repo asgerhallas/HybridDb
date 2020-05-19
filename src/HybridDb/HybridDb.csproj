@@ -25,6 +25,6 @@
   </ItemGroup>
 
   <Target Name="ILRepack">
-    <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net4.5\Inflector.dll&quot;" />
+    <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net45\Inflector.dll&quot;" />
   </Target>
 </Project>
