@@ -12,8 +12,8 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.30" />
-    <PackageReference Include="Indentional" Version="1.0.45" />
-    <PackageReference Include="Inflector" Version="1.0.0">
+    <PackageReference Include="Indentional" Version="1.0.45" PrivateAssets="All" GeneratePathProperty="true" />
+    <PackageReference Include="Inflector" Version="1.0.0" PrivateAssets="All" GeneratePathProperty="true">
       <NoWarn>NU1701</NoWarn>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
@@ -21,5 +21,10 @@
     <PackageReference Include="ShinySwitch" Version="1.0.76" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />    
   </ItemGroup>
+
+  <Target Name="ILRepack">
+    <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net4.5\Inflector.dll&quot;" />
+  </Target>
 </Project>
