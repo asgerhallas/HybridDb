@@ -209,7 +209,7 @@ namespace HybridDb.Tests
 
             TableFor<Entity>()["first"].Length.ShouldBe(255);
             TableFor<Entity>()["second"].Length.ShouldBe(-1);
-            TableFor<Entity>()["third"].Length.ShouldBe(1024);
+            TableFor<Entity>()["third"].Length.ShouldBe(850);
         }
 
         [Fact]

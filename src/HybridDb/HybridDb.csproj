@@ -24,7 +24,7 @@
     <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />    
   </ItemGroup>
 
-  <Target Name="ILRepack">
+  <Target Name="ILRepack" AfterTargets="AfterBuild">
     <Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net45\Inflector.dll&quot;" />
   </Target>
 </Project>
