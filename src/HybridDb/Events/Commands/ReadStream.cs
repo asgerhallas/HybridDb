@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using Dapper;
-using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {

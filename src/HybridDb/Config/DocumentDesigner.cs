@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using HybridDb.Linq;
+using Dapper;
 using HybridDb.Linq.Old;
 
 namespace HybridDb.Config
@@ -24,18 +24,32 @@ namespace HybridDb.Config
             return this;
         }
 
-        public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
-            With(columnNameConvention(projector), projector, x => x, options);
+        public DocumentDesigner<TEntity> With<TMember>(
+            Expression<Func<TEntity, TMember>> projector, 
+            params Option[] options) => 
+            With(columnNameConvention(projector), projector, x => x, null, options);
 
-        public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
-            With(name, projector, x => x, options);
+        public DocumentDesigner<TEntity> With<TMember>(string name, 
+            Expression<Func<TEntity, TMember>> projector, 
+            params Option[] options) => 
+            With(name, projector, x => x, null, options);
 
-        public DocumentDesigner<TEntity> With<TMember, TReturn>(Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options) =>
-            With(columnNameConvention(projector), projector, converter, options);
+        public DocumentDesigner<TEntity> With<TMember, TReturn>(
+            Expression<Func<TEntity, TMember>> projector, 
+            Func<TMember, TReturn> converter, 
+            params Option[] options) => 
+            With(columnNameConvention(projector), projector, converter, null, options);
 
-
-        public DocumentDesigner<TEntity> With<TMember, TReturn>(string name, Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options)
+        public DocumentDesigner<TEntity> With<TMember, TReturn>(string name, 
+            Expression<Func<TEntity, TMember>> projector, 
+            Func<TMember, TReturn> serialize, 
+            Func<TReturn, TMember> deserialize, 
+            params Option[] options)
         {
+#pragma warning disable 618
+            var dbType = SqlMapper.LookupDbType(typeof(TReturn), name, true, out _);
+#pragma warning restore 618
+
             if (typeof (TReturn) == typeof (string))
             {
                 options = options.Concat(new MaxLength(850)).ToArray();
@@ -81,7 +95,7 @@ namespace HybridDb.Config
 
                 if (value == null) return null;
 
-                return converter((TMember)value);
+                return serialize((TMember)value);
             });
 
             if (!newProjection.ReturnType.IsCastableTo(column.Type))
@@ -104,6 +118,10 @@ namespace HybridDb.Config
             else
             {
                 design.Projections[name] = newProjection;
+            }
+
+            if (deserialize != null)
+            {
             }
 
             return this;

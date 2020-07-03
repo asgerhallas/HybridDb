@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
+using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
 using Shouldly;
@@ -739,6 +741,20 @@ namespace HybridDb.Tests
             store.Insert(store.Configuration.GetDesignFor<object>().Table, "a", new {Document = new string('*', 10_000_000)});
         }
 
+        [Fact]
+        public void SelectToCustomType()
+        {
+            Document<Entity<CustomType>>().With("Property", x => x.Property, x => x.Value, x => new CustomType(x));
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity<CustomType>>().Table;
+            store.Insert(table, id, new { Property = "asger", Document = documentAsByteArray });
+
+            var row = store.Query<CustomType>(table, out _, select: "Property").Single();
+
+            row.Data.Value.ShouldBe("asger");
+        }
+
         public class Case
         {
             public Guid Id { get; private set; }
@@ -760,6 +776,20 @@ namespace HybridDb.Tests
         public class ProjectionWithEnum
         {
             public SomeFreakingEnum EnumProp { get; set; }
+        }
+
+        public class Entity<T>
+        {
+            public T Property { get; set; }
+        }
+
+        public class CustomType
+        {
+            public CustomType() => Value = Guid.NewGuid().ToString();
+
+            public CustomType(string value) => Value = value;
+
+            public string Value { get; }
         }
     }
 }

@@ -269,6 +269,7 @@ namespace HybridDb.Config
                     .Match<ReadEventsByCommitIds>(readEvents => ReadEventsByCommitIds.Execute(tx, readEvents))
                     .Match<GetPositionOf>(getPosition => GetPositionOf.Execute(tx, getPosition))
                     .Match<LoadParentCommit>(loadParentCommit => LoadParentCommit.Execute(tx, loadParentCommit))
+                    .Match<DeleteStream>(deleteStream => DeleteStream.Execute(tx, deleteStream))
                     .Else(() => decoratee(tx, command)()));
         }
 
