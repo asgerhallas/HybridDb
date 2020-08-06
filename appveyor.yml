@@ -13,7 +13,7 @@
   - cmd: >-
       dotnet test --no-build
 
-      dotnet pack -p:Version=%APPVEYOR_BUILD_VERSION%
+      dotnet pack -c Release --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=%APPVEYOR_BUILD_VERSION%
       
   artifacts:
   - path: '*/**/*.nupkg'
