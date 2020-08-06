@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Events;
+using HybridDb.Events.Commands;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations;
@@ -14,16 +16,19 @@ namespace HybridDb
     public class DocumentSession : IDocumentSession, IAdvancedDocumentSession
     {
         readonly Dictionary<EntityKey, ManagedEntity> entities;
+        readonly List<(int Generation, EventData<byte[]> Data)> events;
         readonly IDocumentStore store;
         readonly DocumentTransaction enlistedTransaction;
         readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
+
         bool saving = false;
 
         internal DocumentSession(IDocumentStore store, DocumentTransaction enlistedTransaction = null)
         {
             deferredCommands = new List<DmlCommand>();
             entities = new Dictionary<EntityKey, ManagedEntity>();
+            events = new List<(int Generation, EventData<byte[]> Data)>();
             migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
@@ -31,7 +36,6 @@ namespace HybridDb
         }
 
         public IAdvancedDocumentSession Advanced => this;
-        //public IEventsDocumentSession Events { get; }
 
         public IEnumerable<ManagedEntity> ManagedEntities => entities
             .Select(x => new ManagedEntity
@@ -144,6 +148,11 @@ namespace HybridDb
             });
         }
 
+        public void Append(int generation, EventData<byte[]> @event)
+        {
+            events.Add((generation, @event));
+        }
+
         public void Store(object entity)
         {
             Store(null, entity);
@@ -166,18 +175,17 @@ namespace HybridDb
             }
         }
 
-        public void SaveChanges()
-        {
-            SaveChangesInternal(lastWriteWins: false, forceWriteUnchangedDocument: false);
-        }
+        public Guid SaveChanges() => Transactionally(SaveChanges);
+        public Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument) => Transactionally(tx => SaveChanges(tx, lastWriteWins, forceWriteUnchangedDocument));
+        public Guid SaveChanges(DocumentTransaction tx) => SaveChanges(tx, lastWriteWins: false, forceWriteUnchangedDocument: false);
 
-        public void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument)
+        public Guid SaveChanges(DocumentTransaction tx, bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
-            SaveChangesInternal(lastWriteWins, forceWriteUnchangedDocument);
-        }
+            if (enlistedTransaction != null && enlistedTransaction != tx)
+            {
+                throw new InvalidOperationException("Session is already enlisted in another transaction.");
+            }
 
-        void SaveChangesInternal(bool lastWriteWins, bool forceWriteUnchangedDocument)
-        {
             if (saving)
             {
                 throw new InvalidOperationException("Session is not in a valid state. Please dispose it and open a new one.");
@@ -230,22 +238,26 @@ namespace HybridDb
                 }
             }
 
-            var etag = Transactionally(tx =>
+            foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
             {
-                foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
-                {
-                    store.Execute(tx, command);
-                }
+                store.Execute(tx, command);
+            }
 
-                return tx.CommitId;
-            });
+            var eventTable = store.Configuration.Tables.Values.OfType<EventTable>().Single();
+
+            foreach (var @event in events)
+            {
+                tx.Execute(new AppendEvent(eventTable, @event.Generation, @event.Data));
+            }
 
             foreach (var managedEntity in commands.Keys)
             {
-                managedEntity.Etag = etag;
+                managedEntity.Etag = tx.CommitId;
             }
 
             saving = false;
+
+            return tx.CommitId;
         }
 
         public void Dispose() {}

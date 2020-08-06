@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using HybridDb.Events;
 
 namespace HybridDb
 {
@@ -10,15 +11,14 @@ namespace HybridDb
         IQueryable<T> Query<T>() where T : class;
         void Store(object entity);
         void Store(string key, object entity);
+        void Append(int generation, EventData<byte[]> @event);
         void Delete(object entity);
-        void SaveChanges();
-        void SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument);
+        
+        Guid SaveChanges();
+        Guid SaveChanges(DocumentTransaction tx);
+        Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument);
+        Guid SaveChanges(DocumentTransaction tx, bool lastWriteWins, bool forceWriteUnchangedDocument);
+        
         IAdvancedDocumentSession Advanced { get; }
-        //IEventsDocumentSession Events { get; }
     }
-
-    //public interface IEventsDocumentSession
-    //{
-    //    void Append(string streamId, Guid eventId, object @event)
-    //}
 }
