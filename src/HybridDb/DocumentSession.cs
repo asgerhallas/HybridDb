@@ -18,13 +18,13 @@ namespace HybridDb
         readonly Dictionary<EntityKey, ManagedEntity> entities;
         readonly List<(int Generation, EventData<byte[]> Data)> events;
         readonly IDocumentStore store;
-        readonly DocumentTransaction enlistedTransaction;
+        readonly DocumentTransaction enlistedTx;
         readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
 
         bool saving = false;
 
-        internal DocumentSession(IDocumentStore store, DocumentTransaction enlistedTransaction = null)
+        internal DocumentSession(IDocumentStore store, DocumentTransaction tx = null)
         {
             deferredCommands = new List<DmlCommand>();
             entities = new Dictionary<EntityKey, ManagedEntity>();
@@ -32,7 +32,7 @@ namespace HybridDb
             migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
-            this.enlistedTransaction = enlistedTransaction;
+            enlistedTx = tx;
         }
 
         public IAdvancedDocumentSession Advanced => this;
@@ -175,17 +175,12 @@ namespace HybridDb
             }
         }
 
-        public Guid SaveChanges() => Transactionally(SaveChanges);
-        public Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument) => Transactionally(tx => SaveChanges(tx, lastWriteWins, forceWriteUnchangedDocument));
+        public Guid SaveChanges() => SaveChanges(null);
         public Guid SaveChanges(DocumentTransaction tx) => SaveChanges(tx, lastWriteWins: false, forceWriteUnchangedDocument: false);
+        public Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument) => SaveChanges(null, lastWriteWins, forceWriteUnchangedDocument);
 
         public Guid SaveChanges(DocumentTransaction tx, bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
-            if (enlistedTransaction != null && enlistedTransaction != tx)
-            {
-                throw new InvalidOperationException("Session is already enlisted in another transaction.");
-            }
-
             if (saving)
             {
                 throw new InvalidOperationException("Session is not in a valid state. Please dispose it and open a new one.");
@@ -238,26 +233,34 @@ namespace HybridDb
                 }
             }
 
-            foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
+            var commitId = Transactionally(resultingTx =>
             {
-                store.Execute(tx, command);
-            }
+                foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
+                {
+                    store.Execute(resultingTx, command);
+                }
 
-            var eventTable = store.Configuration.Tables.Values.OfType<EventTable>().Single();
+                if (store.Configuration.EventStore)
+                {
+                    var eventTable = store.Configuration.Tables.Values.OfType<EventTable>().Single();
 
-            foreach (var @event in events)
-            {
-                tx.Execute(new AppendEvent(eventTable, @event.Generation, @event.Data));
-            }
+                    foreach (var @event in events)
+                    {
+                        resultingTx.Execute(new AppendEvent(eventTable, @event.Generation, @event.Data));
+                    }
+                }
+
+                return resultingTx.CommitId;
+            }, tx);
 
             foreach (var managedEntity in commands.Keys)
             {
-                managedEntity.Etag = tx.CommitId;
+                managedEntity.Etag = commitId;
             }
 
             saving = false;
 
-            return tx.CommitId;
+            return commitId;
         }
 
         public void Dispose() {}
@@ -306,10 +309,25 @@ namespace HybridDb
             return entity;
         }
 
-        internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
-            enlistedTransaction != null 
-                ? func(enlistedTransaction) 
-                : store.Transactionally(func);
+        internal T Transactionally<T>(Func<DocumentTransaction, T> func, DocumentTransaction overrideTx = null)
+        {
+            if (overrideTx != null)
+            {
+                if (enlistedTx != null && enlistedTx != overrideTx)
+                {
+                    throw new InvalidOperationException("Session is already enlisted in another transaction.");
+                }
+
+                return func(overrideTx);
+            }
+
+            if (enlistedTx != null)
+            {
+                return func(enlistedTx);
+            }
+            
+            return store.Transactionally(func);
+        }
 
         public void Clear() => entities.Clear();
 
