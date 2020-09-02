@@ -7,10 +7,8 @@ using System.Text;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Shouldly;
-using Xunit;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,9 +28,9 @@ namespace HybridDb.Tests
             {
                 var entity1 = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity1);
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(true);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(true);
                 session.Advanced.Evict(entity1);
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(false);
             }
         }
 
@@ -242,7 +240,7 @@ namespace HybridDb.Tests
                 var entity = new Entity { Id = id, Property = "Asger" };
                 session.Store(entity);
                 session.Delete(entity);
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(false);
             }
         }
 
@@ -256,7 +254,7 @@ namespace HybridDb.Tests
             {
                 var entity = new Entity { Id = id, Property = "Asger" };
                 Should.NotThrow(() => session.Delete(entity));
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(false);
             }
         }
 
@@ -303,7 +301,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.Advanced.Clear();
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(false);
             }
         }
 
@@ -315,9 +313,9 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(false);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(false);
                 session.Store(new Entity { Id = id, Property = "Asger" });
-                session.Advanced.IsLoaded<Entity>(id).ShouldBe(true);
+                session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(true);
             }
         }
 
@@ -1046,6 +1044,25 @@ namespace HybridDb.Tests
                 var entity = session.Load<EntityWithoutId>("mykey");
 
                 entity.ShouldNotBe(null);
+            }
+        }
+
+        [Fact]
+        public void StoreNull_Noop()
+        {
+            Document<Entity>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(null);
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Query<Entity>().ToList();
+
+                entity.ShouldBeEmpty();
             }
         }
 

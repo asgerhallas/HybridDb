@@ -35,6 +35,8 @@ namespace HybridDb
             enlistedTx = tx;
         }
 
+        public IDocumentStore DocumentStore => store;
+
         public IAdvancedDocumentSession Advanced => this;
         public IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities => entities;
 
@@ -119,6 +121,8 @@ namespace HybridDb
 
         public void Store(string key, object entity)
         {
+            if (entity == null) return;
+
             var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
 
             key = key ?? design.GetKey(entity);
@@ -320,9 +324,17 @@ namespace HybridDb
 
         public void Clear() => entities.Clear();
 
-        public bool IsLoaded<T>(string key) => entities.ContainsKey(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key));
+        public bool TryGetManagedEntity<T>(string key, out T entity)
+        {
+            if (entities.TryGetValue(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key), out var managedEntity))
+            {
+                entity = (T)managedEntity.Entity;
+                return true;
+            }
 
-        public IDocumentStore DocumentStore => store;
+            entity = default;
+            return false;
+        }
 
         ManagedEntity TryGetManagedEntity(object entity)
         {
