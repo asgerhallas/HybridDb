@@ -34,7 +34,7 @@ namespace HybridDb.Linq.Old
 
             try
             {
-                return (IQueryable) Activator.CreateInstance(typeof (Query<>).MakeGenericType(elementType), new object[] {this, expression});
+                return (IQueryable) Activator.CreateInstance(typeof (Query<>).MakeGenericType(elementType), this, expression);
             }
             catch (TargetInvocationException e)
             {
@@ -42,10 +42,8 @@ namespace HybridDb.Linq.Old
             }
         }
 
-        public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression)
-        {
-            return ExecuteQuery<TProjection>(expression).Results;
-        }
+        public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression) => 
+            ExecuteQuery<TProjection>(expression).Results;
 
         T IQueryProvider.Execute<T>(Expression expression)
         {

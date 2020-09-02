@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using HybridDb.Commands;
 
 namespace HybridDb
 {
@@ -14,6 +13,6 @@ namespace HybridDb
         Guid? GetEtagFor(object entity);
         Dictionary<string, List<string>> GetMetadataFor(object entity);
         void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata);
-        IEnumerable<ManagedEntity> ManagedEntities { get; }
+        IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities { get; }
     }
 }

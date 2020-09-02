@@ -6,36 +6,11 @@ namespace HybridDb
     /// <summary>
     /// Represents a global identification of a document consisting of both type and ID
     /// </summary>
-    class EntityKey
+    public class EntityKey : Tuple<Table, string>
     {
-        public EntityKey(Table table, string id)
-        {
-            Table = table;
-            Id = id;
-        }
+        public EntityKey(Table table, string id) : base(table, id) {}
 
-        public Table Table { get; private set; }
-        public string Id { get; private set; }
-
-        protected bool Equals(EntityKey other)
-        {
-            return Equals(Table.Name, other.Table.Name) && string.Equals(Id, other.Id);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((EntityKey) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ((Table != null ? Table.GetHashCode() : 0)*397) ^ (Id != null ? Id.GetHashCode() : 0);
-            }
-        }
+        public Table Table => Item1;
+        public string Id => Item2;
     }
 }

@@ -6,18 +6,17 @@ using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
-using HybridDb.Linq;
 using HybridDb.Linq.Old;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 
 namespace HybridDb
 {
     public class DocumentSession : IDocumentSession, IAdvancedDocumentSession
     {
+        readonly IDocumentStore store;
+
         readonly Dictionary<EntityKey, ManagedEntity> entities;
         readonly List<(int Generation, EventData<byte[]> Data)> events;
-        readonly IDocumentStore store;
         readonly DocumentTransaction enlistedTx;
         readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
@@ -32,22 +31,12 @@ namespace HybridDb
             migrator = new DocumentMigrator(store.Configuration);
 
             this.store = store;
+
             enlistedTx = tx;
         }
 
         public IAdvancedDocumentSession Advanced => this;
-
-        public IEnumerable<ManagedEntity> ManagedEntities => entities
-            .Select(x => new ManagedEntity
-            {
-                Key = x.Value.Key,
-                Entity = x.Value.Entity,
-                Etag = x.Value.Etag,
-                State = x.Value.State,
-                Version = x.Value.Version,
-                Document = x.Value.Document,
-                Table = x.Value.Table
-            });
+        public IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities => entities;
 
         public T Load<T>(string key) where T : class => Load(typeof(T), key) as T;
 
