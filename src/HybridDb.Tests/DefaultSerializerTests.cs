@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using HybridDb.NewtonsoftJson;
 using HybridDb.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -84,14 +85,11 @@ namespace HybridDb.Tests
         [Fact]
         public void DoesNotInvokeCtorOnDeserialize()
         {
-            var original = new WithMutatingCtor
-            {
-                Value = "SET BY TEST"
-            };
+            var original = new WithMutatingCtor("SET BY TEST");
 
             var copy = JObject.FromObject(original, CreateSerializer()).ToObject<WithMutatingCtor>();
 
-            copy.Value.ShouldBe("SET BY TEST");
+            copy.ValueSetByCtor.ShouldBe("SET BY TEST");
         }
 
         [Fact]
@@ -618,12 +616,11 @@ namespace HybridDb.Tests
 
         public class WithMutatingCtor
         {
-            public WithMutatingCtor()
-            {
-                Value = "FROM CTOR";
-            }
+            [JsonConstructor]
+            public WithMutatingCtor() : this("DEFAULT CTOR") { }
+            public WithMutatingCtor(string value) => ValueSetByCtor = value;
 
-            public string Value { get; set; }
+            public string ValueSetByCtor { get; set; }
         }
 
         public class WithEvent

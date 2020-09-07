@@ -4,6 +4,7 @@ using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
+using HybridDb.NewtonsoftJson;
 using HybridDb.Serialization;
 using Microsoft.Extensions.Logging;
 

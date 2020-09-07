@@ -9,6 +9,7 @@ using HybridDb.Events.Commands;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
+using HybridDb.NewtonsoftJson;
 using HybridDb.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

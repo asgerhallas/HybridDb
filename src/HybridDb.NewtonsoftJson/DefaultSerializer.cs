@@ -8,18 +8,16 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-
 using HybridDb.Serialization;
 
 namespace HybridDb.NewtonsoftJson
 {
-    internal class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+    public class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
     {
         Action<JsonSerializerSettings> setup = x => { };
 
