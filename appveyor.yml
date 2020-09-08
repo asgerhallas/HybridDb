@@ -14,6 +14,7 @@
       dotnet test --no-build
 
       dotnet pack src/HybridDb/ -c Release --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=%APPVEYOR_BUILD_VERSION%
+      
       dotnet pack src/HybridDb.NewtonsoftJson/ -c Release -p:Version=%APPVEYOR_BUILD_VERSION%
       
   artifacts:
