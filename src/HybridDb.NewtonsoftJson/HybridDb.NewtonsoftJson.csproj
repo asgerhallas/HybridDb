@@ -12,15 +12,17 @@
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <ContentTargetFolders>contentFiles</ContentTargetFolders>
-    <!--<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>-->
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <IncludeSymbols>false</IncludeSymbols>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="DefaultSerializer.cs" Pack="True" PackageCopyToOutput="True" />
+    <Compile Include="DefaultSerializer.cs" Pack="True" PackageCopyToOutput="True" />
   </ItemGroup>
 
   <ItemGroup>

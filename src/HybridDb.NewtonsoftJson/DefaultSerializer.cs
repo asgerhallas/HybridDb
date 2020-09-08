@@ -23,7 +23,8 @@ namespace HybridDb.NewtonsoftJson
 
         List<JsonConverter> converters = new List<JsonConverter>();
 
-        readonly List<IContractMutator> contractFilters = new List<IContractMutator>();
+        readonly List<IContractMutator> contractDecorators = new List<IContractMutator>();
+        
         readonly HybridDbContractResolver contractResolver;
 
         readonly List<Func<JsonProperty, bool>> ordering = new List<Func<JsonProperty, bool>>
@@ -93,7 +94,7 @@ namespace HybridDb.NewtonsoftJson
 
         public void AddContractMutator(IContractMutator mutator)
         {
-            contractFilters.Add(mutator);
+            contractDecorators.Add(mutator);
         }
 
         public void Order(int index, Func<JsonProperty, bool> predicate)
@@ -157,22 +158,19 @@ namespace HybridDb.NewtonsoftJson
             static readonly Regex matchesFieldNameForAnonymousType = new Regex(@"\<(?<name>.*?)\>i__Field");
 
             readonly ConcurrentDictionary<Type, JsonContract> contracts = new ConcurrentDictionary<Type, JsonContract>();
+            
             readonly DefaultSerializer serializer;
 
-            public HybridDbContractResolver(DefaultSerializer serializer)
-            {
-                this.serializer = serializer;
-            }
+            public HybridDbContractResolver(DefaultSerializer serializer) => this.serializer = serializer;
 
             public sealed override JsonContract ResolveContract(Type type)
             {
                 return contracts.GetOrAdd(type, key =>
                 {
                     var contract = base.ResolveContract(type);
-                    foreach (var filter in serializer.contractFilters)
-                    {
-                        filter.Mutate(contract);
-                    }
+
+                    foreach (var filter in serializer.contractDecorators) 
+                        filter.Decorate(contract);
 
                     return contract;
                 });
@@ -458,14 +456,14 @@ namespace HybridDb.NewtonsoftJson
     // Important: Do not move these classes out into own files... they are affected by the pragma condition in the top of this file
     public interface IContractMutator
     {
-        void Mutate(JsonContract contract);
+        void Decorate(JsonContract contract);
     }
 
     public abstract class ContractMutator<T> : IContractMutator where T : JsonContract
     {
         public abstract void Mutate(T contract);
 
-        public void Mutate(JsonContract contract)
+        public void Decorate(JsonContract contract)
         {
             if (contract is T tContract)
             {
