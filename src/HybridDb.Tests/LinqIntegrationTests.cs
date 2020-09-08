@@ -2,7 +2,6 @@
 using System.Linq;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
-using HybridDb.NewtonsoftJson;
 using HybridDb.Serialization;
 using Shouldly;
 using Xunit;

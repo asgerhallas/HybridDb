@@ -7,7 +7,6 @@ using System.Text;
 using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.BuiltIn;
-using HybridDb.NewtonsoftJson;
 using HybridDb.Serialization;
 using Newtonsoft.Json.Linq;
 using Shouldly;

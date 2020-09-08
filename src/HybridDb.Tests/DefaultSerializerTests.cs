@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using HybridDb.NewtonsoftJson;
 using HybridDb.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
