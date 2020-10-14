@@ -62,7 +62,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new {Field = "Asger", Document = "asger"});
 
-            Should.NotThrow(() => store.Update(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}, lastWriteWins: true));
+            Should.NotThrow(() => store.Update(table.Table, id, null, new {Field = "Lars"}));
         }
 
         [Fact]
@@ -249,7 +249,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
 
-            Should.NotThrow(() => store.Delete(table.Table, id, Guid.NewGuid(), lastWriteWins: true));
+            Should.NotThrow(() => store.Delete(table.Table, id, null));
         }
 
         [Fact]
@@ -311,7 +311,7 @@ namespace HybridDb.Tests
                 store.Transactionally(tx =>
                 {
                     tx.Execute(new InsertCommand(table, id1, new { Field = "A" }));
-                    return tx.Execute(new UpdateCommand(table, id1, etagThatMakesItFail, new { Field = "B" }, false));
+                    return tx.Execute(new UpdateCommand(table, id1, etagThatMakesItFail, new { Field = "B" }));
                 });
             }
             catch (ConcurrencyException)

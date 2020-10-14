@@ -13,11 +13,11 @@ namespace HybridDb
         public static Guid Insert(this IDocumentStore store, DocumentTable table, string key, object projections) =>
             store.Transactionally(tx => tx.Execute(new InsertCommand(table, key, projections)));
 
-        public static Guid Update(this IDocumentStore store, DocumentTable table, string key, Guid etag, object projections, bool lastWriteWins = false) =>
-            store.Transactionally(tx => tx.Execute(new UpdateCommand(table, key, etag, projections, lastWriteWins)));
+        public static Guid Update(this IDocumentStore store, DocumentTable table, string key, Guid? etag, object projections) =>
+            store.Transactionally(tx => tx.Execute(new UpdateCommand(table, key, etag, projections)));
 
-        public static Guid Delete(this IDocumentStore store, DocumentTable table, string key, Guid etag, bool lastWriteWins = false) =>
-            store.Transactionally(tx => tx.Execute(new DeleteCommand(table, key, etag, lastWriteWins)));
+        public static Guid Delete(this IDocumentStore store, DocumentTable table, string key, Guid? etag) =>
+            store.Transactionally(tx => tx.Execute(new DeleteCommand(table, key, etag)));
 
         public static T Execute<T>(this IDocumentStore store, Command<T> command) => store.Transactionally(tx => store.Execute(tx, command));
 

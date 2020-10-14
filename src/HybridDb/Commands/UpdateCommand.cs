@@ -8,17 +8,17 @@ namespace HybridDb.Commands
     {
         public DocumentTable Table { get; }
         public string Id { get; }
-        public Guid ExpectedEtag { get; }
+        public Guid? ExpectedEtag { get; }
         public object Projections { get; }
         public bool LastWriteWins { get; }
 
-        public UpdateCommand(DocumentTable table, string id, Guid etag, object projections, bool lastWriteWins)
+        public UpdateCommand(DocumentTable table, string id, Guid? etag, object projections)
         {
             Table = table;
             Id = id;
             ExpectedEtag = etag;
+            LastWriteWins = etag == null;
             Projections = projections;
-            LastWriteWins = lastWriteWins;
         }
 
         public static Guid Execute(DocumentTransaction tx, UpdateCommand command)

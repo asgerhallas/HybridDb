@@ -107,6 +107,7 @@ namespace HybridDb
             entities.Remove(new EntityKey(managedEntity.Table, managedEntity.Key));
         }
 
+
         public Guid? GetEtagFor(object entity) => TryGetManagedEntity(entity)?.Etag;
 
         public Dictionary<string, List<string>> GetMetadataFor(object entity) => TryGetManagedEntity(entity)?.Metadata;
@@ -119,7 +120,11 @@ namespace HybridDb
             managedEntity.Metadata = metadata;
         }
 
-        public void Store(string key, object entity)
+        public void Store(object entity, Guid? etag) => Store(null, entity, etag);
+        public void Store(string key, object entity, Guid? etag) => Store(key, entity, etag, EntityState.Loaded);
+        public void Store(string key, object entity) => Store(key, entity, null, EntityState.Transient);
+
+        void Store(string key, object entity, Guid? etag, EntityState state)
         {
             if (entity == null) return;
 
@@ -136,7 +141,8 @@ namespace HybridDb
             {
                 Key = key,
                 Entity = entity,
-                State = EntityState.Transient,
+                State = state,
+                Etag = etag,
                 Table = design.Table
             });
         }
@@ -146,10 +152,7 @@ namespace HybridDb
             events.Add((generation, @event));
         }
 
-        public void Store(object entity)
-        {
-            Store(null, entity);
-        }
+        public void Store(object entity) => Store(null, entity);
 
         public void Delete(object entity)
         {
@@ -192,7 +195,7 @@ namespace HybridDb
                 var document = (string)projections[DocumentTable.DocumentColumn];
                 var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
-                var expectedEtag = managedEntity.Etag;
+                var expectedEtag = !lastWriteWins ? managedEntity.Etag : null;
 
                 switch (managedEntity.State)
                 {
@@ -208,7 +211,7 @@ namespace HybridDb
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
 
-                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections, lastWriteWins));
+                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections));
 
                         if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
                         {
@@ -220,7 +223,7 @@ namespace HybridDb
 
                         break;
                     case EntityState.Deleted:
-                        commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag, lastWriteWins));
+                        commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag));
                         entities.Remove(new EntityKey(design.Table, managedEntity.Key));
                         break;
                 }

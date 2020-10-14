@@ -45,7 +45,7 @@ namespace HybridDb.Tests
                 session.Advanced.GetEtagFor(entity1).ShouldBe(null);
 
                 session.Store(entity1);
-                session.Advanced.GetEtagFor(entity1).ShouldBe(Guid.Empty);
+                session.Advanced.GetEtagFor(entity1).ShouldBe(null);
 
                 session.SaveChanges();
                 session.Advanced.GetEtagFor(entity1).ShouldNotBe(null);
@@ -205,6 +205,28 @@ namespace HybridDb.Tests
 
                 session1.Advanced.Clear();
                 session1.Load<Entity>(id).Property.ShouldBe("Asger er 4 real");
+            }
+        }
+
+        [Fact]
+        public void CanUpdateDocument()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session1 = store.OpenSession())
+            {
+                var entity1 = new Entity { Id = id, Property = "Asger" };
+                session1.Store(entity1);
+                session1.SaveChanges();
+                session1.Advanced.Clear();
+
+                var entity2 = new Entity { Id = id, Property = "Peter" };
+                session1.Store(entity2, null);
+                session1.SaveChanges();
+                session1.Advanced.Clear();
+
+                session1.Load<Entity>(id).Property.ShouldBe("Peter");
             }
         }
 
@@ -623,7 +645,6 @@ namespace HybridDb.Tests
                 session.Load<Entity>(id).ProjectedProperty.ShouldBe("Large");
             }
         }
-
 
         [Fact]
         public void StoreOneTypeAndLoadAnotherFromSameTableAndKeyResultsInOneManagedEntity()

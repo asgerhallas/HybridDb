@@ -94,7 +94,7 @@ namespace HybridDb.Tests.Bugs
 
             using (var connection = new SqlConnection(cnstr + ";Initial Catalog=" + uniqueDbName))
             {
-                // This connection is new (not from the pool) and to different connections in the same tx will escalate to DTC.
+                // This connection is new (not from the pool) and using different connections in the same tx will escalate to DTC.
                 connection.Open();
             }
 
