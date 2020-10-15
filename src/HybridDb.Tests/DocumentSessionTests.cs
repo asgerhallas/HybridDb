@@ -8,6 +8,7 @@ using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq.Old;
+using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -148,22 +149,6 @@ namespace HybridDb.Tests
             var retrievedId = store.Query(table, out _, select: "Id").SingleOrDefault();
 
             retrievedId["Id"].ShouldBe(id);
-        }
-
-        [Fact]
-        public void StoringDocumentWithSameIdTwiceIsIgnored()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-            using (var session = store.OpenSession())
-            {
-                var entity1 = new Entity { Id = id, Property = "Asger" };
-                var entity2 = new Entity { Id = id, Property = "Asger" };
-                session.Store(entity1);
-                session.Store(entity2);
-                session.Load<Entity>(id).ShouldBe(entity1);
-            }
         }
 
         [Fact]
@@ -522,11 +507,10 @@ namespace HybridDb.Tests
         {
             Document<Entity>().With(x => x.ProjectedProperty);
 
-            var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large" });
-                session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small" });
+                session.Store(new Entity { Id = NewId(), Property = "Asger", ProjectedProperty = "Large" });
+                session.Store(new Entity { Id = NewId(), Property = "Lars", ProjectedProperty = "Small" });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -607,11 +591,10 @@ namespace HybridDb.Tests
                 .With(x => x.ProjectedProperty)
                 .With(x => x.TheChild.NestedProperty);
 
-            var id = NewId();
             using (var session = store.OpenSession())
             {
-                session.Store(new Entity { Id = id, Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
-                session.Store(new Entity { Id = id, Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+                session.Store(new Entity { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
+                session.Store(new Entity { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
                 session.SaveChanges();
                 session.Advanced.Clear();
 
@@ -661,19 +644,16 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void StoreTwoInstancesToSameTableWithSameIdIsIgnored()
+        public void StoreTwoInstancesToSameTableWithSameId_Throws()
         {
-            // this may not be desired behavior, but it's been this way for a while
-
             Document<DerivedEntity>();
             Document<MoreDerivedEntity1>();
 
             using (var session = store.OpenSession())
             {
                 session.Store("key", new MoreDerivedEntity1());
-                session.Store("key", new DerivedEntity());
 
-                session.Advanced.ManagedEntities.Count().ShouldBe(1);
+                Should.Throw<HybridDbException>(() => session.Store("key", new DerivedEntity()));
             }
         }
 
@@ -1066,6 +1046,37 @@ namespace HybridDb.Tests
 
                 entity.ShouldNotBe(null);
             }
+        }
+
+        [Fact]
+        public void Store_NewInstance_WithSameKey()
+        {
+            Document<EntityWithoutId>();
+
+            using var session = store.OpenSession();
+            
+            session.Store("mykey", new EntityWithoutId { Data = "1" });
+            
+            Should.Throw<HybridDbException>(() => session.Store("mykey", new EntityWithoutId { Data = "2" }))
+                .Message.ShouldBe("Attempted to store a different object with id 'mykey'.");
+        }
+
+        [Fact]
+        public void Store_SameInstance_WithSameKey()
+        {
+            Document<EntityWithoutId>();
+
+            using var session = store.OpenSession();
+
+            var entity = new EntityWithoutId { Data = "1" };
+            session.Store("mykey", entity);
+            
+            var before = session.Advanced.ManagedEntities.Single();
+
+            session.Store("mykey", entity);
+
+            session.Advanced.ManagedEntities.Single()
+                .ShouldBeLike(before);
         }
 
         [Fact]

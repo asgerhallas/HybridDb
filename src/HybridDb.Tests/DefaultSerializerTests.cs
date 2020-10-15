@@ -14,15 +14,9 @@ namespace HybridDb.Tests
     {
         readonly DefaultSerializer serializer;
 
-        public DefaultSerializerTests()
-        {
-            serializer = new DefaultSerializer();
-        }
+        public DefaultSerializerTests() => serializer = new DefaultSerializer();
 
-        JsonSerializer CreateSerializer()
-        {
-            return serializer.CreateSerializer();
-        }
+        JsonSerializer CreateSerializer() => serializer.CreateSerializer();
 
         [Fact]
         public void RoundtripsAutoPropertiesAndFieldsEvenPrivates()

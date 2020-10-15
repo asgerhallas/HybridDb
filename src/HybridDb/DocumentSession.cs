@@ -120,6 +120,7 @@ namespace HybridDb
             managedEntity.Metadata = metadata;
         }
 
+        public void Store(object entity) => Store(null, entity);
         public void Store(object entity, Guid? etag) => Store(null, entity, etag);
         public void Store(string key, object entity, Guid? etag) => Store(key, entity, etag, EntityState.Loaded);
         public void Store(string key, object entity) => Store(key, entity, null, EntityState.Transient);
@@ -134,8 +135,15 @@ namespace HybridDb
 
             var entityKey = new EntityKey(design.Table, key);
 
-            if (entities.ContainsKey(entityKey))
+            if (entities.TryGetValue(entityKey, out var managedEntity))
+            {
+                // Storing a new instance under an existing id, is an error
+                if (managedEntity.Entity != entity)
+                    throw new HybridDbException($"Attempted to store a different object with id '{key}'.");
+
+                // Storing same instance is a noop
                 return;
+            }
 
             entities.Add(entityKey, new ManagedEntity
             {
@@ -152,7 +160,6 @@ namespace HybridDb
             events.Add((generation, @event));
         }
 
-        public void Store(object entity) => Store(null, entity);
 
         public void Delete(object entity)
         {
