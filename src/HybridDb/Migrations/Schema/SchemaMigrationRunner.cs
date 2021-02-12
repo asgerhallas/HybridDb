@@ -41,10 +41,8 @@ namespace HybridDb.Migrations.Schema
             {
                 store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
 
-                using (var tx = BeginTransaction())
+                WhileLocked(store.TableMode == TableMode.GlobalTempTables, () =>
                 {
-                    LockDatabase();
-
                     TryCreateMetadataTable();
 
                     var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
@@ -62,9 +60,25 @@ namespace HybridDb.Migrations.Schema
                     requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
 
                     MarkDocumentsForReprojections(requiresReprojection);
+                });
+            }
+        }
 
-                    tx.Complete();
-                }
+        void WhileLocked(bool notwrap, Action action)
+        {
+            if (notwrap)
+            {
+                action();
+                return;
+            }
+
+            using (var tx = BeginTransaction())
+            {
+                LockDatabase();
+
+                action();
+
+                tx.Complete();
             }
         }
 
@@ -83,7 +97,7 @@ namespace HybridDb.Migrations.Schema
             using (var connection = store.Database.Connect(true))
             {
                 var parameters = new DynamicParameters();
-                parameters.Add("@Resource", "HybridDb");
+                parameters.Add("@Resource", $"HybridDb");
                 parameters.Add("@DbPrincipal", "public");
                 parameters.Add("@LockMode", "Exclusive");
                 parameters.Add("@LockOwner", "Transaction");
