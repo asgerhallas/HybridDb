@@ -38,62 +38,50 @@ namespace HybridDb.Migrations.Schema
             if (!store.Configuration.RunUpfrontMigrations)
                 return;
             
-            lock (locker)
+            Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
             {
-                store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
+                TryCreateMetadataTable();
 
-                Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
+                var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
+
+                if (schemaVersion > store.Configuration.ConfiguredVersion)
                 {
-                    TryCreateMetadataTable();
+                    throw new InvalidOperationException(_($@"
+                        Database schema is ahead of configuration. Schema is version {schemaVersion},
+                        but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
+                }
 
-                    var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
+                var requiresReprojection = new List<string>();
 
-                    if (schemaVersion > store.Configuration.ConfiguredVersion)
-                    {
-                        throw new InvalidOperationException(_($@"
-                            Database schema is ahead of configuration. Schema is version {schemaVersion},
-                            but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
-                    }
+                requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
+                requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
 
-                    var requiresReprojection = new List<string>();
-
-                    requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
-                    requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
-
-                    MarkDocumentsForReprojections(requiresReprojection);
-                });
-            }
+                MarkDocumentsForReprojections(requiresReprojection);
+            });
         }
 
         void Migrate(bool isTempTables, Action action)
         {
             var sw = Stopwatch.StartNew();
 
+            store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
+
             if (isTempTables)
             {
-                using (var tx = new TransactionScope(
-                    TransactionScopeOption.RequiresNew,
-                    new TransactionOptions
-                    {
-                        IsolationLevel = IsolationLevel.ReadUncommitted,
-                        Timeout = TimeSpan.FromMinutes(1)
-                    },
-                    TransactionScopeAsyncFlowOption.Suppress))
-                {
-                    action();
-
-                    tx.Complete();
-                }
+                action();
             }
             else
             {
-                using (var tx = BeginTransaction())
+                lock (locker)
                 {
-                    LockDatabase();
+                    using (var tx = BeginTransaction())
+                    {
+                        LockDatabase();
 
-                    action();
+                        action();
 
-                    tx.Complete();
+                        tx.Complete();
+                    }
                 }
             }
 
