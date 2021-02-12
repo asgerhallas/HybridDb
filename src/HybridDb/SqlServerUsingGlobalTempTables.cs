@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Threading;
 using System.Transactions;
 using Dapper;
 using Microsoft.Extensions.Logging;
@@ -65,11 +66,11 @@ namespace HybridDb
             }
 
             Action complete = () => { };
-            Action dispose = () => { numberOfManagedConnections--; };
+            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
 
             try
             {
-                numberOfManagedConnections++;
+                Interlocked.Increment(ref numberOfManagedConnections);
 
                 var connection = new SqlConnection(connectionString);
 
