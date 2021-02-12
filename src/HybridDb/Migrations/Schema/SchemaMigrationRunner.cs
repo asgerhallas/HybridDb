@@ -41,7 +41,7 @@ namespace HybridDb.Migrations.Schema
             {
                 store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
 
-                WhileLocked(store.TableMode == TableMode.GlobalTempTables, () =>
+                Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
                 {
                     TryCreateMetadataTable();
 
@@ -64,22 +64,27 @@ namespace HybridDb.Migrations.Schema
             }
         }
 
-        void WhileLocked(bool notwrap, Action action)
+        void Migrate(bool isTempTables, Action action)
         {
-            if (notwrap)
+            var sw = Stopwatch.StartNew();
+
+            if (isTempTables)
             {
                 action();
-                return;
             }
-
-            using (var tx = BeginTransaction())
+            else
             {
-                LockDatabase();
+                using (var tx = BeginTransaction())
+                {
+                    LockDatabase();
 
-                action();
+                    action();
 
-                tx.Complete();
+                    tx.Complete();
+                }
             }
+
+            logger.LogInformation($"Schema migrations ran in {{time}}ms on {{tables}}.", sw.ElapsedMilliseconds, isTempTables ? "temp tables" : "real tables");
         }
 
         static TransactionScope BeginTransaction() => 
