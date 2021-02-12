@@ -23,6 +23,15 @@ namespace HybridDb.Linq.Old
 
         public static T Index<T>(this object parameter) => throw new NotSupportedException("Only for building LINQ expressions");
 
+        public static IQueryable<T> SkipToId<T>(this IQueryable<T> query, string id, int pageSize) =>
+            query.Provider.CreateQuery<T>(
+                Expression.Call(typeof(QueryableEx)
+                        .GetMethod(nameof(SkipToId))
+                        .MakeGenericMethod(typeof(T)),
+                    query.Expression,
+                    Expression.Constant(id),
+                    Expression.Constant(pageSize)));
+
         internal static Translation Translate(this IQueryable query) => Translate(query.Expression);
 
         internal static Translation Translate(this Expression expression) => new QueryTranslator().Translate(expression);

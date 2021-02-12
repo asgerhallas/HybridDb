@@ -89,8 +89,8 @@ namespace HybridDb.Linq.Old
             if (translation.ProjectAs == null)
             {
                 var (stats, rows) = session.Transactionally(tx => tx.Query<object>(
-                    design.Table, translation.Select, translation.Where, translation.Skip,
-                    translation.Take, translation.OrderBy, false, translation.Parameters));
+                    design.Table, translation.Top1, translation.Select, translation.Where, 
+                    translation.Window, translation.OrderBy, false, translation.Parameters));
 
                 var results =
                     from row in rows
@@ -110,8 +110,8 @@ namespace HybridDb.Linq.Old
             else
             {
                 var (stats, rows) = session.Transactionally(tx => tx.Query<TProjection>(
-                    design.Table, translation.Select, translation.Where, translation.Skip,
-                    translation.Take, translation.OrderBy, false, translation.Parameters));
+                    design.Table, translation.Top1, translation.Select, translation.Where, 
+                    translation.Window, translation.OrderBy, false, translation.Parameters));
 
                 var results =
                     from row in rows

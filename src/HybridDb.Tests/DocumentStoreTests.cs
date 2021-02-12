@@ -184,7 +184,10 @@ namespace HybridDb.Tests
                               where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 10
                               select method).Single().MakeGenericMethod(t.GetType());
 
-            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(null, new object[] { store, table.Table, stats, null, "Field = @name", 0, 0, "", false, new {name = "Asger"}})).ToList();
+            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(null, new object[]
+            {
+                store, table.Table, stats, false, null, "Field = @name", null, "", false, new {name = "Asger"}
+            })).ToList();
 
             rows.Count.ShouldBe(1);
             Assert.Equal("Asger", rows.Single().Data.Field);
@@ -291,7 +294,7 @@ namespace HybridDb.Tests
                 return tx.Execute(new InsertCommand(table, id2, new {Field = "B"}));
             });
 
-            var rows = store.Query<Guid>(table, out _, "Etag", orderby: "Field").ToList();
+            var rows = store.Query<Guid>(table, out _, select: "Etag", orderby: "Field").ToList();
 
             rows.Count.ShouldBe(2);
             rows[0].Data.ShouldBe(etag);
@@ -400,7 +403,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
-            var result = store.Query(table.Table, out stats, skip: 2, take: 5, orderby: "Number").ToList();
+            var result = store.Query(table.Table, out stats, window: new SkipTake(2, 5), orderby: "Number").ToList();
 
             result.Count.ShouldBe(5);
             var props = result.Select(x => x[table.Table["Number"]]).ToList();
@@ -422,7 +425,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
-            var result = store.Query(table.Table, out stats, take: 2, orderby: "Number").ToList();
+            var result = store.Query(table.Table, out stats, window: new SkipTake(0, 2), orderby: "Number").ToList();
 
             result.Count.ShouldBe(2);
             var props = result.Select(x => x[table.Table["Number"]]).ToList();
@@ -441,7 +444,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Number = i });
 
             QueryStats stats;
-            var result = store.Query(table.Table, out stats, skip: 7, orderby: "Number").ToList();
+            var result = store.Query(table.Table, out stats, window: new SkipTake(7, 0), orderby: "Number").ToList();
 
             result.Count.ShouldBe(3);
             var props = result.Select(x => x[table.Table["Number"]]).ToList();
@@ -488,7 +491,7 @@ namespace HybridDb.Tests
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Property = i });
 
-            store.Query(table.Table, out var stats, where: "Property >= 5", skip: 1);
+            store.Query(table.Table, out var stats, where: "Property >= 5", window: new SkipTake(1, 0));
 
             stats.RetrievedResults.ShouldBe(4);
             stats.TotalResults.ShouldBe(5);
@@ -520,7 +523,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, NewId(), new { Property = 11 });
             store.Insert(table.Table, NewId(), new { Property = 11 });
 
-            store.Query(table.Table, out var stats, @orderby: "Property", skip: 1);
+            store.Query(table.Table, out var stats, @orderby: "Property", window: new SkipTake(1, 0));
             
             stats.RetrievedResults.ShouldBe(5);
             stats.TotalResults.ShouldBe(6);
@@ -536,7 +539,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
-            store.Query(table.Table, out stats, where: "Property >= 5", skip: 10);
+            store.Query(table.Table, out stats, where: "Property >= 5", window: new SkipTake(10, 0));
 
             stats.RetrievedResults.ShouldBe(0);
             stats.TotalResults.ShouldBe(5);
@@ -552,7 +555,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
-            store.Query(table.Table, out stats, where: "Property >= 5", take: 2);
+            store.Query(table.Table, out stats, where: "Property >= 5", window: new SkipTake(0, 2));
 
             stats.RetrievedResults.ShouldBe(2);
             stats.TotalResults.ShouldBe(5);
@@ -568,7 +571,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Property = i });
 
             QueryStats stats;
-            store.Query(table.Table, out stats, where: "Property >= 5", take: 20);
+            store.Query(table.Table, out stats, where: "Property >= 5", window: new SkipTake(0, 20));
 
             stats.RetrievedResults.ShouldBe(5);
             stats.TotalResults.ShouldBe(5);
@@ -624,7 +627,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, i.ToString(), new { Field = i });
 
             QueryStats stats;
-            var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id", skip: 1, take:1).Single();
+            var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id", window: new SkipTake(1, 1)).Single();
 
             result[table.Table["Field"]].ShouldBe("2");
         }
@@ -639,7 +642,7 @@ namespace HybridDb.Tests
                 store.Insert(table.Table, NewId(), new { Field = i });
 
             QueryStats stats;
-            var result = store.Query(table.Table, out stats, skip: 2, take: 2, orderby: "Field desc").ToList();
+            var result = store.Query(table.Table, out stats, window: new SkipTake(2, 2), orderby: "Field desc").ToList();
 
             var props = result.Select(x => x[table.Table["Field"]]).ToList();
             props[0].ShouldBe("3");
@@ -698,11 +701,11 @@ namespace HybridDb.Tests
             var table = new DocumentTable("Entities");
             store.Insert(table, NewId(), new { Version = 1 });
 
-            var result1 = store.Query(table, out _, skip: 0, take: 2).Single();
+            var result1 = store.Query(table, out _, window: new SkipTake(0, 2)).Single();
             result1.ContainsKey(new Column("RowNumber", typeof(int))).ShouldBe(false);
             result1.ContainsKey(new Column("TotalResults", typeof(int))).ShouldBe(false);
 
-            var result2 = store.Query<object>(table, out _, skip: 0, take: 2).Single();
+            var result2 = store.Query<object>(table, out _, window: new SkipTake(0, 2)).Single();
             ((IDictionary<string, object>)result2.Data).ContainsKey("RowNumber").ShouldBe(false);
             ((IDictionary<string, object>)result2.Data).ContainsKey("TotalResults").ShouldBe(false);
         }
@@ -738,6 +741,96 @@ namespace HybridDb.Tests
 
             store.Insert(store.Configuration.GetDesignFor<object>().Table, "a", new {Document = new string('*', 10_000_000)});
         }
+
+        [Theory]
+        [InlineData(0, new[] { 0, 1, 2, 3, 4 })]
+        [InlineData(3, new[] { 0, 1, 2, 3, 4 })]
+        [InlineData(4, new[] { 0, 1, 2, 3, 4 })]
+        [InlineData(5, new[] { 5, 6, 7, 8, 9 })]
+        [InlineData(7, new[] { 5, 6, 7, 8, 9 })]
+        [InlineData(9, new[] { 5, 6, 7, 8, 9 })]
+        [InlineData(10, new[] { 10, 11, 12, 13, 14 })]
+        [InlineData(15, new[] { 15, 16 })]
+        [InlineData(16, new[] { 15, 16 })]
+        public void CanSkipToId(int index, int[] expected)
+        {
+            Document<Entity>().With(x => x.Number);
+
+            var ids = new List<string>();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 17; i++)
+            {
+                var id = Guid.NewGuid().ToString();
+                ids.Add(id);
+                store.Insert(table.Table, id, new { Number = i });
+            }
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, window: new SkipToId(ids[index], 5), orderby: "Number").ToList();
+
+            result.Select(x => (int)x[table.Table["Number"]])
+                .ShouldBe(expected);
+
+            stats.TotalResults.ShouldBe(17);
+            stats.RetrievedResults.ShouldBe(expected.Length);
+            stats.FirstRowNumberOfWindow.ShouldBe(expected[0]);
+        }
+
+        [Theory]
+        [InlineData(0, 0, new[] { 0, 2, 4, 6, 8 })]
+        [InlineData(2, 0, new[] { 0, 2, 4, 6, 8 })]
+        [InlineData(3, 0, new[] { 0, 2, 4, 6, 8 })]
+        [InlineData(10, 5, new[] { 10, 12, 14, 16 })]
+        [InlineData(11, 0, new[] { 0, 2, 4, 6, 8 })]
+        public void CanSkipToId_Where(int index, int firstRowOfWindow, int[] expected)
+        {
+            Document<Entity>().With(x => x.Number);
+
+            var ids = new List<string>();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 17; i++)
+            {
+                var id = Guid.NewGuid().ToString();
+                ids.Add(id);
+                store.Insert(table.Table, id, new { Number = i });
+            }
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, where: "Number % 2 = 0", window: new SkipToId(ids[index], 5), orderby: "Number").ToList();
+
+            result.Select(x => (int)x[table.Table["Number"]])
+                .ShouldBe(expected);
+
+            stats.TotalResults.ShouldBe(9);
+            stats.RetrievedResults.ShouldBe(expected.Length);
+            stats.FirstRowNumberOfWindow.ShouldBe(firstRowOfWindow);
+        }
+
+        [Fact]
+        public void CanSkipToId_Where_NoResults()
+        {
+            Document<Entity>().With(x => x.Number);
+
+            var ids = new List<string>();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 17; i++)
+            {
+                var id = Guid.NewGuid().ToString();
+                ids.Add(id);
+                store.Insert(table.Table, id, new { Number = i });
+            }
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, where: "Number = -1", window: new SkipToId(ids[0], 5), orderby: "Number").ToList();
+
+            result.Select(x => (int)x[table.Table["Number"]])
+                .ShouldBeEmpty();
+
+            stats.TotalResults.ShouldBe(0);
+            stats.RetrievedResults.ShouldBe(0);
+            stats.FirstRowNumberOfWindow.ShouldBe(0);
+        }
+
 
         public class Case
         {

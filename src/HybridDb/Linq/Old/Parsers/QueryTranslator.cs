@@ -33,8 +33,8 @@ namespace HybridDb.Linq.Old.Parsers
                 Select = selectSql.ToString(),
                 Where = whereSql.ToString(),
                 OrderBy = orderBySql.ToString(),
-                Skip = queryVisitor.Skip,
-                Take = queryVisitor.Take,
+                Window = queryVisitor.Window,
+                Top1 = queryVisitor.Top1,
                 ProjectAs = queryVisitor.ProjectAs,
                 Parameters = parameters.ToDictionary(x => x.Value, x => x.Key),
                 ExecutionMethod = queryVisitor.Execution

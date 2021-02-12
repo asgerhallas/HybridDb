@@ -31,8 +31,8 @@ namespace HybridDb.Tests
             var translation = Query<Entity>().Translate();
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("");
-            translation.Take.ShouldBe(0);
-            translation.Skip.ShouldBe(0);
+            translation.Window.ShouldBe(null);
+            translation.Top1.ShouldBe(false);
         }
 
         [Fact]
@@ -407,9 +407,9 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWithSkipAndTake()
         {
-            var translation = Query<Entity>().Skip(1).Take(1).Translate();
-            translation.Skip.ShouldBe(1);
-            translation.Take.ShouldBe(1);
+            var window = (SkipTake)Query<Entity>().Skip(1).Take(1).Translate().Window;
+            window.Skip.ShouldBe(1);
+            window.Take.ShouldBe(1);
         }
 
         [Fact]
@@ -618,6 +618,16 @@ namespace HybridDb.Tests
             var translation = Query<Entity>().OrderBy(x => x.Column<string>(somecolumn.StringProp.ToString())).Translate();
 
             translation.OrderBy.ShouldBe("SomeColumn");
+        }
+
+        [Fact]
+        public void CanQueryWithSkipToId()
+        {
+            var id = Guid.NewGuid().ToString();
+            var translation = Query<Entity>().SkipToId(id, 5).Translate();
+            var skipToId = translation.Window.ShouldBeOfType<SkipToId>();
+            skipToId.Id.ShouldBe(id);
+            skipToId.PageSize.ShouldBe(5);
         }
 
         Query<T> Query<T>() where T : class

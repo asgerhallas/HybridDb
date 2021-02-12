@@ -191,9 +191,27 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryWithFirst()
         {
-            var result = session.Query<Entity>().Where(x => x.StringProp == "Asger").First();
+            QueryStats stats;
+            var result = session.Query<Entity>().Statistics(out stats).OrderBy(x => x.Property).First();
+
+            stats.TotalResults.ShouldBe(3);
+            stats.RetrievedResults.ShouldBe(1);
+
             result.ShouldNotBe(null);
             result.StringProp.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void CanQueryWithFirst_WithWindow()
+        {
+            QueryStats stats;
+            var result = session.Query<Entity>().Statistics(out stats).Skip(1).OrderBy(x => x.Property).First();
+
+            stats.TotalResults.ShouldBe(3);
+            stats.RetrievedResults.ShouldBe(1);
+
+            result.ShouldNotBe(null);
+            result.StringProp.ShouldBe("Lars");
         }
 
         [Fact]

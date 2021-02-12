@@ -33,12 +33,12 @@ namespace HybridDb
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
         public static IEnumerable<QueryResult<T>> Query<T>(
-            this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
-            int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null)
+            this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
+            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             using (var tx = store.BeginTransaction())
             {
-                var (queryStats, rows) = tx.Query<T>(table, @select, @where, skip, take, @orderby, includeDeleted, parameters);
+                var (queryStats, rows) = tx.Query<T>(table, top1, @select, @where, window, @orderby, includeDeleted, parameters);
 
                 tx.Complete();
 
@@ -49,9 +49,9 @@ namespace HybridDb
         }
 
         public static IEnumerable<IDictionary<string, object>> Query(
-            this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
-            int skip = 0, int take = 0, string orderby = "", bool includeDeleted = false, object parameters = null) =>
-            store.Query<object>(table, out stats, @select, @where, skip, take, @orderby, includeDeleted, parameters)
+            this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
+            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
+            store.Query<object>(table, out stats, top1, @select, @where, window, @orderby, includeDeleted, parameters)
                 .Select(x => (IDictionary<string, object>) x.Data);
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
@@ -60,7 +60,7 @@ namespace HybridDb
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null) =>
-            tx.Query<TProjection>(table, @select,
+            tx.Query<TProjection>(table, false, @select,
                 @where: $"{DocumentTable.TimestampColumn.Name} > @Since and {DocumentTable.TimestampColumn.Name} < min_active_rowversion()",
                 @orderby: $"{DocumentTable.TimestampColumn.Name} ASC",
                 includeDeleted: true,

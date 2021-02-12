@@ -6,8 +6,8 @@ namespace HybridDb.Linq.Old.Parsers
 {
     internal class QueryParser : ExpressionVisitor
     {
-        public int Skip { get; private set; }
-        public int Take { get; private set; }
+        public bool Top1 { get; set; }
+        public Window Window { get; set; }
         public SqlExpression Select { get; private set; }
         public SqlExpression Where { get; private set; }
         public SqlOrderByExpression OrderBy { get; private set; }
@@ -41,7 +41,7 @@ namespace HybridDb.Linq.Old.Parsers
                     goto Take1;
                 case "Take1":
                     Take1:
-                    Take = 1;
+                    Top1 = true;
                     if (expression.Arguments.Count <= 1) break;
                     goto Where;
                 case "Where":
@@ -55,10 +55,13 @@ namespace HybridDb.Linq.Old.Parsers
                                 : whereExpression;
                     break;
                 case "Skip":
-                    Skip = (int) ((ConstantExpression) expression.Arguments[1]).Value;
+                    Window = new SkipTake((int)((ConstantExpression)expression.Arguments[1]).Value, (Window as SkipTake)?.Take ?? 0);
                     break;
                 case "Take":
-                    Take = (int) ((ConstantExpression) expression.Arguments[1]).Value;
+                    Window = new SkipTake((Window as SkipTake)?.Skip ?? 0, (int)((ConstantExpression)expression.Arguments[1]).Value);
+                    break;
+                case "SkipToId":
+                    Window = new SkipToId((string)((ConstantExpression)expression.Arguments[1]).Value, (int)((ConstantExpression)expression.Arguments[2]).Value);
                     break;
                 case "OfType":
                     ProjectAs = expression.Method.GetGenericArguments()[0];

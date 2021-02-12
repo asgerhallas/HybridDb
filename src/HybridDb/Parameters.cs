@@ -36,6 +36,7 @@ namespace HybridDb
             }));
 
         public void Add(string name, object value, SqlDbType? dbType, string size) => parameters.Add(CreateSqlParameter(name, value, dbType));
+        public void Add(Parameters moreParameters) => parameters.AddRange(moreParameters.parameters);
 
         public static SqlParameter CreateSqlParameter(string name, object value, SqlDbType? dbType)
         {

@@ -5,12 +5,9 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Transactions;
 using Dapper;
-using HybridDb.Commands;
 using HybridDb.Config;
-using ShinySwitch;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
@@ -68,8 +65,8 @@ namespace HybridDb
         }
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            DocumentTable table, string select = null, string where = "", int skip = 0, int take = 0,
-            string orderby = "", bool includeDeleted = false, object parameters = null)
+            DocumentTable table, bool top1 = false, string select = null, string where = "", 
+            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
@@ -91,60 +88,87 @@ namespace HybridDb
                     : $"({where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
             }
 
+            QueryStats stats = null;
+            IEnumerable<QueryResult<TProjection>> result = null;
             var timer = Stopwatch.StartNew();
+            var sqlx = new SqlBuilder();
+            var isWindowed = window != null;
 
-            var sql = new SqlBuilder();
-
-            var isWindowed = skip > 0 || take > 0;
-
-            if (isWindowed)
+            if (isWindowed || top1)
             {
-                sql.Append("select count(*) as TotalResults")
+                sqlx.Append("select count(*) as TotalResults")
                     .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(";");
 
-                sql.Append(@"with temp as (select *")
+                sqlx.Append(@"with WithRowNumber as (select *")
+                    .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
                     .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {DocumentTable.LastOperationColumn.Name} as __LastOperation")
                     .Append($", {DocumentTable.TimestampColumn.Name} as __RowVersion")
-                    .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) as RowNumber")
                     .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
-                    .Append(string.IsNullOrEmpty(select), "select * from temp", $"select {select}, __Discriminator, __LastOperation, __RowVersion from temp")
-                    .Append($"where RowNumber >= {skip + 1}")
-                    .Append(take > 0, $"and RowNumber <= {skip + take}")
-                    .Append("order by RowNumber")
-                    .Append(";");
+                    .Append(top1, "select top 1", "select")
+                    .Append(string.IsNullOrEmpty(select), "*", $"{@select}, RowNumber, __Discriminator, __LastOperation, __RowVersion")
+                    .Append("from WithRowNumber");
+
+                switch (window)
+                {
+                    case SkipTake skipTake:
+                    {
+                        var skip = skipTake.Skip;
+                        var take = skipTake.Take;
+
+                        sqlx.Append("where RowNumber >= @skip", new SqlParameter("skip", skip))
+                            .Append(take > 0, "and RowNumber < @take", new SqlParameter("take", skip + take))
+                            .Append("order by RowNumber");
+                        break;
+                    }
+                    case SkipToId skipToId:
+                        sqlx.Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
+                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
+                            .Append("order by RowNumber", new SqlParameter("__Id", skipToId.Id), new SqlParameter("__PageSize", skipToId.PageSize));
+                        break;
+                    case null: break;
+                }
+
+                var internalResult = InternalQuery(sqlx, parameters, reader => new
+                {
+                    Stats = reader.Read<QueryStats>(buffered: true).Single(),
+                    Rows = ReadRow<TProjection>(reader)
+                });
+
+                result = internalResult.Rows.Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion));
+
+                stats = new QueryStats
+                {
+                    TotalResults = internalResult.Stats.TotalResults,
+                    RetrievedResults = internalResult.Rows.Count(),
+                    FirstRowNumberOfWindow = internalResult.Rows.FirstOrDefault()?.RowNumber ?? 0
+                };
             }
             else
             {
-                sql.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
+                sqlx.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
+                    .Append($", 0 as RowNumber")
                     .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {DocumentTable.LastOperationColumn.Name} AS __LastOperation")
                     .Append($", {DocumentTable.TimestampColumn.Name} AS __RowVersion")
                     .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
-            }
+                
+                result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)
+                    .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion))
+                    .ToList();
 
-            var result = InternalQuery<TProjection>(sql, parameters, isWindowed, out var stats);
+                stats = new QueryStats();
+                stats.TotalResults = stats.RetrievedResults = result.Count();
+                stats.FirstRowNumberOfWindow = 0;
+            }
 
             stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
-
-            if (isWindowed)
-            {
-                var potential = stats.TotalResults - skip;
-                if (potential < 0)
-                    potential = 0;
-
-                stats.RetrievedResults = take > 0 && potential > take ? take : potential;
-            }
-            else
-            {
-                stats.RetrievedResults = stats.TotalResults;
-            }
 
             return (stats, result);
         }
@@ -172,33 +196,78 @@ namespace HybridDb
             return select;
         }
 
-        IEnumerable<QueryResult<T>> InternalQuery<T>(SqlBuilder sql, object parameters, bool hasTotalsQuery, out QueryStats stats)
+        T InternalQuery<T>(SqlBuilder sql, object parameters, Func<SqlMapper.GridReader, T> read)
         {
             var normalizedParameters = parameters as Parameters ?? Parameters.FromAnonymousObject(parameters);
 
-            if (hasTotalsQuery)
-            {
-                using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
-                {
-                    stats = reader.Read<QueryStats>(buffered: true).Single();
-
-                    return reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
-                        new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
-                }
-            }
+            normalizedParameters.Add(new Parameters(sql.Parameters));
 
             using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
             {
-                var rows = (List<QueryResult<T>>) reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
-                    new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
-
-                stats = new QueryStats
-                {
-                    TotalResults = rows.Count
-                };
-
-                return rows;
+                return read(reader);
             }
+        }
+
+        public IEnumerable<Row<T>> ReadRow<T>(SqlMapper.GridReader reader)
+        {
+
+
+
+            //stats = reader.Read<QueryStats>(buffered: true).Single();
+
+            //return reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
+            //    new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
+            //using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
+            //{
+            //    var rows = (List<QueryResult<T>>) reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
+            //        new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
+
+            //    stats = new QueryStats
+            //    {
+            //        TotalResults = rows.Count
+            //    };
+
+            //    return rows;
+            //}
+
+            if (typeof(IDictionary<string, object>).IsAssignableFrom(typeof(T)))
+            {
+                return (IEnumerable<Row<T>>)reader
+                    .Read<object, RowExtras, Row<IDictionary<string, object>>>(
+                        (a, b) => CreateRow((IDictionary<string, object>)a, b), 
+                        "RowNumber", 
+                        buffered: true);
+            }
+
+            return reader.Read<T, RowExtras, Row<T>>(CreateRow, "RowNumber", buffered: true);
+        }
+
+        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new Row<T>(data, extras);
+
+        public class RowExtras
+        {
+            public int RowNumber { get; set; }
+            public string __Discriminator { get; set; }
+            public Operation __LastOperation { get; set; }
+            public byte[] __RowVersion { get; set; }
+        }
+
+        public class Row<T>
+        {
+            public Row(T data, RowExtras extras)
+            {
+                Data = data;
+                RowNumber = extras.RowNumber;
+                Discriminator = extras.__Discriminator;
+                LastOperation = extras.__LastOperation;
+                RowVersion = extras.__RowVersion;
+            }
+
+            public T Data { get; set; }
+            public int RowNumber { get; set; }
+            public string Discriminator { get; set; }
+            public Operation LastOperation { get; set; }
+            public byte[] RowVersion { get; set; }
         }
 
         static readonly HashSet<Type> simpleTypes = new HashSet<Type>
