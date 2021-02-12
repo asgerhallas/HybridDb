@@ -7,6 +7,7 @@ using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
+using HybridDb.Events.Commands;
 using HybridDb.Migrations.Schema.Commands;
 using Microsoft.Extensions.Logging;
 using static Indentional.Indent;
@@ -70,7 +71,19 @@ namespace HybridDb.Migrations.Schema
 
             if (isTempTables)
             {
-                action();
+                using (var tx = new TransactionScope(
+                    TransactionScopeOption.RequiresNew,
+                    new TransactionOptions
+                    {
+                        IsolationLevel = IsolationLevel.ReadUncommitted,
+                        Timeout = TimeSpan.FromMinutes(1)
+                    },
+                    TransactionScopeAsyncFlowOption.Suppress))
+                {
+                    action();
+
+                    tx.Complete();
+                }
             }
             else
             {
@@ -159,17 +172,11 @@ namespace HybridDb.Migrations.Schema
 
             var commands = differ.CalculateSchemaChanges(schema, store.Configuration);
 
-            if (!commands.Any()) yield break;
+            if (!commands.Any()) return Enumerable.Empty<string>();
 
             logger.LogInformation("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
 
-            foreach (var command in commands)
-            {
-                foreach (var tablename in ExecuteCommand(command, false))
-                {
-                    yield return tablename;
-                }
-            }
+            return commands.SelectMany(command => ExecuteCommand(command, false), (_, tablename) => tablename);
         }
 
         IEnumerable<string> RunConfiguredMigrations(int schemaVersion)

@@ -27,7 +27,7 @@ namespace HybridDb
 
             if (string.IsNullOrEmpty(store.Configuration.TableNamePrefix))
             {
-                store.Configuration.UseTableNamePrefix($"{DateTimeOffset.Now:s}_{Guid.NewGuid()}");
+                store.Configuration.UseTableNamePrefix($"{Guid.NewGuid()}_{DateTimeOffset.Now:s}");
             }
 
             prefix = $"##{store.Configuration.TableNamePrefix}_";
