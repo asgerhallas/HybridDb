@@ -1,14 +1,213 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
+    public class ConcurrencyTests
+    {
+        readonly ITestOutputHelper output;
+
+        public ConcurrencyTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        //[Fact]
+        //public void Babs()
+        //{
+        //    var enumerable = Enumerable.Range(0, 100).Select(_ => Task.Run(async () =>
+        //    {
+        //        var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
+        //        {
+        //            c.DisableBackgroundMigrations();
+        //            c.Document<A>()
+        //                .With(x => x.AA)
+        //                .With(x => x.BB)
+        //                .With(x => x.CC)
+        //                .With(x => x.DD)
+        //                .With(x => x.EE)
+        //                .With(x => x.FF)
+        //                .With(x => x.GG)
+        //                .With(x => x.HH);
+
+        //            c.Document<B>()
+        //                .With(x => x.AA)
+        //                .With(x => x.BB)
+        //                .With(x => x.CC)
+        //                .With(x => x.DD)
+        //                .With(x => x.EE)
+        //                .With(x => x.FF)
+        //                .With(x => x.GG)
+        //                .With(x => x.HH);
+
+        //            c.Document<C>()
+        //                .With(x => x.AA)
+        //                .With(x => x.BB)
+        //                .With(x => x.CC)
+        //                .With(x => x.DD)
+        //                .With(x => x.EE)
+        //                .With(x => x.FF)
+        //                .With(x => x.GG)
+        //                .With(x => x.HH);
+
+        //            c.Document<D>()
+        //                .With(x => x.AA)
+        //                .With(x => x.BB)
+        //                .With(x => x.CC)
+        //                .With(x => x.DD)
+        //                .With(x => x.EE)
+        //                .With(x => x.FF)
+        //                .With(x => x.GG)
+        //                .With(x => x.HH);
+
+        //            c.Document<E>()
+        //                .With(x => x.AA)
+        //                .With(x => x.BB)
+        //                .With(x => x.CC)
+        //                .With(x => x.DD)
+        //                .With(x => x.EE)
+        //                .With(x => x.FF)
+        //                .With(x => x.GG)
+        //                .With(x => x.HH);
+        //        });
+
+        //        var documentSession = documentStore.OpenSession();
+        //        documentSession.Store("a", new E());
+        //        documentSession.Store("B", new D());
+        //        documentSession.Store("c", new C());
+        //        documentSession.Store("d", new B());
+        //        documentSession.SaveChanges();
+        //        documentSession.Advanced.Clear();
+        //        documentSession.Load<E>("a");
+        //        documentSession.Load<D>("b");
+        //        documentSession.Load<C>("c");
+        //        documentSession.Load<B>("d");
+
+        //        documentStore.Dispose();
+        //    }));
+
+        //    Task.WaitAll(enumerable.ToArray());
+        //}
+
+        public class A
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class B
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class C
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class D
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class E
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class F
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class G
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class H
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+        public class I
+        {
+            public string AA { get; set; }
+            public string BB { get; set; }
+            public string CC { get; set; }
+            public string DD { get; set; }
+            public string EE { get; set; }
+            public string FF { get; set; }
+            public string GG { get; set; }
+            public string HH { get; set; }
+        }
+
+    }
+
+
     public class ConfigurationTests
     {
         readonly Configuration configuration;

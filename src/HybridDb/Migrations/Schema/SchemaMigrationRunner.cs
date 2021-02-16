@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
-using HybridDb.Events.Commands;
 using HybridDb.Migrations.Schema.Commands;
 using Microsoft.Extensions.Logging;
 using static Indentional.Indent;
@@ -38,7 +36,7 @@ namespace HybridDb.Migrations.Schema
             if (!store.Configuration.RunUpfrontMigrations)
                 return;
             
-            Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
+            Migrate(store.TableMode != TableMode.RealTables, () =>
             {
                 TryCreateMetadataTable();
 
@@ -64,7 +62,7 @@ namespace HybridDb.Migrations.Schema
         {
             var sw = Stopwatch.StartNew();
 
-            store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
+            store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.RealTables ? "CURRENT" : "TempDb")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
 
             if (isTempTables)
             {

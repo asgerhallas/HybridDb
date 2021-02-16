@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace HybridDb
     public class SqlServerUsingGlobalTempTables : SqlServer
     {
         SqlConnection schemaBuilderConnection;
+        //ConcurrentDictionary<Guid, ManagedConnection> connections = new ConcurrentDictionary<Guid, ManagedConnection>();
 
         string prefix;
         int numberOfManagedConnections;
@@ -40,6 +42,12 @@ namespace HybridDb
         {
             schemaBuilderConnection?.Dispose();
 
+            //foreach (var connection in connections)
+            //{
+            //    connections.TryRemove(connection.Key, out _);
+            //    connection.Value.Dispose();
+            //}
+
             if (numberOfManagedConnections > 0)
             {
                 store.Logger.LogWarning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
@@ -55,6 +63,8 @@ namespace HybridDb
 
         public override ManagedConnection Connect(bool schema = false)
         {
+            var newGuid = Guid.NewGuid();
+
             if (schema)
             {
                 if (Transaction.Current != null)
@@ -66,7 +76,11 @@ namespace HybridDb
             }
 
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            Action dispose = () =>
+            {
+                Interlocked.Decrement(ref numberOfManagedConnections);
+                //connections.TryRemove(newGuid, out _);
+            };
 
             try
             {
@@ -77,6 +91,10 @@ namespace HybridDb
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
 
+                var managedConnection = new ManagedConnection(connection, complete, dispose);
+
+                //connections.TryAdd(newGuid, managedConnection);
+
                 connection.InfoMessage += (obj, args) => OnMessage(args);
                 connection.Open();
 
@@ -84,8 +102,8 @@ namespace HybridDb
                 {
                     connection.EnlistTransaction(Transaction.Current);
                 }
-
-                return new ManagedConnection(connection, complete, dispose);
+                
+                return managedConnection;
             }
             catch (Exception)
             {

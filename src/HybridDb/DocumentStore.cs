@@ -24,6 +24,9 @@ namespace HybridDb
                 case TableMode.GlobalTempTables:
                     Database = new SqlServerUsingGlobalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb");
                     break;
+                case TableMode.LocalTempTables:
+                    Database = new SqlServerUsingLocalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb");
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
