@@ -54,6 +54,8 @@ namespace HybridDb.Config
                     .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
                     .Match<DeleteCommand>(deleteCommand => DeleteCommand.Execute(tx, deleteCommand))
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
+
+            Register(_ => new DocumentMigrator(this));
         }
 
         public string ConnectionString { get; private set; }

@@ -23,13 +23,13 @@ namespace HybridDb
 
         bool saving = false;
 
-        internal DocumentSession(IDocumentStore store, DocumentTransaction tx = null)
+        internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
             deferredCommands = new List<DmlCommand>();
             entities = new Dictionary<EntityKey, ManagedEntity>();
             events = new List<(int Generation, EventData<byte[]> Data)>();
-            migrator = new DocumentMigrator(store.Configuration);
 
+            this.migrator = migrator;
             this.store = store;
 
             enlistedTx = tx;

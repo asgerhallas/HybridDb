@@ -8,6 +8,7 @@ using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.Linq.Old;
+using HybridDb.Migrations.Documents;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -971,7 +972,7 @@ namespace HybridDb.Tests
 
             // The this reference inside OpenSession() is not referencing the fake store, but the wrapped store itself.
             // Therefore we bypass the OpenSession factory.
-            using (var session = new DocumentSession(fakeStore))
+            using (var session = new DocumentSession(fakeStore, fakeStore.Configuration.Resolve<DocumentMigrator>()))
             {
                 session.Store(new Entity());
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
+using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -632,7 +633,8 @@ namespace HybridDb.Tests
 
         Query<T> Query<T>() where T : class
         {
-            var session = new DocumentSession(Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c => c.UseConnectionString(connectionString))));
+            var documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c => c.UseConnectionString(connectionString)));
+            var session = new DocumentSession(documentStore, documentStore.Configuration.Resolve<DocumentMigrator>());
 
             return new Query<T>(new QueryProvider(session, null));
         }

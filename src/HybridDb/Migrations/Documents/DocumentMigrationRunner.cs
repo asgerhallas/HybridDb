@@ -12,7 +12,7 @@ namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrationRunner
     {
-        public Task Run(IDocumentStore store)
+        public Task Run(DocumentStore store)
         {
             var logger = store.Configuration.Logger;
             var configuration = store.Configuration;
@@ -57,7 +57,7 @@ namespace HybridDb.Migrations.Documents
 
                                     try
                                     {
-                                        using (var session = new DocumentSession(store, tx))
+                                        using (var session = new DocumentSession(store, store.Migrator, tx))
                                         {
                                             session.ConvertToEntityAndPutUnderManagement(concreteDesign, row);
                                             session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);

@@ -74,6 +74,7 @@ namespace HybridDb
         public StoreStats Stats { get; } = new StoreStats();
 
         public bool IsInitialized { get; private set; }
+        public DocumentMigrator Migrator { get; private set; }
         public Task DocumentMigration { get; private set; }
 
         public void Initialize()
@@ -82,6 +83,8 @@ namespace HybridDb
 
             Configuration.Initialize();
             Database.Initialize();
+
+            Migrator = Configuration.Resolve<DocumentMigrator>();
 
             // No use of the store for handling documents is allowed before this is run.
             new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
@@ -98,7 +101,7 @@ namespace HybridDb
         {
             AssertInitialized();
 
-            return new DocumentSession(this, tx);
+            return new DocumentSession(this, Migrator, tx);
         }
 
         public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);
