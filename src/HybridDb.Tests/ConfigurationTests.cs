@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations;
@@ -20,82 +21,96 @@ namespace HybridDb.Tests
             this.output = output;
         }
 
-        //[Fact]
-        //public void Babs()
-        //{
-        //    var enumerable = Enumerable.Range(0, 100).Select(_ => Task.Run(async () =>
-        //    {
-        //        var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
-        //        {
-        //            c.DisableBackgroundMigrations();
-        //            c.Document<A>()
-        //                .With(x => x.AA)
-        //                .With(x => x.BB)
-        //                .With(x => x.CC)
-        //                .With(x => x.DD)
-        //                .With(x => x.EE)
-        //                .With(x => x.FF)
-        //                .With(x => x.GG)
-        //                .With(x => x.HH);
+        [Fact]
+        public void Babs()
+        {
+            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(90))
+            {
+                var enumerable = Enumerable.Range(0, 1000).Select(_ =>
+                {
+                    concurrencySemaphore.Wait();
 
-        //            c.Document<B>()
-        //                .With(x => x.AA)
-        //                .With(x => x.BB)
-        //                .With(x => x.CC)
-        //                .With(x => x.DD)
-        //                .With(x => x.EE)
-        //                .With(x => x.FF)
-        //                .With(x => x.GG)
-        //                .With(x => x.HH);
+                    return Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
+                            {
+                                c.DisableBackgroundMigrations();
+                                c.Document<A>()
+                                    .With(x => x.AA)
+                                    .With(x => x.BB)
+                                    .With(x => x.CC)
+                                    .With(x => x.DD)
+                                    .With(x => x.EE)
+                                    .With(x => x.FF)
+                                    .With(x => x.GG)
+                                    .With(x => x.HH);
 
-        //            c.Document<C>()
-        //                .With(x => x.AA)
-        //                .With(x => x.BB)
-        //                .With(x => x.CC)
-        //                .With(x => x.DD)
-        //                .With(x => x.EE)
-        //                .With(x => x.FF)
-        //                .With(x => x.GG)
-        //                .With(x => x.HH);
+                                c.Document<B>()
+                                    .With(x => x.AA)
+                                    .With(x => x.BB)
+                                    .With(x => x.CC)
+                                    .With(x => x.DD)
+                                    .With(x => x.EE)
+                                    .With(x => x.FF)
+                                    .With(x => x.GG)
+                                    .With(x => x.HH);
 
-        //            c.Document<D>()
-        //                .With(x => x.AA)
-        //                .With(x => x.BB)
-        //                .With(x => x.CC)
-        //                .With(x => x.DD)
-        //                .With(x => x.EE)
-        //                .With(x => x.FF)
-        //                .With(x => x.GG)
-        //                .With(x => x.HH);
+                                c.Document<C>()
+                                    .With(x => x.AA)
+                                    .With(x => x.BB)
+                                    .With(x => x.CC)
+                                    .With(x => x.DD)
+                                    .With(x => x.EE)
+                                    .With(x => x.FF)
+                                    .With(x => x.GG)
+                                    .With(x => x.HH);
 
-        //            c.Document<E>()
-        //                .With(x => x.AA)
-        //                .With(x => x.BB)
-        //                .With(x => x.CC)
-        //                .With(x => x.DD)
-        //                .With(x => x.EE)
-        //                .With(x => x.FF)
-        //                .With(x => x.GG)
-        //                .With(x => x.HH);
-        //        });
+                                c.Document<D>()
+                                    .With(x => x.AA)
+                                    .With(x => x.BB)
+                                    .With(x => x.CC)
+                                    .With(x => x.DD)
+                                    .With(x => x.EE)
+                                    .With(x => x.FF)
+                                    .With(x => x.GG)
+                                    .With(x => x.HH);
 
-        //        var documentSession = documentStore.OpenSession();
-        //        documentSession.Store("a", new E());
-        //        documentSession.Store("B", new D());
-        //        documentSession.Store("c", new C());
-        //        documentSession.Store("d", new B());
-        //        documentSession.SaveChanges();
-        //        documentSession.Advanced.Clear();
-        //        documentSession.Load<E>("a");
-        //        documentSession.Load<D>("b");
-        //        documentSession.Load<C>("c");
-        //        documentSession.Load<B>("d");
+                                c.Document<E>()
+                                    .With(x => x.AA)
+                                    .With(x => x.BB)
+                                    .With(x => x.CC)
+                                    .With(x => x.DD)
+                                    .With(x => x.EE)
+                                    .With(x => x.FF)
+                                    .With(x => x.GG)
+                                    .With(x => x.HH);
+                            });
 
-        //        documentStore.Dispose();
-        //    }));
+                            var documentSession = documentStore.OpenSession();
+                            documentSession.Store("a", new E());
+                            documentSession.Store("B", new D());
+                            documentSession.Store("c", new C());
+                            documentSession.Store("d", new B());
+                            documentSession.SaveChanges();
+                            documentSession.Advanced.Clear();
+                            documentSession.Load<E>("a");
+                            documentSession.Load<D>("b");
+                            documentSession.Load<C>("c");
+                            documentSession.Load<B>("d");
+                            documentStore.Dispose();
+                        }
+                        finally
+                        {
+                            concurrencySemaphore.Release();
+                        }
+                    });
+                });
 
-        //    Task.WaitAll(enumerable.ToArray());
-        //}
+                Task.WaitAll(enumerable.ToArray());
+            }
+        }
 
         public class A
         {
