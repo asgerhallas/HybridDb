@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 
 namespace HybridDb.Config
 {
-    public class AssemblyQualifiedNameTypeMapper : ITypeMapper
+    public class AssemblyQualifiedNameTypeMapper : TypeMapper
     {
-        public string ToDiscriminator(Type type) => type.AssemblyQualifiedName;
-        public Type ToType(string discriminator) => Type.GetType(discriminator, false, true);
+        public override string ToDiscriminator(Type type) => type.AssemblyQualifiedName;
     }
 }

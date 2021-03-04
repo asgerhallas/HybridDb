@@ -92,13 +92,15 @@ namespace HybridDb.Config
             }
         }
 
-        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) =>
-            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof(TEntity), tablename), ColumnNameConvention);
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null) => 
+            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof(TEntity), tablename, discriminator), ColumnNameConvention);
 
-        public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null)
+        public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null, string discriminator = null)
         {
             lock (gate)
             {
+                discriminator = discriminator ?? TypeMapper.ToDiscriminator(type);
+
                 // for interfaces we find the first design for a class that is assignable to the interface or fallback to the design for typeof(object)
                 if (type.IsInterface)
                 {
@@ -113,7 +115,7 @@ namespace HybridDb.Config
                 {
                     return AddDesign(new DocumentDesign(
                         this, GetOrAddDocumentTable(tablename ?? GetTableNameByConventionFor(type)),
-                        type, TypeMapper.ToDiscriminator(type)));
+                        type, discriminator));
                 }
 
                 // design already exists for type
@@ -133,11 +135,11 @@ namespace HybridDb.Config
                 {
                     return AddDesign(new DocumentDesign(
                         this, GetOrAddDocumentTable(tablename),
-                        type, TypeMapper.ToDiscriminator(type)));
+                        type, discriminator));
                 }
 
                 // a table and base design exists for type, add the derived type as a child design
-                var design = new DocumentDesign(this, existing, type, TypeMapper.ToDiscriminator(type));
+                var design = new DocumentDesign(this, existing, type, discriminator);
 
                 var afterParent = documentDesigns.IndexOf(existing) + 1;
                 documentDesigns.Insert(afterParent, design);
@@ -160,7 +162,7 @@ namespace HybridDb.Config
                     throw new InvalidOperationException($"No concrete type could be mapped from discriminator '{discriminator}'.");
                 }
 
-                return GetOrCreateDesignFor(type);
+                return GetOrCreateDesignFor(type, discriminator: discriminator);
             }
         }
 

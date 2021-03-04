@@ -9,6 +9,7 @@
     <!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

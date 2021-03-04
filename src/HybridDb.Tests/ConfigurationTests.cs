@@ -28,6 +28,21 @@ namespace HybridDb.Tests
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("Entities");
+        }        
+        
+        [Fact]
+        public void RegisterDocumentDesign_WithExplicitDiscriminator()
+        {
+            configuration.Document<Entity>(discriminator: "Hans+Grete");
+
+            var design = configuration.DocumentDesigns.Single();
+            design.DocumentType.ShouldBe(typeof(Entity));
+            design.Discriminator.ShouldBe("Hans+Grete");
+            design.Parent.ShouldBe(null);
+            design.DecendentsAndSelf.Values.ShouldBe(new[] { design });
+
+            var table = configuration.Tables.Single();
+            table.Key.ShouldBe("Entities");
         }
 
         [Fact]
@@ -66,6 +81,23 @@ namespace HybridDb.Tests
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("mytable");
+        }
+
+        [Fact]
+        public void RegisterDerivedTypeAsDocument_WithExplicitDiscriminator()
+        {
+            configuration.Document<AbstractEntity>();
+            configuration.Document<DerivedEntity>(discriminator: "DD");
+
+            var designs = configuration.DocumentDesigns;
+            designs[0].DocumentType.ShouldBe(typeof(AbstractEntity));
+            designs[0].Parent.ShouldBe(null);
+            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0], designs[1] });
+
+            designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
+            designs[1].Discriminator.ShouldBe("DD");
+            designs[1].Parent.ShouldBe(designs[0]);
+            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
         }
 
         [Fact]
