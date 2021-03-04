@@ -47,7 +47,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             serializer.EnableAutomaticBackReferences();
             UseSerializer(serializer);
 
-            Document<JObject>("Cases");
+            Document<JObject>("Cases", discriminator: "DV.Application.Cases.Case, DV.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 
             InitializeStore();
 
@@ -79,7 +79,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             serializer.EnableAutomaticBackReferences();
             UseSerializer(serializer);
 
-            Document<JObject>("Cases");
+            Document<JObject>("Cases", discriminator: "DV.Application.Cases.Case, DV.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 
             InitializeStore();
 
@@ -99,7 +99,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql");
 
             UseTypeMapper(new OtherTypeMapper());
-            Document<JObject>("BuildingParts");
+            Document<JObject>("BuildingParts", discriminator: "UValueCalculator.Models.RefBuildingPart, UValueCalculator, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 
             var before = store.Query(new DocumentTable("BuildingParts"), out _).Single();
 
