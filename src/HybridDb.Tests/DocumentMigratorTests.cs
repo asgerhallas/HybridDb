@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
@@ -70,6 +71,19 @@ namespace HybridDb.Tests
             var entity = (Entity) new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(id, document, 0, design.Discriminator));
 
             entity.Property.ShouldBe("Asger123");
+        }
+
+        [Fact]
+        public void Bug_DontCallTypeMapperDirectly()
+        {
+            Document<Entity>(discriminator: "BusseBøhMand");
+
+            UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((serializer, json) => json)));
+
+            var design = configuration.GetDesignFor<Entity>();
+            var document = configuration.Serializer.Serialize(new Entity());
+
+            Should.NotThrow(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(NewId(), document, 0, design.Discriminator)));
         }
 
         static IDictionary<string, object> Row(string id, string document, int version, string discriminator) =>

@@ -15,7 +15,7 @@ namespace HybridDb
 
         protected HybridDbConfigurator() => configuration = new Configuration();
 
-        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null) => configuration.Document<TEntity>(tablename);
+        protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null) => configuration.Document<TEntity>(tablename, discriminator);
 
         protected void UseSerializer(ISerializer serializer) => configuration.UseSerializer(serializer);
 

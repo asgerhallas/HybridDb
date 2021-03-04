@@ -23,7 +23,7 @@ namespace HybridDb.Migrations.Documents
 
             var migratedRow = migrations
                 .Aggregate(row, (currentRow, nextCommand) =>
-                    nextCommand.Command.Matches(nextCommand.Migration.Version, configuration, currentRow)
+                    nextCommand.Command.Matches(nextCommand.Migration.Version, configuration, design, currentRow)
                         ? nextCommand.Command.Execute(session, configuration.Serializer, currentRow)
                         : currentRow);
 
