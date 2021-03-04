@@ -22,7 +22,7 @@ namespace HybridDb.Tests
 
             var design = configuration.DocumentDesigns.Single();
             design.DocumentType.ShouldBe(typeof(Entity));
-            design.Discriminator.ShouldBe(typeof(Entity).AssemblyQualifiedName);
+            design.Discriminator.ShouldBe("ConfigurationTests+Entity");
             design.Parent.ShouldBe(null);
             design.DecendentsAndSelf.Values.ShouldBe(new[] { design });
 

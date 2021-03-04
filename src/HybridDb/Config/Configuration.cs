@@ -35,7 +35,7 @@ namespace HybridDb.Config
             Logger = NullLoggerProvider.Instance.CreateLogger("HybridDb");
 
             Serializer = new DefaultSerializer();
-            TypeMapper = new AssemblyQualifiedNameTypeMapper();
+            TypeMapper = new ShortNameTypeMapper();
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunUpfrontMigrations = true;

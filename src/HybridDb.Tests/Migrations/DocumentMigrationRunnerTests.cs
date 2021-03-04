@@ -21,6 +21,7 @@ namespace HybridDb.Tests.Migrations
         [InlineData(false, 0)]
         public void ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
         {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
 
             var id = NewId();
@@ -44,6 +45,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
         {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
             Document<OtherEntity>().With(x => x.Number);
 
@@ -121,6 +123,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void AcceptsConcurrentWrites()
         {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             UseRealTables();
 
             Document<Entity>().With(x => x.Number);

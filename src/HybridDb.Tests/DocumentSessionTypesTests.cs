@@ -334,7 +334,7 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact(Skip = "Please fix")]
+        [Fact]
         public void CanStoreAndLoadAnonymousObject()
         {
             var entity = new { SomeString = "Asger" };
@@ -512,7 +512,7 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 Should.Throw<InvalidOperationException>(() => session.Load<AbstractEntity>("key"))
-                    .Message.ShouldBe("No type found for discriminator 'NoShow'.");
+                    .Message.ShouldBe("No type found for 'NoShow'.");
             }
         }
 
