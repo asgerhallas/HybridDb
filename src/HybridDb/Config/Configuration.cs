@@ -70,6 +70,7 @@ namespace HybridDb.Config
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
         public bool Queued { get; private set; }
+        public bool SoftDelete { get; private set; }
         public bool EventStore { get; private set; }
         public Func<Expression, string> ColumnNameConvention { get; private set; }
 
@@ -256,6 +257,8 @@ namespace HybridDb.Config
         public void UseKeyResolver(Func<object, string> resolver) => DefaultKeyResolver = resolver;
 
         public void UseQueues() => Queued = true;
+
+        public void UseSoftDelete() => SoftDelete = true;
 
         public void UseEventStore(string tableName = "events")
         {

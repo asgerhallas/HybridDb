@@ -40,7 +40,7 @@ namespace HybridDb
         public IAdvancedDocumentSession Advanced => this;
         public IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities => entities;
 
-        public T Load<T>(string key) where T : class => Load(typeof(T), key) as T;
+        public T Load<T>(string key) where T : class => (T)Load(typeof(T), key);
 
         public object Load(Type type, string key)
         {
@@ -48,9 +48,15 @@ namespace HybridDb
 
             if (entities.TryGetValue(new EntityKey(design.Table, key), out var managedEntity))
             {
-                return managedEntity.State != EntityState.Deleted
-                    ? managedEntity.Entity
-                    : null;
+                if (managedEntity.State == EntityState.Deleted) return null;
+
+                var entityType = managedEntity.Entity.GetType();
+                if (!type.IsAssignableFrom(entityType))
+                {
+                    throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{entityType}', which is not assignable to '{type}'.");
+                }
+
+                return managedEntity.Entity;
             }
 
             var row = Transactionally(tx => tx.Get(design.Table, key));
@@ -275,9 +281,9 @@ namespace HybridDb
 
             if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out var managedEntity))
             {
-                return managedEntity.State != EntityState.Deleted
-                    ? managedEntity.Entity
-                    : null;
+                if (managedEntity.State == EntityState.Deleted) return null;
+
+                return managedEntity.Entity;
             }
 
             var document = (string)row[DocumentTable.DocumentColumn];

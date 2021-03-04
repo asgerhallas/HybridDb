@@ -14,6 +14,7 @@ namespace HybridDb.Tests
         public void QueueInserts()
         {
             UseRealTables();
+            UseSoftDelete();
 
             Document<Entity>().With(x => x.Property);
 
@@ -36,6 +37,7 @@ namespace HybridDb.Tests
         public void QueueUpdates()
         {
             UseRealTables();
+            UseSoftDelete();
 
             Document<Entity>().With(x => x.Property);
 
@@ -60,6 +62,7 @@ namespace HybridDb.Tests
         public void QueueDeletes()
         {
             UseRealTables();
+            UseSoftDelete();
 
             Document<Entity>().With(x => x.Property);
 
@@ -85,6 +88,7 @@ namespace HybridDb.Tests
         public void CanReinsertDeleted()
         {
             UseRealTables();
+            UseSoftDelete();
 
             Document<Entity>().With(x => x.Property);
 
@@ -111,6 +115,7 @@ namespace HybridDb.Tests
         public void CanRedeleteReinserted()
         {
             UseRealTables();
+            UseSoftDelete();
 
             Document<Entity>().With(x => x.Property);
 
@@ -157,6 +162,7 @@ namespace HybridDb.Tests
 
             Use(mode);
             UseTableNamePrefix(nameof(Bug_RaceConditionWithSnapshotAndRowVersion));
+            UseSoftDelete();
 
             Document<Entity>().With(x => x.Property);
 

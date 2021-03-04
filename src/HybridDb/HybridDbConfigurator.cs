@@ -41,6 +41,7 @@ namespace HybridDb
         protected void UseKeyResolver(Func<object, string> resolver) => configuration.UseKeyResolver(resolver);
 
         protected void UseQueues() => configuration.UseQueues();
+        protected void UseSoftDelete() => configuration.UseSoftDelete();
 
         protected void UseEventStore() => configuration.UseEventStore();
 

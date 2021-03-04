@@ -93,6 +93,28 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void ThrowOnLoadWhenFoundEntityIsNotASubtype_WhenAlreadyManaged()
+        {
+            Document<AbstractEntity>();
+            Document<MoreDerivedEntity1>();
+            Document<MoreDerivedEntity2>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new MoreDerivedEntity1 { Id = id });
+                session.SaveChanges();
+                session.Advanced.Clear();
+                
+                session.Load<MoreDerivedEntity1>(id);
+                
+                Should.Throw<InvalidOperationException>(() => session.Load<MoreDerivedEntity2>(id))
+                    .Message.ShouldBe(
+                        $"Document with id '{id}' exists, but is of type 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity1', which is not assignable to 'HybridDb.Tests.HybridDbTests+MoreDerivedEntity2'.");
+            }
+        }
+
+        [Fact]
         public void CanLoadDerivedEntityByOwnType()
         {
             Document<AbstractEntity>();

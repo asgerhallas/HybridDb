@@ -59,9 +59,9 @@ namespace HybridDb
             storeStats.NumberOfRequests++;
             storeStats.NumberOfGets++;
 
-            var sql = $"select * from {Store.Database.FormatTableNameAndEscape(table.Name)} where {DocumentTable.IdColumn.Name} = @Id and {DocumentTable.LastOperationColumn.Name} <> @Op";
+            var sql = $"select * from {Store.Database.FormatTableNameAndEscape(table.Name)} where {DocumentTable.IdColumn.Name} = @Id";
 
-            return (IDictionary<string, object>) SqlConnection.Query(sql, new {Id = key, Op = Operation.Deleted}, SqlTransaction).SingleOrDefault();
+            return (IDictionary<string, object>) SqlConnection.Query(sql, new {Id = key}, SqlTransaction).SingleOrDefault();
         }
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
@@ -81,11 +81,15 @@ namespace HybridDb
                 }
             }
 
-            if (!includeDeleted)
+            switch (Store.Configuration.SoftDelete)
             {
-                where = string.IsNullOrEmpty(where)
-                    ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
-                    : $"({where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
+                case false when includeDeleted:
+                    throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
+                case true when !includeDeleted:
+                    @where = string.IsNullOrEmpty(@where)
+                        ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
+                        : $"({@where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
+                    break;
             }
 
             QueryStats stats = null;
