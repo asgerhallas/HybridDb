@@ -7,6 +7,7 @@ using HybridDb.Linq.Old;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
@@ -346,6 +347,7 @@ namespace HybridDb.Tests
             }
 
             ResetConfiguration();
+            UseTypeMapper(new ShortNameTypeMapper(ListOf(GetType().Assembly, typeof(string).Assembly)));
 
             using (var session = store.OpenSession())
             {
