@@ -63,8 +63,18 @@ namespace HybridDb.Migrations.Documents
                                             session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
                                         }
                                     }
-                                    catch (ConcurrencyException) { }
-                                    catch (SqlException) { }
+                                    catch (ConcurrencyException exception)
+                                    {
+                                        logger.LogInformation(exception,
+                                            "ConcurrencyException while migrating document of type '{type}' with id '{id}'. Document is migrated by the other party.",
+                                            concreteDesign.DocumentType.FullName, key);
+                                    }
+                                    catch (SqlException exception)
+                                    {
+                                        logger.LogWarning(exception,
+                                            "SqlException while migrating document of type '{type}' with id '{id}'. Will retry.",
+                                            concreteDesign.DocumentType.FullName, key);
+                                    }
                                     catch (Exception exception)
                                     {
                                         logger.LogError(exception,
