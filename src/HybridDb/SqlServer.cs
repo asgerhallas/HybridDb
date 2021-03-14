@@ -33,7 +33,7 @@ namespace HybridDb
 
         public string Escape(string identifier) => $"[{identifier}]";
 
-        public int RawExecute(string sql, object parameters = null, bool schema = false)
+        public int RawExecute(string sql, object parameters = null, bool schema = false, int? commandTimeout = null)
         {
             if (parameters is IEnumerable<SqlParameter> sqlParameters)
             {
@@ -44,7 +44,7 @@ namespace HybridDb
 
             using (var connection = Connect(schema))
             {
-                var result = connection.Connection.Execute(sql, parameters);
+                var result = connection.Connection.Execute(sql, parameters, commandTimeout: commandTimeout);
                 connection.Complete();
 
                 return result;
