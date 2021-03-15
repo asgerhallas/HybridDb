@@ -1,10 +1,8 @@
 ﻿using System;
-using System.ComponentModel.Design;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using Microsoft.Extensions.Logging;
 

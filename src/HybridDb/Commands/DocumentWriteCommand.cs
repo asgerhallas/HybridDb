@@ -23,7 +23,7 @@ namespace HybridDb.Commands
             {
                 throw new ConcurrencyException(
                     $"Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}. " +
-                    $"The transaction is rolled back now, so no changes was actually made.");
+                    $"The transaction is rolled back now, so no changes were actually made.");
             }
 
             tx.Store.Stats.LastWrittenEtag = tx.CommitId;

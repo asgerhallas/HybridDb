@@ -42,7 +42,6 @@ namespace HybridDb.Config
             RunBackgroundMigrations = true;
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
-            Queued = false;
             EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
 
@@ -69,7 +68,6 @@ namespace HybridDb.Config
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
-        public bool Queued { get; private set; }
         public bool SoftDelete { get; private set; }
         public bool EventStore { get; private set; }
         public Func<Expression, string> ColumnNameConvention { get; private set; }
@@ -257,8 +255,6 @@ namespace HybridDb.Config
         public void UseTableNamePrefix(string prefix) => TableNamePrefix = prefix;
 
         public void UseKeyResolver(Func<object, string> resolver) => DefaultKeyResolver = resolver;
-
-        public void UseQueues() => Queued = true;
 
         public void UseSoftDelete() => SoftDelete = true;
 
