@@ -11,9 +11,9 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTypesTests : HybridDbTests
+    public class DocumentSession_TypesTests : HybridDbTests
     {
-        public DocumentSessionTypesTests(ITestOutputHelper output) : base(output) { }
+        public DocumentSession_TypesTests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
         public void CanLoadByInterface()

@@ -15,7 +15,7 @@ namespace HybridDb
     {
         readonly IDocumentStore store;
 
-        readonly Dictionary<EntityKey, ManagedEntity> entities;
+        readonly ManagedEntities entities = new ManagedEntities();
         readonly List<(int Generation, EventData<byte[]> Data)> events;
         readonly DocumentTransaction enlistedTx;
         readonly List<DmlCommand> deferredCommands;
@@ -26,7 +26,6 @@ namespace HybridDb
         internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
             deferredCommands = new List<DmlCommand>();
-            entities = new Dictionary<EntityKey, ManagedEntity>();
             events = new List<(int Generation, EventData<byte[]> Data)>();
 
             this.migrator = migrator;
@@ -110,9 +109,8 @@ namespace HybridDb
 
             if (managedEntity == null) return;
 
-            entities.Remove(new EntityKey(managedEntity.Table, managedEntity.Key));
+            entities.Remove(managedEntity.EntityKey);
         }
-
 
         public Guid? GetEtagFor(object entity) => TryGetManagedEntity(entity)?.Etag;
 
@@ -121,6 +119,7 @@ namespace HybridDb
         public void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata)
         {
             var managedEntity = TryGetManagedEntity(entity);
+            
             if (managedEntity == null) return;
 
             managedEntity.Metadata = metadata;
@@ -137,50 +136,48 @@ namespace HybridDb
 
             var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
 
-            key = key ?? design.GetKey(entity);
+            key ??= design.GetKey(entity);
 
             var entityKey = new EntityKey(design.Table, key);
 
-            if (entities.TryGetValue(entityKey, out var managedEntity))
+            if (entities.TryGetValue(entityKey, out var managedEntity) || 
+                entities.TryGetValue(entity, out managedEntity))
             {
                 // Storing a new instance under an existing id, is an error
                 if (managedEntity.Entity != entity)
                     throw new HybridDbException($"Attempted to store a different object with id '{key}'.");
 
+                // Storing a same instance under an new id, is an error
+                // Table cannot change as it's tied to entity's type
+                if (!Equals(managedEntity.EntityKey, entityKey))
+                    throw new HybridDbException($"Attempted to store same object '{managedEntity.Key}' with a different id '{key}'. Did you forget to evict?");
+
                 // Storing same instance is a noop
                 return;
             }
 
-            entities.Add(entityKey, new ManagedEntity
+            entities.Add(new ManagedEntity(entityKey)
             {
-                Key = key,
                 Entity = entity,
                 State = state,
-                Etag = etag,
-                Table = design.Table
+                Etag = etag
             });
         }
 
-        public void Append(int generation, EventData<byte[]> @event)
-        {
-            events.Add((generation, @event));
-        }
-
+        public void Append(int generation, EventData<byte[]> @event) => events.Add((generation, @event));
 
         public void Delete(object entity)
         {
             var managedEntity = TryGetManagedEntity(entity);
             if (managedEntity == null) return;
 
-            var entityKey = new EntityKey(managedEntity.Table, managedEntity.Key);
-
             if (managedEntity.State == EntityState.Transient)
             {
-                entities.Remove(entityKey);
+                entities.Remove(managedEntity.EntityKey);
             }
             else
             {
-                entities[entityKey].State = EntityState.Deleted;
+                managedEntity.State = EntityState.Deleted;
             }
         }
 
@@ -276,10 +273,11 @@ namespace HybridDb
 
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
-            var table = concreteDesign.Table;
             var key = (string)row[DocumentTable.IdColumn];
 
-            if (entities.TryGetValue(new EntityKey(concreteDesign.Table, key), out var managedEntity))
+            var entityKey = new EntityKey(concreteDesign.Table, key);
+
+            if (entities.TryGetValue(entityKey, out var managedEntity))
             {
                 if (managedEntity.State == EntityState.Deleted) return null;
 
@@ -301,20 +299,18 @@ namespace HybridDb
                 ? (Dictionary<string, List<string>>) store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>)) 
                 : null;
 
-            managedEntity = new ManagedEntity
+            managedEntity = new ManagedEntity(entityKey)
             {
-                Key = key,
                 Entity = entity,
                 Document = document,
                 Metadata = metadata,
                 MetadataDocument = metadataDocument,
                 Etag = (Guid) row[DocumentTable.EtagColumn],
                 Version = documentVersion,
-                State = EntityState.Loaded,
-                Table = table
+                State = EntityState.Loaded
             };
 
-            entities.Add(new EntityKey(concreteDesign.Table, key), managedEntity);
+            entities.Add(managedEntity);
             return entity;
         }
 
@@ -352,13 +348,10 @@ namespace HybridDb
             return false;
         }
 
-        ManagedEntity TryGetManagedEntity(object entity)
-        {
-            return entities
-                .Select(x => x.Value)
-                .SingleOrDefault(x => x.Entity == entity);
-        }
-
+        ManagedEntity TryGetManagedEntity(object entity) => 
+            entities.TryGetValue(entity, out var managedEntity) 
+                ? managedEntity 
+                : null;
 
         bool SafeSequenceEqual<T>(IEnumerable<T> first, IEnumerable<T> second)
         {

@@ -2,6 +2,7 @@
 using System.ComponentModel.Design;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq;
@@ -45,7 +46,8 @@ namespace HybridDb.Migrations.Documents
 
                             if (stats.TotalResults == 0) break;
 
-                            logger.LogInformation($"Migrating {stats.RetrievedResults}/{stats.TotalResults} from {table.Name}.");
+                            logger.LogInformation($"Migrating {{NumberOfDocumentsInBatch}} documents from {{Table}}. {{NumberOfPendingDocuments}} documents left.", 
+                                stats.RetrievedResults, table.Name, stats.TotalResults);
 
                             using (var tx = store.BeginTransaction())
                             {
@@ -89,6 +91,8 @@ namespace HybridDb.Migrations.Documents
                             }
                         }
                     }
+
+                    logger.LogInformation("Documents in {{Table}} are fully migrated to {{Version}}", table.Name, store.Configuration.ConfiguredVersion);
 
                     nextTable:;
                 }
