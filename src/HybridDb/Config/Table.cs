@@ -15,12 +15,11 @@ namespace HybridDb.Config
 
         public Table(string name, IEnumerable<Column> columns)
         {
-            if (name.EndsWith("_"))
-            {
-                throw new NotSupportedException("A table name can not end with '_'.");
-            }
+            Name = name ?? throw new ArgumentNullException(nameof(name));
 
-            Name = name;
+            if (name.EndsWith("_")) throw new NotSupportedException("A table name can not end with '_'.");
+
+            if (columns == null) throw new ArgumentNullException(nameof(columns));
 
             this.columns = columns.ToDictionary(x => x.Name, x => x);
         }
@@ -39,5 +38,18 @@ namespace HybridDb.Config
         public virtual DdlCommand GetCreateCommand() => new CreateTable(this);
 
         public override string ToString() => Name;
+
+        protected bool Equals(Table other) => string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+
+            return Equals((Table) obj);
+        }
+
+        public override int GetHashCode() => Name.ToLowerInvariant().GetHashCode();
     }
 }
