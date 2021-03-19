@@ -6,13 +6,15 @@ namespace HybridDb.Queue
 {
     public class EnqueueCommand : Command<string>
     {
-        public EnqueueCommand(QueueTable table, HybridDbMessage message)
+        public EnqueueCommand(QueueTable table, HybridDbMessage message, string topic = "messages")
         {
             Table = table;
             Message = message;
+            Topic = topic;
         }
 
         public QueueTable Table { get; }
+        public string Topic { get; }
         public HybridDbMessage Message { get; }
 
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
@@ -25,22 +27,22 @@ namespace HybridDb.Queue
             {
                 tx.SqlConnection.Execute(@$"
                     set nocount on; 
-                    insert into {tablename} (Id, CommitId, Discriminator, Message, IsFailed) 
-                    values (@Id, @CommitId, @Discriminator, @Message, @IsFailed); 
+                    insert into {tablename} (Topic, Id, CommitId, Discriminator, Message) 
+                    values (@Topic, @Id, @CommitId, @Discriminator, @Message); 
                     set nocount off;",
                     new
                     {
+                        command.Topic,
                         command.Message.Id,
                         tx.CommitId,
                         Discriminator = discriminator,
-                        Message = serializer(command.Message),
-                        IsFailed = false
+                        Message = serializer(command.Message)
                     },
                     tx.SqlTransaction);
             }
             catch (SqlException e)
             {
-                // primary key violations are ignored, rest is rethrown
+                // Enqueuing is idempotent. It should ignore exceptions from primary key violations and just not insert the message.
                 if (e.Number == 2627) return command.Message.Id;
 
                 throw;

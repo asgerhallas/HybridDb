@@ -10,9 +10,10 @@ namespace HybridDb.Queue
         {
             config.GetOrAddTable(new QueueTable(tablename));
 
-            config.Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((container, decoratee) => (tx, command) => () =>
+            config.Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((_, decoratee) => (tx, command) => () =>
                 Switch<object>.On(command)
-                    .Match<DequeueCommand>(enqueueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, enqueueCommand))
+                    .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
+                    .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))
                     .Else(() => decoratee(tx, command)()));
         }
     }

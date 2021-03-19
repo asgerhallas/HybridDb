@@ -43,6 +43,7 @@ namespace HybridDb
         public Guid Complete()
         {
             SqlTransaction?.Commit();
+            managedConnection.Complete();
             return CommitId;
         }
 

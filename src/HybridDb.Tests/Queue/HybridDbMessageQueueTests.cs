@@ -1,24 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
-using HybridDb;
 using HybridDb.Queue;
-using HybridDb.Tests;
-using Serilog;
-using Serilog.Core;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Energy10.Tests.Application.Devices.MessageQueue
+namespace HybridDb.Tests.Queue
 {
     public class HybridDbMessageQueueTests : HybridDbTests
     {
-        readonly HybridDbMessageQueue queue;
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
 
         public HybridDbMessageQueueTests(ITestOutputHelper output) : base(output)
@@ -26,20 +22,20 @@ namespace Energy10.Tests.Application.Devices.MessageQueue
             configuration.UseMessageQueue();
 
             handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
-            queue = Using(new HybridDbMessageQueue(store, handler, logger));
         }
+
+        HybridDbMessageQueue StartQueue() => Using(new HybridDbMessageQueue(store, handler));
 
         public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
 
         [Fact]
-        public async Task Dispatch()
+        public async Task DequeueAndHandle()
         {
+            StartQueue();
+
             var subject = new Subject<HybridDbMessage>();
 
-            handler.Call(asserter =>
-            {
-                subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1));
-            });
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
 
             using (var session = store.OpenSession())
             {
@@ -52,25 +48,124 @@ namespace Energy10.Tests.Application.Devices.MessageQueue
 
             var message = await subject.FirstAsync();
 
-            message.ShouldBeOfType<MyMessage>()
-                .Text.ShouldBe("Some command");
+            message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+        }       
+        
+        [Fact]
+        public async Task Enqueue_Idempotent()
+        {
+            var id = Guid.NewGuid().ToString();
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Defer(
+                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(), 
+                    new MyMessage(id, "A")));
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Defer(
+                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(), 
+                    new MyMessage(id, "B")));
+
+                session.SaveChanges();
+            }
+
+            var queue = StartQueue();
+
+            var messages = new List<object>();
+            queue.Diagnostics.OfType<MessageHandling>().Select(x => x.Message).Subscribe(messages.Add);
+            await queue.Diagnostics.OfType<QueueIdle>().FirstAsync();
+
+            messages.Count.ShouldBe(1);
+            ((MyMessage)messages.Single()).Text.ShouldBe("A");
         }        
         
         [Fact]
-        public async Task RetriesAFixedNumberOfTimes()
+        public async Task Retry_ThenPoison()
         {
+            var queue = StartQueue();
+
             A.CallTo(handler).WithReturnType<Task>()
                 .Invokes(x => throw new ArgumentException());
             
             using (var session = store.OpenSession())
             {
-                session.Store(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+                session.Advanced.Defer(
+                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(),
+                        new MyMessage(Guid.NewGuid().ToString(), "Some command")));
+
                 session.SaveChanges();
             }
 
-            var messages = await queue.Handling.Select(x => x.Message).OfType<MyMessage>().Take(5).ToList().SingleAsync();
+            var messages = new List<object>();
 
-            messages.Select(x => x.Text).ShouldAllBe(x => x == "Some command");
+            await queue.Diagnostics
+                .Do(messages.Add)
+                .OfType<PoisonMessage>()
+                .FirstAsync();
+
+            var messageHandlings = messages.OfType<MessageHandling>().ToList();
+            messageHandlings.Count.ShouldBe(5);
+            messageHandlings
+                .Select(x => x.Message).OfType<MyMessage>()
+                .Select(x => x.Text).ShouldAllBe(x => x == "Some command");
+
+            messages.OfType<MessageFailed>()
+                .Select(x => x.Message).ShouldBe(messageHandlings
+                    .Select(x => x.Message));
+        }
+
+        [Fact]
+        public async Task PoisonMessagesAreNotHandled()
+        {
+            var queue = StartQueue();
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Defer(
+                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(),
+                        new MyMessage(Guid.NewGuid().ToString(), "poison message"), "errors"));
+
+                session.Advanced.Defer(
+                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(),
+                        new MyMessage(Guid.NewGuid().ToString(), "edible message")));
+
+                session.SaveChanges();
+            }
+
+            var messages = new List<MessageHandling>();
+
+            await queue.Diagnostics
+                .OfType<MessageHandling>()
+                .Do(messages.Add)
+                .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(1)));
+
+            ((MyMessage) messages.Single().Message).Text.ShouldBe("edible message");
+        }
+
+        [Fact]
+        public async Task DontHawkConnectionsWhileIdle()
+        {
+            var diagnostics = Enumerable.Range(0, 200)
+                .Select(x => Using(
+                    new HybridDbMessageQueue(store, handler,
+                        new MessageQueueOptions
+                        {
+                            IdleDelay = TimeSpan.FromSeconds(5)
+                        })).Diagnostics)
+                .Merge();
+
+            var messages = await diagnostics
+                .OfType<QueueFailed>()
+                .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(7)))
+                .ToList()
+                .FirstAsync();
+
+            messages.ShouldBeEmpty();
         }
     }
 }

@@ -12,23 +12,21 @@ namespace HybridDb.Queue
     public class HybridDbMessageQueue : IDisposable
     {
         // This implementation misses a few pieces:
-        // [ ] Enqueuing should be idempotent. It should ignore exceptions from primary key violations and just not insert the message.
-        // [x] Querying on the queue should be done in same transaction as the subsequent write. And the message should be temporarily removed
-        //    from the queue while handling it, so other machines/workers won't try to handle it too.
         // [ ] Handling of messages could be idempotent too, by soft deleting them when done, but still keeping it around to guard against
         //    subsequent redelivery with the same id.
-        // [x] Testing should be made reliable with a newer HybridDb that support multiple concurrent readers on the same test-session.
+        // [ ] When Idle it should use a less intensive peek, instead of dequeue
 
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
-        readonly Subject<(IDocumentSession Session, HybridDbMessage Message)> handling = new();
-        readonly Subject<HybridDbMessage> handled = new();
+        readonly Subject<IHybridDbDiagnosticEvent> diagnostics = new();
 
-        public IObservable<(IDocumentSession Session, HybridDbMessage Message)> Handling => handling;
-        public IObservable<HybridDbMessage> Handled => handled;
+        public IObservable<IHybridDbDiagnosticEvent> Diagnostics => diagnostics;
 
-        public HybridDbMessageQueue(IDocumentStore store, Func<IDocumentSession, HybridDbMessage, Task> handler, ILogger logger)
+        public HybridDbMessageQueue(IDocumentStore store, Func<IDocumentSession, HybridDbMessage, Task> handler, MessageQueueOptions options = null)
         {
+            options ??= new MessageQueueOptions();
+
+            var logger = store.Configuration.Logger;
             var table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
             cts = new CancellationTokenSource();
@@ -50,51 +48,57 @@ namespace HybridDb.Queue
 
                         if (message == null)
                         {
-                            await Task.Delay(100, cts.Token);
+                            tx.Complete();
+                            
+                            diagnostics.OnNext(new QueueIdle());
+
+                            await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
                             continue;
                         }
 
                         try
                         {
-                            handling.OnNext((session, message));
+                            diagnostics.OnNext(new MessageHandling(session, message));
 
                             await handler(session, message);
 
                             session.SaveChanges();
 
-                            handled.OnNext(message);
+                            diagnostics.OnNext(new MessageHandled(message));
                         }
-                        catch (Exception e)
+                        catch (Exception exception)
                         {
+                            diagnostics.OnNext(new MessageFailed(message, exception));
+
                             var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
 
-                            if (failures >= 5)
+                            if (failures < 5)
                             {
-                                logger.LogError(e, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
+                                tx.Dispose();
 
-                                var errorSession = store.OpenSession();
-                                errorSession.Load<HybridDbMessage>(message.Id)?.MarkAsFailed();
-                                errorSession.SaveChanges();
-
-                                retries.TryRemove(message.Id, out _);
-                            }
-                            else
-                            {
-                                logger.LogWarning(e, "Dispatch of command {commandId} failed. Will retry.", message.Id);
+                                logger.LogWarning(exception, "Dispatch of command {commandId} failed. Will retry.", message.Id);
+                                
+                                continue;
                             }
 
-                            continue;
+                            logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
+
+                            tx.Execute(new EnqueueCommand(table, message, "errors"));
+
+                            diagnostics.OnNext(new PoisonMessage(message, exception));
+
+                            retries.TryRemove(message.Id, out _);
                         }
 
                         tx.Complete();
                     }
-                    catch (TaskCanceledException) { continue; }
-                    catch (Exception e)
+                    catch (TaskCanceledException) { }
+                    catch (Exception exception)
                     {
-                        logger.LogError(e, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                        diagnostics.OnNext(new QueueFailed(exception));
+
+                        logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
                     }
-                     
-                    await Task.Delay(10, cts.Token).ConfigureAwait(false);
                 }
 
                 logger.LogInformation("Queue stopped.");
@@ -105,10 +109,13 @@ namespace HybridDb.Queue
         public void Dispose() => cts.Cancel();
     }
 
-    public abstract record HybridDbMessage(string Id)
-    {
-        public bool IsFailed { get; private set; }
+    public abstract record HybridDbMessage(string Id);
+    public interface IHybridDbDiagnosticEvent { }
 
-        public void MarkAsFailed() => IsFailed = true;
-    }
+    public record MessageHandling(IDocumentSession Session, HybridDbMessage Message) : IHybridDbDiagnosticEvent;
+    public record MessageHandled(HybridDbMessage Message) : IHybridDbDiagnosticEvent;
+    public record MessageFailed(HybridDbMessage Message, Exception Exception) : IHybridDbDiagnosticEvent;
+    public record PoisonMessage(HybridDbMessage Message, Exception Exception) : IHybridDbDiagnosticEvent;
+    public record QueueIdle : IHybridDbDiagnosticEvent;
+    public record QueueFailed(Exception Exception) : IHybridDbDiagnosticEvent;
 }
