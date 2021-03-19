@@ -43,7 +43,7 @@ namespace HybridDb.Migrations.Schema
                 TryCreateMetadataTable();
 
                 var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
-
+                lock (store) { 
                 if (schemaVersion > store.Configuration.ConfiguredVersion)
                 {
                     throw new InvalidOperationException(_($@"
@@ -57,6 +57,7 @@ namespace HybridDb.Migrations.Schema
                 requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
 
                 MarkDocumentsForReprojections(requiresReprojection);
+                }
             });
         }
 
@@ -72,16 +73,13 @@ namespace HybridDb.Migrations.Schema
             }
             else
             {
-                lock (locker)
+                using (var tx = BeginTransaction())
                 {
-                    using (var tx = BeginTransaction())
-                    {
-                        LockDatabase();
+                    //LockDatabase();
 
-                        action();
+                    action();
 
-                        tx.Complete();
-                    }
+                    tx.Complete();
                 }
             }
 
