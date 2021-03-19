@@ -6,11 +6,11 @@ namespace HybridDb.Queue
 {
     public class EnqueueCommand : Command<string>
     {
-        public EnqueueCommand(QueueTable table, HybridDbMessage message, string topic = "messages")
+        public EnqueueCommand(QueueTable table, HybridDbMessage message, string topic = null)
         {
             Table = table;
             Message = message;
-            Topic = topic;
+            Topic = topic ?? "messages";
         }
 
         public QueueTable Table { get; }

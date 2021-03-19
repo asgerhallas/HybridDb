@@ -299,8 +299,6 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns()
         {
-            output.WriteLine("XXX");
-
             InitializeStore();
 
             var command = new CountingCommand();

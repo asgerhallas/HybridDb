@@ -1,10 +1,11 @@
 using System;
+using System.Linq;
 using HybridDb.Config;
 using ShinySwitch;
 
 namespace HybridDb.Queue
 {
-    public static class CommandQueueEx
+    public static class QueueEx
     {
         public static void UseMessageQueue(this Configuration config, string tablename = "messages")
         {
@@ -15,6 +16,13 @@ namespace HybridDb.Queue
                     .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
                     .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))
                     .Else(() => decoratee(tx, command)()));
+        }
+
+        public static void Enqueue(this IDocumentSession session, HybridDbMessage message, string topic = null)
+        {
+            var queueTable = session.Advanced.DocumentStore.Configuration.Tables.Values.OfType<QueueTable>().Single();
+
+            session.Advanced.Defer(new EnqueueCommand(queueTable, message, topic));
         }
     }
 }

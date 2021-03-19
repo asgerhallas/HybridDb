@@ -3,7 +3,6 @@ using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations.Commands

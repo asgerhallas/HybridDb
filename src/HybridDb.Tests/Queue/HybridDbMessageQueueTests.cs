@@ -39,9 +39,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(
-                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(), 
-                    new MyMessage(Guid.NewGuid().ToString(), "Some command")));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
 
                 session.SaveChanges();
             }
@@ -58,18 +56,14 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(
-                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(), 
-                    new MyMessage(id, "A")));
+                session.Enqueue(new MyMessage(id, "A"));
 
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(
-                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(), 
-                    new MyMessage(id, "B")));
+                session.Enqueue(new MyMessage(id, "B"));
 
                 session.SaveChanges();
             }
@@ -94,9 +88,7 @@ namespace HybridDb.Tests.Queue
             
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(
-                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(),
-                        new MyMessage(Guid.NewGuid().ToString(), "Some command")));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
 
                 session.SaveChanges();
             }
@@ -126,13 +118,9 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(
-                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(),
-                        new MyMessage(Guid.NewGuid().ToString(), "poison message"), "errors"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "poison message"), "errors");
 
-                session.Advanced.Defer(
-                    new EnqueueCommand(configuration.Tables.Values.OfType<QueueTable>().Single(),
-                        new MyMessage(Guid.NewGuid().ToString(), "edible message")));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "edible message"));
 
                 session.SaveChanges();
             }

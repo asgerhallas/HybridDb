@@ -8,7 +8,7 @@ namespace HybridDb.Migrations.Schema
         public static string BuildTableExistsSql(DocumentStore store, string tablename) =>
             string.Format(store.Database is SqlServerUsingRealTables
                     ? "object_id('{0}', 'U') is not null"
-                    : "OBJECT_ID('tempdb..{0}') is not null",
+                    : "object_id('tempdb..{0}') is not null",
                 store.Database.FormatTableName(tablename));
 
         public static SqlBuilder BuildColumnSql(Column column)
