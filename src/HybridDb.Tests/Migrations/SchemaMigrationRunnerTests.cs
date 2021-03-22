@@ -302,14 +302,14 @@ namespace HybridDb.Tests.Migrations
             // Does in fact not initialize the store because there's a NoInitialize in ctor.
             InitializeStore();
 
-            CreateMetadataTable();
+            //CreateMetadataTable();
 
-            var hybridDbTableName = store.Database.FormatTableNameAndEscape("HybridDb");
+            //var hybridDbTableName = store.Database.FormatTableNameAndEscape("HybridDb");
 
-            store.Database.RawExecute($@"
-                if not exists (select * from {hybridDbTableName} with (updlock))
-                    insert into {hybridDbTableName} (SchemaVersion) values (-1);",
-                schema: true);
+            //store.Database.RawExecute($@"
+            //    if not exists (select * from {hybridDbTableName} with (updlock))
+            //        insert into {hybridDbTableName} (SchemaVersion) values (-1);",
+            //    schema: true);
 
             var command = new CountingCommand();
 

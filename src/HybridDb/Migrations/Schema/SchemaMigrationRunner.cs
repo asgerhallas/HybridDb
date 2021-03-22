@@ -37,11 +37,22 @@ namespace HybridDb.Migrations.Schema
         {
             if (!store.Configuration.RunUpfrontMigrations)
                 return;
-            
+
+            using (var tx = BeginTransaction())
+            {
+                try
+                {
+                    TryCreateMetadataTable();
+
+                    tx.Complete();
+                }
+                catch (Exception e)
+                {
+                }
+            }
+
             Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
             {
-                //TryCreateMetadataTable();
-
                 var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
 
                 if (schemaVersion > store.Configuration.ConfiguredVersion)
@@ -124,15 +135,15 @@ namespace HybridDb.Migrations.Schema
         {
             var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
 
-            store.Configuration.tables.TryAdd(metadata.Name, metadata);
+            //store.Configuration.tables.TryAdd(metadata.Name, metadata);
 
             store.Execute(new CreateTable(metadata));
 
             var hybridDbTableName = store.Database.FormatTableNameAndEscape(metadata.Name);
 
             store.Database.RawExecute($@"
-                if not exists (select * from {hybridDbTableName} with (updlock))
-                    insert into {hybridDbTableName} (SchemaVersion) values (-1);", 
+                    if not exists (select * from {hybridDbTableName} with (tablockx))
+                        insert into {hybridDbTableName} with (tablockx) (SchemaVersion) values (-1);",
                 schema: true);
         }
 
