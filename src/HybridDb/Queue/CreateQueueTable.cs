@@ -20,8 +20,8 @@ namespace HybridDb.Queue
             var tableName = store.Database.FormatTableName(QueueTable.Name);
 
             store.Database.RawExecute($@"
-                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName}')
-                BEGIN                       
+                if (object_id('{tableName}', 'U') is null)
+                begin
                     CREATE TABLE [dbo].[{tableName}] (
                         [Topic] [nvarchar](850) NOT NULL,
 	                    [Id] [nvarchar](850) NOT NULL,
@@ -31,7 +31,7 @@ namespace HybridDb.Queue
 
                         CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
-                END", schema: true);
+                end", schema: true);
         }
     }
 }

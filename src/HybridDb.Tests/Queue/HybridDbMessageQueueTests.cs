@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
+using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
 using Shouldly;
 using Xunit;
@@ -154,6 +155,55 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             messages.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task MultipleReaders()
+        {
+            using (var session = store.OpenSession())
+            {
+                foreach (var i in Enumerable.Range(1, 200))
+                {
+                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                }
+
+                session.SaveChanges();
+            }
+
+            var queue1 = StartQueue();
+            var queue2 = StartQueue();
+            var queue3 = StartQueue();
+
+            var q1Count = 0;
+            var q2Count = 0;
+            var q3Count = 0;
+            
+            queue1.Diagnostics.OfType<MessageHandled>().Subscribe(_ => q1Count++);
+            queue2.Diagnostics.OfType<MessageHandled>().Subscribe(_ => q2Count++);
+            queue3.Diagnostics.OfType<MessageHandled>().Subscribe(_ => q3Count++);
+
+            var allDiagnostics = new List<IHybridDbDiagnosticEvent>();
+
+            var diagnostics = Observable
+                .Merge(queue1.Diagnostics, queue2.Diagnostics, queue3.Diagnostics)
+                .Do(allDiagnostics.Add);
+
+            var handled = await diagnostics
+                .OfType<MessageHandled>()
+                .Take(200)
+                .ToList()
+                .FirstAsync();
+
+            // Each message is handled only once
+            handled.Select(x => int.Parse(((MyMessage)x.Message).Text))
+                .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
+
+            // reasonably evenly load
+            q1Count.ShouldBeGreaterThan(60);
+            q2Count.ShouldBeGreaterThan(60);
+            q3Count.ShouldBeGreaterThan(60);
+
+            allDiagnostics.OfType<MessageFailed>().ShouldBeEmpty();
         }
     }
 }
