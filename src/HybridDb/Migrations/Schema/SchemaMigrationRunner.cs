@@ -40,10 +40,10 @@ namespace HybridDb.Migrations.Schema
             
             Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
             {
-                TryCreateMetadataTable();
+                //TryCreateMetadataTable();
 
                 var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
-                lock (store) { 
+
                 if (schemaVersion > store.Configuration.ConfiguredVersion)
                 {
                     throw new InvalidOperationException(_($@"
@@ -57,7 +57,6 @@ namespace HybridDb.Migrations.Schema
                 requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
 
                 MarkDocumentsForReprojections(requiresReprojection);
-                }
             });
         }
 
@@ -132,7 +131,7 @@ namespace HybridDb.Migrations.Schema
             var hybridDbTableName = store.Database.FormatTableNameAndEscape(metadata.Name);
 
             store.Database.RawExecute($@"
-                if not exists (select * from {hybridDbTableName})
+                if not exists (select * from {hybridDbTableName} with (updlock))
                     insert into {hybridDbTableName} (SchemaVersion) values (-1);", 
                 schema: true);
         }
@@ -141,6 +140,7 @@ namespace HybridDb.Migrations.Schema
         {
             var currentSchemaVersion = store.Database.RawQuery<int>($@"
                 update {store.Database.FormatTableNameAndEscape("HybridDb")}
+                with (tablockx)
                 set [SchemaVersion] = @nextSchemaVersion
                 output DELETED.SchemaVersion", 
                 new { nextSchemaVersion }, 
