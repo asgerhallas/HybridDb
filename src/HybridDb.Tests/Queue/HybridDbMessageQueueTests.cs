@@ -6,7 +6,6 @@ using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
-using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
 using Shouldly;
 using Xunit;
@@ -25,7 +24,7 @@ namespace HybridDb.Tests.Queue
             handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
         }
 
-        HybridDbMessageQueue StartQueue() => Using(new HybridDbMessageQueue(store, handler));
+        HybridDbMessageQueue StartQueue(MessageQueueOptions options = null) => Using(new HybridDbMessageQueue(store, handler, options));
 
         public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
 
@@ -37,6 +36,32 @@ namespace HybridDb.Tests.Queue
             var subject = new Subject<HybridDbMessage>();
 
             handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+
+                session.SaveChanges();
+            }
+
+            var message = await subject.FirstAsync();
+
+            message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+        }       
+        
+        [Fact]
+        public async Task DequeueAndHandle_AfterMuchIdle()
+        {
+            StartQueue(new MessageQueueOptions
+            {
+                IdleDelay = TimeSpan.Zero
+            });
+
+            var subject = new Subject<HybridDbMessage>();
+
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            await Task.Delay(5000);
 
             using (var session = store.OpenSession())
             {
@@ -155,6 +180,25 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             messages.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task IdlePerformance()
+        {
+            var queue = Using(new HybridDbMessageQueue(store, handler, new MessageQueueOptions
+            {
+                IdleDelay = TimeSpan.Zero
+            }));
+
+            var messages = await queue.Diagnostics
+                .OfType<QueueIdle>()
+                .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(7)))
+                .ToList()
+                .FirstAsync();
+
+            // was around 70.000 rounds in 7secs on my pc
+            // not that it really matters
+            output.WriteLine(messages.Count.ToString());
         }
 
         [Fact]

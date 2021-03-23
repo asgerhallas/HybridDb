@@ -42,24 +42,13 @@ namespace HybridDb.Queue
                     try
                     {
                         using var tx = store.BeginTransaction();
-                        using var session = store.OpenSession(tx);
 
-                        // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
-                        // from the queue while handling it, so other machines/workers won't try to handle it too.
-                        var message = tx.Execute(new DequeueCommand(table));
-
-                        if (message == null)
-                        {
-                            tx.Complete();
-                            
-                            diagnostics.OnNext(new QueueIdle());
-
-                            await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
-                            continue;
-                        }
+                        var message = await NextMessage(tx, options, table);
 
                         try
                         {
+                            using var session = store.OpenSession(tx);
+
                             diagnostics.OnNext(new MessageHandling(session, message));
 
                             await handler(session, message);
@@ -106,6 +95,24 @@ namespace HybridDb.Queue
                 logger.LogInformation("Queue stopped.");
 
             }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }
+
+        async Task<HybridDbMessage> NextMessage(DocumentTransaction tx, MessageQueueOptions options, QueueTable table)
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
+                // from the queue while handling it, so other machines/workers won't try to handle it too.
+                var message = tx.Execute(new DequeueCommand(table));
+
+                if (message != null) return message;
+
+                diagnostics.OnNext(new QueueIdle());
+
+                await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
+            }
+
+            return await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false);
         }
 
         public void Dispose() => cts.Cancel();
