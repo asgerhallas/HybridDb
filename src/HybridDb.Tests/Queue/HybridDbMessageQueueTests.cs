@@ -199,9 +199,9 @@ namespace HybridDb.Tests.Queue
                 .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
-            q1Count.ShouldBeGreaterThan(60);
-            q2Count.ShouldBeGreaterThan(60);
-            q3Count.ShouldBeGreaterThan(60);
+            q1Count.ShouldBeGreaterThan(50);
+            q2Count.ShouldBeGreaterThan(50);
+            q3Count.ShouldBeGreaterThan(50);
 
             allDiagnostics.OfType<MessageFailed>().ShouldBeEmpty();
         }
