@@ -157,7 +157,7 @@ namespace HybridDb.Tests.Queue
             messages.ShouldBeEmpty();
         }
 
-        [Fact]
+        [Fact(Skip = "Skipped temporarily as it is unstable (never completes)")]
         public async Task MultipleReaders()
         {
             using (var session = store.OpenSession())
