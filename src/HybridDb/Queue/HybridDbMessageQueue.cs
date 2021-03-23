@@ -19,7 +19,7 @@ namespace HybridDb.Queue
 
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
-        readonly ReplaySubject<IHybridDbDiagnosticEvent> diagnostics = new(TimeSpan.FromSeconds(60));
+        readonly ReplaySubject<IHybridDbDiagnosticEvent> diagnostics;
 
         public IObservable<IHybridDbDiagnosticEvent> Diagnostics => diagnostics;
 
@@ -28,6 +28,7 @@ namespace HybridDb.Queue
             options ??= new MessageQueueOptions();
 
             cts = new CancellationTokenSource();
+            diagnostics = new ReplaySubject<IHybridDbDiagnosticEvent>(options.DiagnosticsReplayWindow);
 
             var logger = store.Configuration.Logger;
             var table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();

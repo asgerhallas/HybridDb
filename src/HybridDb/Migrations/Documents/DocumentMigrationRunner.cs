@@ -44,7 +44,8 @@ namespace HybridDb.Migrations.Documents
 
                             if (stats.TotalResults == 0) break;
 
-                            logger.LogInformation($"Migrating {{NumberOfDocumentsInBatch}} documents from {{Table}}. {{NumberOfPendingDocuments}} documents left.", 
+                            logger.LogInformation(
+                                "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.", 
                                 stats.RetrievedResults, table.Name, stats.TotalResults);
 
                             using (var tx = store.BeginTransaction())
@@ -90,7 +91,7 @@ namespace HybridDb.Migrations.Documents
                         }
                     }
 
-                    logger.LogInformation("Documents in {{Table}} are fully migrated to {{Version}}", table.Name, store.Configuration.ConfiguredVersion);
+                    logger.LogInformation("Documents in {Table} are fully migrated to {Version}", table.Name, store.Configuration.ConfiguredVersion);
 
                     nextTable:;
                 }
