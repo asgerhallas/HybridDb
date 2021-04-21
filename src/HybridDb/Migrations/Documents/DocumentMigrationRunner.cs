@@ -43,7 +43,7 @@ namespace HybridDb.Migrations.Documents
                                 .Query(table, out var stats, 
                                     @select: "*", 
                                     @where: @where.ToString(), 
-                                    window: new SkipTake(0, 500), 
+                                    window: new SkipTake(0, 100), 
                                     parameters: @where.Parameters,
                                     orderby: "newid()")
                                 .ToList();
