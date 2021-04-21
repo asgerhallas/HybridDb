@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
@@ -162,27 +164,6 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
-        public async Task DontHawkConnectionsWhileIdle()
-        {
-            var diagnostics = Enumerable.Range(0, 200)
-                .Select(x => Using(
-                    new HybridDbMessageQueue(store, handler,
-                        new MessageQueueOptions
-                        {
-                            IdleDelay = TimeSpan.FromSeconds(5)
-                        })).Diagnostics)
-                .Merge();
-
-            var messages = await diagnostics
-                .OfType<QueueFailed>()
-                .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(7)))
-                .ToList()
-                .FirstAsync();
-
-            messages.ShouldBeEmpty();
-        }
-
-        [Fact]
         public async Task IdlePerformance()
         {
             var queue = Using(new HybridDbMessageQueue(store, handler, new MessageQueueOptions
@@ -198,6 +179,31 @@ namespace HybridDb.Tests.Queue
 
             // was around 70.000 rounds in 7secs on my pc
             // not that it really matters
+            output.WriteLine(messages.Count.ToString());
+        }
+
+        [Fact]
+        public async Task ReadPerformance()
+        {
+            using (var session = store.OpenSession())
+            {
+                foreach (var i in Enumerable.Range(1, 10000))
+                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+
+                session.SaveChanges();
+            }
+
+            var queue = Using(new HybridDbMessageQueue(store, handler, new MessageQueueOptions
+            {
+                MaxConcurrency = 10
+            }));
+
+            var messages = await queue.Diagnostics
+                .OfType<MessageHandled>()
+                .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(10)))
+                .ToList()
+                .FirstAsync();
+
             output.WriteLine(messages.Count.ToString());
         }
 
@@ -248,6 +254,76 @@ namespace HybridDb.Tests.Queue
             q3Count.ShouldBeGreaterThan(50);
 
             allDiagnostics.OfType<MessageFailed>().ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task MultipleWorkers_Default_4()
+        {
+            var max = new StrongBox<int>(0);
+
+            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max)));
+
+            using (var session = store.OpenSession())
+            {
+                foreach (var i in Enumerable.Range(1, 200))
+                {
+                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                }
+
+                session.SaveChanges();
+            }
+
+            await queue.Diagnostics.OfType<MessageHandled>()
+                .Take(200)
+                .ToList()
+                .FirstAsync();
+
+            max.Value.ShouldBeGreaterThan(1);
+        }
+
+        [Fact]
+        public async Task MultipleWorkers_Limited_1()
+        {
+            var max = new StrongBox<int>(0);
+
+            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max),
+                new MessageQueueOptions
+                {
+                    MaxConcurrency = 1
+                }));
+
+            using (var session = store.OpenSession())
+            {
+                foreach (var i in Enumerable.Range(1, 200))
+                {
+                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                }
+
+                session.SaveChanges();
+            }
+
+            var threads = await queue.Diagnostics.OfType<MessageHandled>()
+                .Take(200)
+                .ToList()
+                .FirstAsync();
+
+            max.Value.ShouldBe(1);
+        }
+
+        Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)
+        {
+            var counter = new SemaphoreSlim(int.MaxValue);
+
+            return async (IDocumentSession _, HybridDbMessage _) =>
+            {
+                await counter.WaitAsync();
+
+                await Task.Delay(100);
+
+                max.Value = Math.Max(int.MaxValue - counter.CurrentCount, max.Value);
+
+                counter.Release();
+            };
         }
     }
 }

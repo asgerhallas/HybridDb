@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Data.SqlClient;
 using Dapper;
 
@@ -6,6 +7,8 @@ namespace HybridDb.Queue
 {
     public class EnqueueCommand : Command<string>
     {
+        static readonly ConcurrentDictionary<Type, string> cache = new();
+
         public EnqueueCommand(QueueTable table, HybridDbMessage message, string topic = null)
         {
             Table = table;
@@ -21,7 +24,7 @@ namespace HybridDb.Queue
         {
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             
-            var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.GetType());
+            var discriminator = cache.GetOrAdd(command.Message.GetType(), key => tx.Store.Configuration.TypeMapper.ToDiscriminator(key));
 
             try
             {

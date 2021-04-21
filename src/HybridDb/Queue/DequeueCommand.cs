@@ -1,13 +1,14 @@
 using System;
-using System.Data;
+using System.Collections.Concurrent;
 using System.Linq;
 using Dapper;
-using HybridDb.Config;
 
 namespace HybridDb.Queue
 {
     public class DequeueCommand : Command<HybridDbMessage>
     {
+        static readonly ConcurrentDictionary<string, Type> cache = new();
+
         public DequeueCommand(QueueTable table, string topic = "messages")
         {
             Table = table;
@@ -33,7 +34,7 @@ namespace HybridDb.Queue
 
             if (msg == default) return null;
 
-            var type = tx.Store.Configuration.TypeMapper.ToType(msg.Discriminator);
+            var type = cache.GetOrAdd(msg.Discriminator, _ => tx.Store.Configuration.TypeMapper.ToType(msg.Discriminator));
 
             return (HybridDbMessage)deserializer(msg.Message, type);
         }
