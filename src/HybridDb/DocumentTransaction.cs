@@ -66,7 +66,12 @@ namespace HybridDb
         }
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            DocumentTable table, bool top1 = false, string select = null, string where = "", 
+            DocumentTable table, bool top1 = false, string select = null, string where = "",
+            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
+            Query<TProjection>(Store.Database.FormatTableNameAndEscape(table.Name), top1, select, where, window, orderby, includeDeleted, parameters);
+
+        public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
+            string @from, bool top1 = false, string select = null, string where = "", 
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             storeStats.NumberOfRequests++;
@@ -102,7 +107,7 @@ namespace HybridDb
             if (isWindowed || top1)
             {
                 sqlx.Append("select count(*) as TotalResults")
-                    .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
+                    .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(";");
 
@@ -111,7 +116,7 @@ namespace HybridDb
                     .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {DocumentTable.LastOperationColumn.Name} as __LastOperation")
                     .Append($", {DocumentTable.TimestampColumn.Name} as __RowVersion")
-                    .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
+                    .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
                     .Append(top1, "select top 1", "select")
@@ -160,7 +165,7 @@ namespace HybridDb
                     .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {DocumentTable.LastOperationColumn.Name} AS __LastOperation")
                     .Append($", {DocumentTable.TimestampColumn.Name} AS __RowVersion")
-                    .Append($"from {Store.Database.FormatTableNameAndEscape(table.Name)}")
+                    .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 
@@ -215,26 +220,6 @@ namespace HybridDb
 
         public IEnumerable<Row<T>> ReadRow<T>(SqlMapper.GridReader reader)
         {
-
-
-
-            //stats = reader.Read<QueryStats>(buffered: true).Single();
-
-            //return reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
-            //    new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
-            //using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
-            //{
-            //    var rows = (List<QueryResult<T>>) reader.Read<T, string, Operation, byte[], QueryResult<T>>((obj, a, b, c) =>
-            //        new QueryResult<T>(obj, a, b, c), splitOn: "__Discriminator,__LastOperation,__RowVersion", buffered: true);
-
-            //    stats = new QueryStats
-            //    {
-            //        TotalResults = rows.Count
-            //    };
-
-            //    return rows;
-            //}
-
             if (typeof(IDictionary<string, object>).IsAssignableFrom(typeof(T)))
             {
                 return (IEnumerable<Row<T>>)reader

@@ -1,11 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Linq.Bonsai;
 using HybridDb.Migrations.Documents;
+using HybridDb.Migrations.Schema;
+using HybridDb.Queue;
+using HybridDb.Tests;
+using ShinySwitch;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -82,43 +88,54 @@ namespace HybridDb.Tests.Migrations
             row[DocumentTable.VersionColumn].ShouldBe(1);
         }
 
-        [Fact(Skip = "sideshow")]
-        public void QueriesInSetsAndUpdatesOneByOne()
+        [Fact]
+        public void DocumentsAreMigratedInRandomOrder()
         {
-            var fakeStore = A.Fake<IDocumentStore>(x => x.Wrapping(store));
-
             Document<Entity>().With(x => x.Number);
-
-            var documentTable = new DocumentTable("Entities");
 
             for (int i = 0; i < 200; i++)
             {
-                store.Insert(documentTable, NewId(), new
+                store.Insert(new DocumentTable("Entities"), NewId(), new
                 {
-                    Discriminator = typeof(Entity).AssemblyQualifiedName, 
+                    Discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Entity)), 
                     Version = 0, 
                     Document = configuration.Serializer.Serialize(new Entity())
                 });
             }
 
-            // bump the version of the configuration
-            UseMigrations(new InlineMigration(1));
+            var migration1 = new TrackingCommand();
+            UseMigrations(new InlineMigration(1, migration1));
 
             new DocumentMigrationRunner().Run(store).Wait();
 
-            // 1+2: Entities table => 100 rows
-            // 3: Entities table => 0 rows
-            A.CallTo(fakeStore)
-                .Where(x => x.Method.Name == "Query")
-                .WhenArgumentsMatch(x => x.Get<DocumentTable>(0).Name == "Entities")
-                .MustHaveHappened(3, Times.Exactly);
+            ResetConfiguration();
 
-            // each document is being updated individually
-            A.CallTo(fakeStore)
-                .Where(x => x.Method.Name == "Execute")
-                .WhenArgumentsMatch(x => x.Get<DmlCommand[]>(0)[0] is UpdateCommand)
-                .MustHaveHappened(200, Times.Exactly);
+            Document<Entity>().With(x => x.Number);
+
+            var migration2 = new TrackingCommand();
+            UseMigrations(
+                new InlineMigration(1, migration1),
+                new InlineMigration(2, migration2));
+
+            new DocumentMigrationRunner().Run(store).Wait();
+
+            migration1.MigratedIds.ShouldAllBe(x => migration2.MigratedIds.Contains(x));
+            migration1.MigratedIds.SequenceEqual(migration2.MigratedIds).ShouldBe(false);
         }
+
+        public class TrackingCommand : DocumentRowMigrationCommand
+        {
+            public List<string> MigratedIds { get; private set; } = new();
+
+            public TrackingCommand() : base(null, null) { }
+
+            public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
+            {
+                MigratedIds.Add(row.Get(DocumentTable.IdColumn));
+                return row;
+            }
+        }
+
 
         [Fact]
         public void AcceptsConcurrentWrites()
@@ -233,7 +250,7 @@ namespace HybridDb.Tests.Migrations
 
             ResetConfiguration();
             Document<Entity>();
-            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
+            UseMigrations(new InlineMigration(1, new HybridDbTests.ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);

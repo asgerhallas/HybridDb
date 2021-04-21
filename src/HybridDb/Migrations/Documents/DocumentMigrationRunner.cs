@@ -32,14 +32,20 @@ namespace HybridDb.Migrations.Documents
                     {
                         var (migration, command) = migrationAndCommand;
 
-                        var baseDesign = configuration.TryGetDesignByTablename(table.Name) ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
+                        var baseDesign = configuration.TryGetDesignByTablename(table.Name) 
+                                         ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
 
                         while (true)
                         {
                             var @where = command.Matches(migration?.Version);
 
                             var rows = store
-                                .Query(table, out var stats, @select: "*", @where: @where.ToString(), window: new SkipTake(0, 500), parameters: @where.Parameters)
+                                .Query(table, out var stats, 
+                                    @select: "*", 
+                                    @where: @where.ToString(), 
+                                    window: new SkipTake(0, 500), 
+                                    parameters: @where.Parameters,
+                                    orderby: "newid()")
                                 .ToList();
 
                             if (stats.TotalResults == 0) break;
