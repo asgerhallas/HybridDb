@@ -166,7 +166,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task IdlePerformance()
         {
-            var queue = Using(new HybridDbMessageQueue(store, handler, new MessageQueueOptions
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new MessageQueueOptions
             {
                 IdleDelay = TimeSpan.Zero
             }));
@@ -193,7 +193,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store, handler, new MessageQueueOptions
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new MessageQueueOptions
             {
                 MaxConcurrency = 10
             }));
@@ -204,6 +204,7 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
+            // around 6300 messages on my machine
             output.WriteLine(messages.Count.ToString());
         }
 
@@ -278,7 +279,7 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
-            max.Value.ShouldBeGreaterThan(1);
+            max.Value.ShouldBe(4);
         }
 
         [Fact]

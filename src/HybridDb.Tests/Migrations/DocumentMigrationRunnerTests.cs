@@ -119,23 +119,10 @@ namespace HybridDb.Tests.Migrations
 
             new DocumentMigrationRunner().Run(store).Wait();
 
+            migration1.MigratedIds.Count.ShouldBe(migration2.MigratedIds.Count);
             migration1.MigratedIds.ShouldAllBe(x => migration2.MigratedIds.Contains(x));
             migration1.MigratedIds.SequenceEqual(migration2.MigratedIds).ShouldBe(false);
         }
-
-        public class TrackingCommand : DocumentRowMigrationCommand
-        {
-            public List<string> MigratedIds { get; private set; } = new();
-
-            public TrackingCommand() : base(null, null) { }
-
-            public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
-            {
-                MigratedIds.Add(row.Get(DocumentTable.IdColumn));
-                return row;
-            }
-        }
-
 
         [Fact]
         public void AcceptsConcurrentWrites()
@@ -250,7 +237,7 @@ namespace HybridDb.Tests.Migrations
 
             ResetConfiguration();
             Document<Entity>();
-            UseMigrations(new InlineMigration(1, new HybridDbTests.ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
+            UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] += "1"; })));
 
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
@@ -260,6 +247,19 @@ namespace HybridDb.Tests.Migrations
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                 .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" })));
+        }
+
+        public class TrackingCommand : DocumentRowMigrationCommand
+        {
+            public List<string> MigratedIds { get; private set; } = new();
+
+            public TrackingCommand() : base(null, null) { }
+
+            public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
+            {
+                MigratedIds.Add(row.Get(DocumentTable.IdColumn));
+                return row;
+            }
         }
     }
 }

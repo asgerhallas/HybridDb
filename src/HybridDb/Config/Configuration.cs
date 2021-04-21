@@ -19,10 +19,12 @@ namespace HybridDb.Config
 {
     public class Configuration : ConfigurationContainer
     {
-        readonly object gate = new object();
+        readonly object gate = new();
 
         bool initialized;
+
         internal readonly ConcurrentDictionary<string, Table> tables;
+        
         readonly List<DocumentDesign> documentDesigns;
 
         public Configuration()
@@ -34,8 +36,8 @@ namespace HybridDb.Config
 
             Logger = NullLoggerProvider.Instance.CreateLogger("HybridDb");
 
-            Serializer = new DefaultSerializer();
-            TypeMapper = new ShortNameTypeMapper();
+            UseSerializer(new DefaultSerializer());
+            UseTypeMapper(new ShortNameTypeMapper());
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunUpfrontMigrations = true;
@@ -219,10 +221,7 @@ namespace HybridDb.Config
 
         public void UseLogger(ILogger logger) => Logger = logger;
 
-        public void UseSerializer(ISerializer serializer)
-        {
-            Serializer = serializer;
-        }
+        public void UseSerializer(ISerializer serializer) => Serializer = serializer;
 
         public void UseTypeMapper(ITypeMapper typeMapper)
         {
@@ -231,7 +230,7 @@ namespace HybridDb.Config
                 if (DocumentDesigns.Any())
                     throw new InvalidOperationException("Please call UseTypeMapper() before any documents are configured.");
 
-                TypeMapper = typeMapper;
+                TypeMapper = new CachedTypeMapper(typeMapper);
             }
         }
 
