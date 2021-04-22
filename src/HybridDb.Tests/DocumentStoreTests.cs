@@ -26,78 +26,78 @@ namespace HybridDb.Tests
 
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            store.Insert(table, id, new {Field = "Asger", Document = documentAsByteArray});
+            store.Insert(table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             var row = store.Query(table, out _).Single();
 
             //var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string) row["Id"]).ShouldBe(id);
-            ((Guid) row["Etag"]).ShouldNotBe(Guid.Empty);
-            ((string) row["Document"]).ShouldBe("asger");
-            ((string) row["Field"]).ShouldBe("Asger");
+            ((string)row["Id"]).ShouldBe(id);
+            ((Guid)row["Etag"]).ShouldNotBe(Guid.Empty);
+            ((string)row["Document"]).ShouldBe("asger");
+            ((string)row["Field"]).ShouldBe("Asger");
         }
 
         [Fact]
         public void CanUpdate()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            var etag = store.Insert(table, id, new {Field = "Asger"});
+            var etag = store.Insert(table, id, new { Field = "Asger" });
 
-            store.Update(table, id, etag, new {Field = "Lars"});
+            store.Update(table, id, etag, new { Field = "Lars" });
 
             var row = store.Query(table, out _).Single();
-            ((Guid) row["Etag"]).ShouldNotBe(etag);
-            ((string) row["Field"]).ShouldBe("Lars");
+            ((Guid)row["Etag"]).ShouldNotBe(etag);
+            ((string)row["Field"]).ShouldBe("Lars");
         }
 
         [Fact]
         public void CanUpdatePessimistically()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new {Field = "Asger", Document = "asger"});
+            store.Insert(table.Table, id, new { Field = "Asger", Document = "asger" });
 
-            Should.NotThrow(() => store.Update(table.Table, id, null, new {Field = "Lars"}));
+            Should.NotThrow(() => store.Update(table.Table, id, null, new { Field = "Lars" }));
         }
 
         [Fact]
         public void UpdateFailsWhenEtagNotMatch()
         {
             Document<Entity>().With(x => x.Field);
-                        
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, id, Guid.NewGuid(), new {Field = "Lars"}));
+            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, id, Guid.NewGuid(), new { Field = "Lars" }));
         }
 
         [Fact]
         public void UpdateFailsWhenIdNotMatchAkaObjectDeleted()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id = NewId();
             var etag = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new {Field = "Lars"}));
+            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new { Field = "Lars" }));
         }
 
         [Fact]
         public void CanGet()
         {
             Document<Entity>().With(x => x.Field).With(x => x.Complex.ToString());
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new {Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray});
+            var etag = store.Insert(table.Table, id, new { Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray });
 
             var row = store.Get(table.Table, id);
             row[DocumentTable.IdColumn].ShouldBe(id);
@@ -111,7 +111,7 @@ namespace HybridDb.Tests
         public void CanGetDynamically()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
@@ -127,7 +127,7 @@ namespace HybridDb.Tests
         public void CanQueryProjectToNestedProperty()
         {
             Document<Entity>().With(x => x.TheChild.NestedDouble);
-            
+
             var id1 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
@@ -142,7 +142,7 @@ namespace HybridDb.Tests
         public void CanQueryAndReturnFullDocuments()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id1 = NewId();
             var id2 = NewId();
             var id3 = NewId();
@@ -171,28 +171,18 @@ namespace HybridDb.Tests
         public void CanQueryAndReturnAnonymousProjections()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
-            var t = new {Field = ""};
+            var t = new { Field = "" };
 
-            QueryStats stats = null;
-            var methodInfo = (
-                from method in typeof(DocumentStoreEx).GetMethods()
-                where method.Name == "Query" && 
-                      method.IsGenericMethod && 
-                      method.GetParameters().Length == 10 && 
-                      method.GetParameters()[1].ParameterType == typeof(DocumentTable)
-                select method
-            ).Single().MakeGenericMethod(t.GetType());
-
-            var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(null, new object[]
-            {
-                store, table.Table, stats, false, null, "Field = @name", null, "", false, new {name = "Asger"}
-            })).ToList();
+            IEnumerable<dynamic> Query<U>(U prototype) => 
+                store.Query<U>(table.Table, out _, false, null, "Field = @name", null, "", false, new {name = "Asger"});
+            
+            var rows = Query(t).ToList();
 
             rows.Count.ShouldBe(1);
             Assert.Equal("Asger", rows.Single().Data.Field);
