@@ -66,7 +66,7 @@ namespace HybridDb
         }
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            string @from, bool top1 = false, string select = null, string where = "", 
+            DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             storeStats.NumberOfRequests++;
@@ -99,19 +99,23 @@ namespace HybridDb
             var sqlx = new SqlBuilder();
             var isWindowed = window != null;
 
+            var from = Store.Database.FormatTableNameAndEscape(table.Name);
+
             if (isWindowed || top1)
             {
                 sqlx.Append("select count(*) as TotalResults")
                     .Append($"from {@from}")
+                    .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(";");
 
                 sqlx.Append(@"with WithRowNumber as (select *")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
-                    .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {DocumentTable.LastOperationColumn.Name} as __LastOperation")
-                    .Append($", {DocumentTable.TimestampColumn.Name} as __RowVersion")
+                    .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
+                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
+                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} as __RowVersion")
                     .Append($"from {@from}")
+                    .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
                     .Append(top1, "select top 1", "select")
@@ -157,10 +161,11 @@ namespace HybridDb
             {
                 sqlx.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
                     .Append($", 0 as RowNumber")
-                    .Append($", {DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {DocumentTable.LastOperationColumn.Name} AS __LastOperation")
-                    .Append($", {DocumentTable.TimestampColumn.Name} AS __RowVersion")
+                    .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
+                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} AS __LastOperation")
+                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} AS __RowVersion")
                     .Append($"from {@from}")
+                    .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
                 

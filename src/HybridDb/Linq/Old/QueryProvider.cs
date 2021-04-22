@@ -86,12 +86,10 @@ namespace HybridDb.Linq.Old
         {
             var translation = expression.Translate();
 
-            var from = store.Database.FormatTableNameAndEscape(design.Table.Name);
-
             if (translation.ProjectAs == null)
             {
                 var (stats, rows) = session.Transactionally(tx => tx.Query<object>(
-                    from, translation.Top1, translation.Select, translation.Where, 
+                    design.Table, null, translation.Top1, translation.Select, translation.Where, 
                     translation.Window, translation.OrderBy, false, translation.Parameters));
 
                 var results =
@@ -112,7 +110,7 @@ namespace HybridDb.Linq.Old
             else
             {
                 var (stats, rows) = session.Transactionally(tx => tx.Query<TProjection>(
-                    from, translation.Top1, translation.Select, translation.Where, 
+                    design.Table, null, translation.Top1, translation.Select, translation.Where, 
                     translation.Window, translation.OrderBy, false, translation.Parameters));
 
                 var results =

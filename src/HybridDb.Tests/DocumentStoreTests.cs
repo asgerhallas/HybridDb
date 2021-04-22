@@ -826,6 +826,51 @@ namespace HybridDb.Tests
             stats.FirstRowNumberOfWindow.ShouldBe(0);
         }
 
+        [Fact]
+        public void CanJoin()
+        {
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            using (var s1 = store.OpenSession())
+            {
+                s1.Store(new Entity
+                {
+                    Id = "a",
+                    Number = 1
+                });
+
+                s1.Store(new Entity
+                {
+                    Id = "b",
+                    Number = 2
+                });
+
+                s1.Store(new OtherEntity
+                {
+                    Id = "c",
+                    Number = 2,
+                    
+                });
+
+                s1.SaveChanges();
+            }
+            
+            var entities = store.Configuration.GetDesignFor<Entity>();
+            var otherEntities = store.Configuration.GetDesignFor<OtherEntity>();
+
+            var result = store.Query<IDictionary<string, object>>(
+                entities.Table, 
+                $"inner join {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)} on {store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Number = {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Number", 
+                out var stats,
+                select: $"{store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Id, {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Id as OtherId"
+            ).ToList();
+
+            result.Count.ShouldBe(1);
+            result[0].Data.Get<string>("Id").ShouldBe("b");
+            result[0].Data.Get<string>("OtherId").ShouldBe("c");
+        }
+
 
         public class Case
         {

@@ -33,12 +33,12 @@ namespace HybridDb
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
         public static IEnumerable<QueryResult<T>> Query<T>(
-            this IDocumentStore store, string from, out QueryStats stats, bool top1 = false, string select = null, string where = "",
+            this IDocumentStore store, DocumentTable table, string @join, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             using (var tx = store.BeginTransaction())
             {
-                var (queryStats, rows) = tx.Query<T>(from, top1, @select, @where, window, @orderby, includeDeleted, parameters);
+                var (queryStats, rows) = tx.Query<T>(table, @join, top1, @select, @where, window, @orderby, includeDeleted, parameters);
 
                 tx.Complete();
 
@@ -51,7 +51,7 @@ namespace HybridDb
         public static IEnumerable<QueryResult<T>> Query<T>(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
-            store.Query<T>(store.Database.FormatTableNameAndEscape(table.Name), out stats, top1, select, where, window, orderby, includeDeleted, parameters);
+            store.Query<T>(table, null, out stats, top1, select, where, window, orderby, includeDeleted, parameters);
 
         public static IEnumerable<IDictionary<string, object>> Query(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
@@ -65,7 +65,7 @@ namespace HybridDb
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null) =>
-            tx.Query<TProjection>(tx.Store.Database.FormatTableNameAndEscape(table.Name), false, @select,
+            tx.Query<TProjection>(table, null, false, @select,
                 @where: $"{DocumentTable.TimestampColumn.Name} > @Since and {DocumentTable.TimestampColumn.Name} < min_active_rowversion()",
                 @orderby: $"{DocumentTable.TimestampColumn.Name} ASC",
                 includeDeleted: true,
