@@ -180,9 +180,14 @@ namespace HybridDb.Tests
             var t = new {Field = ""};
 
             QueryStats stats = null;
-            var methodInfo = (from method in typeof(DocumentStoreEx).GetMethods()
-                              where method.Name == "Query" && method.IsGenericMethod && method.GetParameters().Length == 10
-                              select method).Single().MakeGenericMethod(t.GetType());
+            var methodInfo = (
+                from method in typeof(DocumentStoreEx).GetMethods()
+                where method.Name == "Query" && 
+                      method.IsGenericMethod && 
+                      method.GetParameters().Length == 10 && 
+                      method.GetParameters()[1].ParameterType == typeof(DocumentTable)
+                select method
+            ).Single().MakeGenericMethod(t.GetType());
 
             var rows = ((IEnumerable<dynamic>) methodInfo.Invoke(null, new object[]
             {
