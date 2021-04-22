@@ -8,8 +8,7 @@ namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrator
     {
-        readonly ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache =
-            new ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>>();
+        readonly ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache = new();
 
         readonly Configuration configuration;
 

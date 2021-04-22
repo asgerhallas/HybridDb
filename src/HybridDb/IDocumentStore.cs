@@ -10,6 +10,7 @@ namespace HybridDb
         Configuration Configuration { get; }
         StoreStats Stats { get; }
         TableMode TableMode { get; }
+        IDatabase Database { get; }
 
         void Initialize();
 

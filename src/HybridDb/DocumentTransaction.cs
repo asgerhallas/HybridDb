@@ -49,7 +49,7 @@ namespace HybridDb
 
         public Guid CommitId { get; }
 
-        public DocumentStore Store { get; }
+        public IDocumentStore Store { get; }
         public SqlConnection SqlConnection { get; }
         public SqlTransaction SqlTransaction { get; }
 
@@ -64,11 +64,6 @@ namespace HybridDb
 
             return (IDictionary<string, object>) SqlConnection.Query(sql, new {Id = key}, SqlTransaction).SingleOrDefault();
         }
-
-        public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            DocumentTable table, bool top1 = false, string select = null, string where = "",
-            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
-            Query<TProjection>(Store.Database.FormatTableNameAndEscape(table.Name), top1, select, where, window, orderby, includeDeleted, parameters);
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
             string @from, bool top1 = false, string select = null, string where = "", 

@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
 using Shouldly;
@@ -12,6 +10,9 @@ using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb.Tests.Events
 {
+    // ReadPastActiveTransactions = false uses "min_active_rowversion" which is database global
+    // and as all tests run within the tempdb, this affects tests that run in parallel.
+    [CollectionDefinition("ReadPastActiveTransactions", DisableParallelization = false)]
     public class ReadEventsTests : EventStoreTests
     {
         public ReadEventsTests(ITestOutputHelper output) : base(output)
