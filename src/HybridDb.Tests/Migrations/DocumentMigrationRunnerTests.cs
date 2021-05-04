@@ -83,42 +83,6 @@ namespace HybridDb.Tests.Migrations
             row[DocumentTable.VersionColumn].ShouldBe(1);
         }
 
-        [Fact]
-        public void DocumentsAreMigratedInRandomOrder()
-        {
-            Document<Entity>().With(x => x.Number);
-
-            for (int i = 0; i < 200; i++)
-            {
-                store.Insert(new DocumentTable("Entities"), NewId(), new
-                {
-                    Discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Entity)), 
-                    Version = 0, 
-                    Document = configuration.Serializer.Serialize(new Entity())
-                });
-            }
-
-            var migration1 = new TrackingCommand();
-            UseMigrations(new InlineMigration(1, migration1));
-
-            new DocumentMigrationRunner().Run(store).Wait();
-
-            ResetConfiguration();
-
-            Document<Entity>().With(x => x.Number);
-
-            var migration2 = new TrackingCommand();
-            UseMigrations(
-                new InlineMigration(1, migration1),
-                new InlineMigration(2, migration2));
-
-            new DocumentMigrationRunner().Run(store).Wait();
-
-            migration1.MigratedIds.Count.ShouldBe(migration2.MigratedIds.Count);
-            migration1.MigratedIds.ShouldAllBe(x => migration2.MigratedIds.Contains(x));
-            migration1.MigratedIds.SequenceEqual(migration2.MigratedIds).ShouldBe(false);
-        }
-
         [Fact(Skip = "Only for getting a ballpark estimate of migration performance")]
         public void ConcurrentMigrationPerformance()
         {
