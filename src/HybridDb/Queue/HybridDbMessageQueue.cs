@@ -19,12 +19,13 @@ namespace HybridDb.Queue
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
-        readonly Subject<IHybridDbQueueEvent> subject = new();
+        readonly Subject<IHybridDbQueueEvent> events = new();
 
         readonly IDocumentStore store;
         readonly ILogger logger;
         readonly QueueTable table;
         readonly MessageQueueOptions options;
+        readonly IDisposable eventsSubscription;
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
 
         public Task MainLoop { get; }
@@ -40,7 +41,9 @@ namespace HybridDb.Queue
             this.handler = handler;
             this.options = options ?? new MessageQueueOptions();
 
-            Events = this.options.ObserveQueue(subject);
+            Events = this.options.ObserveEvents(events);
+
+            eventsSubscription = this.options.SubscribeEvents(Events);
 
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
@@ -85,7 +88,7 @@ namespace HybridDb.Queue
                         catch (TaskCanceledException) { }
                         catch (Exception exception)
                         {
-                            subject.OnNext(new QueueFailed(exception));
+                            events.OnNext(new QueueFailed(exception));
 
                             logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
                         }
@@ -150,7 +153,7 @@ namespace HybridDb.Queue
 
                 if (message != null) return message;
 
-                subject.OnNext(new QueueIdle());
+                events.OnNext(new QueueIdle());
 
                 await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
             }
@@ -165,7 +168,7 @@ namespace HybridDb.Queue
 
             try
             {
-                subject.OnNext(new MessageHandling(context, message));
+                events.OnNext(new MessageHandling(context, message));
 
                 using var session = options.CreateSession(store);
 
@@ -175,11 +178,11 @@ namespace HybridDb.Queue
 
                 session.SaveChanges();
 
-                subject.OnNext(new MessageHandled(context, message));
+                events.OnNext(new MessageHandled(context, message));
             }
             catch (Exception exception)
             {
-                subject.OnNext(new MessageFailed(context, message, exception));
+                events.OnNext(new MessageFailed(context, message, exception));
 
                 var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
 
@@ -194,7 +197,7 @@ namespace HybridDb.Queue
 
                 tx.Execute(new EnqueueCommand(table, message, "errors"));
 
-                subject.OnNext(new PoisonMessage(context, message, exception));
+                events.OnNext(new PoisonMessage(context, message, exception));
 
                 retries.TryRemove(message.Id, out _);
             }
@@ -206,6 +209,7 @@ namespace HybridDb.Queue
         {
             cts.Cancel();
             MainLoop.Wait();
+            eventsSubscription.Dispose();
         }
     }
 

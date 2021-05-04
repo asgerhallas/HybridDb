@@ -8,7 +8,7 @@ namespace HybridDb.Tests.Queue
     {
         public TestMessageQueueOptions()
         {
-            ObserveQueue = o =>
+            ObserveEvents = o =>
             {
                 var replay = o.Replay(TimeSpan.FromSeconds(60));
 
