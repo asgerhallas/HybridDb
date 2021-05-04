@@ -119,7 +119,7 @@ namespace HybridDb.Tests.Migrations
             migration1.MigratedIds.SequenceEqual(migration2.MigratedIds).ShouldBe(false);
         }
 
-        [Fact]
+        [Fact(Skip = "Only for getting a ballpark estimate of migration performance")]
         public void ConcurrentMigrationPerformance()
         {
             Document<Entity>().With(x => x.Number);
