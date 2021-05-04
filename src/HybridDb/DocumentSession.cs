@@ -17,11 +17,11 @@ namespace HybridDb
 
         readonly ManagedEntities entities = new ManagedEntities();
         readonly List<(int Generation, EventData<byte[]> Data)> events;
-        readonly DocumentTransaction enlistedTx;
         readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
 
         bool saving = false;
+        DocumentTransaction enlistedTx;
 
         internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
@@ -31,7 +31,7 @@ namespace HybridDb
             this.migrator = migrator;
             this.store = store;
 
-            enlistedTx = tx;
+            Enlist(tx);
         }
 
         public IDocumentStore DocumentStore => store;
@@ -181,11 +181,9 @@ namespace HybridDb
             }
         }
 
-        public Guid SaveChanges() => SaveChanges(null);
-        public Guid SaveChanges(DocumentTransaction tx) => SaveChanges(tx, lastWriteWins: false, forceWriteUnchangedDocument: false);
-        public Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument) => SaveChanges(null, lastWriteWins, forceWriteUnchangedDocument);
+        public Guid SaveChanges() => SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: false);
 
-        public Guid SaveChanges(DocumentTransaction tx, bool lastWriteWins, bool forceWriteUnchangedDocument)
+        public Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument)
         {
             if (saving)
             {
@@ -257,7 +255,7 @@ namespace HybridDb
                 }
 
                 return resultingTx.CommitId;
-            }, tx);
+            });
 
             foreach (var managedEntity in commands.Keys)
             {
@@ -314,25 +312,10 @@ namespace HybridDb
             return entity;
         }
 
-        internal T Transactionally<T>(Func<DocumentTransaction, T> func, DocumentTransaction overrideTx = null)
-        {
-            if (overrideTx != null)
-            {
-                if (enlistedTx != null && enlistedTx != overrideTx)
-                {
-                    throw new InvalidOperationException("Session is already enlisted in another transaction.");
-                }
-
-                return func(overrideTx);
-            }
-
-            if (enlistedTx != null)
-            {
-                return func(enlistedTx);
-            }
-            
-            return store.Transactionally(func);
-        }
+        internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
+            enlistedTx != null 
+                ? func(enlistedTx) 
+                : store.Transactionally(func);
 
         public void Clear() => entities.Clear();
 
@@ -346,6 +329,22 @@ namespace HybridDb
 
             entity = default;
             return false;
+        }
+
+        public void Enlist(DocumentTransaction tx)
+        {
+            if (tx == null)
+            {
+                enlistedTx = null;
+                return;
+            }
+
+            if (!ReferenceEquals(tx.Store, DocumentStore))
+            {
+                throw new ArgumentException("Cannot enlist in a transaction that does not originate from the same store as the session.");
+            }
+
+            enlistedTx = tx;
         }
 
         ManagedEntity TryGetManagedEntity(object entity) => 

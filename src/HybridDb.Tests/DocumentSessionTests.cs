@@ -1306,6 +1306,22 @@ namespace HybridDb.Tests
             }
         }
 
+
+        [Fact]
+        public void CannotEnlistInForeignTransaction()
+        {
+            Document<Entity>();
+
+            using var session = store.OpenSession();
+            
+            ResetStore();
+
+            var tx = store.BeginTransaction();
+
+            Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
+                .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");
+        }
+
         public class EntityWithFunnyKey
         {
             public Guid Id { get; set; }

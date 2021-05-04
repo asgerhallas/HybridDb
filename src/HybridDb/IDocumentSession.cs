@@ -17,13 +17,10 @@ namespace HybridDb
         void Store(string key, object entity, Guid? etag);
 
         void Delete(object entity);
-
         void Append(int generation, EventData<byte[]> @event);
         
         Guid SaveChanges();
-        Guid SaveChanges(DocumentTransaction tx);
         Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument);
-        Guid SaveChanges(DocumentTransaction tx, bool lastWriteWins, bool forceWriteUnchangedDocument);
         
         IAdvancedDocumentSession Advanced { get; }
     }
