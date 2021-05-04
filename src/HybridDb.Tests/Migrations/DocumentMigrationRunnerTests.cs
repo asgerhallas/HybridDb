@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using FakeItEasy;
-using HybridDb.Commands;
+using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Linq.Bonsai;
 using HybridDb.Migrations.Documents;
-using HybridDb.Migrations.Schema;
-using HybridDb.Queue;
-using HybridDb.Tests;
-using ShinySwitch;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -122,6 +117,38 @@ namespace HybridDb.Tests.Migrations
             migration1.MigratedIds.Count.ShouldBe(migration2.MigratedIds.Count);
             migration1.MigratedIds.ShouldAllBe(x => migration2.MigratedIds.Contains(x));
             migration1.MigratedIds.SequenceEqual(migration2.MigratedIds).ShouldBe(false);
+        }
+
+        [Fact]
+        public void ConcurrentMigrationPerformance()
+        {
+            Document<Entity>().With(x => x.Number);
+
+            using (var session = store.OpenSession())
+            {
+                for (int i = 0; i < 100000; i++)
+                {
+                    session.Store(new Entity()
+                    {
+                        Id = NewId(),
+                    });
+                }
+
+                session.SaveChanges();
+            }
+
+            var migration1 = new TrackingCommand();
+            UseMigrations(new InlineMigration(1, migration1));
+
+            var sw = Stopwatch.StartNew();
+            
+            Task.WaitAll(
+                new DocumentMigrationRunner().Run(store),
+                new DocumentMigrationRunner().Run(store));
+
+            // Only for a ballpark estimate
+            // Takes about 26000ms on my machine
+            output.WriteLine(sw.ElapsedMilliseconds.ToString());
         }
 
         [Fact]
