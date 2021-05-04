@@ -26,7 +26,8 @@ namespace HybridDb.Tests.Queue
             handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
         }
 
-        HybridDbMessageQueue StartQueue(MessageQueueOptions options = null) => Using(new HybridDbMessageQueue(store, handler, options));
+        HybridDbMessageQueue StartQueue(TestMessageQueueOptions options = null) => Using(
+            new HybridDbMessageQueue(store, handler, options ?? new TestMessageQueueOptions()));
 
         public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
 
@@ -54,7 +55,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task DequeueAndHandle_AfterMuchIdle()
         {
-            StartQueue(new MessageQueueOptions
+            StartQueue(new TestMessageQueueOptions
             {
                 IdleDelay = TimeSpan.Zero
             });
@@ -99,8 +100,8 @@ namespace HybridDb.Tests.Queue
             var queue = StartQueue();
 
             var messages = new List<object>();
-            queue.Diagnostics.OfType<MessageHandling>().Select(x => x.Message).Subscribe(messages.Add);
-            await queue.Diagnostics.OfType<QueueIdle>().FirstAsync();
+            queue.Events.OfType<MessageHandling>().Select(x => x.Message).Subscribe(messages.Add);
+            await queue.Events.OfType<QueueIdle>().FirstAsync();
 
             messages.Count.ShouldBe(1);
             ((MyMessage)messages.Single()).Text.ShouldBe("A");
@@ -123,7 +124,7 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<object>();
 
-            await queue.Diagnostics
+            await queue.Events
                 .Do(messages.Add)
                 .OfType<PoisonMessage>()
                 .FirstAsync();
@@ -155,7 +156,7 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<MessageHandling>();
 
-            await queue.Diagnostics
+            await queue.Events
                 .OfType<MessageHandling>()
                 .Do(messages.Add)
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(1)));
@@ -166,12 +167,12 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task IdlePerformance()
         {
-            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new MessageQueueOptions
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new TestMessageQueueOptions
             {
                 IdleDelay = TimeSpan.Zero
             }));
 
-            var messages = await queue.Diagnostics
+            var messages = await queue.Events
                 .OfType<QueueIdle>()
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(7)))
                 .ToList()
@@ -193,12 +194,12 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new MessageQueueOptions
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new TestMessageQueueOptions
             {
-                MaxConcurrency = 10
+                MaxConcurrency = 10,
             }));
 
-            var messages = await queue.Diagnostics
+            var messages = await queue.Events
                 .OfType<MessageHandled>()
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(10)))
                 .ToList()
@@ -229,14 +230,14 @@ namespace HybridDb.Tests.Queue
             var q2Count = 0;
             var q3Count = 0;
             
-            queue1.Diagnostics.OfType<MessageHandled>().Subscribe(_ => q1Count++);
-            queue2.Diagnostics.OfType<MessageHandled>().Subscribe(_ => q2Count++);
-            queue3.Diagnostics.OfType<MessageHandled>().Subscribe(_ => q3Count++);
+            queue1.Events.OfType<MessageHandled>().Subscribe(_ => q1Count++);
+            queue2.Events.OfType<MessageHandled>().Subscribe(_ => q2Count++);
+            queue3.Events.OfType<MessageHandled>().Subscribe(_ => q3Count++);
 
-            var allDiagnostics = new List<IHybridDbDiagnosticEvent>();
+            var allDiagnostics = new List<IHybridDbQueueEvent>();
 
             var diagnostics = Observable
-                .Merge(queue1.Diagnostics, queue2.Diagnostics, queue3.Diagnostics)
+                .Merge(queue1.Events, queue2.Events, queue3.Events)
                 .Do(allDiagnostics.Add);
 
             var handled = await diagnostics
@@ -262,7 +263,7 @@ namespace HybridDb.Tests.Queue
         {
             var max = new StrongBox<int>(0);
 
-            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max)));
+            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max), new TestMessageQueueOptions()));
 
             using (var session = store.OpenSession())
             {
@@ -274,7 +275,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await queue.Diagnostics.OfType<MessageHandled>()
+            await queue.Events.OfType<MessageHandled>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();
@@ -288,7 +289,7 @@ namespace HybridDb.Tests.Queue
             var max = new StrongBox<int>(0);
 
             var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max),
-                new MessageQueueOptions
+                new TestMessageQueueOptions
                 {
                     MaxConcurrency = 1
                 }));
@@ -303,7 +304,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var threads = await queue.Diagnostics.OfType<MessageHandled>()
+            var threads = await queue.Events.OfType<MessageHandled>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();

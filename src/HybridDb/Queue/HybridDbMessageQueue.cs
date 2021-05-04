@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
@@ -18,7 +19,7 @@ namespace HybridDb.Queue
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
-        readonly ReplaySubject<IHybridDbDiagnosticEvent> diagnostics;
+        readonly Subject<IHybridDbQueueEvent> subject = new();
 
         readonly IDocumentStore store;
         readonly ILogger logger;
@@ -28,7 +29,7 @@ namespace HybridDb.Queue
 
         public Task MainLoop { get; }
 
-        public IObservable<IHybridDbDiagnosticEvent> Diagnostics => diagnostics;
+        public IObservable<IHybridDbQueueEvent> Events { get; }
 
         public HybridDbMessageQueue(
             IDocumentStore store, 
@@ -39,11 +40,12 @@ namespace HybridDb.Queue
             this.handler = handler;
             this.options = options ?? new MessageQueueOptions();
 
+            Events = this.options.ObserveQueue(subject);
+
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
             cts = new CancellationTokenSource();
-            diagnostics = new ReplaySubject<IHybridDbDiagnosticEvent>(this.options.DiagnosticsReplayWindow);
 
             MainLoop = Task.Factory.StartNew(async () =>
                 {
@@ -83,7 +85,7 @@ namespace HybridDb.Queue
                         catch (TaskCanceledException) { }
                         catch (Exception exception)
                         {
-                            diagnostics.OnNext(new QueueFailed(exception));
+                            subject.OnNext(new QueueFailed(exception));
 
                             logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
                         }
@@ -148,7 +150,7 @@ namespace HybridDb.Queue
 
                 if (message != null) return message;
 
-                diagnostics.OnNext(new QueueIdle());
+                subject.OnNext(new QueueIdle());
 
                 await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
             }
@@ -159,9 +161,11 @@ namespace HybridDb.Queue
 
         async Task HandleMessage(DocumentTransaction tx, HybridDbMessage message)
         {
+            var context = new MessageContext();
+
             try
             {
-                diagnostics.OnNext(new MessageHandling(message));
+                subject.OnNext(new MessageHandling(context, message));
 
                 using var session = options.CreateSession(store);
 
@@ -171,11 +175,11 @@ namespace HybridDb.Queue
 
                 session.SaveChanges();
 
-                diagnostics.OnNext(new MessageHandled(message));
+                subject.OnNext(new MessageHandled(context, message));
             }
             catch (Exception exception)
             {
-                diagnostics.OnNext(new MessageFailed(message, exception));
+                subject.OnNext(new MessageFailed(context, message, exception));
 
                 var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
 
@@ -190,7 +194,7 @@ namespace HybridDb.Queue
 
                 tx.Execute(new EnqueueCommand(table, message, "errors"));
 
-                diagnostics.OnNext(new PoisonMessage(message, exception));
+                subject.OnNext(new PoisonMessage(context, message, exception));
 
                 retries.TryRemove(message.Id, out _);
             }
@@ -206,12 +210,14 @@ namespace HybridDb.Queue
     }
 
     public abstract record HybridDbMessage(string Id);
-    public interface IHybridDbDiagnosticEvent { }
+    public interface IHybridDbQueueEvent { }
 
-    public record MessageHandling(HybridDbMessage Message) : IHybridDbDiagnosticEvent;
-    public record MessageHandled(HybridDbMessage Message) : IHybridDbDiagnosticEvent;
-    public record MessageFailed(HybridDbMessage Message, Exception Exception) : IHybridDbDiagnosticEvent;
-    public record PoisonMessage(HybridDbMessage Message, Exception Exception) : IHybridDbDiagnosticEvent;
-    public record QueueIdle : IHybridDbDiagnosticEvent;
-    public record QueueFailed(Exception Exception) : IHybridDbDiagnosticEvent;
+    public record MessageHandling(MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
+    public record MessageHandled(MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
+    public record MessageFailed(MessageContext Context, HybridDbMessage Message, Exception Exception) : IHybridDbQueueEvent;
+    public record PoisonMessage(MessageContext Context, HybridDbMessage Message, Exception Exception) : IHybridDbQueueEvent;
+    public record QueueIdle : IHybridDbQueueEvent;
+    public record QueueFailed(Exception Exception) : IHybridDbQueueEvent;
+
+    public class MessageContext : Dictionary<string, object> { }
 }
