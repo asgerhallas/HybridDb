@@ -30,7 +30,10 @@ namespace HybridDb.Queue
 
         public IObservable<IHybridDbDiagnosticEvent> Diagnostics => diagnostics;
 
-        public HybridDbMessageQueue(IDocumentStore store, Func<IDocumentSession, HybridDbMessage, Task> handler, MessageQueueOptions options = null)
+        public HybridDbMessageQueue(
+            IDocumentStore store, 
+            Func<IDocumentSession, HybridDbMessage, Task> handler, 
+            MessageQueueOptions options = null)
         {
             this.store = store;
             this.handler = handler;
@@ -158,9 +161,11 @@ namespace HybridDb.Queue
         {
             try
             {
-                using var session = store.OpenSession(tx);
+                diagnostics.OnNext(new MessageHandling(message));
 
-                diagnostics.OnNext(new MessageHandling(session, message));
+                using var session = options.CreateSession(store);
+
+                session.Advanced.Enlist(tx);
 
                 await handler(session, message);
 
@@ -203,7 +208,7 @@ namespace HybridDb.Queue
     public abstract record HybridDbMessage(string Id);
     public interface IHybridDbDiagnosticEvent { }
 
-    public record MessageHandling(IDocumentSession Session, HybridDbMessage Message) : IHybridDbDiagnosticEvent;
+    public record MessageHandling(HybridDbMessage Message) : IHybridDbDiagnosticEvent;
     public record MessageHandled(HybridDbMessage Message) : IHybridDbDiagnosticEvent;
     public record MessageFailed(HybridDbMessage Message, Exception Exception) : IHybridDbDiagnosticEvent;
     public record PoisonMessage(HybridDbMessage Message, Exception Exception) : IHybridDbDiagnosticEvent;
