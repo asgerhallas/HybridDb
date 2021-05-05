@@ -26,8 +26,13 @@ namespace HybridDb.Tests.Queue
             handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
         }
 
-        HybridDbMessageQueue StartQueue(TestMessageQueueOptions options = null) => Using(
-            new HybridDbMessageQueue(store, handler, options ?? new TestMessageQueueOptions()));
+        HybridDbMessageQueue StartQueue(MessageQueueOptions options = null)
+        {
+            options = (options ?? new MessageQueueOptions())
+                .ReplayEvents(TimeSpan.FromSeconds(60));
+
+            return Using(new HybridDbMessageQueue(store, handler, options));
+        }
 
         public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
 
@@ -55,7 +60,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task DequeueAndHandle_AfterMuchIdle()
         {
-            StartQueue(new TestMessageQueueOptions
+            StartQueue(new MessageQueueOptions
             {
                 IdleDelay = TimeSpan.Zero
             });
@@ -167,10 +172,13 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task IdlePerformance()
         {
-            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new TestMessageQueueOptions
-            {
-                IdleDelay = TimeSpan.Zero
-            }));
+            var queue = Using(new HybridDbMessageQueue(
+                store,
+                (_, _) => Task.CompletedTask,
+                new MessageQueueOptions
+                {
+                    IdleDelay = TimeSpan.Zero,
+                }.ReplayEvents(TimeSpan.FromSeconds(60))));
 
             var messages = await queue.Events
                 .OfType<QueueIdle>()
@@ -194,10 +202,13 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask, new TestMessageQueueOptions
-            {
-                MaxConcurrency = 10,
-            }));
+            var queue = Using(new HybridDbMessageQueue(
+                store,
+                (_, _) => Task.CompletedTask,
+                new MessageQueueOptions
+                {
+                    MaxConcurrency = 10,
+                }.ReplayEvents(TimeSpan.FromSeconds(60))));
 
             var messages = await queue.Events
                 .OfType<MessageHandled>()
@@ -263,7 +274,11 @@ namespace HybridDb.Tests.Queue
         {
             var max = new StrongBox<int>(0);
 
-            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max), new TestMessageQueueOptions()));
+            var queue = Using(new HybridDbMessageQueue(
+                store,
+                MaxConcurrencyCounter(max),
+                new MessageQueueOptions()
+                    .ReplayEvents(TimeSpan.FromSeconds(60))));
 
             using (var session = store.OpenSession())
             {
@@ -288,11 +303,13 @@ namespace HybridDb.Tests.Queue
         {
             var max = new StrongBox<int>(0);
 
-            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max),
-                new TestMessageQueueOptions
+            var queue = Using(new HybridDbMessageQueue(
+                store,
+                MaxConcurrencyCounter(max),
+                new MessageQueueOptions
                 {
                     MaxConcurrency = 1
-                }));
+                }.ReplayEvents(TimeSpan.FromSeconds(60))));
 
             using (var session = store.OpenSession())
             {
