@@ -26,7 +26,8 @@ namespace HybridDb.Tests
         public void SimpleType_MustBeBaseType()
         {
             var discriminator = typeMapper.ToDiscriminator(typeof(MyType));
-            Should.Throw<InvalidOperationException>(() => typeMapper.ToType(typeof(NotABaseType), discriminator));
+            Should.Throw<InvalidOperationException>(() => typeMapper.ToType(typeof(NotABaseType), discriminator))
+                .Message.ShouldBe("No type found for 'MyType'.");
         }
 
         [Fact]
