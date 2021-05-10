@@ -32,7 +32,7 @@ namespace HybridDb.Queue
 
             if (msg == default) return null;
 
-            var type = tx.Store.Configuration.TypeMapper.ToType(msg.Discriminator);
+            var type = tx.Store.Configuration.TypeMapper.ToType(typeof(HybridDbMessage), msg.Discriminator);
 
             return (HybridDbMessage)deserializer(msg.Message, type);
         }

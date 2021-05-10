@@ -25,32 +25,32 @@ namespace HybridDb.Config
             return $"{shortname}({string.Join("|", type.GetGenericArguments().Select(ToDiscriminator))})";
         }
 
-        public Type ToType(string discriminator) => TypeParser.End().Parse(discriminator);
+        public Type ToType(Type basetype, string discriminator) => TypeParser(basetype).End().Parse(discriminator);
 
         public static Parser<string> ShortName = Parse.AnyChar.Except(Parse.Chars('(', '|', ')')).AtLeastOnce().Text();
 
-        public Parser<Type> SimpleType =>
+        public Parser<Type> SimpleType(Type basetype) =>
             from shortname in ShortName
             where !string.IsNullOrEmpty(shortname)
-            select TypeByShortName(shortname);
+            select TypeByShortName(basetype, shortname);
 
-        public Parser<Type> GenericType =>
+        public Parser<Type> GenericType(Type basetype) =>
             from shortname in ShortName
-            from types in TypeParser.DelimitedBy(Parse.Char('|')).Contained(Parse.Char('('), Parse.Char(')'))
-            select TypeByShortName(shortname).MakeGenericType(types.ToArray());
+            from types in TypeParser(basetype).DelimitedBy(Parse.Char('|')).Contained(Parse.Char('('), Parse.Char(')'))
+            select TypeByShortName(basetype, shortname).MakeGenericType(types.ToArray());
 
-        public Parser<Type> TypeParser => GenericType.Or(SimpleType);
+        public Parser<Type> TypeParser(Type basetype) => GenericType(basetype).Or(SimpleType(basetype));
         
         static string ShortNameByType(Type type) =>
             type.IsNested
                 ? $"{type.DeclaringType.Name}+{type.Name}"
                 : type.Name;
 
-        Type TypeByShortName(string shortname)
+        Type TypeByShortName(Type basetype, string shortname)
         {
             var types = (assemblies ?? AppDomain.CurrentDomain.GetAssemblies())
                 .SelectMany(x => x.GetTypes())
-                .Where(x => ShortNameByType(x) == shortname)
+                .Where(x => ShortNameByType(x) == shortname && basetype.IsAssignableFrom(x))
                 .ToList();
 
             var type = types.Count switch

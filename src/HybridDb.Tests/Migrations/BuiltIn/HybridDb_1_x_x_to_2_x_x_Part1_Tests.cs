@@ -141,7 +141,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         public class OtherTypeMapper : ITypeMapper
         {
             public string ToDiscriminator(Type type) => type.Name;
-            public Type ToType(string discriminator) => typeof(JObject);
+            public Type ToType(Type baseType, string discriminator) => typeof(JObject);
         }
     }
 }

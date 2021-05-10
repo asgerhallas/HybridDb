@@ -236,6 +236,29 @@ namespace HybridDb.Tests
             ProjectionsFor<Entity>()["Test"].Projector(new Entity(), null).ShouldBe(null);
         }
 
+        [Fact]
+        public void DisallowSameDiscriminatorInSameTable()
+        {
+            configuration.Document<Namespace1.DerivedEntity>();
+            Should.Throw<InvalidOperationException>(() => configuration.Document<Namespace2.DerivedEntity>())
+                .Message.ShouldBe("Document 'DerivedEntity' has discriminator 'DerivedEntity' in table 'DerivedEntities'. This combination already exists, please select either another table or discriminator for the type.");
+        }
+
+        [Fact]
+        public void DisallowSameDiscriminatorInSameTable_DifferentTypeName()
+        {
+            configuration.Document<Entity>(tablename:"t", discriminator:"u");
+            Should.Throw<InvalidOperationException>(() => configuration.Document<OtherEntity>(tablename: "t", discriminator: "u"))
+                .Message.ShouldBe("Document 'OtherEntity' has discriminator 'u' in table 't'. This combination already exists, please select either another table or discriminator for the type.");
+        }
+
+        [Fact]
+        public void AllowSameDiscriminator_DifferentTables()
+        {
+            configuration.Document<Namespace1.DerivedEntity>(tablename:"t", discriminator:"u");
+            configuration.Document<Namespace2.DerivedEntity>(tablename: "v", discriminator: "u");
+        }
+
         public class Entity
         {
             public string String { get; set; }

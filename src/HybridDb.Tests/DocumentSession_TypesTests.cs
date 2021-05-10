@@ -4,6 +4,7 @@ using System.Reflection;
 using HybridDb.Config;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
+using HybridDb.Tests.Namespace1;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -417,6 +418,39 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void AutoRegistersSubTypesOnLoad_SameDiscriminator_DifferentBaseTypes()
+        {
+            Document<Namespace1.NamespacedAbstractEntity>().With(x => x.Property);
+            Document<Namespace2.NamespacedAbstractEntity>(tablename: "other").With(x => x.Property);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Namespace1.DerivedEntity { Id = "A", Property = "Asger" });
+                session.Store(new Namespace2.DerivedEntity { Id = "B", Property = "Peter" });
+                session.SaveChanges();
+            }
+
+            ResetConfiguration();
+
+            Document<Namespace1.NamespacedAbstractEntity>().With(x => x.Property);
+            Document<Namespace2.NamespacedAbstractEntity>(tablename: "other").With(x => x.Property);
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Namespace1.NamespacedAbstractEntity>("A").ShouldBeOfType<Namespace1.DerivedEntity>();
+
+                configuration.TryGetDesignFor(typeof(Namespace1.DerivedEntity)).ShouldNotBe(null);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Load<Namespace2.NamespacedAbstractEntity>("B").ShouldBeOfType<Namespace2.DerivedEntity>();
+
+                configuration.TryGetDesignFor(typeof(Namespace2.DerivedEntity)).ShouldNotBe(null);
+            }
+        }
+
+        [Fact]
         public void AutoRegistersSubTypesOnQuery()
         {
             using (var session = store.OpenSession())
@@ -525,10 +559,11 @@ namespace HybridDb.Tests
                 return "NoShow";
             }
 
-            public Type ToType(string discriminator)
+            public Type ToType(Type basetype, string discriminator)
             {
                 return null;
             }
         }
     }
+
 }

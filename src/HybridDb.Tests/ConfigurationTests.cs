@@ -294,7 +294,7 @@ namespace HybridDb.Tests
                 return discriminator;
             }
 
-            public Type ToType(string discriminator)
+            public Type ToType(Type basetype, string discriminator)
             {
                 throw new NotImplementedException();
             }

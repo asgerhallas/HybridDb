@@ -100,7 +100,7 @@ namespace HybridDb.Config
         {
             lock (gate)
             {
-                discriminator = discriminator ?? TypeMapper.ToDiscriminator(type);
+                discriminator ??= TypeMapper.ToDiscriminator(type);
 
                 // for interfaces we find the first design for a class that is assignable to the interface or fallback to the design for typeof(object)
                 if (type.IsInterface)
@@ -140,12 +140,7 @@ namespace HybridDb.Config
                 }
 
                 // a table and base design exists for type, add the derived type as a child design
-                var design = new DocumentDesign(this, existing, type, discriminator);
-
-                var afterParent = documentDesigns.IndexOf(existing) + 1;
-                documentDesigns.Insert(afterParent, design);
-
-                return design;
+                return AddDesign(new DocumentDesign(this, existing, type, discriminator));
             }
         }
 
@@ -156,7 +151,7 @@ namespace HybridDb.Config
                 if (design.DecendentsAndSelf.TryGetValue(discriminator, out var concreteDesign))
                     return concreteDesign;
 
-                var type = TypeMapper.ToType(discriminator);
+                var type = TypeMapper.ToType(design.Root.DocumentType, discriminator);
 
                 if (type == null)
                 {
@@ -297,14 +292,27 @@ namespace HybridDb.Config
 
         DocumentDesign AddDesign(DocumentDesign design)
         {
-            var existingDesign = DocumentDesigns.FirstOrDefault(x => design.DocumentType.IsAssignableFrom(x.DocumentType));
-            if (existingDesign != null)
+            if (DocumentDesigns.Any(x => Equals(x.Table, design.Table) && x.Discriminator == design.Discriminator))
             {
-                throw new InvalidOperationException($"Document {design.DocumentType.Name} must be configured before its subtype {existingDesign.DocumentType}.");
+                throw new InvalidOperationException(_(@$"
+                    Document '{design.DocumentType.Name}' has discriminator '{design.Discriminator}' in table '{design.Table}'.
+                    This combination already exists, please select either another table or discriminator for the type."));
             }
 
-            documentDesigns.Add(design);
+            if (design.Parent != null)
+            {
+                documentDesigns.Insert(documentDesigns.IndexOf(design.Parent) + 1, design);
+            }
+            else
+            {
+                if (DocumentDesigns.FirstOrDefault(x => design.DocumentType.IsAssignableFrom(x.DocumentType)) is { } existingDesign)
+                    throw new InvalidOperationException($"Document '{design.DocumentType.Name}' must be configured before its subtype '{existingDesign.DocumentType}'.");
+
+                documentDesigns.Add(design);
+            }
+
             return design;
+
         }
 
         DocumentTable GetOrAddDocumentTable(string tablename)

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -278,5 +279,27 @@ namespace HybridDb.Tests
             {
             }
         }
+    }
+
+    namespace Namespace1
+    {
+        public abstract class NamespacedAbstractEntity
+        {
+            public string Id { get; set; }
+            public string Property { get; set; }
+        }
+
+        public class DerivedEntity : NamespacedAbstractEntity { }
+    }
+
+    namespace Namespace2
+    {
+        public abstract class NamespacedAbstractEntity
+        {
+            public string Id { get; set; }
+            public string Property { get; set; }
+        }
+
+        public class DerivedEntity : NamespacedAbstractEntity { }
     }
 }
