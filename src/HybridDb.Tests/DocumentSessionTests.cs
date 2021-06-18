@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -7,6 +8,7 @@ using System.Text;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
 using ShouldBeLike;
@@ -310,6 +312,35 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id, Property = "Asger" });
                 session.Advanced.Clear();
                 session.Advanced.TryGetManagedEntity<Entity>(id, out _).ShouldBe(false);
+            }
+        }
+
+        [Fact]
+        public void CanClearSession_DeferredCommands()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Defer(new DeleteCommand(configuration.GetDesignFor<Entity>().Table, id, Guid.Empty));
+                session.Advanced.Clear();
+                session.Advanced.DeferredCommands.ShouldBeEmpty();
+            }
+        }
+
+        [Fact]
+        public void CanClearSession_Transaction()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                var tx = store.BeginTransaction();
+                session.Advanced.Enlist(tx);
+                session.Advanced.Clear();
+                session.Advanced.DocumentTransaction.ShouldBe(null);
             }
         }
 

@@ -15,13 +15,14 @@ namespace HybridDb
     {
         readonly IDocumentStore store;
 
-        readonly ManagedEntities entities = new ManagedEntities();
+        readonly ManagedEntities entities = new();
         readonly List<(int Generation, EventData<byte[]> Data)> events;
         readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
 
-        bool saving = false;
         DocumentTransaction enlistedTx;
+
+        bool saving = false;
 
         internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
@@ -35,6 +36,8 @@ namespace HybridDb
         }
 
         public IDocumentStore DocumentStore => store;
+        public DocumentTransaction DocumentTransaction => enlistedTx;
+        public IReadOnlyList<DmlCommand> DeferredCommands => deferredCommands;
 
         public IAdvancedDocumentSession Advanced => this;
         public IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities => entities;
@@ -317,7 +320,12 @@ namespace HybridDb
                 ? func(enlistedTx) 
                 : store.Transactionally(func);
 
-        public void Clear() => entities.Clear();
+        public void Clear()
+        {
+            entities.Clear();
+            deferredCommands.Clear();
+            enlistedTx = null;
+        }
 
         public bool TryGetManagedEntity<T>(string key, out T entity)
         {

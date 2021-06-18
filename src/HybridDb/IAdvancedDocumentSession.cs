@@ -6,7 +6,11 @@ namespace HybridDb
     public interface IAdvancedDocumentSession
     {
         IDocumentStore DocumentStore { get; }
+        DocumentTransaction DocumentTransaction { get; }
+        IReadOnlyList<DmlCommand> DeferredCommands { get; }
+
         void Defer(DmlCommand command);
+        void Enlist(DocumentTransaction tx);
         void Evict(object entity);
         void Clear();
 
@@ -18,6 +22,5 @@ namespace HybridDb
         IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities { get; }
         bool TryGetManagedEntity<T>(string key, out T entity);
 
-        void Enlist(DocumentTransaction tx);
     }
 }
