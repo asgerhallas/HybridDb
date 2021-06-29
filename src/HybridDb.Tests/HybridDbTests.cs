@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -12,7 +11,6 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
-using Serilog.Sinks.XUnit;
 using Shouldly;
 using Xunit.Abstractions;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
@@ -71,7 +69,7 @@ namespace HybridDb.Tests
 
             return isAppveyor
                 ? "Server=(local)\\SQL2017;Database=master;User ID=sa;Password=Password12!"
-                : "Data Source=.; Integrated Security=True";
+                : "Data Source=(LocalDb)\\MSSQLLocalDB; Integrated Security=True";
         }
 
         protected void NoInitialize() => autoInitialize = false;

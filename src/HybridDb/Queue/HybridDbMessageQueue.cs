@@ -48,13 +48,15 @@ namespace HybridDb.Queue
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
-            cts = new CancellationTokenSource();
+            cts = this.options.GetCancellationTokenSource();
 
             MainLoop = Task.Factory.StartNew(async () =>
                 {
-                    using var semaphore = new SemaphoreSlim(this.options.MaxConcurrency);
+                    events.OnNext(new QueueStarting());
 
                     logger.LogInformation("Queue started.");
+
+                    using var semaphore = new SemaphoreSlim(this.options.MaxConcurrency);
 
                     while (!cts.Token.IsCancellationRequested)
                     {
@@ -208,7 +210,12 @@ namespace HybridDb.Queue
         public void Dispose()
         {
             cts.Cancel();
-            MainLoop.Wait();
+            
+            try { MainLoop.Wait(); }
+            catch (TaskCanceledException) { }
+            catch (AggregateException ex) when ( ex.InnerException is TaskCanceledException ) { }
+            catch (Exception ex) { logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose."); }
+
             eventsSubscription.Dispose();
         }
     }
@@ -220,6 +227,7 @@ namespace HybridDb.Queue
     public record MessageHandled(MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
     public record MessageFailed(MessageContext Context, HybridDbMessage Message, Exception Exception) : IHybridDbQueueEvent;
     public record PoisonMessage(MessageContext Context, HybridDbMessage Message, Exception Exception) : IHybridDbQueueEvent;
+    public record QueueStarting : IHybridDbQueueEvent;
     public record QueueIdle : IHybridDbQueueEvent;
     public record QueueFailed(Exception Exception) : IHybridDbQueueEvent;
 
