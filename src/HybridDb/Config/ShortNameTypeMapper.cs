@@ -17,9 +17,9 @@ namespace HybridDb.Config
         {
             this.assemblies = assemblies;
 
-            // Loading types from dynamic assemblies while new types are being emitted will throw.
-            // This happens a lot in test when fake libraries emit fake types. We filter away
-            // dynamic types here, and if they are needed you will need to pass them in yourself.
+            //// Loading types from dynamic assemblies while new types are being emitted will throw.
+            //// This happens a lot in test when fake libraries emit fake types. We filter away
+            //// dynamic types here, and if they are needed you will need to pass them in yourself.
             this.types = (assemblies ?? AppDomain.CurrentDomain.GetAssemblies().Where(x => !x.IsDynamic))
                 .SelectMany(x => x.GetTypes())
                 .ToList();

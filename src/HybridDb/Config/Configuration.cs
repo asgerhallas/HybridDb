@@ -39,6 +39,7 @@ namespace HybridDb.Config
 
             UseSerializer(new DefaultSerializer());
             UseTypeMapper(new ShortNameTypeMapper());
+
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunUpfrontMigrations = true;
@@ -60,10 +61,11 @@ namespace HybridDb.Config
             Register(_ => new DocumentMigrator(this));
         }
 
+        public ITypeMapper TypeMapper => Resolve<ITypeMapper>();
+
         public string ConnectionString { get; private set; }
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
-        public ITypeMapper TypeMapper { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
         public bool RunUpfrontMigrations { get; private set; }
@@ -226,7 +228,7 @@ namespace HybridDb.Config
                 if (DocumentDesigns.Any())
                     throw new InvalidOperationException("Please call UseTypeMapper() before any documents are configured.");
 
-                TypeMapper = new CachedTypeMapper(typeMapper);
+                Register<ITypeMapper>(_ => new CachedTypeMapper(typeMapper));
             }
         }
 
