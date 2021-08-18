@@ -12,7 +12,7 @@ namespace HybridDb.Tests.Events
 {
     // ReadPastActiveTransactions = false uses "min_active_rowversion" which is database global
     // and as all tests run within the tempdb, this affects tests that run in parallel.
-    [CollectionDefinition("ReadPastActiveTransactions", DisableParallelization = true)]
+    [Collection(nameof(DisableParallelizationCollection))]
     public class ReadEventsTests : EventStoreTests
     {
         public ReadEventsTests(ITestOutputHelper output) : base(output)

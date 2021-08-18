@@ -10,8 +10,20 @@ namespace HybridDb.Config
     public class ShortNameTypeMapper : ITypeMapper
     {
         readonly IReadOnlyList<Assembly> assemblies;
+        readonly IReadOnlyList<Type> types;
 
-        public ShortNameTypeMapper(IReadOnlyList<Assembly> assemblies = null) => this.assemblies = assemblies;
+
+        public ShortNameTypeMapper(IReadOnlyList<Assembly> assemblies = null)
+        {
+            this.assemblies = assemblies;
+
+            // Loading types from dynamic assemblies while new types are being emitted will throw.
+            // This happens a lot in test when fake libraries emit fake types. We filter away
+            // dynamic types here, and if they are needed you will need to pass them in yourself.
+            this.types = (assemblies ?? AppDomain.CurrentDomain.GetAssemblies().Where(x => !x.IsDynamic))
+                .SelectMany(x => x.GetTypes())
+                .ToList();
+        }
 
         public string ToDiscriminator(Type type)
         {
@@ -48,19 +60,18 @@ namespace HybridDb.Config
 
         Type TypeByShortName(Type basetype, string shortname)
         {
-            var types = (assemblies ?? AppDomain.CurrentDomain.GetAssemblies())
-                .SelectMany(x => x.GetTypes())
+            var matchingTypes = types
                 .Where(x => ShortNameByType(x) == shortname && basetype.IsAssignableFrom(x))
                 .ToList();
 
-            var type = types.Count switch
+            var type = matchingTypes.Count switch
             {
                 > 1 => throw new InvalidOperationException(Indent._($@"
                         Too many types found for '{shortname}'. Found: 
 
-                            {string.Join(Environment.NewLine, types.Select(x => x.FullName))}")),
+                            {string.Join(Environment.NewLine, matchingTypes.Select(x => x.FullName))}")),
                 < 1 => throw new InvalidOperationException($@"No type found for '{shortname}'."),
-                _ => types[0]
+                _ => matchingTypes[0]
             };
 
             return type;

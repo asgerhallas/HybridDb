@@ -4,7 +4,6 @@ using System.Reflection;
 using HybridDb.Config;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
-using HybridDb.Tests.Namespace1;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;

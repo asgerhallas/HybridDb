@@ -330,12 +330,12 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
-        public async Task CancellationDispose()
+        public void CancellationDispose()
         {
-            new HybridDbMessageQueue(store, handler, new MessageQueueOptions
+            Should.NotThrow(() => new HybridDbMessageQueue(store, handler, new MessageQueueOptions
             {
                 GetCancellationTokenSource = () => new CancellationTokenSource(0)
-            }).Dispose();
+            }).Dispose());
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)

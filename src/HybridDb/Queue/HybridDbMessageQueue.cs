@@ -213,7 +213,7 @@ namespace HybridDb.Queue
             
             try { MainLoop.Wait(); }
             catch (TaskCanceledException) { }
-            catch (AggregateException ex) when ( ex.InnerException is TaskCanceledException ) { }
+            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
             catch (Exception ex) { logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose."); }
 
             eventsSubscription.Dispose();
