@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,19 +11,20 @@ namespace HybridDb.Config
     public class ShortNameTypeMapper : ITypeMapper
     {
         readonly IReadOnlyList<Assembly> assemblies;
-        readonly IReadOnlyList<Type> types;
-
+        readonly Lazy<IReadOnlyList<Type>> typesInAssemblies;
 
         public ShortNameTypeMapper(IReadOnlyList<Assembly> assemblies = null)
         {
             this.assemblies = assemblies;
 
-            //// Loading types from dynamic assemblies while new types are being emitted will throw.
-            //// This happens a lot in test when fake libraries emit fake types. We filter away
-            //// dynamic types here, and if they are needed you will need to pass them in yourself.
-            this.types = (assemblies ?? AppDomain.CurrentDomain.GetAssemblies().Where(x => !x.IsDynamic))
+            // Loading types from dynamic assemblies while new types are being emitted will throw.
+            // This happens a lot in test when fake libraries emit fake types. We filter away
+            // dynamic types here, and if they are needed you will need to pass them in yourself.
+            // Also this is lazy because some types seems to not be loadable if we get them too early.
+            typesInAssemblies = new Lazy<IReadOnlyList<Type>>(() =>
+                (assemblies ?? AppDomain.CurrentDomain.GetAssemblies().Where(x => !x.IsDynamic))
                 .SelectMany(x => x.GetTypes())
-                .ToList();
+                .ToList(), isThreadSafe: true);
         }
 
         public string ToDiscriminator(Type type)
@@ -60,7 +62,7 @@ namespace HybridDb.Config
 
         Type TypeByShortName(Type basetype, string shortname)
         {
-            var matchingTypes = types
+            var matchingTypes = typesInAssemblies.Value
                 .Where(x => ShortNameByType(x) == shortname && basetype.IsAssignableFrom(x))
                 .ToList();
 
