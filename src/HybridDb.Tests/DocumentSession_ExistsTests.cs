@@ -112,6 +112,17 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void Exists_NotInConfig_NotInSession_NotInDb()
+        {
+            var id = NewId();
+
+            using var session = store.OpenSession();
+
+            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(false);
+            etag.ShouldBe(null);
+        }
+
+        [Fact]
         public void Exists_InSession_Stored_AndSavedInDb()
         {
             Document<Entity>();

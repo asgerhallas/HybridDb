@@ -357,7 +357,7 @@ namespace HybridDb
         }
 
         public bool TryGetManagedEntity(Type type, string key, out ManagedEntity entity) => 
-            entities.TryGetValue(new EntityKey(store.Configuration.GetExactDesignFor(type).Table, key), out entity);
+            entities.TryGetValue(new EntityKey(store.Configuration.GetOrCreateDesignFor(type).Table, key), out entity);
 
         public void Enlist(DocumentTransaction tx)
         {
