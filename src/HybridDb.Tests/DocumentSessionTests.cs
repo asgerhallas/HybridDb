@@ -1352,12 +1352,12 @@ namespace HybridDb.Tests
             Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
                 .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");
         }
+         
 
         public class EntityWithFunnyKey
         {
             public Guid Id { get; set; }
         }
-
 
         public class EntityProjection
         {

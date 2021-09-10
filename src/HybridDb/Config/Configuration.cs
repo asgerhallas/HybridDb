@@ -56,6 +56,8 @@ namespace HybridDb.Config
                     .Match<InsertCommand>(insertCommand => InsertCommand.Execute(tx, insertCommand))
                     .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
                     .Match<DeleteCommand>(deleteCommand => DeleteCommand.Execute(tx, deleteCommand))
+                    .Match<GetCommand>(getCommand => GetCommand.Execute(tx, getCommand))
+                    .Match<ExistsCommand>(existsCommand => ExistsCommand.Execute(tx, existsCommand))
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
             Register(_ => new DocumentMigrator(this));

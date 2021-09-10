@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Transactions;
 using Dapper;
+using HybridDb.Commands;
 using HybridDb.Config;
 using IsolationLevel = System.Data.IsolationLevel;
 
@@ -55,15 +55,7 @@ namespace HybridDb
 
         public T Execute<T>(Command<T> command) => Store.Execute(this, command);
 
-        public IDictionary<string, object> Get(DocumentTable table, string key)
-        {
-            storeStats.NumberOfRequests++;
-            storeStats.NumberOfGets++;
-
-            var sql = $"select * from {Store.Database.FormatTableNameAndEscape(table.Name)} where {DocumentTable.IdColumn.Name} = @Id";
-
-            return (IDictionary<string, object>) SqlConnection.Query(sql, new {Id = key}, SqlTransaction).SingleOrDefault();
-        }
+        public IDictionary<string, object> Get(DocumentTable table, string key) => Execute(new GetCommand(table, key));
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
             DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 

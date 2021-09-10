@@ -116,6 +116,23 @@ namespace HybridDb
         }
 
         public Guid? GetEtagFor(object entity) => TryGetManagedEntity(entity)?.Etag;
+        
+        public bool Exists<T>(string key, out Guid? etag) where T : class => Exists(typeof(T), key, out etag);
+
+        public bool Exists(Type type, string key, out Guid? etag)
+        {
+            if (TryGetManagedEntity(type, key, out var entity))
+            {
+                etag = entity.Etag;
+                return true;
+            }
+
+            var design = store.Configuration.GetOrCreateDesignFor(type);
+
+            etag = Transactionally(tx => tx.Execute(new ExistsCommand(design.Table, key)));
+
+            return etag != null;
+        }
 
         public Dictionary<string, List<string>> GetMetadataFor(object entity) => TryGetManagedEntity(entity)?.Metadata;
 
@@ -329,15 +346,18 @@ namespace HybridDb
 
         public bool TryGetManagedEntity<T>(string key, out T entity)
         {
-            if (entities.TryGetValue(new EntityKey(store.Configuration.GetExactDesignFor(typeof(T)).Table, key), out var managedEntity))
+            if (TryGetManagedEntity(typeof(T), key, out var entityObject))
             {
-                entity = (T)managedEntity.Entity;
+                entity = (T) entityObject.Entity;
                 return true;
             }
 
             entity = default;
             return false;
         }
+
+        public bool TryGetManagedEntity(Type type, string key, out ManagedEntity entity) => 
+            entities.TryGetValue(new EntityKey(store.Configuration.GetExactDesignFor(type).Table, key), out entity);
 
         public void Enlist(DocumentTransaction tx)
         {
