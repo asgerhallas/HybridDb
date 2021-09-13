@@ -409,15 +409,22 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var messages = await queue1.Events
-                .Merge(queue2.Events)
+            var messagesA = await queue1.Events
                 .OfType<MessageHandled>()
-                .Take(3)
+                .Take(2)
                 .Select(x => x.Message)
                 .ToList()
                 .FirstAsync();
 
-            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "2", "3");
+            var messagesB = await queue2.Events
+                .OfType<MessageHandled>()
+                .Take(1)
+                .Select(x => x.Message)
+                .ToList()
+                .FirstAsync();
+
+            messagesA.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "3");
+            messagesB.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2");
         }
 
         [Fact]
