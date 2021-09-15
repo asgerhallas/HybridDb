@@ -8,11 +8,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
+using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Queue
 {
@@ -149,10 +151,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task Poison_GoesToErrorTopic()
         {
-            var queue = StartQueue(new MessageQueueOptions
-            {
-                ErrorTopic = "myfails"
-            });
+            var queue = StartQueue();
 
             A.CallTo(handler).WithReturnType<Task>()
                 .Invokes(x => throw new ArgumentException());
@@ -171,7 +170,9 @@ namespace HybridDb.Tests.Queue
                 .OfType<PoisonMessage>()
                 .FirstAsync();
 
-            var message = (MyMessage)store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), "myfails"));
+            var message = (MyMessage)store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(), 
+                new List<string>{ "errors/default" }));
 
             message.Text.ShouldBe("Failing command");
         }
@@ -365,14 +366,15 @@ namespace HybridDb.Tests.Queue
         {
             var queue = StartQueue(new MessageQueueOptions
             {
-                InboxTopic = "a"
+                InboxTopics = ListOf("a")
             });
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"), "a");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "b");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "a");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "a");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "b");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"), "a");
 
                 session.SaveChanges();
             }
@@ -384,47 +386,78 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
-            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "3");
+            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "4");
         }
 
         [Fact]
-        public async Task Topics_MultipleQueues()
+        public async Task Topics_MultipleTopics()
         {
-            var queue1 = StartQueue(new MessageQueueOptions
+            var queue = StartQueue(new MessageQueueOptions
             {
-                InboxTopic = "a"
-            });
-
-            var queue2 = StartQueue(new MessageQueueOptions
-            {
-                InboxTopic = "b"
+                InboxTopics = ListOf("a", "b")
             });
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"), "a");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "b");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "a");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "a");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "b");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"), "c");
 
                 session.SaveChanges();
             }
 
-            var messagesA = await queue1.Events
+            var messages = await queue.Events
                 .OfType<MessageHandled>()
                 .Take(2)
                 .Select(x => x.Message)
                 .ToList()
                 .FirstAsync();
 
-            var messagesB = await queue2.Events
+            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "3");
+        }
+
+
+        [Fact]
+        public async Task Topics_MultipleQueues()
+        {
+            var queue1 = StartQueue(new MessageQueueOptions
+            {
+                InboxTopics = ListOf("a", "c")
+            });
+
+            var queue2 = StartQueue(new MessageQueueOptions
+            {
+                InboxTopics = ListOf("b", "default")
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "a");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "b");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"), "a");
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "5"), "c");
+
+                session.SaveChanges();
+            }
+
+            var messagesA = await queue1.Events
                 .OfType<MessageHandled>()
-                .Take(1)
+                .Take(3)
                 .Select(x => x.Message)
                 .ToList()
                 .FirstAsync();
 
-            messagesA.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "3");
-            messagesB.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2");
+            var messagesB = await queue2.Events
+                .OfType<MessageHandled>()
+                .Take(2)
+                .Select(x => x.Message)
+                .ToList()
+                .FirstAsync();
+
+            messagesA.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "4", "5");
+            messagesB.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "3");
         }
 
         [Fact]

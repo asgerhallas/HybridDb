@@ -2,6 +2,7 @@ using System;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
+using System.Collections.Generic;
 
 namespace HybridDb.Queue
 {
@@ -10,8 +11,7 @@ namespace HybridDb.Queue
         public TimeSpan IdleDelay { get; set; } = TimeSpan.FromMilliseconds(100);
         public int MaxConcurrency { get; set; } = 4;
         
-        public string InboxTopic { get; set; } = "messages";
-        public string ErrorTopic { get; set; } = "errors";
+        public List<string> InboxTopics { get; set; } = new() { EnqueueCommand.DefaultTopic };
 
         public Func<IDocumentStore, IDocumentSession> CreateSession { get; set; } = store => store.OpenSession();
         public Func<CancellationTokenSource> GetCancellationTokenSource { get; set; } = () => new CancellationTokenSource();

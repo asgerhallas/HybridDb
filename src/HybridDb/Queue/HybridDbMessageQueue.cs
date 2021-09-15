@@ -151,7 +151,7 @@ namespace HybridDb.Queue
             {
                 // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                 // from the queue while handling it, so other machines/workers won't try to handle it too.
-                var message = tx.Execute(new DequeueCommand(table, options.InboxTopic));
+                var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
 
                 if (message != null) return message;
 
@@ -197,7 +197,7 @@ namespace HybridDb.Queue
 
                 logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
 
-                tx.Execute(new EnqueueCommand(table, message, options.ErrorTopic));
+                tx.Execute(new EnqueueCommand(table, message, $"errors/{message.Topic}"));
 
                 events.OnNext(new PoisonMessage(context, message, exception));
 
@@ -220,7 +220,10 @@ namespace HybridDb.Queue
         }
     }
 
-    public abstract record HybridDbMessage(string Id);
+    public abstract record HybridDbMessage(string Id)
+    {
+        public string Topic { get; init; }
+    }
     
     public interface IHybridDbQueueEvent { }
 
