@@ -220,10 +220,7 @@ namespace HybridDb.Queue
         }
     }
 
-    public abstract record HybridDbMessage(string Id)
-    {
-        public string Topic { get; init; }
-    }
+    public abstract record HybridDbMessage(string Id, string Topic = null);
     
     public interface IHybridDbQueueEvent { }
 
