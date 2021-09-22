@@ -243,7 +243,9 @@ namespace HybridDb
 
                         if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
                         {
-                            store.Configuration.BackupWriter.Write($"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", Encoding.UTF8.GetBytes(managedEntity.Document));
+                            store.Configuration.BackupWriter.Write(
+                                $"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", 
+                                Encoding.UTF8.GetBytes(managedEntity.Document));
                         }
 
                         managedEntity.Version = configuredVersion;
