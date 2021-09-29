@@ -27,7 +27,7 @@ namespace HybridDb.Migrations.Schema.Commands
         {
             var sql = new SqlBuilder();
             Builder(sql, store.Database);
-            store.Database.RawExecute(sql.ToString(), commandTimeout: CommandTimeout);
+            store.Database.RawExecute(sql.ToString(), new Parameters(sql.Parameters), commandTimeout: CommandTimeout);
         }
     }
 }

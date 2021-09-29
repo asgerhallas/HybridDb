@@ -1,10 +1,13 @@
 using System;
+using System.Data;
+using System.Data.SqlClient;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
 using Xunit;
 using Xunit;
 using Xunit.Abstractions;
+using SqlCommand = HybridDb.Migrations.Schema.Commands.SqlCommand;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
@@ -24,6 +27,18 @@ namespace HybridDb.Tests.Migrations.Commands
 
             store.Execute(new SqlCommand("add some index", (sql, db) => sql
                 .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int")));
+        }
+
+        [Fact]
+        public void CanUseParameters()
+        {
+            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
+            store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
+
+            store.Execute(new SqlCommand("add some data", (sql, db) => sql
+                .Append(
+                    $"insert into {db.FormatTableNameAndEscape("Entities")} ({db.Escape("Col1")}) values (@value)", 
+                    new SqlParameter("@value", SqlDbType.Int) { Value = 1 })));
         }
 
         [Fact]
