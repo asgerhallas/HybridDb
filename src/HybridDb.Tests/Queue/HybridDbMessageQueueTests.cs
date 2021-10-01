@@ -58,8 +58,8 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
-        }       
-        
+        }
+
         [Fact]
         public async Task DequeueAndHandle_AfterMuchIdle()
         {
@@ -84,8 +84,8 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
-        }       
-        
+        }
+
         [Fact]
         public async Task Enqueue_Idempotent()
         {
@@ -112,9 +112,9 @@ namespace HybridDb.Tests.Queue
             await queue.Events.OfType<QueueIdle>().FirstAsync();
 
             messages.Count.ShouldBe(1);
-            ((MyMessage)messages.Single()).Text.ShouldBe("A");
-        }        
-        
+            ((MyMessage) messages.Single()).Text.ShouldBe("A");
+        }
+
         [Fact]
         public async Task Retry_ThenPoison()
         {
@@ -122,7 +122,7 @@ namespace HybridDb.Tests.Queue
 
             A.CallTo(handler).WithReturnType<Task>()
                 .Invokes(x => throw new ArgumentException());
-            
+
             using (var session = store.OpenSession())
             {
                 session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
@@ -170,10 +170,49 @@ namespace HybridDb.Tests.Queue
                 .OfType<PoisonMessage>()
                 .FirstAsync();
 
-            var message = (MyMessage)store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(), 
-                new List<string>{ "errors/default" }));
+            var message = (MyMessage) store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> {"errors/default"}));
 
+            message.Text.ShouldBe("Failing command");
+        }
+
+        [Fact]
+        public async Task Poison_GoesToErrorTopic_TopicIsReadFromColumn()
+        {
+            A.CallTo(handler).WithReturnType<Task>()
+                .Invokes(x => throw new ArgumentException());
+
+            var id = Guid.NewGuid().ToString();
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage(id, "Failing command"), "mytopic");
+                session.SaveChanges();
+            }
+
+            // Manipulate the topic directly in database - like returning errors to queue
+            var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
+            store.Database.RawExecute(
+                $"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Topic] = 'myothertopic'");
+
+            var messages = new List<object>();
+
+            var queue = StartQueue(new MessageQueueOptions
+            {
+                InboxTopics = ListOf("mytopic", "myothertopic")
+            });
+
+            await queue.Events
+                .Do(messages.Add)
+                .OfType<PoisonMessage>()
+                .FirstAsync();
+
+            var message = (MyMessage) store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> {"errors/myothertopic"}));
+
+            message.Topic.ShouldBe("errors/myothertopic");
             message.Text.ShouldBe("Failing command");
         }
 
@@ -272,7 +311,7 @@ namespace HybridDb.Tests.Queue
             var q1Count = 0;
             var q2Count = 0;
             var q3Count = 0;
-            
+
             queue1.Events.OfType<MessageHandled>().Subscribe(_ => q1Count++);
             queue2.Events.OfType<MessageHandled>().Subscribe(_ => q2Count++);
             queue3.Events.OfType<MessageHandled>().Subscribe(_ => q3Count++);
@@ -290,7 +329,7 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             // Each message is handled only once
-            handled.Select(x => int.Parse(((MyMessage)x.Message).Text))
+            handled.Select(x => int.Parse(((MyMessage) x.Message).Text))
                 .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
@@ -416,7 +455,6 @@ namespace HybridDb.Tests.Queue
 
             messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "3");
         }
-
 
         [Fact]
         public async Task Topics_MultipleQueues()

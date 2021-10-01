@@ -24,10 +24,10 @@ namespace HybridDb.Queue
         {
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
 
-            var msg = (tx.SqlConnection.Query<(string Message, string Discriminator)>(@$"
+            var msg = (tx.SqlConnection.Query<(string Id, string Message, string Discriminator, string Topic)>(@$"
                     set nocount on; 
                     delete top(1) from {tablename} with (rowlock, readpast) 
-                    output deleted.Message, deleted.Discriminator 
+                    output deleted.Id, deleted.Message, deleted.Discriminator, deleted.Topic
                     where Topic in @Topics;
                     set nocount off;",
                 new { command.Topics }, 
@@ -38,7 +38,12 @@ namespace HybridDb.Queue
 
             var type = tx.Store.Configuration.TypeMapper.ToType(typeof(HybridDbMessage), msg.Discriminator);
 
-            return (HybridDbMessage)deserializer(msg.Message, type);
+            return (HybridDbMessage) deserializer(msg.Message, type) with
+            {
+                // If someone has written directly to the row in Sql Server, the row info takes precedence
+                Id = msg.Id,
+                Topic = msg.Topic
+            };
         }
     }
 }
