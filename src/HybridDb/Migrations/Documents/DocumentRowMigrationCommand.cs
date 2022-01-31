@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using HybridDb.Config;
 using static Indentional.Indent;
 
@@ -8,14 +9,16 @@ namespace HybridDb.Migrations.Documents
 {
     public abstract class DocumentRowMigrationCommand : RowMigrationCommand
     {
-        protected DocumentRowMigrationCommand(Type type, string idPrefix)
+        protected DocumentRowMigrationCommand(Type type, string idPrefix, params string[] ids)
         {
             Type = type;
             IdPrefix = idPrefix;
+            Ids = ids; // TODO: sanitize, as we don't use it as params
         }
 
         public Type Type { get; }
         public string IdPrefix { get; }
+        public IReadOnlyList<string> Ids { get; }
 
         public override bool Matches(Configuration configuration, Table table) =>
             table is DocumentTable && (
@@ -24,7 +27,8 @@ namespace HybridDb.Migrations.Documents
 
         public override SqlBuilder Matches(int? version) => new SqlBuilder()
             .Append(version != null, "Version < @version", new SqlParameter("version", version))
-            .Append(!string.IsNullOrEmpty(IdPrefix), " and Id LIKE @idPrefix + '%'", new SqlParameter("idPrefix", IdPrefix));
+            .Append(!string.IsNullOrEmpty(IdPrefix), " and Id LIKE @idPrefix + '%'", new SqlParameter("idPrefix", IdPrefix))
+            .Append(Ids.Any(), $" and Id in ({string.Join(", ", Ids.Select(x => $"'{x}'"))})");
 
         public override bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)
         {
@@ -38,9 +42,13 @@ namespace HybridDb.Migrations.Documents
                     but the row has discriminator {row.Get(DocumentTable.DiscriminatorColumn)}."));
             }
 
-            return row.Get(DocumentTable.VersionColumn) < version &&
-                   (string.IsNullOrEmpty(IdPrefix) || rowId.StartsWith(IdPrefix)) &&
-                   (Type == null || Type.IsAssignableFrom(design.DocumentType));
+            if (row.Get(DocumentTable.VersionColumn) >= version) return false;
+
+            if (!string.IsNullOrEmpty(IdPrefix) && !rowId.StartsWith(IdPrefix)) return false;
+
+            if (Ids.Any() && !Ids.Contains(rowId)) return false;
+
+            return Type == null || Type.IsAssignableFrom(design.DocumentType);
         }
     }
 }

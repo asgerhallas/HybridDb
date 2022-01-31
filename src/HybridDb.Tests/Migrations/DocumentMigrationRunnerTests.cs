@@ -6,7 +6,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Linq.Bonsai;
 using HybridDb.Migrations.Documents;
+using Serilog.Events;
+using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,7 +47,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
+        public async Task DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
@@ -63,6 +66,7 @@ namespace HybridDb.Tests.Migrations
 
             ResetConfiguration();
 
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
             Document<OtherEntity>().With(x => x.Number);
 
@@ -72,6 +76,8 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
 
             InitializeStore();
+
+            await store.DocumentMigration;
 
             // 3 UpdateProjections (DocumentTables)
             // + 2 for inline migrations
@@ -239,6 +245,52 @@ namespace HybridDb.Tests.Migrations
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
                 .ShouldBe(Encoding.UTF8.GetBytes(configuration.Serializer.Serialize(new Entity { Id = id, Property = "Asger" })));
         }
+
+        [Fact]
+        public async Task MigratesSelectedIds()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+
+            for (int i = 0; i < 10; i++)
+            {
+                store.Insert(table, i.ToString(), new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity())
+                });
+            }
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var migratedIds = new List<string>();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>(null, new []{ "2", "4", "8", "3" },
+                    (session, serializer, r) =>
+                    {
+                        migratedIds.Add(r.Get(DocumentTable.IdColumn));
+                        return r.Get(DocumentTable.DocumentColumn);
+                    })));
+
+            InitializeStore();
+
+            await store.DocumentMigration;
+            
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+                .ShouldBe(4);
+
+            migratedIds.ShouldBeLikeUnordered("2", "4", "8", "3");
+        }
+
 
         public class TrackingCommand : DocumentRowMigrationCommand
         {
