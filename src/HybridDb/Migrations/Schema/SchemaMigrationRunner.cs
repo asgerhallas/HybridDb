@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
-using HybridDb.Events.Commands;
 using HybridDb.Migrations.Schema.Commands;
 using Microsoft.Extensions.Logging;
 using static Indentional.Indent;
@@ -17,7 +15,7 @@ namespace HybridDb.Migrations.Schema
 {
     public class SchemaMigrationRunner
     {
-        static object locker = new object();
+        static readonly object locker = new();
 
         readonly ILogger logger;
         readonly DocumentStore store;
@@ -74,53 +72,50 @@ namespace HybridDb.Migrations.Schema
             {
                 lock (locker)
                 {
-                    using (var tx = BeginTransaction())
-                    {
-                        LockDatabase();
+                    using var tx = BeginTransaction();
+                    
+                    LockDatabase();
 
-                        action();
+                    action();
 
-                        tx.Complete();
-                    }
+                    tx.Complete();
                 }
             }
 
             logger.LogInformation($"Schema migrations ran in {{time}}ms on {{tables}}.", sw.ElapsedMilliseconds, isTempTables ? "temp tables" : "real tables");
         }
 
-        static TransactionScope BeginTransaction() => 
-            new TransactionScope(
-                TransactionScopeOption.RequiresNew, 
-                new TransactionOptions
-                {
-                    IsolationLevel = IsolationLevel.Serializable,
-                    Timeout = TimeSpan.FromMinutes(10)
-                }, 
-                TransactionScopeAsyncFlowOption.Suppress);
+        static TransactionScope BeginTransaction() => new(
+            TransactionScopeOption.RequiresNew, 
+            new TransactionOptions
+            {
+                IsolationLevel = IsolationLevel.Serializable,
+                Timeout = TimeSpan.FromMinutes(10)
+            }, 
+            TransactionScopeAsyncFlowOption.Suppress);
 
         void LockDatabase()
         {
-            using (var connection = store.Database.Connect(true))
+            using var connection = store.Database.Connect(true);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@Resource", $"HybridDb");
+            parameters.Add("@DbPrincipal", "public");
+            parameters.Add("@LockMode", "Exclusive");
+            parameters.Add("@LockOwner", "Transaction");
+            parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
+            parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
+
+            connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+
+            var result = parameters.Get<int>("@Result");
+
+            if (result < 0)
             {
-                var parameters = new DynamicParameters();
-                parameters.Add("@Resource", $"HybridDb");
-                parameters.Add("@DbPrincipal", "public");
-                parameters.Add("@LockMode", "Exclusive");
-                parameters.Add("@LockOwner", "Transaction");
-                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
-                parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
-
-                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
-
-                var result = parameters.Get<int>("@Result");
-
-                if (result < 0)
-                {
-                    throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
-                }
-
-                connection.Complete();
+                throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
             }
+
+            connection.Complete();
         }
 
         void TryCreateMetadataTable()

@@ -21,8 +21,8 @@ namespace HybridDb.Migrations.Schema.Commands
         {
             // TODO: sletter kun den første ser det ud til?
             var dropConstraints = new SqlBuilder()
-                .Append("DECLARE @ConstraintName nvarchar(200)")
-                .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
+                .Append($"DECLARE @ConstraintName nvarchar(200)")
+                .Append($"SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
                 .Append($"WHERE PARENT_OBJECT_ID = OBJECT_ID('{Table.Name}') ")
                 .Append($"AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'{Name}' AND object_id = OBJECT_ID(N'{Table.Name}'))")
                 .Append($"IF @ConstraintName IS NOT NULL ")

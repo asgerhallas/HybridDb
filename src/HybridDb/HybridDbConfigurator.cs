@@ -4,6 +4,7 @@ using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
+using HybridDb.Queue;
 using HybridDb.Serialization;
 using Microsoft.Extensions.Logging;
 
@@ -33,6 +34,8 @@ namespace HybridDb
         protected void UseMigrations(IReadOnlyList<Migration> migrations) => configuration.UseMigrations(migrations);
 
         protected void UseMigrations(params Migration[] migrations) => configuration.UseMigrations(migrations.ToList());
+        
+        protected void UseMessageQueue(string tablename = "messages") => configuration.UseMessageQueue(tablename);
 
         protected void UseBackupWriter(IBackupWriter writer) => configuration.UseBackupWriter(writer);
 

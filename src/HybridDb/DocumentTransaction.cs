@@ -95,13 +95,13 @@ namespace HybridDb
 
             if (isWindowed || top1)
             {
-                sqlx.Append("select count(*) as TotalResults")
+                sqlx.Append($"select count(*) as TotalResults")
                     .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
-                    .Append(";");
+                    .Append($";");
 
-                sqlx.Append(@"with WithRowNumber as (select *")
+                sqlx.Append($"with WithRowNumber as (select *")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
                     .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
@@ -109,10 +109,10 @@ namespace HybridDb
                     .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
-                    .Append(")")
+                    .Append($")")
                     .Append(top1, "select top 1", "select")
                     .Append(string.IsNullOrEmpty(select), "*", $"{@select}, RowNumber, __Discriminator, __LastOperation, __RowVersion")
-                    .Append("from WithRowNumber");
+                    .Append($"from WithRowNumber");
 
                 switch (window)
                 {
@@ -123,7 +123,7 @@ namespace HybridDb
 
                         sqlx.Append("where RowNumber >= @skip", new SqlParameter("skip", skip))
                             .Append(take > 0, "and RowNumber < @take", new SqlParameter("take", skip + take))
-                            .Append("order by RowNumber");
+                            .Append($"order by RowNumber");
                         break;
                     }
                     case SkipToId skipToId:

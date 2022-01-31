@@ -30,8 +30,8 @@ namespace HybridDb.Queue
             {
                 tx.SqlConnection.Execute(@$"
                     set nocount on; 
-                    insert into {tablename} (Topic, Id, CommitId, Discriminator, Message) 
-                    values (@Topic, @Id, @CommitId, @Discriminator, @Message); 
+                    insert into {tablename} (Topic, Id, CommitId, Discriminator, Version, Message) 
+                    values (@Topic, @Id, @CommitId, @Discriminator, @Version, @Message); 
                     set nocount off;",
                     new
                     {
@@ -39,6 +39,7 @@ namespace HybridDb.Queue
                         command.Message.Id,
                         tx.CommitId,
                         Discriminator = discriminator,
+                        Version = tx.Store.Configuration.ConfiguredVersion,
                         Message = serializer(command.Message)
                     },
                     tx.SqlTransaction);

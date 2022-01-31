@@ -1,4 +1,5 @@
 using System;
+using System.Data.SqlClient;
 using System.Linq;
 using HybridDb.Config;
 
@@ -29,11 +30,11 @@ namespace HybridDb.Migrations.Schema.Commands
             {
                 sql.Append(new SqlBuilder()
                     .Append(i > 0, ",")
-                    .Append(store.Database.Escape(column.Name))
+                    .AppendColumnName(column)
                     .Append(DdlCommandEx.BuildColumnSql(column)));
             }
 
-            sql.Append(") end;");
+            sql.Append($") end;");
 
             store.Database.RawExecute(sql.ToString(), schema: true);
         }

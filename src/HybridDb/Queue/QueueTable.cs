@@ -11,6 +11,7 @@ namespace HybridDb.Queue
             new Column<string>("Id", length: 850),
             new Column<Guid>("CommitId"),
             new Column<string>("Discriminator", length: 850),
+            new Column<int>("Version"),
             new Column<string>("Message", length: -1))
         { }
 
