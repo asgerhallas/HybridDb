@@ -46,7 +46,7 @@ namespace HybridDb.Migrations.Documents
 
             if (!string.IsNullOrEmpty(IdPrefix) && !rowId.StartsWith(IdPrefix)) return false;
 
-            if (Ids.Any() && !Ids.Contains(rowId)) return false;
+            if (Ids.Any() && !Ids.Contains(rowId, StringComparer.InvariantCultureIgnoreCase)) return false;
 
             return Type == null || Type.IsAssignableFrom(design.DocumentType);
         }

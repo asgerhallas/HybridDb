@@ -254,16 +254,23 @@ namespace HybridDb.Tests.Migrations
 
             var table = configuration.GetDesignFor<Entity>().Table;
 
-            for (int i = 0; i < 10; i++)
-            {
-                store.Insert(table, i.ToString(), new
+            void Insert(string id) =>
+                store.Insert(table, id, new
                 {
                     AwaitsReprojection = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new Entity())
                 });
-            }
+
+            Insert("a");
+            Insert("B");
+            Insert("C");
+            Insert("d");
+            Insert("E");
+            Insert("f");
+            Insert("g");
+            Insert("H");
 
             ResetConfiguration();
 
@@ -273,7 +280,7 @@ namespace HybridDb.Tests.Migrations
             var migratedIds = new List<string>();
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>(null, new []{ "2", "4", "8", "3" },
+                new InlineMigration(1, new ChangeDocument<Entity>(null, new []{ "b", "d", "e", "G" },
                     (session, serializer, r) =>
                     {
                         migratedIds.Add(r.Get(DocumentTable.IdColumn));
@@ -288,7 +295,7 @@ namespace HybridDb.Tests.Migrations
                 .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
                 .ShouldBe(4);
 
-            migratedIds.ShouldBeLikeUnordered("2", "4", "8", "3");
+            migratedIds.ShouldBeLikeUnordered("B", "d", "E", "g");
         }
 
 
