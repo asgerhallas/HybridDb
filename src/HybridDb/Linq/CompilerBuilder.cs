@@ -81,7 +81,7 @@ namespace HybridDb.Linq
             Func<BonsaiExpression, Emitter, Emitter, string> compiler) => (a, b, c) => compiler(a, new Emitter(b), new Emitter(c));
 
         public static LinqCompiler DefaultCompiler => Compose(PreProcessors.All, 
-            new InMethod(), 
+            new InMethodCompiler(), 
             new NormalizeComparisons(), 
             new CastEnums(), 
             new ColumnNameCompiler(), 

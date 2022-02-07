@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Linq.Plugins
         readonly Compiler compile;
         readonly Emitter emit;
 
-        public InMethodTests() => (compile, emit) = CompilerBuilder.ComposeFrontendAndBackend(PreProcessors.All, new InMethod(), new LinqCompilerRoot());
+        public InMethodTests() => (compile, emit) = CompilerBuilder.ComposeFrontendAndBackend(PreProcessors.All, new InMethodCompiler(), new LinqCompilerRoot());
 
         [Fact]
         public void Compile_InConstantArray()
@@ -23,7 +23,7 @@ namespace HybridDb.Tests.Linq.Plugins
             var needles = new[] {"Hello", "World"};
 
             compile(F<A>(x => x.Value.In(needles)))
-                .ShouldBeLike(new InMethod.In(
+                .ShouldBeLike(new InMethodCompiler.In(
                     new Column("Value", false, typeof(string)),
                     new List(Helpers.ListOf(
                             new Constant("Hello", typeof(string)),
@@ -34,7 +34,7 @@ namespace HybridDb.Tests.Linq.Plugins
         [Fact]
         public void Compile_InConstantParamsArray() =>
             compile(F<A>(x => x.Value.In("Hello", "World")))
-                .ShouldBeLike(new InMethod.In(
+                .ShouldBeLike(new InMethodCompiler.In(
                     new Column("Value", false, typeof(string)),
                     new List(Helpers.ListOf(
                             new Constant("Hello", typeof(string)),
@@ -53,7 +53,7 @@ namespace HybridDb.Tests.Linq.Plugins
             var needles = MakeNeedles();
 
             compile(F<A>(x => x.Value.In(needles)))
-                .ShouldBeLike(new InMethod.In(
+                .ShouldBeLike(new InMethodCompiler.In(
                     new Column("Value", false, typeof(string)),
                     new List(Helpers.ListOf(
                             new Constant("Hello", typeof(string)),
@@ -63,7 +63,7 @@ namespace HybridDb.Tests.Linq.Plugins
 
         [Fact]
         public void EmitSql_Constants() =>
-            emit(new InMethod.In(
+            emit(new InMethodCompiler.In(
                 new Column("Id", false, typeof(string)),
                 new List(Helpers.ListOf(
                         new Constant("Hello", typeof(string)),
@@ -73,7 +73,7 @@ namespace HybridDb.Tests.Linq.Plugins
 
         [Fact]
         public void EmitSql_Nothing() =>
-            emit(new InMethod.In(new Column("Id", false, typeof(string)), new List(new BonsaiExpression[0], typeof(string), typeof(string[]))))
+            emit(new InMethodCompiler.In(new Column("Id", false, typeof(string)), new List(new BonsaiExpression[0], typeof(string), typeof(string[]))))
                 .ShouldBe("0 <> 0");
 
         public class A

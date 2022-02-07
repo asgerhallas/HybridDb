@@ -8,7 +8,7 @@ using ShinySwitch;
 
 namespace HybridDb.Linq.Plugins
 {
-    public class InMethod : LinqPlugin
+    public class InMethodCompiler : LinqPlugin
     {
         public override BonsaiExpression Compile(Expression exp, Compiler top, Compiler next) => Switch<BonsaiExpression>.On(exp)
             .Match<MethodCallExpression>(methodCall =>
