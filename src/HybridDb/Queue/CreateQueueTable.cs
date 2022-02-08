@@ -24,6 +24,7 @@ namespace HybridDb.Queue
                 begin
                     CREATE TABLE [dbo].[{tableName}] (
                         [Topic] [nvarchar](850) NOT NULL,
+                        [Version] [nvarchar](40) NOT NULL,
 	                    [Id] [nvarchar](850) NOT NULL,
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Discriminator] [nvarchar](850) NOT NULL,

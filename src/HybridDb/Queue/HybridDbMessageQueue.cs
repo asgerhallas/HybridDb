@@ -34,12 +34,15 @@ namespace HybridDb.Queue
 
         public HybridDbMessageQueue(
             IDocumentStore store, 
-            Func<IDocumentSession, HybridDbMessage, Task> handler, 
-            MessageQueueOptions options = null)
+            Func<IDocumentSession, HybridDbMessage, Task> handler)
         {
             this.store = store;
             this.handler = handler;
-            this.options = options ?? new MessageQueueOptions();
+
+            if (!store.Configuration.TryResolve(out options))
+            {
+                throw new HybridDbException("MessageQueue is not enables. Please run UseMessageQueue in the configuration.");
+            }
 
             Events = this.options.ObserveEvents(events);
 

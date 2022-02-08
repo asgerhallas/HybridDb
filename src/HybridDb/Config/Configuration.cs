@@ -20,12 +20,13 @@ namespace HybridDb.Config
 {
     public class Configuration : ConfigurationContainer
     {
+        const string MetadataTableName = "HybridDb";
+
         readonly object gate = new();
 
         bool initialized;
 
-        internal readonly ConcurrentDictionary<string, Table> tables;
-        
+        readonly ConcurrentDictionary<string, Table> tables;
         readonly List<DocumentDesign> documentDesigns;
 
         public Configuration()
@@ -92,6 +93,9 @@ namespace HybridDb.Config
             {
                 // add this first in the collection, but after all other designs has been registered, so no registered document falls back to Document table
                 documentDesigns.Insert(0, new DocumentDesign(this, GetOrAddDocumentTable("Documents"), typeof(object), "object"));
+
+                // add a table for metadata
+                GetOrAddTable(new Table(MetadataTableName, new Column("SchemaVersion", typeof(int))));
 
                 initialized = true;
             }
@@ -216,6 +220,8 @@ namespace HybridDb.Config
                 return table;
             });
         }
+
+        public Table GetMetadataTable() => Tables[MetadataTableName];
 
         public void UseConnectionString(string connectionString) => ConnectionString = connectionString;
 

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
+using HybridDb.Config;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
 using ShouldBeLike;
@@ -24,17 +25,39 @@ namespace HybridDb.Tests.Queue
 
         public HybridDbMessageQueueTests(ITestOutputHelper output) : base(output)
         {
-            configuration.UseMessageQueue();
-
             handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
         }
 
         HybridDbMessageQueue StartQueue(MessageQueueOptions options = null)
         {
-            options = (options ?? new MessageQueueOptions())
-                .ReplayEvents(TimeSpan.FromSeconds(60));
+            configuration.UseMessageQueue(
+                (options ?? new MessageQueueOptions())
+                .ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            return Using(new HybridDbMessageQueue(store, handler, options));
+            return Using(new HybridDbMessageQueue(store, handler));
+        }
+
+        IDocumentStore CreateOtherStore(Action<Configuration> configurator)
+        {
+            var newConfiguration = new Configuration();
+            
+            newConfiguration.UseConnectionString(connectionString);
+
+            configurator(newConfiguration);
+            return Using(new DocumentStore(store, newConfiguration, true));
+        }
+
+        (HybridDbMessageQueue, IDocumentStore) StartOtherQueue(MessageQueueOptions options = null)
+        {
+            var newStore = CreateOtherStore(newConfiguration =>
+            {
+                newConfiguration.UseConnectionString(connectionString);
+                newConfiguration.UseMessageQueue(
+                    (options ?? new MessageQueueOptions())
+                    .ReplayEvents(TimeSpan.FromSeconds(60)));
+            });
+
+            return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
 
         public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
@@ -89,6 +112,9 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task Enqueue_Idempotent()
         {
+            configuration.UseMessageQueue(new MessageQueueOptions()
+                .ReplayEvents(TimeSpan.FromSeconds(60)));
+
             var id = Guid.NewGuid().ToString();
 
             using (var session = store.OpenSession())
@@ -105,7 +131,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = StartQueue();
+            var queue = Using(new HybridDbMessageQueue(store, handler));
 
             var messages = new List<object>();
             queue.Events.OfType<MessageHandling>().Select(x => x.Message).Subscribe(messages.Add);
@@ -183,6 +209,11 @@ namespace HybridDb.Tests.Queue
             A.CallTo(handler).WithReturnType<Task>()
                 .Invokes(x => throw new ArgumentException());
 
+            configuration.UseMessageQueue(new MessageQueueOptions
+            {
+                InboxTopics = ListOf("mytopic", "myothertopic")
+            }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
             var id = Guid.NewGuid().ToString();
 
             using (var session = store.OpenSession())
@@ -198,10 +229,8 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<object>();
 
-            var queue = StartQueue(new MessageQueueOptions
-            {
-                InboxTopics = ListOf("mytopic", "myothertopic")
-            });
+            // start the queue late, after above manipulation
+            var queue = Using(new HybridDbMessageQueue(store, handler));
 
             await queue.Events
                 .Do(messages.Add)
@@ -241,15 +270,105 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task DequeueAndHandle_SameOrEarlierVersion()
+        {
+            configuration.UseMessageQueue(new MessageQueueOptions
+            {
+                Version = new Version("1.2.3")
+            });
+
+            var store2 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
+            {
+                Version = new Version("1.2.4")
+            }));
+            
+            var store3 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
+            {
+                Version = new Version("1.2.5")
+            }));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"));
+
+                session.SaveChanges();
+            }
+
+            using (var session = store2.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"));
+
+                session.SaveChanges();
+            }
+
+            using (var session = store3.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "5"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "6"));
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "the last one"));
+
+                session.SaveChanges();
+            }
+
+            var queue = Using(new HybridDbMessageQueue(store2, handler));
+
+            var messages = await queue.Events
+                .OfType<MessageHandled>()
+                .Take(5)
+                .Select(x => x.Message)
+                .ToList()
+                .FirstAsync();
+
+            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "2", "3", "4", "the last one");
+        }        
+        
+        [Fact]
+        public async Task DequeueAndHandle_NotLaterVersions()
+        {
+            configuration.UseMessageQueue(new MessageQueueOptions
+            {
+                Version = new Version("1.2.3")
+            });
+
+            var store2 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
+            {
+                Version = new Version("1.2.4")
+            }));
+
+            using (var session = store2.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "later1"));
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "later2"));
+
+                session.SaveChanges();
+            }
+
+            var queue = Using(new HybridDbMessageQueue(store, handler));
+
+            await Should.ThrowAsync<TimeoutException>(async () => await queue.Events
+                .OfType<MessageHandled>()
+                .FirstAsync()
+                .Timeout(TimeSpan.FromSeconds(15)));
+        }
+
+        [Fact]
         public async Task IdlePerformance()
         {
-            var queue = Using(new HybridDbMessageQueue(
-                store,
-                (_, _) => Task.CompletedTask,
+            configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
-                    IdleDelay = TimeSpan.Zero,
-                }.ReplayEvents(TimeSpan.FromSeconds(60))));
+                    IdleDelay = TimeSpan.Zero
+                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
             var messages = await queue.Events
                 .OfType<QueueIdle>()
@@ -265,6 +384,11 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task ReadPerformance()
         {
+            configuration.UseMessageQueue(new MessageQueueOptions
+            {
+                MaxConcurrency = 10,
+            }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
             using (var session = store.OpenSession())
             {
                 foreach (var i in Enumerable.Range(1, 10000))
@@ -273,13 +397,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(
-                store,
-                (_, _) => Task.CompletedTask,
-                new MessageQueueOptions
-                {
-                    MaxConcurrency = 10,
-                }.ReplayEvents(TimeSpan.FromSeconds(60))));
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
             var messages = await queue.Events
                 .OfType<MessageHandled>()
@@ -294,6 +412,10 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task MultipleReaders()
         {
+            var queue1 = StartQueue();
+            var (queue2, _) = StartOtherQueue();
+            var (queue3, _) = StartOtherQueue();
+
             using (var session = store.OpenSession())
             {
                 foreach (var i in Enumerable.Range(1, 200))
@@ -303,10 +425,6 @@ namespace HybridDb.Tests.Queue
 
                 session.SaveChanges();
             }
-
-            var queue1 = StartQueue();
-            var queue2 = StartQueue();
-            var queue3 = StartQueue();
 
             var q1Count = 0;
             var q2Count = 0;
@@ -333,9 +451,9 @@ namespace HybridDb.Tests.Queue
                 .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
-            q1Count.ShouldBeGreaterThan(50);
-            q2Count.ShouldBeGreaterThan(50);
-            q3Count.ShouldBeGreaterThan(50);
+            q1Count.ShouldBeGreaterThan(30);
+            q2Count.ShouldBeGreaterThan(30);
+            q3Count.ShouldBeGreaterThan(30);
 
             allDiagnostics.OfType<MessageFailed>().ShouldBeEmpty();
         }
@@ -345,11 +463,10 @@ namespace HybridDb.Tests.Queue
         {
             var max = new StrongBox<int>(0);
 
-            var queue = Using(new HybridDbMessageQueue(
-                store,
-                MaxConcurrencyCounter(max),
-                new MessageQueueOptions()
-                    .ReplayEvents(TimeSpan.FromSeconds(60))));
+            configuration.UseMessageQueue(new MessageQueueOptions()
+                .ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max)));
 
             using (var session = store.OpenSession())
             {
@@ -374,13 +491,14 @@ namespace HybridDb.Tests.Queue
         {
             var max = new StrongBox<int>(0);
 
+            configuration.UseMessageQueue(new MessageQueueOptions
+            {
+                MaxConcurrency = 1
+            }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
             var queue = Using(new HybridDbMessageQueue(
                 store,
-                MaxConcurrencyCounter(max),
-                new MessageQueueOptions
-                {
-                    MaxConcurrency = 1
-                }.ReplayEvents(TimeSpan.FromSeconds(60))));
+                MaxConcurrencyCounter(max)));
 
             using (var session = store.OpenSession())
             {
@@ -464,7 +582,7 @@ namespace HybridDb.Tests.Queue
                 InboxTopics = ListOf("a", "c")
             });
 
-            var queue2 = StartQueue(new MessageQueueOptions
+            var (queue2, _) = StartOtherQueue(new MessageQueueOptions
             {
                 InboxTopics = ListOf("b", "default")
             });
@@ -501,10 +619,12 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public void CancellationDispose()
         {
-            Should.NotThrow(() => new HybridDbMessageQueue(store, handler, new MessageQueueOptions
+            configuration.UseMessageQueue(new MessageQueueOptions
             {
                 GetCancellationTokenSource = () => new CancellationTokenSource(0)
-            }).Dispose());
+            });
+
+            Should.NotThrow(() => new HybridDbMessageQueue(store, handler).Dispose());
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)

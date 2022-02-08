@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Queue
     {
         public EnqueueCommandTests(ITestOutputHelper output) : base(output)
         {
-            configuration.UseMessageQueue();
+            configuration.UseMessageQueue(new MessageQueueOptions());
         }
 
         [Fact]

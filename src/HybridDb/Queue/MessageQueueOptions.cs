@@ -8,6 +8,7 @@ namespace HybridDb.Queue
 {
     public class MessageQueueOptions
     {
+        public Version Version { get; set; } = new Version(1, 0);
         public TimeSpan IdleDelay { get; set; } = TimeSpan.FromMilliseconds(100);
         public int MaxConcurrency { get; set; } = 4;
         

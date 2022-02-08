@@ -22,15 +22,21 @@ namespace HybridDb.Queue
 
         public static HybridDbMessage Execute(Func<string, Type, object> deserializer, DocumentTransaction tx, DequeueCommand command)
         {
+            var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
 
             var msg = (tx.SqlConnection.Query<(string Id, string Message, string Discriminator, string Topic)>(@$"
                     set nocount on; 
                     delete top(1) from {tablename} with (rowlock, readpast) 
                     output deleted.Id, deleted.Message, deleted.Discriminator, deleted.Topic
-                    where Topic in @Topics;
+                    where Topic in @Topics
+                    and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid);
                     set nocount off;",
-                new { command.Topics }, 
+                new
+                {
+                    command.Topics,
+                    Version = options.Version.ToString()
+                }, 
                 tx.SqlTransaction
             )).SingleOrDefault();
 

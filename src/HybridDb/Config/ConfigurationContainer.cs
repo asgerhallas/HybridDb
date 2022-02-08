@@ -10,11 +10,11 @@ namespace HybridDb.Config
         readonly List<object> tracked = new List<object>();
         readonly ConcurrentDictionary<Type, Lazy<object>> factories = new ConcurrentDictionary<Type, Lazy<object>>();
 
-        public void Register<T>(Func<IContainerActivator, T> factory)
+        public bool Register<T>(Func<IContainerActivator, T> factory)
         {
             var activator = new Lazy<object>(() => Track(factory(this)), isThreadSafe: true);
 
-            factories.AddOrUpdate(typeof(T), key => activator, (key, current) => activator);
+            return factories.TryAdd(typeof(T), activator);
         }
 
         public void Decorate<T>(Func<IContainerActivator, T, T> factory)
@@ -24,14 +24,26 @@ namespace HybridDb.Config
                 (key, decoratee) => new Lazy<object>(() => Track(factory(this, (T) decoratee.Value)), isThreadSafe: true));
         }
 
-        public T Resolve<T>()
+        public bool TryResolve<T>(out T result)
         {
             if (!factories.TryGetValue(typeof(T), out var activator))
+            {
+                result = default;
+                return false;
+            }
+
+            result = (T) activator.Value;
+            return true;
+        }
+
+        public T Resolve<T>()
+        {
+            if (!TryResolve<T>(out var result))
             {
                 throw new InvalidOperationException($"No activator registered for {typeof(T)}");
             }
 
-            return (T) activator.Value;
+            return result;
         }
 
         public void Dispose()

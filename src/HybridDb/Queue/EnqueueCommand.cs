@@ -22,20 +22,21 @@ namespace HybridDb.Queue
 
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
         {
+            var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
-
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.GetType());
 
             try
             {
                 tx.SqlConnection.Execute(@$"
                     set nocount on; 
-                    insert into {tablename} (Topic, Id, CommitId, Discriminator, Message) 
-                    values (@Topic, @Id, @CommitId, @Discriminator, @Message); 
+                    insert into {tablename} (Topic, Version, Id, CommitId, Discriminator, Message) 
+                    values (@Topic, @Version, @Id, @CommitId, @Discriminator, @Message); 
                     set nocount off;",
                     new
                     {
                         command.Message.Topic,
+                        Version = options.Version.ToString(),
                         command.Message.Id,
                         tx.CommitId,
                         Discriminator = discriminator,

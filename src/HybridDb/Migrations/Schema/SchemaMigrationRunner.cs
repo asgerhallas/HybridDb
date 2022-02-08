@@ -7,6 +7,7 @@ using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
+using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Migrations.Schema.Commands;
 using Microsoft.Extensions.Logging;
@@ -125,9 +126,7 @@ namespace HybridDb.Migrations.Schema
 
         void TryCreateMetadataTable()
         {
-            var metadata = new Table("HybridDb", new Column("SchemaVersion", typeof(int)));
-
-            store.Configuration.tables.TryAdd(metadata.Name, metadata);
+            var metadata = store.Configuration.GetMetadataTable();
 
             store.Execute(new CreateTable(metadata));
 
