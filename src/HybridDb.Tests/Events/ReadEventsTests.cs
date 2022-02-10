@@ -41,7 +41,7 @@ namespace HybridDb.Tests.Events
             UseRealTables();
             UseTableNamePrefix(nameof(NoReadPast_MinActiveTransaction));
 
-            InitializeStore();
+            TouchStore();
 
             store.Transactionally(IsolationLevel.ReadCommitted, tx1 =>
             {

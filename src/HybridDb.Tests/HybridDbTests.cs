@@ -141,7 +141,10 @@ namespace HybridDb.Tests
             activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration, autoInitialize)));
         }
 
-        protected void InitializeStore()
+        /// <summary>
+        /// Creates the store. Also initializes it, unless NoInitialize() has been called.
+        /// </summary>
+        protected void TouchStore()
         {
             var _ = store;
         }

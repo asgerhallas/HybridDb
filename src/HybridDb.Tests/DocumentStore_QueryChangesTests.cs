@@ -18,7 +18,7 @@ namespace HybridDb.Tests
 
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
@@ -41,7 +41,7 @@ namespace HybridDb.Tests
 
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
@@ -66,7 +66,7 @@ namespace HybridDb.Tests
 
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
@@ -92,7 +92,7 @@ namespace HybridDb.Tests
 
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
@@ -119,7 +119,7 @@ namespace HybridDb.Tests
 
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
@@ -166,7 +166,7 @@ namespace HybridDb.Tests
 
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 

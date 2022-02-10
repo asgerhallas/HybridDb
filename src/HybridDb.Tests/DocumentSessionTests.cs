@@ -834,7 +834,7 @@ namespace HybridDb.Tests
 
             Document<Entity>();
 
-            InitializeStore();
+            TouchStore();
 
             UseMigrations(new InlineMigration(1, new ChangeDocumentAsJObject<Entity>(x => { x["Property"] = "Peter"; })));
 
@@ -882,7 +882,7 @@ namespace HybridDb.Tests
             ResetConfiguration();
             Document<Entity>();
 
-            InitializeStore();
+            TouchStore();
 
             UseMigrations(new InlineMigration(1), new InlineMigration(2));
 

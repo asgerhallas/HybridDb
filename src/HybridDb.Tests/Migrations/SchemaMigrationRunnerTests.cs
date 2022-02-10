@@ -42,7 +42,6 @@ namespace HybridDb.Tests.Migrations
 
             runner.Run();
 
-            configuration.Tables.Keys.ShouldNotContain("HybridDb");
             store.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Any().ShouldBe(false);
         }
 
@@ -299,7 +298,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns()
         {
-            InitializeStore();
+            TouchStore();
 
             var command = new CountingCommand();
 

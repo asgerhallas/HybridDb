@@ -41,7 +41,7 @@ namespace HybridDb.Queue
 
             if (!store.Configuration.TryResolve(out options))
             {
-                throw new HybridDbException("MessageQueue is not enables. Please run UseMessageQueue in the configuration.");
+                throw new HybridDbException("MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
             }
 
             Events = this.options.ObserveEvents(events);

@@ -3,12 +3,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Transactions;
 using Dapper;
-using HybridDb.Config;
-using HybridDb.Events;
-using HybridDb.Events.Commands;
 using HybridDb.Migrations.Schema.Commands;
 using Microsoft.Extensions.Logging;
 using static Indentional.Indent;
@@ -36,6 +32,9 @@ namespace HybridDb.Migrations.Schema
 
         public void Run()
         {
+            store.Configuration.Initialize();
+            store.Database.Initialize();
+
             if (!store.Configuration.RunUpfrontMigrations)
                 return;
             

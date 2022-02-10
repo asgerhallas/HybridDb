@@ -129,9 +129,10 @@ namespace HybridDb.Tests
             designs[2].DecendentsAndSelf.Values.ShouldBe(new[] { designs[2] });
 
             var tables = configuration.Tables.Keys.OrderBy(x => x).ToList();
-            tables.Count.ShouldBe(2);
+            tables.Count.ShouldBe(3);
             tables[0].ShouldBe("Documents");
-            tables[1].ShouldBe("MoreDerivedEntity1s");
+            tables[1].ShouldBe("HybridDb");
+            tables[2].ShouldBe("MoreDerivedEntity1s");
         }
 
         [Fact]

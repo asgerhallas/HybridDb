@@ -7,12 +7,14 @@ namespace HybridDb.Queue
 {
     public static class QueueEx
     {
-        public static void UseMessageQueue(this Configuration config, MessageQueueOptions options, string tablename = "messages")
+        public static void UseMessageQueue(this Configuration config, MessageQueueOptions options = null)
         {
-            if (!config.Register(_ => options))
+            options ??= new MessageQueueOptions();
+
+            if (!config.Register(_ => options, overwriteExisting: false))
                 throw new HybridDbException("Only one message queue can be enabled per store.");
 
-            config.GetOrAddTable(new QueueTable(tablename));
+            config.GetOrAddTable(new QueueTable(options.TableName));
 
             config.Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((_, decoratee) => (tx, command) => () =>
                 Switch<object>.On(command)

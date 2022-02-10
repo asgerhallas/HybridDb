@@ -49,7 +49,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             Document<JObject>("Cases", discriminator: "DV.Application.Cases.Case, DV.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 
-            InitializeStore();
+            TouchStore();
 
             var after = store.Query(new DocumentTable("Cases"), out _).Single();
 
@@ -81,7 +81,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             Document<JObject>("Cases", discriminator: "DV.Application.Cases.Case, DV.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 
-            InitializeStore();
+            TouchStore();
 
             log.Where(x => x.Exception != null).ShouldBeEmpty();
 
@@ -114,7 +114,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             serializer.EnableAutomaticBackReferences();
             UseSerializer(serializer);
 
-            InitializeStore();
+            TouchStore();
 
             var after = store.Query(new DocumentTable("BuildingParts"), out _).Single();
 

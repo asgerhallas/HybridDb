@@ -410,6 +410,16 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public void MultipleReader_OnlyOnePerStore()
+        {
+            configuration.UseMessageQueue(new MessageQueueOptions());
+
+            Should.Throw<HybridDbException>(() => configuration
+                .UseMessageQueue(new MessageQueueOptions()))
+                .Message.ShouldBe("Only one message queue can be enabled per store.");
+        }
+
+        [Fact]
         public async Task MultipleReaders()
         {
             var queue1 = StartQueue();

@@ -24,8 +24,6 @@ namespace HybridDb.Config
 
         readonly object gate = new();
 
-        bool initialized;
-
         readonly ConcurrentDictionary<string, Table> tables;
         readonly List<DocumentDesign> documentDesigns;
 
@@ -66,6 +64,8 @@ namespace HybridDb.Config
 
         public ITypeMapper TypeMapper => Resolve<ITypeMapper>();
 
+        internal bool IsInitialized { get; private set; }
+
         public string ConnectionString { get; private set; }
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
@@ -87,7 +87,7 @@ namespace HybridDb.Config
 
         internal void Initialize()
         {
-            if (initialized) return;
+            if (IsInitialized) return;
 
             lock (gate)
             {
@@ -97,7 +97,7 @@ namespace HybridDb.Config
                 // add a table for metadata
                 GetOrAddTable(new Table(MetadataTableName, new Column("SchemaVersion", typeof(int))));
 
-                initialized = true;
+                IsInitialized = true;
             }
         }
 
@@ -212,7 +212,7 @@ namespace HybridDb.Config
 
             return tables.GetOrAdd(table.Name, name =>
             {
-                if (initialized)
+                if (IsInitialized)
                 {
                     throw new InvalidOperationException($"You can not register the table '{name}' after store has been initialized.");
                 }

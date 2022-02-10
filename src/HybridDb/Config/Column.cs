@@ -5,10 +5,10 @@ namespace HybridDb.Config
 {
     public class Column
     {
-        public Column(string name, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false) 
-            : this(name, null, type, length, defaultValue, isPrimaryKey) { }
+        public Column(string name, Type type, int? length = null, bool? nullable = null, object defaultValue = null, bool isPrimaryKey = false) 
+            : this(name, null, type, length, nullable, defaultValue, isPrimaryKey) { }
 
-        public Column(string name, SqlDbType? dbType, Type type, int? length = null, object defaultValue = null, bool isPrimaryKey = false)
+        public Column(string name, SqlDbType? dbType, Type type, int? length = null, bool? nullable = null, object defaultValue = null, bool isPrimaryKey = false)
         {
             Type = System.Nullable.GetUnderlyingType(type) ?? type;
 
@@ -25,8 +25,12 @@ namespace HybridDb.Config
             Length = length;
             IsPrimaryKey = isPrimaryKey;
 
-            Nullable = type.CanBeNull() && !IsPrimaryKey;
+            var canBeNull = type.CanBeNull() && !IsPrimaryKey;
 
+            Nullable = nullable is null
+                ? canBeNull 
+                : nullable.Value && canBeNull;
+             
             if (Type.IsEnum)
             {
                 Type = typeof(Enum);
@@ -101,7 +105,7 @@ namespace HybridDb.Config
 
     public class Column<T> : Column
     {
-        public Column(string name, int? length = null, object defaultValue = null, bool isPrimaryKey = false) : base(name, typeof(T), length, defaultValue, isPrimaryKey) { }
-        public Column(string name, SqlDbType? dbType, int? length = null, object defaultValue = null, bool isPrimaryKey = false) : base(name, dbType, typeof(T), length, defaultValue, isPrimaryKey) { }
+        public Column(string name, int? length = null, bool? nullable = null, object defaultValue = null, bool isPrimaryKey = false) : base(name, typeof(T), length, nullable, defaultValue, isPrimaryKey) { }
+        public Column(string name, SqlDbType? dbType, int? length = null, bool? nullable = null, object defaultValue = null, bool isPrimaryKey = false) : base(name, dbType, typeof(T), length, nullable, defaultValue, isPrimaryKey) { }
     }
 }

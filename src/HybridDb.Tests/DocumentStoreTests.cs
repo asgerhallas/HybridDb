@@ -720,7 +720,7 @@ namespace HybridDb.Tests
             UseTableNamePrefix(Guid.NewGuid().ToString());
             Document<Entity>().With(x => x.Property);
 
-            InitializeStore();
+            TouchStore();
 
             Parallel.For(0, 10, x =>
             {

@@ -75,7 +75,7 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
                 new InlineMigration(2, new ChangeDocument<OtherEntity>((serializer, bytes) => bytes)));
 
-            InitializeStore();
+            TouchStore();
 
             await store.DocumentMigration;
 
@@ -204,7 +204,7 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
             Document<Entity>().With(x => x.Number);
 
-            InitializeStore();
+            TouchStore();
 
             UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((x, y) => throw new Exception())));
 
@@ -239,7 +239,7 @@ namespace HybridDb.Tests.Migrations
             var backupWriter = new FakeBackupWriter();
             UseBackupWriter(backupWriter);
 
-            InitializeStore();
+            TouchStore();
 
             backupWriter.Files.Count.ShouldBe(1);
             backupWriter.Files[$"HybridDb.Tests.HybridDbTests+Entity_{id}_0.bak"]
@@ -287,7 +287,7 @@ namespace HybridDb.Tests.Migrations
                         return r.Get(DocumentTable.DocumentColumn);
                     })));
 
-            InitializeStore();
+            TouchStore();
 
             await store.DocumentMigration;
             

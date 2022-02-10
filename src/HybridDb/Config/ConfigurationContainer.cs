@@ -10,11 +10,15 @@ namespace HybridDb.Config
         readonly List<object> tracked = new List<object>();
         readonly ConcurrentDictionary<Type, Lazy<object>> factories = new ConcurrentDictionary<Type, Lazy<object>>();
 
-        public bool Register<T>(Func<IContainerActivator, T> factory)
+        public bool Register<T>(Func<IContainerActivator, T> factory, bool overwriteExisting = true)
         {
             var activator = new Lazy<object>(() => Track(factory(this)), isThreadSafe: true);
 
-            return factories.TryAdd(typeof(T), activator);
+            var addOrUpdate = factories.AddOrUpdate(typeof(T), 
+                _ => activator, 
+                (_, existing) => overwriteExisting ? activator : existing);
+
+            return addOrUpdate == activator;
         }
 
         public void Decorate<T>(Func<IContainerActivator, T, T> factory)

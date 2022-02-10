@@ -81,13 +81,11 @@ namespace HybridDb
         {
             if (IsInitialized) throw new InvalidOperationException("Store is already initialized.");
 
-            Configuration.Initialize();
-            Database.Initialize();
-
-            Migrator = Configuration.Resolve<DocumentMigrator>();
-
             // No use of the store for handling documents is allowed before this is run.
+            // The SchemaMigrationRunner will initialize the Database and initialize/freeze the configuration.
             new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
+            
+            Migrator = Configuration.Resolve<DocumentMigrator>();
 
             // Set as initialized before invoking document migrations, to avoid errors when the runner
             // tries to open sessions and execute commands. Concurrent use of the store for handling
