@@ -101,7 +101,8 @@ namespace HybridDb
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(";");
 
-                sqlx.Append(@"with WithRowNumber as (select *")
+                sqlx.Append(string.IsNullOrEmpty(select), @"with WithRowNumber as (select *", $@"with WithRowNumber as (select {select}")
+                //sqlx.Append(@"with WithRowNumber as (select *")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
                     .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
                     .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
@@ -111,7 +112,7 @@ namespace HybridDb
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
                     .Append(top1, "select top 1", "select")
-                    .Append(string.IsNullOrEmpty(select), "*", $"{@select}, RowNumber, __Discriminator, __LastOperation, __RowVersion")
+                    .Append("*")
                     .Append("from WithRowNumber");
 
                 switch (window)

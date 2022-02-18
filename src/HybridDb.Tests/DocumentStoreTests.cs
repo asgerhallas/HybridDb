@@ -179,9 +179,9 @@ namespace HybridDb.Tests
 
             var t = new { Field = "" };
 
-            IEnumerable<dynamic> Query<U>(U prototype) => 
-                store.Query<U>(table.Table, out _, false, null, "Field = @name", null, "", false, new {name = "Asger"});
-            
+            IEnumerable<dynamic> Query<U>(U prototype) =>
+                store.Query<U>(table.Table, out _, false, null, "Field = @name", null, "", false, new { name = "Asger" });
+
             var rows = Query(t).ToList();
 
             rows.Count.ShouldBe(1);
@@ -192,7 +192,7 @@ namespace HybridDb.Tests
         public void CanQueryAndReturnValueProjections()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
@@ -208,7 +208,7 @@ namespace HybridDb.Tests
         public void CanQueryDynamicTable()
         {
             Document<Entity>().With(x => x.Field).With(x => x.Property);
-            
+
             var id1 = NewId();
             var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
@@ -228,7 +228,7 @@ namespace HybridDb.Tests
         public void CanDelete()
         {
             Document<Entity>();
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
@@ -242,7 +242,7 @@ namespace HybridDb.Tests
         public void CanDeletePessimistically()
         {
             Document<Entity>();
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
@@ -254,7 +254,7 @@ namespace HybridDb.Tests
         public void DeleteFailsWhenEtagNotMatch()
         {
             Document<Entity>();
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
@@ -266,7 +266,7 @@ namespace HybridDb.Tests
         public void DeleteFailsWhenIdNotMatchAkaDocumentAlreadyDeleted()
         {
             Document<Entity>();
-            
+
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
@@ -278,15 +278,15 @@ namespace HybridDb.Tests
         public void CanBatchCommandsAndGetEtag()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id1 = NewId();
             var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             var etag = store.Transactionally(tx =>
             {
-                tx.Execute(new InsertCommand(table, id1, new {Field = "A"}));
-                return tx.Execute(new InsertCommand(table, id2, new {Field = "B"}));
+                tx.Execute(new InsertCommand(table, id1, new { Field = "A" }));
+                return tx.Execute(new InsertCommand(table, id2, new { Field = "B" }));
             });
 
             var rows = store.Query<Guid>(table, out _, select: "Etag", orderby: "Field").ToList();
@@ -300,7 +300,7 @@ namespace HybridDb.Tests
         public void BatchesAreTransactional()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var id1 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>().Table;
             var etagThatMakesItFail = Guid.NewGuid();
@@ -324,7 +324,7 @@ namespace HybridDb.Tests
         public void CanStoreAndQueryEnumProjection()
         {
             Document<Entity>().With(x => x.EnumProp);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
@@ -337,7 +337,7 @@ namespace HybridDb.Tests
         public void CanStoreAndQueryEnumProjectionToNetType()
         {
             Document<Entity>().With(x => x.EnumProp);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
@@ -351,7 +351,7 @@ namespace HybridDb.Tests
         public void CanStoreAndQueryStringProjection()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
             store.Insert(table.Table, id, new { Property = "Hest" });
@@ -364,7 +364,7 @@ namespace HybridDb.Tests
         public void CanStoreAndQueryOnNull()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
             store.Insert(table.Table, id, new { Property = (string)null });
@@ -378,7 +378,7 @@ namespace HybridDb.Tests
         public void CanStoreAndQueryDateTimeProjection()
         {
             Document<Entity>().With(x => x.DateTimeProp);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             var id = NewId();
             store.Insert(table.Table, id, new { DateTimeProp = new DateTime(2001, 12, 24, 1, 1, 1) });
@@ -392,7 +392,7 @@ namespace HybridDb.Tests
         public void CanPage()
         {
             Document<Entity>().With(x => x.Number);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Number = i });
@@ -414,7 +414,7 @@ namespace HybridDb.Tests
         public void CanTake()
         {
             Document<Entity>().With(x => x.Number);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Number = i });
@@ -433,7 +433,7 @@ namespace HybridDb.Tests
         public void CanSkip()
         {
             Document<Entity>().With(x => x.Number);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Number = i });
@@ -453,7 +453,7 @@ namespace HybridDb.Tests
         public void CanQueryWithoutWhere()
         {
             Document<Entity>();
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, NewId(), new { });
 
@@ -466,7 +466,7 @@ namespace HybridDb.Tests
         public void CanGetStats()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Property = i });
@@ -481,7 +481,7 @@ namespace HybridDb.Tests
         public void CanGetStatsWhenSkipping()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Property = i });
@@ -496,7 +496,7 @@ namespace HybridDb.Tests
         public void CanGetStatsWithNoResults()
         {
             Document<Entity>();
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
 
             store.Query(table.Table, out var stats);
@@ -509,7 +509,7 @@ namespace HybridDb.Tests
         public void CanGetStatsWhenOrderingByPropertyWithSameValue()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, NewId(), new { Property = 10 });
             store.Insert(table.Table, NewId(), new { Property = 10 });
@@ -519,7 +519,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, NewId(), new { Property = 11 });
 
             store.Query(table.Table, out var stats, @orderby: "Property", window: new SkipTake(1, 0));
-            
+
             stats.RetrievedResults.ShouldBe(5);
             stats.TotalResults.ShouldBe(6);
         }
@@ -528,7 +528,7 @@ namespace HybridDb.Tests
         public void CanGetStatsWhenSkippingAllOrMore()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Property = i });
@@ -544,7 +544,7 @@ namespace HybridDb.Tests
         public void CanGetStatsWhenTaking()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Property = i });
@@ -560,7 +560,7 @@ namespace HybridDb.Tests
         public void CanGetStatsWhenTakingAllOrMore()
         {
             Document<Entity>().With(x => x.Property);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 0; i < 10; i++)
                 store.Insert(table.Table, NewId(), new { Property = i });
@@ -576,7 +576,7 @@ namespace HybridDb.Tests
         public void CanOrderBy()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, NewId(), new { Field = i });
@@ -596,7 +596,7 @@ namespace HybridDb.Tests
         public void CanOrderByIdAndSelectOtherField()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, i.ToString(), new { Field = i });
@@ -616,7 +616,7 @@ namespace HybridDb.Tests
         public void CanOrderByIdAndSelectOtherFieldWindowed()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, i.ToString(), new { Field = i });
@@ -631,7 +631,7 @@ namespace HybridDb.Tests
         public void CanOrderByDescWhileSkippingAndTaking()
         {
             Document<Entity>().With(x => x.Field);
-            
+
             var table = store.Configuration.GetDesignFor<Entity>();
             for (var i = 5; i > 0; i--)
                 store.Insert(table.Table, NewId(), new { Field = i });
@@ -734,7 +734,7 @@ namespace HybridDb.Tests
         {
             Document<object>();
 
-            store.Insert(store.Configuration.GetDesignFor<object>().Table, "a", new {Document = new string('*', 10_000_000)});
+            store.Insert(store.Configuration.GetDesignFor<object>().Table, "a", new { Document = new string('*', 10_000_000) });
         }
 
         [Theory]
@@ -850,18 +850,18 @@ namespace HybridDb.Tests
                 {
                     Id = "c",
                     Number = 2,
-                    
+
                 });
 
                 s1.SaveChanges();
             }
-            
+
             var entities = store.Configuration.GetDesignFor<Entity>();
             var otherEntities = store.Configuration.GetDesignFor<OtherEntity>();
 
             var result = store.Query<IDictionary<string, object>>(
-                entities.Table, 
-                $"inner join {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)} on {store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Number = {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Number", 
+                entities.Table,
+                $"inner join {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)} on {store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Number = {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Number",
                 out var stats,
                 select: $"{store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Id, {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Id as OtherId"
             ).ToList();
@@ -871,6 +871,45 @@ namespace HybridDb.Tests
             result[0].Data.Get<string>("OtherId").ShouldBe("c");
         }
 
+        [Fact]
+        public void CanTakeWithJoin()
+        {
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            using (var s1 = store.OpenSession())
+            {
+                for (var i = 0; i < 10; i++)
+                {
+                    s1.Store(new Entity
+                    {
+                        Id = i.ToString(),
+                        Number = i
+                    });
+
+                    s1.Store(new OtherEntity
+                    {
+                        Id = i.ToString(),
+                        Number = i,
+                    });
+                    
+                }
+                s1.SaveChanges();
+            }
+
+            var entities = store.Configuration.GetDesignFor<Entity>();
+            var otherEntities = store.Configuration.GetDesignFor<OtherEntity>();
+
+            var result = store.Query<IDictionary<string, object>>(
+                table: entities.Table,
+                $"inner join {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)} on {store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Number = {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Number",
+                out var stats,
+                window: new SkipTake(0, 5),
+                select: $"{store.Database.FormatTableNameAndEscape(entities.Table.Name)}.Id, {store.Database.FormatTableNameAndEscape(otherEntities.Table.Name)}.Id as OtherId"
+            ).ToList();
+
+            result.Count.ShouldBe(5);
+        }
 
         public class Case
         {
