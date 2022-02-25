@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Indentional;
 using Sprache;
+using static Indentional.Text;
 
 namespace HybridDb.Config
 {
@@ -68,7 +69,7 @@ namespace HybridDb.Config
 
             var type = matchingTypes.Count switch
             {
-                > 1 => throw new InvalidOperationException(Indent._($@"
+                > 1 => throw new InvalidOperationException(Indent($@"
                         Too many types found for '{shortname}'. Found: 
 
                             {string.Join(Environment.NewLine, matchingTypes.Select(x => x.FullName))}")),

@@ -14,7 +14,7 @@ using HybridDb.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ShinySwitch;
-using static Indentional.Indent;
+using static Indentional.Text;
 
 namespace HybridDb.Config
 {
@@ -133,7 +133,7 @@ namespace HybridDb.Config
                     if (tablename == null || tablename == existing.Table.Name)
                         return existing;
 
-                    throw new InvalidOperationException(_($@"
+                    throw new InvalidOperationException(Indent($@"
                         Design already exists for type '{type}' but is not assigned to the specified tablename '{tablename}'.
                         The existing design for '{type}' is assigned to table '{existing.Table.Name}'."));
                 }
@@ -304,7 +304,7 @@ namespace HybridDb.Config
         {
             if (DocumentDesigns.Any(x => Equals(x.Table, design.Table) && x.Discriminator == design.Discriminator))
             {
-                throw new InvalidOperationException(_(@$"
+                throw new InvalidOperationException(Indent(@$"
                     Document '{design.DocumentType.Name}' has discriminator '{design.Discriminator}' in table '{design.Table}'.
                     This combination already exists, please select either another table or discriminator for the type."));
             }

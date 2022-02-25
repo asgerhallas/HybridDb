@@ -7,7 +7,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Migrations.Schema.Commands;
 using Microsoft.Extensions.Logging;
-using static Indentional.Indent;
+using static Indentional.Text;
 using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migrations.Schema
@@ -46,7 +46,7 @@ namespace HybridDb.Migrations.Schema
 
                 if (schemaVersion > store.Configuration.ConfiguredVersion)
                 {
-                    throw new InvalidOperationException(_($@"
+                    throw new InvalidOperationException(Indent($@"
                         Database schema is ahead of configuration. Schema is version {schemaVersion},
                         but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
                 }
@@ -201,7 +201,8 @@ namespace HybridDb.Migrations.Schema
                 store.Database.RawExecute(
                     $"update {store.Database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection",
                     new { AwaitsReprojection = true },
-                    schema: true);
+                    schema: true,
+                    commandTimeout: 300);
             }
         }
 

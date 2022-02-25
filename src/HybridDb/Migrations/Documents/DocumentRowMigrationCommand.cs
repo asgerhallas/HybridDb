@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using HybridDb.Config;
-using static Indentional.Indent;
+using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -36,7 +36,7 @@ namespace HybridDb.Migrations.Documents
 
             if (row.Get(DocumentTable.DiscriminatorColumn) != design.Discriminator)
             {
-                throw new ArgumentException(_(@$"
+                throw new ArgumentException(Indent(@$"
                     Provided design must be the concrete design for the row.
                     The given design has discriminator {design.Discriminator}, 
                     but the row has discriminator {row.Get(DocumentTable.DiscriminatorColumn)}."));

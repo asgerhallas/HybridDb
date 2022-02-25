@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq.Old;
 using Microsoft.Extensions.Logging;
-using static Indentional.Indent;
+using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -117,7 +117,7 @@ namespace HybridDb.Migrations.Documents
                 }
                 catch (Exception exception)
                 {
-                    logger.LogCritical(exception, _(@"
+                    logger.LogCritical(exception, Indent(@"
                         Document migration failed. Migration runner stopped. 
                         Documents will not be migrated in background until you restart the runner."));
                 }
