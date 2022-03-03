@@ -39,8 +39,8 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             UseTypeMapper(new OtherTypeMapper());
             UseMigrations(new InlineMigration(1,
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_0_10_64_And_Later())));
+                after: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
+                background: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_0_10_64_And_Later())));
 
             // Match the serializer with the one used in the sample data set
             var serializer = new DefaultSerializer();
@@ -71,8 +71,8 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             UseTypeMapper(new OtherTypeMapper());
             UseMigrations(new InlineMigration(1,
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_0_10_64_And_Later())));
+                after: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
+                background: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_0_10_64_And_Later())));
 
             // Match the serializer with the one used in the sample data set
             var serializer = new DefaultSerializer();
@@ -106,8 +106,8 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             ResetStore();
 
             UseMigrations(new InlineMigration(1,
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
-                ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_Before_0_10_64())));
+                after: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
+                background: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_Before_0_10_64())));
 
             // Match the serializer with the one used in the sample data set
             var serializer = new DefaultSerializer();

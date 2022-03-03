@@ -51,14 +51,10 @@ namespace HybridDb.Migrations.Schema
                         but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
                 }
 
-                var requiresReprojection = new List<string>();
-
-                requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
-                requiresReprojection.AddRange(RunConfiguredMigrations(schemaVersion));
-
-                MarkDocumentsForReprojections(requiresReprojection);
+                MarkDocumentsForReprojections(RunMigrations(schemaVersion));
             });
         }
+
 
         void Migrate(bool isTempTables, Action action)
         {
@@ -107,7 +103,7 @@ namespace HybridDb.Migrations.Schema
                 parameters.Add("@DbPrincipal", "public");
                 parameters.Add("@LockMode", "Exclusive");
                 parameters.Add("@LockOwner", "Transaction");
-                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(10).TotalMilliseconds);
+                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(300).TotalMilliseconds);
                 parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
 
                 connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
@@ -150,7 +146,29 @@ namespace HybridDb.Migrations.Schema
             return currentSchemaVersion;
         }
 
-        IEnumerable<string> RunAutoMigrations(int schemaVersion)
+        IReadOnlyList<string> RunMigrations(int schemaVersion)
+        {
+            var configuredMigrations = GetConfiguredMigrations(schemaVersion);
+
+            if (!configuredMigrations.Any())
+            {
+                return RunAutoMigrations(schemaVersion);
+            }
+
+            logger.LogInformation("Found migrations from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
+
+            var requiresReprojection = new List<string>();
+
+            requiresReprojection.AddRange(RunConfiguredMigrations(configuredMigrations, x => x.BeforeAutoMigrations(store.Configuration)));
+            requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
+            requiresReprojection.AddRange(RunConfiguredMigrations(configuredMigrations, x => x.AfterAutoMigrations(store.Configuration)));
+
+            logger.LogInformation("Schema is migrated from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
+
+            return requiresReprojection;
+        }
+
+        IReadOnlyList<string> RunAutoMigrations(int schemaVersion)
         {
             var schema = schemaVersion == -1 // fresh database
                 ? new Dictionary<string, List<string>>()
@@ -158,30 +176,20 @@ namespace HybridDb.Migrations.Schema
 
             var commands = differ.CalculateSchemaChanges(schema, store.Configuration);
 
-            if (!commands.Any()) return Enumerable.Empty<string>();
+            if (!commands.Any()) return new List<string>();
 
-            logger.LogInformation("Found {0} differences between current schema and configuration. Migrates schema to get up to date.", commands.Count);
+            logger.LogInformation("Found {0} differences between current schema and configuration. Automatically migrates schema to get up to date.", commands.Count);
 
-            return commands.SelectMany(command => ExecuteCommand(command, false), (_, tablename) => tablename);
+            return commands.SelectMany(command => ExecuteCommand(command, false), (_, tablename) => tablename).ToList();
         }
 
-        IEnumerable<string> RunConfiguredMigrations(int schemaVersion)
+        IEnumerable<string> RunConfiguredMigrations(
+            IEnumerable<Migration> migrationsToRun, 
+            Func<Migration, IEnumerable<DdlCommand>> selector)
         {
-            if (!(store.Database is SqlServerUsingRealTables))
-            {
-                logger.LogInformation("Skips provided migrations when not using real tables.");
-                yield break;
-            }
-
-            if (schemaVersion >= store.Configuration.ConfiguredVersion) yield break;
-
-            var migrationsToRun = migrations.OrderBy(x => x.Version).Where(x => x.Version > schemaVersion).ToList();
-
-            logger.LogInformation("Migrates schema from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
-
             foreach (var migration in migrationsToRun)
             {
-                foreach (var command in migration.Upfront(store.Configuration))
+                foreach (var command in selector(migration))
                 {
                     foreach (var tablename in ExecuteCommand(command, true))
                     {
@@ -189,6 +197,22 @@ namespace HybridDb.Migrations.Schema
                     }
                 }
             }
+        }
+
+        IReadOnlyList<Migration> GetConfiguredMigrations(int schemaVersion)
+        {
+            if (store.Database is not SqlServerUsingRealTables)
+            {
+                logger.LogInformation("Skips provided migrations when not using real tables.");
+                return new List<Migration>();
+            }
+
+            if (schemaVersion >= store.Configuration.ConfiguredVersion) return new List<Migration>();
+
+            return migrations
+                .OrderBy(x => x.Version)
+                .Where(x => x.Version > schemaVersion)
+                .ToList();
         }
 
         void MarkDocumentsForReprojections(IEnumerable<string> requiresReprojection)

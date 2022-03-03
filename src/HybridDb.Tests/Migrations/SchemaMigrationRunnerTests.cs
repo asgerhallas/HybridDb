@@ -10,6 +10,7 @@ using ShinySwitch;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations
 {
@@ -64,9 +65,9 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            UseMigrations(new InlineMigration(1,
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(
                 new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
-                new AddColumn("Testing", new Column("Noget", typeof (int)))));
+                new AddColumn("Testing", new Column("Noget", typeof (int))))));
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
@@ -87,9 +88,9 @@ namespace HybridDb.Tests.Migrations
             UseTableNamePrefix(Guid.NewGuid().ToString());
             CreateMetadataTable();
 
-            UseMigrations(new InlineMigration(1,
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
-                new AddColumn("Testing", new Column("Noget", typeof(int)))));
+                new AddColumn("Testing", new Column("Noget", typeof(int))))));
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
@@ -117,16 +118,19 @@ namespace HybridDb.Tests.Migrations
             tables["Testing"].ShouldContain("Noget");
         }
 
-        [Fact(Skip="We are experimenting with doing it the other way around to enable adding indexes to newly created tables.")]
-        public void RunsProvidedSchemaMigrationsInOrderThenDiffed()
+        [Fact]
+        public void RunsInThreeSteps_Before_Auto_After()
         {
             CreateMetadataTable();
 
             var table = new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true));
 
             UseMigrations(
-                new InlineMigration(2, new AddColumn("Testing", new Column("Noget", typeof(int)))),
-                new InlineMigration(1, new CreateTable(table)));
+                new InlineMigration(1, 
+                    before: ListOf<DdlCommand>(
+                        new CreateTable(table),
+                        new AddColumn("Testing", new Column("Noget", typeof(int)))),
+                    after: ListOf<DdlCommand>(new RenameColumn(table, "NogetNyt", "NogetVirkeligNyt"))));
 
             var runner = new SchemaMigrationRunner(store,
                 new FakeSchemaDiffer(new RenameColumn(table, "Noget", "NogetNyt")));
@@ -136,7 +140,9 @@ namespace HybridDb.Tests.Migrations
             var tables = store.Database.QuerySchema();
             tables.ShouldContainKey("Testing");
             tables["Testing"].ShouldContain("Id");
-            tables["Testing"].ShouldContain("NogetNyt");
+            tables["Testing"].ShouldNotContain("Noget");
+            tables["Testing"].ShouldNotContain("NogetNyt");
+            tables["Testing"].ShouldContain("NogetVirkeligNyt");
         }
         
 
@@ -162,7 +168,7 @@ namespace HybridDb.Tests.Migrations
 
             var command = new UnsafeCountingCommand();
 
-            UseMigrations(new InlineMigration(1, command));
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
@@ -178,7 +184,7 @@ namespace HybridDb.Tests.Migrations
 
             var command = new CountingCommand();
 
-            UseMigrations(new InlineMigration(1, command));
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
 
@@ -195,13 +201,15 @@ namespace HybridDb.Tests.Migrations
 
             var command = new CountingCommand();
 
-            UseMigrations(new InlineMigration(1, command));
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             ResetConfiguration();
 
-            UseMigrations(new InlineMigration(1, new ThrowingCommand()), new InlineMigration(2, command));
+            UseMigrations(
+                new InlineMigration(1, after: ListOf<DdlCommand>(new ThrowingCommand())), 
+                new InlineMigration(2, after: ListOf<DdlCommand>(command)));
 
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
@@ -213,7 +221,7 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            UseMigrations(new InlineMigration(1, new CountingCommand()));
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(new CountingCommand())));
 
             new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
@@ -231,8 +239,8 @@ namespace HybridDb.Tests.Migrations
             var countingCommand = new CountingCommand();
 
             UseMigrations(
-                new InlineMigration(1, countingCommand), 
-                new InlineMigration(2, countingCommand));
+                new InlineMigration(1, after: ListOf<DdlCommand>(countingCommand)), 
+                new InlineMigration(2, after: ListOf<DdlCommand>(countingCommand)));
 
             Should.NotThrow(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run());
 
@@ -305,11 +313,11 @@ namespace HybridDb.Tests.Migrations
             Func<SchemaMigrationRunner> runnerFactory = () => 
                 new SchemaMigrationRunner(store, new SchemaDiffer());
 
-            UseMigrations(new InlineMigration(1,
+            UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(
                 new AddColumn("Other", new Column("Asger", typeof(int))),
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
                 new SlowCommand(),
-                command));
+                command)));
 
             store.Execute(new CreateTable(new DocumentTable("Other")));
 
