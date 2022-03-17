@@ -100,7 +100,7 @@ namespace HybridDb.Linq.Old
 
         protected override SqlExpression Visit(SqlColumnExpression expression)
         {
-            sql.Append(expression.ColumnName);
+            sql.Append($"[{expression.ColumnName}]");
             return expression;
         }
 
@@ -119,7 +119,7 @@ namespace HybridDb.Linq.Old
 
         string FormatOrdering(SqlOrderingExpression expression)
         {
-            return string.Format("{0}{1}", expression.Column.ColumnName, expression.Direction == SqlOrderingExpression.Directions.Descending ? " DESC" : "");
+            return $"[{expression.Column.ColumnName}]{(expression.Direction == SqlOrderingExpression.Directions.Descending ? " DESC" : "")}";
         }
 
         protected override SqlExpression Visit(SqlSelectExpression expression)
@@ -130,7 +130,7 @@ namespace HybridDb.Linq.Old
 
         string FormatProjection(SqlProjectionExpression expression)
         {
-            return string.Format("{0} AS {1}", expression.From.ColumnName, expression.To);
+            return $"[{expression.From.ColumnName}] AS {expression.To}";
         }
 
         protected override SqlExpression Visit(SqlConstantExpression expression)
@@ -148,7 +148,7 @@ namespace HybridDb.Linq.Old
             if (enumerable != null && !(value is string))
             {
                 var listOfValues = enumerable.Cast<object>().ToList();
-                return string.Format("({0})", listOfValues.Count == 0 ? "NULL" : string.Join(", ", listOfValues.Select(FormatConstant)));
+                return $"({(listOfValues.Count == 0 ? "NULL" : string.Join(", ", listOfValues.Select(FormatConstant)))})";
             }
 
             string key;

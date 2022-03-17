@@ -30,7 +30,7 @@ namespace HybridDb.Commands
 
             var sql = $@"
                 insert into {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} 
-                ({string.Join(", ", from column in projections.Keys select column.Name)}) 
+                ({string.Join(", ", from column in projections.Keys select tx.Store.Database.Escape(column.Name))}) 
                 values ({string.Join(", ", from column in projections.Keys select "@" + column.Name)});";
 
             var parameters = Parameters.FromProjections(projections);

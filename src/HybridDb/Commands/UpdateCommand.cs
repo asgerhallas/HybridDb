@@ -32,7 +32,7 @@ namespace HybridDb.Commands
 
             var sql = new SqlBuilder()
                 .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {string.Join(", ", from column in projections.Keys select column.Name + " = @" + column.Name)}")
+                .Append($"set {string.Join(", ", from column in projections.Keys select $"[{column.Name}] = @{column.Name}")}")
                 .Append($"where {DocumentTable.IdColumn.Name}=@Id")
                 .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")
                 .ToString();

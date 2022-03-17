@@ -555,6 +555,62 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void Bug_Query_MissingEscape()
+        {
+            Document<Entity>().With(x => x.From);
+
+            using var session = store.OpenSession();
+
+            session.Store(new Entity
+            {
+                Id = NewId(), 
+                Property = "Asger", 
+                From = new DateTimeOffset(new DateTime(2001, 12, 1))
+            });
+
+            session.Store(new Entity
+            {
+                Id = NewId(), 
+                Property = "Lars", 
+                From = new DateTimeOffset(new DateTime(2001, 12, 2))
+            });
+
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            var entity = session.Query<Entity>()
+                .OrderByDescending(x => x.From)
+                .First(x => x.From != null);
+
+            entity.Property.ShouldBe("Lars");
+        }
+
+        [Fact]
+        public void Bug_Update_MissingEscape()
+        {
+            Document<Entity>().With(x => x.From);
+
+            using var session = store.OpenSession();
+
+            var newId = NewId();
+            session.Store(new Entity
+            {
+                Id = newId, 
+                Property = "Asger", 
+                From = new DateTimeOffset(new DateTime(2001, 12, 1))
+            });
+
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            var entity = session.Load<Entity>(newId);
+
+            entity.Property = "Danny";
+
+            session.SaveChanges();
+        }
+
+        [Fact]
         public void CanSaveChangesOnAQueriedDocument()
         {
             Document<Entity>().With(x => x.ProjectedProperty);

@@ -224,6 +224,7 @@ namespace HybridDb.Tests
             public SomeFreakingEnum EnumProp { get; set; }
             public Child TheChild { get; set; }
             public ComplexType Complex { get; set; }
+            public DateTimeOffset From { get; set; }
 
             public class Child
             {
