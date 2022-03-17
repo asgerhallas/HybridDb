@@ -224,7 +224,6 @@ namespace HybridDb.Tests
             public SomeFreakingEnum EnumProp { get; set; }
             public Child TheChild { get; set; }
             public ComplexType Complex { get; set; }
-            public DateTimeOffset From { get; set; }
 
             public class Child
             {
@@ -242,6 +241,13 @@ namespace HybridDb.Tests
                     return A + B;
                 }
             }
+        }
+
+        public class EntityWithDateTimeOffset
+        {
+            public string Id { get; set; }
+            public string Property { get; set; }
+            public DateTimeOffset From { get; set; }
         }
 
         public class OtherEntity

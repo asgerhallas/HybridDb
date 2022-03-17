@@ -100,7 +100,10 @@ namespace HybridDb.Linq.Old
 
         protected override SqlExpression Visit(SqlColumnExpression expression)
         {
+            if (string.IsNullOrEmpty(expression.ColumnName)) return expression;
+
             sql.Append($"[{expression.ColumnName}]");
+            
             return expression;
         }
 

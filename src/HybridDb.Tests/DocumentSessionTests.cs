@@ -557,18 +557,18 @@ namespace HybridDb.Tests
         [Fact]
         public void Bug_Query_MissingEscape()
         {
-            Document<Entity>().With(x => x.From);
+            Document<EntityWithDateTimeOffset>().With(x => x.From);
 
             using var session = store.OpenSession();
 
-            session.Store(new Entity
+            session.Store(new EntityWithDateTimeOffset
             {
                 Id = NewId(), 
                 Property = "Asger", 
                 From = new DateTimeOffset(new DateTime(2001, 12, 1))
             });
 
-            session.Store(new Entity
+            session.Store(new EntityWithDateTimeOffset
             {
                 Id = NewId(), 
                 Property = "Lars", 
@@ -578,7 +578,7 @@ namespace HybridDb.Tests
             session.SaveChanges();
             session.Advanced.Clear();
 
-            var entity = session.Query<Entity>()
+            var entity = session.Query<EntityWithDateTimeOffset>()
                 .OrderByDescending(x => x.From)
                 .First(x => x.From != null);
 
@@ -588,12 +588,12 @@ namespace HybridDb.Tests
         [Fact]
         public void Bug_Update_MissingEscape()
         {
-            Document<Entity>().With(x => x.From);
+            Document<EntityWithDateTimeOffset>().With(x => x.From);
 
             using var session = store.OpenSession();
 
             var newId = NewId();
-            session.Store(new Entity
+            session.Store(new EntityWithDateTimeOffset
             {
                 Id = newId, 
                 Property = "Asger", 
@@ -603,7 +603,7 @@ namespace HybridDb.Tests
             session.SaveChanges();
             session.Advanced.Clear();
 
-            var entity = session.Load<Entity>(newId);
+            var entity = session.Load<EntityWithDateTimeOffset>(newId);
 
             entity.Property = "Danny";
 
