@@ -46,6 +46,5 @@ namespace HybridDb
 
         IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities { get; }
         bool TryGetManagedEntity<T>(string key, out T entity);
-
     }
 }

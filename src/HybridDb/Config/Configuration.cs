@@ -60,6 +60,8 @@ namespace HybridDb.Config
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
             Register(_ => new DocumentMigrator(this));
+
+            Register<Action<IHybridDbSessionEvents>>(c => e => {});
         }
 
         public ITypeMapper TypeMapper => Resolve<ITypeMapper>();

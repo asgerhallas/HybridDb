@@ -178,6 +178,7 @@ namespace HybridDb
 
             entities.Add(new ManagedEntity(entityKey)
             {
+                Design = design,
                 Entity = entity,
                 State = state,
                 Etag = etag
@@ -212,11 +213,13 @@ namespace HybridDb
 
             saving = true;
 
+            var notify = store.Configuration.Resolve<Action<IHybridDbSessionEvents>>();
+
             var commands = new Dictionary<ManagedEntity, DmlCommand>();
             foreach (var managedEntity in entities.Values.ToList())
             {
                 var key = managedEntity.Key;
-                var design = store.Configuration.GetExactDesignFor(managedEntity.Entity.GetType());
+                var design = managedEntity.Design;
                 var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
                 var configuredVersion = (int)projections[DocumentTable.VersionColumn];
@@ -259,21 +262,23 @@ namespace HybridDb
                 }
             }
 
+            if (store.Configuration.EventStore)
+            {
+                var eventTable = store.Configuration.Tables.Values.OfType<EventTable>().Single();
+
+                foreach (var @event in events)
+                {
+                    deferredCommands.Add(new AppendEvent(eventTable, @event.Generation, @event.Data));
+                }
+            }
+
+            notify(new SavingChanges(this, commands, deferredCommands));
+
             var commitId = Transactionally(resultingTx =>
             {
                 foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
                 {
                     store.Execute(resultingTx, command);
-                }
-
-                if (store.Configuration.EventStore)
-                {
-                    var eventTable = store.Configuration.Tables.Values.OfType<EventTable>().Single();
-
-                    foreach (var @event in events)
-                    {
-                        resultingTx.Execute(new AppendEvent(eventTable, @event.Generation, @event.Data));
-                    }
                 }
 
                 return resultingTx.CommitId;
@@ -321,6 +326,7 @@ namespace HybridDb
 
             managedEntity = new ManagedEntity(entityKey)
             {
+                Design = concreteDesign,
                 Entity = entity,
                 Document = document,
                 Metadata = metadata,
@@ -357,6 +363,8 @@ namespace HybridDb
             entity = default;
             return false;
         }
+
+        public Func<Dictionary<ManagedEntity, DmlCommand>, Dictionary<ManagedEntity, DmlCommand>> OnSavingChanges { get; set; }
 
         public bool TryGetManagedEntity(Type type, string key, out ManagedEntity entity) => 
             entities.TryGetValue(new EntityKey(store.Configuration.GetOrCreateDesignFor(type).Table, key), out entity);

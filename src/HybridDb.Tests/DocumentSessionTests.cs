@@ -1337,7 +1337,6 @@ namespace HybridDb.Tests
             }
         }
 
-
         [Fact]
         public void CannotEnlistInForeignTransaction()
         {
@@ -1352,7 +1351,7 @@ namespace HybridDb.Tests
             Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
                 .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");
         }
-         
+
 
         public class EntityWithFunnyKey
         {

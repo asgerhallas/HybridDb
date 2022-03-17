@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 
@@ -9,7 +10,7 @@ namespace HybridDb.Commands
         public DocumentTable Table { get; }
         public string Id { get; }
         public Guid? ExpectedEtag { get; }
-        public object Projections { get; }
+        public IDictionary<Column, object> Projections { get; }
         public bool LastWriteWins { get; }
 
         public UpdateCommand(DocumentTable table, string id, Guid? etag, object projections)
@@ -18,25 +19,25 @@ namespace HybridDb.Commands
             Id = id;
             ExpectedEtag = etag;
             LastWriteWins = etag == null;
-            Projections = projections;
+            Projections = ConvertAnonymousToProjections(table, projections);
         }
 
         public static Guid Execute(DocumentTransaction tx, UpdateCommand command)
         {
-            var values = ConvertAnonymousToProjections(command.Table, command.Projections); 
+            var projections = command.Projections.ToDictionary();
 
-            values[DocumentTable.EtagColumn] = tx.CommitId;
-            values[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
-            values[DocumentTable.LastOperationColumn] = Operation.Updated;
+            projections[DocumentTable.EtagColumn] = tx.CommitId;
+            projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
+            projections[DocumentTable.LastOperationColumn] = Operation.Updated;
 
             var sql = new SqlBuilder()
                 .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {string.Join(", ", from column in values.Keys select column.Name + " = @" + column.Name)}")
+                .Append($"set {string.Join(", ", from column in projections.Keys select column.Name + " = @" + column.Name)}")
                 .Append($"where {DocumentTable.IdColumn.Name}=@Id")
                 .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")
                 .ToString();
 
-            var parameters = Parameters.FromProjections(values);
+            var parameters = Parameters.FromProjections(projections);
 
             parameters.Add("@Id", command.Id, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
 

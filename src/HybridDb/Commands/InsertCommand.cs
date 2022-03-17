@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 
@@ -10,29 +11,29 @@ namespace HybridDb.Commands
         {
             Table = table;
             Id = id;
-            Projections = projections;
+            Projections = ConvertAnonymousToProjections(table, projections);
         }
 
         public string Id { get; }
-        public object Projections { get; }
+        public IDictionary<Column, object> Projections { get; }
         public DocumentTable Table { get; }
 
         public static Guid Execute(DocumentTransaction tx, InsertCommand command)
         {
-            var values = ConvertAnonymousToProjections(command.Table, command.Projections);
+            var projections = command.Projections.ToDictionary();
 
-            values[DocumentTable.IdColumn] = command.Id;
-            values[DocumentTable.EtagColumn] = tx.CommitId;
-            values[DocumentTable.CreatedAtColumn] = DateTimeOffset.Now;
-            values[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
-            values[DocumentTable.LastOperationColumn] = Operation.Inserted;
+            projections[DocumentTable.IdColumn] = command.Id;
+            projections[DocumentTable.EtagColumn] = tx.CommitId;
+            projections[DocumentTable.CreatedAtColumn] = DateTimeOffset.Now;
+            projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
+            projections[DocumentTable.LastOperationColumn] = Operation.Inserted;
 
             var sql = $@"
                 insert into {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} 
-                ({string.Join(", ", from column in values.Keys select column.Name)}) 
-                values ({string.Join(", ", from column in values.Keys select "@" + column.Name)});";
+                ({string.Join(", ", from column in projections.Keys select column.Name)}) 
+                values ({string.Join(", ", from column in projections.Keys select "@" + column.Name)});";
 
-            var parameters = Parameters.FromProjections(values);
+            var parameters = Parameters.FromProjections(projections);
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
