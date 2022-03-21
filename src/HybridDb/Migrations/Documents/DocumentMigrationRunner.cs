@@ -22,6 +22,8 @@ namespace HybridDb.Migrations.Documents
 
             return Task.Factory.StartNew(async () =>
                 {
+                    configuration.Notify(new MigrationStarted(store));
+
                     const int batchSize = 500;
 
                     var random = new Random();
@@ -29,8 +31,7 @@ namespace HybridDb.Migrations.Documents
                     foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                     {
                         var commands = configuration.Migrations
-                            .SelectMany(x => x.Background(configuration),
-                                (migration, command) => (Migration: migration, Command: command))
+                            .SelectMany(x => x.Background(configuration), (migration, command) => (Migration: migration, Command: command))
                             .Concat((null, new UpdateProjectionsMigration()))
                             .Where(x => x.Command.Matches(configuration, table));
 
@@ -99,6 +100,7 @@ namespace HybridDb.Migrations.Documents
                     }
                 },
                 TaskCreationOptions.LongRunning)
+            .ContinueWith(_ => configuration.Notify(new MigrationEnded(store)))
             .ContinueWith(t =>
                 logger.LogError(t.Exception, Indent(@"
                     DocumentMigrationRunner failed and stopped. 

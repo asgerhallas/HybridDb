@@ -18,9 +18,9 @@ namespace HybridDb.Tests
             Document<Case>();
             Document<Profile>();
 
-            configuration.Register<Action<IHybridDbSessionEvents>>(c => e =>
+            configuration.HandleEvents(@event =>
             {
-                if (e is not SavingChanges savingChanges) return;
+                if (@event is not SavingChanges savingChanges) return;
 
                 foreach (var (managedEntity, dmlCommand) in savingChanges.DocumentCommands)
                 {

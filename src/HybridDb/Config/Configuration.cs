@@ -60,8 +60,6 @@ namespace HybridDb.Config
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
             Register(_ => new DocumentMigrator(this));
-
-            Register<Action<IHybridDbSessionEvents>>(c => e => {});
         }
 
         public ITypeMapper TypeMapper => Resolve<ITypeMapper>();
@@ -86,6 +84,30 @@ namespace HybridDb.Config
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
 
         static string GetTableNameByConventionFor(Type type) => Inflector.Inflector.Pluralize(type.Name);
+
+        public void HandleEvents(Action<IHybridDbEvent> handler)
+        {
+            if (TryResolve<Action<IHybridDbEvent>>(out _))
+            {
+                Decorate<Action<IHybridDbEvent>>((_, decoratee) => e =>
+                {
+                    decoratee(e);
+                    handler(e);
+                });
+            }
+            else
+            {
+                Register(_ => handler);
+            }
+        }
+
+        public void Notify(IHybridDbEvent @event)
+        {
+            if (TryResolve<Action<IHybridDbEvent>>(out var handler))
+            {
+                handler(@event);
+            }
+        }
 
         internal void Initialize()
         {

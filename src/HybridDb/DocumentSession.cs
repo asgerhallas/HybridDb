@@ -213,8 +213,6 @@ namespace HybridDb
 
             saving = true;
 
-            var notify = store.Configuration.Resolve<Action<IHybridDbSessionEvents>>();
-
             var commands = new Dictionary<ManagedEntity, DmlCommand>();
             foreach (var managedEntity in entities.Values.ToList())
             {
@@ -272,7 +270,7 @@ namespace HybridDb
                 }
             }
 
-            notify(new SavingChanges(this, commands, deferredCommands));
+            store.Configuration.Notify(new SavingChanges(this, commands, deferredCommands));
 
             var commitId = Transactionally(resultingTx =>
             {
