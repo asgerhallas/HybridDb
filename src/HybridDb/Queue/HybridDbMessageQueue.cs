@@ -256,7 +256,10 @@ namespace HybridDb.Queue
         }
     }
 
-    public abstract record HybridDbMessage(string Id, string Topic = null);
+    public abstract record HybridDbMessage(string Id, string Topic = null)
+    {
+        public Dictionary<string, string> Metadata { get; } = new();
+    }
     
     public class MessageContext : Dictionary<string, object> { }
 }
