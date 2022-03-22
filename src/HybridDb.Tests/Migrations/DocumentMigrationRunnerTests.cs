@@ -221,6 +221,33 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
+        public void StopsIfMigrationFails_BeforeLoadingDocument()
+        {
+            Document<Entity>().With(x => x.Number);
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity { Id = id });
+                session.SaveChanges();
+            }
+
+            ResetConfiguration();
+            Document<Entity>().With(x => x.Number);
+
+            TouchStore();
+
+            UseMigrations(new InlineMigration(1, new MigrationFailsBeforeLoadingDocument(typeof(Entity), null)));
+
+            Should.NotThrow(() => new DocumentMigrationRunner().Run(store).Wait(1000));
+
+            var numberOfErrors = log.Count(x => 
+                x.RenderMessage() == "DocumentMigrationRunner failed and stopped. Documents will not be migrated in background until you restart the runner. They will still be migrated on Session.Load() and Session.Query().");
+
+            numberOfErrors.ShouldBe(1);
+        }
+
+        [Fact]
         public void BacksUpMigratedDocumentBeforeMigration()
         {
             var id = NewId();
@@ -310,6 +337,17 @@ namespace HybridDb.Tests.Migrations
                 MigratedIds.Add(row.Get(DocumentTable.IdColumn));
                 return row;
             }
+        }
+
+        public class MigrationFailsBeforeLoadingDocument : DocumentRowMigrationCommand
+        {
+            public MigrationFailsBeforeLoadingDocument(Type type, string idPrefix, params string[] ids) : base(type, idPrefix, ids)
+            {
+            }
+
+            public override SqlBuilder Matches(int? version) => throw new Exception("Hej do");
+
+            public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row) => throw new NotImplementedException();
         }
     }
 }
