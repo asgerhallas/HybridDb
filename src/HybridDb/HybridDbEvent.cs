@@ -9,6 +9,9 @@ namespace HybridDb
         IDictionary<ManagedEntity, DmlCommand> DocumentCommands,
         IList<DmlCommand> OtherCommands) : IHybridDbEvent;
 
+    public record AddedToSession(IDocumentSession Session, ManagedEntity ManagedEntity) : IHybridDbEvent;
+    public record RemovedFromSession(IDocumentSession Session, ManagedEntity ManagedEntity) : IHybridDbEvent;
+
     public record MigrationStarted(IDocumentStore Store) : IHybridDbEvent;
     public record MigrationEnded(IDocumentStore Store) : IHybridDbEvent;
 }

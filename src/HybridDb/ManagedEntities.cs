@@ -6,8 +6,14 @@ namespace HybridDb
 {
     public class ManagedEntities : IReadOnlyDictionary<EntityKey, ManagedEntity>
     {
+        readonly DocumentSession session;
         readonly Dictionary<EntityKey, ManagedEntity> entitiesByKey = new();
         readonly Dictionary<object, ManagedEntity> entitiesByInstance = new();
+
+        public ManagedEntities(DocumentSession session)
+        {
+            this.session = session;
+        }
 
         public void Add(ManagedEntity managedEntity)
         {
@@ -15,18 +21,33 @@ namespace HybridDb
 
             entitiesByKey.Add(managedEntity.EntityKey, managedEntity);
             entitiesByInstance.Add(managedEntity.Entity, managedEntity);
+
+            session.DocumentStore.Configuration.Notify(new AddedToSession(session, managedEntity));
         }
 
         public void Clear()
         {
+            foreach (var managedEntity in entitiesByKey.Values)
+            {
+                session.DocumentStore.Configuration.Notify(new RemovedFromSession(session, managedEntity));
+            }
+
             entitiesByKey.Clear();
             entitiesByInstance.Clear();
         }
 
-        public bool Remove(EntityKey key) =>
-            entitiesByKey.TryGetValue(key, out var managedEntity) && 
-            entitiesByInstance.Remove(managedEntity.Entity) && 
-            entitiesByKey.Remove(key);
+        public bool Remove(EntityKey key)
+        {
+            if (entitiesByKey.TryGetValue(key, out var managedEntity) &&
+               entitiesByInstance.Remove(managedEntity.Entity) &&
+               entitiesByKey.Remove(key))
+            {
+                session.DocumentStore.Configuration.Notify(new RemovedFromSession(session, managedEntity));
+                return true;
+            }
+
+            return false;
+        }
 
         public bool ContainsKey(EntityKey key) => entitiesByKey.ContainsKey(key);
         public bool TryGetValue(EntityKey key, out ManagedEntity managedEntity) => entitiesByKey.TryGetValue(key, out managedEntity);

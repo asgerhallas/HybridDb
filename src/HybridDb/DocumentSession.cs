@@ -15,7 +15,7 @@ namespace HybridDb
     {
         readonly IDocumentStore store;
 
-        readonly ManagedEntities entities = new();
+        readonly ManagedEntities entities;
         readonly List<(int Generation, EventData<byte[]> Data)> events;
         readonly List<DmlCommand> deferredCommands;
         readonly DocumentMigrator migrator;
@@ -26,8 +26,9 @@ namespace HybridDb
 
         internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
-            deferredCommands = new List<DmlCommand>();
+            entities = new ManagedEntities(this);
             events = new List<(int Generation, EventData<byte[]> Data)>();
+            deferredCommands = new List<DmlCommand>();
 
             this.migrator = migrator;
             this.store = store;
@@ -41,6 +42,8 @@ namespace HybridDb
 
         public IAdvancedDocumentSession Advanced => this;
         public IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities => entities;
+
+        public Dictionary<object, object> SessionData { get; } = new();
 
         public T Load<T>(string key) where T : class => (T)Load(typeof(T), key);
 
@@ -362,7 +365,6 @@ namespace HybridDb
             return false;
         }
 
-        public Func<Dictionary<ManagedEntity, DmlCommand>, Dictionary<ManagedEntity, DmlCommand>> OnSavingChanges { get; set; }
 
         public bool TryGetManagedEntity(Type type, string key, out ManagedEntity entity) => 
             entities.TryGetValue(new EntityKey(store.Configuration.GetOrCreateDesignFor(type).Table, key), out entity);
