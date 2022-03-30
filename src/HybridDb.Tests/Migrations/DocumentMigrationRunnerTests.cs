@@ -13,6 +13,7 @@ using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations
 {
@@ -237,7 +238,7 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            UseMigrations(new InlineMigration(1, new MigrationFailsBeforeLoadingDocument(typeof(Entity), null)));
+            UseMigrations(new InlineMigration(1, new MigrationFailsBeforeLoadingDocument(typeof(Entity))));
 
             Should.NotThrow(() => new DocumentMigrationRunner().Run(store).Wait(1000));
 
@@ -307,7 +308,7 @@ namespace HybridDb.Tests.Migrations
             var migratedIds = new List<string>();
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>(null, new []{ "b", "d", "e", "G" },
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new []{ "b", "d", "e", "G" })),
                     (session, serializer, r) =>
                     {
                         migratedIds.Add(r.Get(DocumentTable.IdColumn));
@@ -325,6 +326,119 @@ namespace HybridDb.Tests.Migrations
             migratedIds.ShouldBeLikeUnordered("B", "d", "E", "g");
         }
 
+        [Fact]
+        public async Task MigratesByPrefix()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+
+            void Insert(string id) =>
+                store.Insert(table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity())
+                });
+
+            Insert("atest");
+            Insert("Ahest");
+            Insert("aatest");
+            Insert("AaAtest");
+            Insert("EAatest");
+            Insert("ftest");
+            Insert("gatest");
+            Insert("Htest");
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var migratedIds = new List<string>();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdPrefixMatcher("aA")),
+                    (session, serializer, r) =>
+                    {
+                        migratedIds.Add(r.Get(DocumentTable.IdColumn));
+                        return r.Get(DocumentTable.DocumentColumn);
+                    })));
+
+            TouchStore();
+
+            await store.DocumentMigration;
+
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+                .ShouldBe(2);
+
+            migratedIds.ShouldBeLikeUnordered("aatest", "AaAtest");
+        }
+
+        [Fact]
+        public async Task MigratesSelectedIdsAndIdPrefixCombined()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+
+            void Insert(string id) =>
+                store.Insert(table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity())
+                });
+
+            Insert("a");
+            Insert("B");
+            Insert("C");
+            Insert("d");
+            Insert("E");
+            Insert("f");
+            Insert("g");
+            Insert("H");
+            Insert("atest");
+            Insert("Ahest");
+            Insert("aatest");
+            Insert("AaAtest");
+            Insert("EAatest");
+            Insert("ftest");
+            Insert("gatest");
+            Insert("Htest");
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var migratedIds = new List<string>();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf<IDocumentMigrationMatcher>(
+                        new IdPrefixMatcher("a"),
+                        new IdMatcher(new[] { "b", "aatest", "e", "G" })),
+                    (session, serializer, r) =>
+                    {
+                        migratedIds.Add(r.Get(DocumentTable.IdColumn));
+                        return r.Get(DocumentTable.DocumentColumn);
+                    })));
+
+            TouchStore();
+
+            await store.DocumentMigration;
+
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+                .ShouldBe(1);
+
+            migratedIds.ShouldBeLikeUnordered("aatest");
+        }
 
         public class TrackingCommand : DocumentRowMigrationCommand
         {
@@ -341,7 +455,7 @@ namespace HybridDb.Tests.Migrations
 
         public class MigrationFailsBeforeLoadingDocument : DocumentRowMigrationCommand
         {
-            public MigrationFailsBeforeLoadingDocument(Type type, string idPrefix, params string[] ids) : base(type, idPrefix, ids)
+            public MigrationFailsBeforeLoadingDocument(Type type, params IDocumentMigrationMatcher[] matchers) : base(type, matchers)
             {
             }
 

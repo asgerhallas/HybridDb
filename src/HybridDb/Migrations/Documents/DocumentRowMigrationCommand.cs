@@ -9,31 +9,30 @@ namespace HybridDb.Migrations.Documents
 {
     public abstract class DocumentRowMigrationCommand : RowMigrationCommand
     {
-        protected DocumentRowMigrationCommand(Type type, string idPrefix, params string[] ids)
+        protected DocumentRowMigrationCommand(Type type, params IDocumentMigrationMatcher[] matchers)
         {
             Type = type;
-            IdPrefix = idPrefix;
-            Ids = ids; // TODO: sanitize, as we don't use it as params
+            Matchers = matchers ?? throw new ArgumentNullException(nameof(matchers));
         }
 
         public Type Type { get; }
-        public string IdPrefix { get; }
-        public IReadOnlyList<string> Ids { get; }
+        public IDocumentMigrationMatcher[] Matchers { get; }
 
         public override bool Matches(Configuration configuration, Table table) =>
             table is DocumentTable && (
                 Type == null || configuration.TryGetDesignFor(Type)?.Table == table
             );
 
-        public override SqlBuilder Matches(int? version) => new SqlBuilder()
-            .Append(version != null, "Version < @version", new SqlParameter("version", version))
-            .Append(!string.IsNullOrEmpty(IdPrefix), " and Id LIKE @idPrefix + '%'", new SqlParameter("idPrefix", IdPrefix))
-            .Append(Ids.Any(), $" and Id in ({string.Join(", ", Ids.Select(x => $"'{x}'"))})");
+        public override SqlBuilder Matches(int? version)
+        {
+            var builder = new SqlBuilder()
+                .Append(version != null, "Version < @version", new SqlParameter("version", version));
+
+            return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(version)));
+        }
 
         public override bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)
         {
-            var rowId = row.Get(DocumentTable.IdColumn);
-
             if (row.Get(DocumentTable.DiscriminatorColumn) != design.Discriminator)
             {
                 throw new ArgumentException(Indent(@$"
@@ -44,9 +43,10 @@ namespace HybridDb.Migrations.Documents
 
             if (row.Get(DocumentTable.VersionColumn) >= version) return false;
 
-            if (!string.IsNullOrEmpty(IdPrefix) && !rowId.StartsWith(IdPrefix)) return false;
-
-            if (Ids.Any() && !Ids.Contains(rowId, StringComparer.InvariantCultureIgnoreCase)) return false;
+            foreach (var matcher in Matchers)
+            {
+                if (!matcher.Matches(version, configuration, design, row)) return false;
+            }
 
             return Type == null || Type.IsAssignableFrom(design.DocumentType);
         }

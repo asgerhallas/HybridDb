@@ -45,7 +45,7 @@ namespace HybridDb.Migrations.BuiltIn
         /// </summary>
         public class BackgroundCommand_Before_0_10_64 : DocumentRowMigrationCommand
         {
-            public BackgroundCommand_Before_0_10_64() : base(null, null) { }
+            public BackgroundCommand_Before_0_10_64() : base(null) { }
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
             {
@@ -76,7 +76,7 @@ namespace HybridDb.Migrations.BuiltIn
         /// </summary>
         public class BackgroundCommand_0_10_64_And_Later : DocumentRowMigrationCommand
         {
-            public BackgroundCommand_0_10_64_And_Later() : base(null, null) { }
+            public BackgroundCommand_0_10_64_And_Later() : base(null) { }
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
             {

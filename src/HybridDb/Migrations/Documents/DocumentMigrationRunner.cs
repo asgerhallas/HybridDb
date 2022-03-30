@@ -24,7 +24,6 @@ namespace HybridDb.Migrations.Documents
                 {
                     try
                     {
-
                         configuration.Notify(new MigrationStarted(store));
 
                         const int batchSize = 500;
@@ -44,8 +43,7 @@ namespace HybridDb.Migrations.Documents
                                 var (migration, command) = migrationAndCommand;
 
                                 var baseDesign = configuration.TryGetDesignByTablename(table.Name)
-                                                 ?? throw new InvalidOperationException(
-                                                     $"Design not found for table '{table.Name}'");
+                                                 ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
 
                                 var numberOfRowsLeft = 0;
 
@@ -71,10 +69,10 @@ namespace HybridDb.Migrations.Documents
 
                                         numberOfRowsLeft = stats.TotalResults - stats.RetrievedResults;
 
-                                        logger.LogInformation(Indent(
-                                                @"Migrating {NumberOfDocumentsInBatch} documents from {Table}. 
-                                        {NumberOfPendingDocuments} documents left."),
-                                            stats.RetrievedResults, table.Name, stats.TotalResults);
+                                        logger.LogInformation(Indent(@"
+                                            Migrating {NumberOfDocumentsInBatch} documents from {Table}. 
+                                            {NumberOfPendingDocuments} documents left."
+                                        ), stats.RetrievedResults, table.Name, stats.TotalResults);
 
                                         using var tx = store.BeginTransaction();
 
