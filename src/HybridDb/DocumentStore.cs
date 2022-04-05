@@ -31,7 +31,7 @@ namespace HybridDb
             if (initialize) Initialize();
         }
 
-        internal DocumentStore(DocumentStore store, Configuration configuration, bool initialize)
+        public DocumentStore(DocumentStore store, Configuration configuration, bool initialize)
         {
             Configuration = configuration;
             Logger = configuration.Logger;
@@ -51,7 +51,7 @@ namespace HybridDb
         }
 
         public static DocumentStore Create(Configuration configuration = null, bool initialize = true) => 
-            new DocumentStore(TableMode.RealTables, configuration ?? new Configuration(), initialize);
+            new(TableMode.RealTables, configuration ?? new Configuration(), initialize);
 
         public static DocumentStore ForTesting(TableMode mode, Action<Configuration> configure, bool initialize = true)
         {
@@ -63,7 +63,7 @@ namespace HybridDb
         }
 
         public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) => 
-            new DocumentStore(mode, configuration ?? new Configuration(), initialize);
+            new(mode, configuration ?? new Configuration(), initialize);
 
         public void Dispose() => Database.Dispose();
 

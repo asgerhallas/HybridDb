@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using ShinySwitch;
@@ -79,11 +80,10 @@ namespace HybridDb.Tests.Migrations
             tables["Testing"].ShouldContain("Noget");
         }
 
-        [Theory]
-        [InlineData(TableMode.GlobalTempTables)]
-        public void DoesNotRunProvidedSchemaMigrationsOnTempTables(TableMode mode)
+        [Fact]
+        public void DoesRunProvidedSchemaMigrationsOnTempTables()
         {
-            Use(mode);
+            UseGlobalTempTables();
 
             UseTableNamePrefix(Guid.NewGuid().ToString());
             CreateMetadataTable();
@@ -97,7 +97,31 @@ namespace HybridDb.Tests.Migrations
             runner.Run();
 
             var tables = store.Database.QuerySchema();
-            tables.ShouldNotContainKey("Testing");
+            tables.ShouldContainKey("Testing");
+        }
+
+        [Fact]
+        public void BeforeAutoMigration_WithAutoMigrations()
+        {
+            UseGlobalTempTables();
+
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+            CreateMetadataTable();
+            Document<Entity>("Testing")
+                .With(x => x.Property);
+
+            UseMigrations(new InlineMigration(1, before: ListOf<DdlCommand>(
+                new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
+                new AddColumn("Testing", new Column("Noget", typeof(int))))));
+
+            var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
+
+            runner.Run();
+
+            var tables = store.Database.QuerySchema();
+            var table = tables["Testing"];
+            table.ShouldContain("Property");
+            table.ShouldContain("Noget");
         }
 
         [Fact]

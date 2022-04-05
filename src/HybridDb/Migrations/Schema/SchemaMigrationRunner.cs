@@ -152,38 +152,47 @@ namespace HybridDb.Migrations.Schema
 
             if (!configuredMigrations.Any())
             {
-                return RunAutoMigrations(schemaVersion);
+                return GetReprojections(RunAutoMigrations(schemaVersion, hasMigrationsBeforeAutoMigrations: false));
             }
 
             logger.LogInformation("Found migrations from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
 
             var requiresReprojection = new List<string>();
 
-            requiresReprojection.AddRange(RunConfiguredMigrations(configuredMigrations, x => x.BeforeAutoMigrations(store.Configuration)));
-            requiresReprojection.AddRange(RunAutoMigrations(schemaVersion));
-            requiresReprojection.AddRange(RunConfiguredMigrations(configuredMigrations, x => x.AfterAutoMigrations(store.Configuration)));
+            var beforeCommands = RunConfiguredMigrations(configuredMigrations, x => x.BeforeAutoMigrations(store.Configuration)).ToList();
+            requiresReprojection.AddRange(GetReprojections(beforeCommands));
+
+            requiresReprojection.AddRange(GetReprojections(RunAutoMigrations(schemaVersion, hasMigrationsBeforeAutoMigrations: beforeCommands.Any())));
+            
+            var afterCommands = RunConfiguredMigrations(configuredMigrations, x => x.AfterAutoMigrations(store.Configuration));
+            requiresReprojection.AddRange(GetReprojections(afterCommands));
 
             logger.LogInformation("Schema is migrated from version {0} to {1}.", schemaVersion, store.Configuration.ConfiguredVersion);
 
             return requiresReprojection;
         }
 
-        IReadOnlyList<string> RunAutoMigrations(int schemaVersion)
+        IReadOnlyList<string> GetReprojections(IEnumerable<DdlCommand> commands) => commands
+            .Where(x => !string.IsNullOrEmpty(x.RequiresReprojectionOf))
+            .Select(x => x.RequiresReprojectionOf)
+            .ToList();
+
+        IReadOnlyList<DdlCommand> RunAutoMigrations(int schemaVersion, bool hasMigrationsBeforeAutoMigrations)
         {
-            var schema = schemaVersion == -1 // fresh database
+            var schema = schemaVersion == -1 && !hasMigrationsBeforeAutoMigrations // fresh database
                 ? new Dictionary<string, List<string>>()
                 : store.Database.QuerySchema();
 
             var commands = differ.CalculateSchemaChanges(schema, store.Configuration);
 
-            if (!commands.Any()) return new List<string>();
+            if (!commands.Any()) return new List<DdlCommand>();
 
             logger.LogInformation("Found {0} differences between current schema and configuration. Automatically migrates schema to get up to date.", commands.Count);
 
-            return commands.SelectMany(command => ExecuteCommand(command, false), (_, tablename) => tablename).ToList();
+            return commands.SelectMany(command => ExecuteCommand(command, false)).ToList();
         }
 
-        IEnumerable<string> RunConfiguredMigrations(
+        IEnumerable<DdlCommand> RunConfiguredMigrations(
             IEnumerable<Migration> migrationsToRun, 
             Func<Migration, IEnumerable<DdlCommand>> selector)
         {
@@ -191,9 +200,9 @@ namespace HybridDb.Migrations.Schema
             {
                 foreach (var command in selector(migration))
                 {
-                    foreach (var tablename in ExecuteCommand(command, true))
+                    foreach (var executedCommand in ExecuteCommand(command, true))
                     {
-                        yield return tablename;
+                        yield return executedCommand;
                     }
                 }
             }
@@ -201,12 +210,6 @@ namespace HybridDb.Migrations.Schema
 
         IReadOnlyList<Migration> GetConfiguredMigrations(int schemaVersion)
         {
-            if (store.Database is not SqlServerUsingRealTables)
-            {
-                logger.LogInformation("Skips provided migrations when not using real tables.");
-                return new List<Migration>();
-            }
-
             if (schemaVersion >= store.Configuration.ConfiguredVersion) return new List<Migration>();
 
             return migrations
@@ -217,7 +220,7 @@ namespace HybridDb.Migrations.Schema
 
         void MarkDocumentsForReprojections(IEnumerable<string> requiresReprojection)
         {
-            foreach (var tablename in requiresReprojection)
+            foreach (var tablename in requiresReprojection.Distinct())
             {
                 var design = store.Configuration.TryGetDesignByTablename(tablename);
                 if (design == null) continue;
@@ -230,7 +233,7 @@ namespace HybridDb.Migrations.Schema
             }
         }
 
-        IEnumerable<string> ExecuteCommand(DdlCommand command, bool allowUnsafe)
+        IEnumerable<DdlCommand> ExecuteCommand(DdlCommand command, bool allowUnsafe)
         {
             if (!command.Safe && !allowUnsafe)
             {
@@ -242,8 +245,7 @@ namespace HybridDb.Migrations.Schema
 
             store.Execute(command);
 
-            if (command.RequiresReprojectionOf != null)
-                yield return command.RequiresReprojectionOf;
+            yield return command;
         }
     }
 }
