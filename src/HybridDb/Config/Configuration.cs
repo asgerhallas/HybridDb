@@ -41,8 +41,8 @@ namespace HybridDb.Config
 
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
-            RunUpfrontMigrations = true;
             RunBackgroundMigrations = true;
+            RunUpfrontMigrationsOnTempTables = false;
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
             EventStore = false;
@@ -71,8 +71,8 @@ namespace HybridDb.Config
         public ISerializer Serializer { get; private set; }
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
-        public bool RunUpfrontMigrations { get; private set; }
         public bool RunBackgroundMigrations { get; private set; }
+        public bool RunUpfrontMigrationsOnTempTables { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
         public Func<object, string> DefaultKeyResolver { get; private set; }
@@ -306,17 +306,13 @@ namespace HybridDb.Config
 
         public void UseColumnNameConventions(Func<Expression, string> convention) => ColumnNameConvention = convention;
 
-        internal void DisableMigrations()
-        {
-            RunUpfrontMigrations = false;
-            RunBackgroundMigrations = false;
-        }
-
         /// <summary>
         /// This will disable the background process that loads and migrates rows/documents,
         /// but a document will still be migrated when it is loaded into a session.
         /// </summary>
         public void DisableBackgroundMigrations() => RunBackgroundMigrations = false;
+
+        public void EnableUpfrontMigrationsOnTempTables() => RunUpfrontMigrationsOnTempTables = true;
 
         static string KeyResolver(object entity)
         {

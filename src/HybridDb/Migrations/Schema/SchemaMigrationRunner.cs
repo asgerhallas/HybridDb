@@ -34,9 +34,6 @@ namespace HybridDb.Migrations.Schema
         {
             store.Configuration.Initialize();
             store.Database.Initialize();
-
-            if (!store.Configuration.RunUpfrontMigrations)
-                return;
             
             Migrate(store.TableMode == TableMode.GlobalTempTables, () =>
             {
@@ -210,6 +207,12 @@ namespace HybridDb.Migrations.Schema
 
         IReadOnlyList<Migration> GetConfiguredMigrations(int schemaVersion)
         {
+            if (store.Database is not SqlServerUsingRealTables && !store.Configuration.RunUpfrontMigrationsOnTempTables)
+            {
+                logger.LogInformation("Skips provided migrations when not using real tables.");
+                return new List<Migration>();
+            }
+
             if (schemaVersion >= store.Configuration.ConfiguredVersion) return new List<Migration>();
 
             return migrations

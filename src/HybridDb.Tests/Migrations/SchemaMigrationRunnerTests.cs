@@ -35,19 +35,6 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void DoesNothingWhenTurnedOff()
-        {
-            DisableMigrations();
-            CreateMetadataTable();
-
-            var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
-
-            runner.Run();
-
-            store.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Any().ShouldBe(false);
-        }
-
-        [Fact]
         public void DoesNothingGivenNoMigrations()
         {
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
@@ -88,6 +75,8 @@ namespace HybridDb.Tests.Migrations
             UseTableNamePrefix(Guid.NewGuid().ToString());
             CreateMetadataTable();
 
+            EnableUpfrontMigrationsOnTempTables();
+
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
                 new AddColumn("Testing", new Column("Noget", typeof(int))))));
@@ -103,8 +92,6 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void BeforeAutoMigration_WithAutoMigrations()
         {
-            UseGlobalTempTables();
-
             UseTableNamePrefix(Guid.NewGuid().ToString());
             CreateMetadataTable();
             Document<Entity>("Testing")

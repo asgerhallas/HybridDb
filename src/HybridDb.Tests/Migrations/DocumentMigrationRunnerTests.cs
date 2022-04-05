@@ -180,17 +180,6 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void DoesNotStartBackgroundProcessWhenAllMigrationsAreTurnedOff()
-        {
-            DisableMigrations();
-            Document<Entity>().With(x => x.Number);
-
-            new DocumentMigrationRunner().Run(store).Wait();
-
-            store.Stats.NumberOfRequests.ShouldBe(0);
-        }
-
-        [Fact]
         public void StopsIfMigrationFails()
         {
             Document<Entity>().With(x => x.Number);

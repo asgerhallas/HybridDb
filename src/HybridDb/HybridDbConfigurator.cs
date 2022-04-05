@@ -44,8 +44,8 @@ namespace HybridDb
 
         protected void UseEventStore() => configuration.UseEventStore();
 
-        internal void DisableMigrations() => configuration.DisableMigrations();
-
         protected void DisableBackgroundMigrations() => configuration.DisableBackgroundMigrations();
+
+        protected void EnableUpfrontMigrationsOnTempTables() => configuration.EnableUpfrontMigrationsOnTempTables();
     }
 }
