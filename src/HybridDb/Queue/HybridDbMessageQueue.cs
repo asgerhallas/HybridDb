@@ -206,9 +206,9 @@ namespace HybridDb.Queue
 
             try
             {
-                events.OnNext(new MessageHandling(context, message));
-
                 using var session = options.CreateSession(store);
+
+                events.OnNext(new MessageHandling(session, context, message));
 
                 session.Advanced.Enlist(tx);
 
@@ -216,7 +216,7 @@ namespace HybridDb.Queue
 
                 session.SaveChanges();
 
-                events.OnNext(new MessageHandled(context, message));
+                events.OnNext(new MessageHandled(session, context, message));
             }
             catch (Exception exception)
             {
