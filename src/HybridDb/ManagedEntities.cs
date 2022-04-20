@@ -20,7 +20,8 @@ namespace HybridDb
             if (managedEntity == null) throw new ArgumentNullException(nameof(managedEntity));
 
             entitiesByKey.Add(managedEntity.EntityKey, managedEntity);
-            entitiesByInstance.Add(managedEntity.Entity, managedEntity);
+            if(managedEntity.Entity != null) 
+                entitiesByInstance.Add(managedEntity.Entity, managedEntity);
 
             session.DocumentStore.Configuration.Notify(new AddedToSession(session, managedEntity));
         }

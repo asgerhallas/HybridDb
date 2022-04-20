@@ -86,6 +86,19 @@ namespace HybridDb.Tests
             Should.NotThrow(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(NewId(), document, 0, design.Discriminator)));
         }
 
+        [Fact]
+        public void ReturnsNullIfDocumentIsNull()
+        {
+            Document<Entity>();
+
+            UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((serializer, json) => json)));
+
+            var design = configuration.GetDesignFor<Entity>();
+            var document = configuration.Serializer.Serialize(new Entity());
+
+            Should.NotThrow(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(NewId(), document, 0, design.Discriminator)));
+        }
+
         static IDictionary<string, object> Row(string id, string document, int version, string discriminator) =>
             new Dictionary<string, object>
             {

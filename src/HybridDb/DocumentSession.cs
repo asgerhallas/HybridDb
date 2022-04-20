@@ -300,31 +300,42 @@ namespace HybridDb
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
             var key = (string)row[DocumentTable.IdColumn];
-
             var entityKey = new EntityKey(concreteDesign.Table, key);
-
             if (entities.TryGetValue(entityKey, out var managedEntity))
             {
                 if (managedEntity.State == EntityState.Deleted) return null;
-
                 return managedEntity.Entity;
             }
 
             var document = (string)row[DocumentTable.DocumentColumn];
-            var documentVersion = (int) row[DocumentTable.VersionColumn];
+            var documentVersion = (int)row[DocumentTable.VersionColumn];
+            var metadataDocument = (string)row[DocumentTable.MetadataColumn];
+            var metadata = metadataDocument != null
+                ? (Dictionary<string, List<string>>)store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>))
+                : null;
 
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, row);
+            if (entity == null)
+            {
+                managedEntity = new ManagedEntity(entityKey)
+                {
+                    Design = concreteDesign,
+                    Entity = null,
+                    Document = document,
+                    Metadata = metadata,
+                    MetadataDocument = metadataDocument,
+                    Etag = (Guid)row[DocumentTable.EtagColumn],
+                    Version = documentVersion,
+                    State = EntityState.Deleted
+                };
+                entities.Add(managedEntity);
+                return null;
+            }
 
             if (entity.GetType() != concreteDesign.DocumentType)
             {
                 throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{entity.GetType()}'.");
             }
-
-            var metadataDocument = (string)row[DocumentTable.MetadataColumn];
-            var metadata = metadataDocument != null
-                ? (Dictionary<string, List<string>>) store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>)) 
-                : null;
-
             managedEntity = new ManagedEntity(entityKey)
             {
                 Design = concreteDesign,
@@ -332,11 +343,10 @@ namespace HybridDb
                 Document = document,
                 Metadata = metadata,
                 MetadataDocument = metadataDocument,
-                Etag = (Guid) row[DocumentTable.EtagColumn],
+                Etag = (Guid)row[DocumentTable.EtagColumn],
                 Version = documentVersion,
                 State = EntityState.Loaded
             };
-
             entities.Add(managedEntity);
             return entity;
         }

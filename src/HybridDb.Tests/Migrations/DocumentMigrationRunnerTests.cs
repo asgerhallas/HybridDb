@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Castle.DynamicProxy.Generators.Emitters.SimpleAST;
 using HybridDb.Config;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Migrations.Documents;
@@ -427,6 +428,49 @@ namespace HybridDb.Tests.Migrations
                 .ShouldBe(1);
 
             migratedIds.ShouldBeLikeUnordered("aatest");
+        }
+
+        [Fact]
+        public async Task MigratesWithNull()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+
+            void Insert(string id) =>
+                store.Insert(table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity())
+                });
+
+            Insert("atest");
+            Insert("aatest");
+            Insert("AaAtest");
+       
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new []{ "aatest", "AaAtest" })),
+                    (_, _, _) => null)));
+
+            TouchStore();
+
+            await store.DocumentMigration;
+
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+                .ShouldBe(2);
+
+            var entities = store.OpenSession().Query<Entity>().ToList();
+            entities.Count.ShouldBe(1);
         }
 
         public class TrackingCommand : DocumentRowMigrationCommand
