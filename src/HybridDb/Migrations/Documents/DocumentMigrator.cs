@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
+using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -38,7 +39,7 @@ namespace HybridDb.Migrations.Documents
             }
 
             var document = migratedRow.Get(DocumentTable.DocumentColumn);
-            return document == null ? null : configuration.Serializer.Deserialize(document, design.DocumentType);
+            return configuration.Serializer.Deserialize(document, design.DocumentType);
         }
     }
 }
