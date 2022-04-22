@@ -8,7 +8,6 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb
 {

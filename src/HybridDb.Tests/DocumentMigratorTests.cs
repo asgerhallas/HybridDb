@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;

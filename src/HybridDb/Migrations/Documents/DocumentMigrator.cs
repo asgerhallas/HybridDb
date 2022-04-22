@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Migrations.Documents
 {
