@@ -65,7 +65,7 @@ namespace HybridDb
             }
 
             var row = Transactionally(tx => tx.Get(design.Table, key));
-
+            
             if (row == null) return null;
 
             var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
@@ -119,7 +119,7 @@ namespace HybridDb
         }
 
         public Guid? GetEtagFor(object entity) => TryGetManagedEntity(entity)?.Etag;
-
+        
         public bool Exists<T>(string key, out Guid? etag) where T : class => Exists(typeof(T), key, out etag);
 
         public bool Exists(Type type, string key, out Guid? etag)
@@ -142,7 +142,7 @@ namespace HybridDb
         public void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata)
         {
             var managedEntity = TryGetManagedEntity(entity);
-
+            
             if (managedEntity == null) return;
 
             managedEntity.Metadata = metadata;
@@ -163,7 +163,7 @@ namespace HybridDb
 
             var entityKey = new EntityKey(design.Table, key);
 
-            if (entities.TryGetValue(entityKey, out var managedEntity) ||
+            if (entities.TryGetValue(entityKey, out var managedEntity) || 
                 entities.TryGetValue(entity, out managedEntity))
             {
                 // Storing a new instance under an existing id, is an error
@@ -227,38 +227,36 @@ namespace HybridDb
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        {
-                            var (projections, configuredVersion, document, _) = LoadProjections(managedEntity);
-                            commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));
-                            managedEntity.State = EntityState.Loaded;
-                            managedEntity.Version = configuredVersion;
-                            managedEntity.Document = document;
-                        }
+                    {
+                        var (projections, configuredVersion, document, _) = LoadProjections(managedEntity);
+                        commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));
+                        managedEntity.State = EntityState.Loaded;
+                        managedEntity.Version = configuredVersion;
+                        managedEntity.Document = document;
+                    }
                         break;
                     case EntityState.Loaded:
-                        {
-                            var (projections, configuredVersion, document, metadataDocument) = LoadProjections(managedEntity);
+                    {
+                        var (projections, configuredVersion, document, metadataDocument) = LoadProjections(managedEntity);
 
-                            if (!forceWriteUnchangedDocument &&
-                                SafeSequenceEqual(managedEntity.Document, document) &&
-                                SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
-
-                                break;
-
-                            commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections));
-
-                            if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
-                            {
-                                store.Configuration.BackupWriter.Write(
-                                    $"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak",
-                                    Encoding.UTF8.GetBytes(managedEntity.Document));
-                            }
-
-                            managedEntity.Version = configuredVersion;
-                            managedEntity.Document = document;
-
+                        if (!forceWriteUnchangedDocument &&
+                            SafeSequenceEqual(managedEntity.Document, document) &&
+                            SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
+
+                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections));
+
+                        if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
+                        {
+                            store.Configuration.BackupWriter.Write(
+                                $"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak",
+                                Encoding.UTF8.GetBytes(managedEntity.Document));
                         }
+
+                        managedEntity.Version = configuredVersion;
+                        managedEntity.Document = document;
+                    }
+                        break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag));
                         entities.Remove(new EntityKey(design.Table, managedEntity.Key));
@@ -308,7 +306,7 @@ namespace HybridDb
             return (projections, configuredVersion, document, metadataDocument);
         }
 
-        public void Dispose() { }
+        public void Dispose() {}
 
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
@@ -322,13 +320,15 @@ namespace HybridDb
 
             var document = (string)row[DocumentTable.DocumentColumn];
             var documentVersion = (int)row[DocumentTable.VersionColumn];
+
+            //null Document from migrator results in $Deleted key that indicates that the row must be deleted. Old document is kept to be able to serialize the entity.
+            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, row);
             var metadataDocument = (string)row[DocumentTable.MetadataColumn];
             var metadata = metadataDocument != null
                 ? (Dictionary<string, List<string>>)store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>))
                 : null;
 
-            var entity = migrator.DeserializeAndMigrate(this, concreteDesign, row);
-            if (row.TryGetValue("Deleted", out var isDeleted))
+            if (row.TryGetValue("$Deleted", out var isDeleted))
             {
                 if ((bool)isDeleted)
                     managedEntity = new ManagedEntity(entityKey)
@@ -344,7 +344,7 @@ namespace HybridDb
                     };
 
                 entities.Add(managedEntity);
-                return null;
+                return entity;
             }
 
             if (entity.GetType() != concreteDesign.DocumentType)
@@ -367,8 +367,8 @@ namespace HybridDb
         }
 
         internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
-            enlistedTx != null
-                ? func(enlistedTx)
+            enlistedTx != null 
+                ? func(enlistedTx) 
                 : store.Transactionally(func);
 
         public void Clear()
@@ -382,7 +382,7 @@ namespace HybridDb
         {
             if (TryGetManagedEntity(typeof(T), key, out var entityObject))
             {
-                entity = (T)entityObject.Entity;
+                entity = (T) entityObject.Entity;
                 return true;
             }
 
@@ -391,7 +391,7 @@ namespace HybridDb
         }
 
 
-        public bool TryGetManagedEntity(Type type, string key, out ManagedEntity entity) =>
+        public bool TryGetManagedEntity(Type type, string key, out ManagedEntity entity) => 
             entities.TryGetValue(new EntityKey(store.Configuration.GetOrCreateDesignFor(type).Table, key), out entity);
 
         public void Enlist(DocumentTransaction tx)
@@ -410,9 +410,9 @@ namespace HybridDb
             enlistedTx = tx;
         }
 
-        ManagedEntity TryGetManagedEntity(object entity) =>
-            entities.TryGetValue(entity, out var managedEntity)
-                ? managedEntity
+        ManagedEntity TryGetManagedEntity(object entity) => 
+            entities.TryGetValue(entity, out var managedEntity) 
+                ? managedEntity 
                 : null;
 
         bool SafeSequenceEqual<T>(IEnumerable<T> first, IEnumerable<T> second)

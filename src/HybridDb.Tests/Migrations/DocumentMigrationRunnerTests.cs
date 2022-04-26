@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Linq.Bonsai;
 using HybridDb.Migrations.Documents;
 using Serilog.Events;
 using ShouldBeLike;
@@ -32,7 +33,7 @@ namespace HybridDb.Tests.Migrations
             var table = new DocumentTable("Entities");
             store.Insert(table, id, new
             {
-                AwaitsReprojection = awaitsReprojection,
+                AwaitsReprojection = awaitsReprojection, 
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
@@ -111,7 +112,7 @@ namespace HybridDb.Tests.Migrations
             UseMigrations(new InlineMigration(1, migration1));
 
             var sw = Stopwatch.StartNew();
-
+            
             Task.WaitAll(
                 new DocumentMigrationRunner().Run(store),
                 new DocumentMigrationRunner().Run(store));
@@ -160,7 +161,7 @@ namespace HybridDb.Tests.Migrations
 
             gate1.WaitOne();
 
-            store.Update(table, id, etag, new { });
+            store.Update(table, id, etag, new {});
 
             gate2.WaitOne();
 
@@ -230,7 +231,7 @@ namespace HybridDb.Tests.Migrations
 
             Should.NotThrow(() => new DocumentMigrationRunner().Run(store).Wait(1000));
 
-            var numberOfErrors = log.Count(x =>
+            var numberOfErrors = log.Count(x => 
                 x.RenderMessage() == "DocumentMigrationRunner failed and stopped. Documents will not be migrated in background until you restart the runner. They will still be migrated on Session.Load() and Session.Query().");
 
             numberOfErrors.ShouldBe(1);
@@ -296,7 +297,7 @@ namespace HybridDb.Tests.Migrations
             var migratedIds = new List<string>();
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new[] { "b", "d", "e", "G" })),
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new []{ "b", "d", "e", "G" })),
                     (session, serializer, r) =>
                     {
                         migratedIds.Add(r.Get(DocumentTable.IdColumn));
@@ -306,7 +307,7 @@ namespace HybridDb.Tests.Migrations
             TouchStore();
 
             await store.DocumentMigration;
-
+            
             log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
                 .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
                 .ShouldBe(4);
@@ -429,7 +430,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public async Task MigratesWithNull()
+        public async Task DeletesRowIfMigrationReturnsNull()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
@@ -457,7 +458,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(
                 new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new[] { "aatest", "AaAtest" })),
-                    (_, _, r) => null )));
+                    (_, _, r) => null)));
 
             TouchStore();
 

@@ -98,13 +98,9 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql");
 
+            ResetConfiguration();
+
             UseTypeMapper(new OtherTypeMapper());
-            Document<JObject>("BuildingParts", discriminator: "UValueCalculator.Models.RefBuildingPart, UValueCalculator, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-
-            var before = store.Query(new DocumentTable("BuildingParts"), out _).Single();
-
-            ResetStore();
-
             UseMigrations(new InlineMigration(1,
                 after: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.UpfrontCommand()),
                 background: ListOf(new HybridDb_1_x_x_to_2_x_x_Part1.BackgroundCommand_Before_0_10_64())));
@@ -114,6 +110,13 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             serializer.EnableAutomaticBackReferences();
             UseSerializer(serializer);
 
+            Document<JObject>("BuildingParts", discriminator: "UValueCalculator.Models.RefBuildingPart, UValueCalculator, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+
+            var before = store.Query(new DocumentTable("BuildingParts"), out _).Single();
+
+            ResetStore();
+
+            
             TouchStore();
 
             var after = store.Query(new DocumentTable("BuildingParts"), out _).Single();

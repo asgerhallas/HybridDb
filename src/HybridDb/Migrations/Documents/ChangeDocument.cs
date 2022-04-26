@@ -9,13 +9,13 @@ namespace HybridDb.Migrations.Documents
     {
         readonly Func<IDocumentSession, ISerializer, IDictionary<string, object>, string> change;
 
-        public ChangeDocument(Func<ISerializer, string, string> change) : base(typeof(T)) =>
+        public ChangeDocument(Func<ISerializer, string, string> change) : base(typeof(T)) => 
             this.change = (_, serializer, row) => change(serializer, row.Get(DocumentTable.DocumentColumn));
 
         public ChangeDocument(Func<IDocumentSession, ISerializer, IDictionary<string, object>, string> change) : base(typeof(T)) =>
             this.change = change;
 
-        public ChangeDocument(IReadOnlyList<IDocumentMigrationMatcher> matchers, Func<IDocumentSession, ISerializer, IDictionary<string, object>, string> change)
+        public ChangeDocument(IReadOnlyList<IDocumentMigrationMatcher> matchers, Func<IDocumentSession, ISerializer, IDictionary<string, object>, string> change) 
             : base(typeof(T), matchers.ToArray()) => this.change = change;
 
         public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
@@ -28,7 +28,7 @@ namespace HybridDb.Migrations.Documents
                 return row;
             }
 
-            row.Add("Deleted", true);
+            row.Add("$Deleted", true);
             return row;
         }
     }

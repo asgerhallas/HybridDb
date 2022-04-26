@@ -38,6 +38,7 @@ namespace HybridDb.Migrations.Documents
             }
 
             var document = migratedRow.Get(DocumentTable.DocumentColumn);
+
             return configuration.Serializer.Deserialize(document, design.DocumentType);
         }
     }
