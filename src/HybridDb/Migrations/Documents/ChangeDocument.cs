@@ -20,15 +20,7 @@ namespace HybridDb.Migrations.Documents
 
         public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
         {
-            var migratedDocument = change(session, serializer, row);
-
-            if (migratedDocument != null)
-            {
-                row.Set(DocumentTable.DocumentColumn, migratedDocument);
-                return row;
-            }
-
-            row.Add("$Deleted", true);
+            row.Set(DocumentTable.DocumentColumn, change(session, serializer, row));
             return row;
         }
     }

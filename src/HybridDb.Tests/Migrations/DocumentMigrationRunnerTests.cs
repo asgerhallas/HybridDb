@@ -7,7 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq.Bonsai;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
+using Newtonsoft.Json;
 using Serilog.Events;
 using ShouldBeLike;
 using Shouldly;
@@ -458,7 +460,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(
                 new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new[] { "aatest", "AaAtest" })),
-                    (_, _, r) => null)));
+                    (_, serializer, r) => serializer.Serialize(new DeletedDocument()))));
 
             TouchStore();
 

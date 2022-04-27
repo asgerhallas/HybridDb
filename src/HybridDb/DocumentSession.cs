@@ -7,6 +7,7 @@ using HybridDb.Config;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 
 namespace HybridDb
@@ -328,10 +329,9 @@ namespace HybridDb
                 ? (Dictionary<string, List<string>>)store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>))
                 : null;
 
-            if (row.TryGetValue("$Deleted", out var isDeleted))
+            if (entity is DeletedDocument)
             {
-                if ((bool)isDeleted)
-                    managedEntity = new ManagedEntity(entityKey)
+                managedEntity = new ManagedEntity(entityKey)
                     {
                         Design = concreteDesign,
                         Entity = entity,
@@ -344,7 +344,7 @@ namespace HybridDb
                     };
 
                 entities.Add(managedEntity);
-                return entity;
+                return null;
             }
 
             if (entity.GetType() != concreteDesign.DocumentType)
