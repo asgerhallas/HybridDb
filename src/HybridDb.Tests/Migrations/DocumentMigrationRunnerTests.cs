@@ -432,7 +432,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public async Task DeletesRowIfMigrationReturnsNull()
+        public async Task DeletesRowIfMigrationChangeResultsInDeletedDocument()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
