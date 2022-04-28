@@ -485,7 +485,7 @@ namespace HybridDb.Tests.Migrations
                     AwaitsReprojection = false,
                     Discriminator = typeof(T).AssemblyQualifiedName,
                     Version = 0,
-                    Document = configuration.Serializer.Serialize(new Entity { Id = id }),
+                    Document = configuration.Serializer.Serialize(new { Id = id }),
                     Number = number
                 });
 
