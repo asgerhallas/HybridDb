@@ -78,7 +78,7 @@ namespace HybridDb.Queue
 
                                     try
                                     {
-                                        await Task.Factory.StartNew(async () =>
+                                        await Task.Run(async () =>
                                         {
                                             try
                                             {
@@ -141,8 +141,7 @@ namespace HybridDb.Queue
 
         void DisposeTransaction(DocumentTransaction tx)
         {
-            if (!txs.TryRemove(tx, out _))
-                throw new InvalidOperationException("Transaction was not tracked.");
+            if (!txs.TryRemove(tx, out _)) return;
 
             try
             {

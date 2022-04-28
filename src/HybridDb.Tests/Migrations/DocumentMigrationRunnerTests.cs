@@ -445,7 +445,7 @@ namespace HybridDb.Tests.Migrations
                     AwaitsReprojection = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
-                    Document = configuration.Serializer.Serialize(new Entity()),
+                    Document = configuration.Serializer.Serialize(new Entity { Id = id }),
                     Number = number
                 });
 
@@ -459,8 +459,7 @@ namespace HybridDb.Tests.Migrations
             Document<Entity>().With(x => x.Number);
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new[] { "aatest", "AaAtest" })),
-                    (_, serializer, r) => serializer.Serialize(new DeletedDocument()))));
+                new InlineMigration(1, new DeleteDocument<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
 
             TouchStore();
 
@@ -472,6 +471,7 @@ namespace HybridDb.Tests.Migrations
 
             var entities = store.OpenSession().Query<Entity>().ToList();
             entities.Count.ShouldBe(1);
+            entities.Single().Id.ShouldBe("atest");
         }
 
         public class TrackingCommand : DocumentRowMigrationCommand

@@ -67,9 +67,41 @@ namespace HybridDb.Tests.Queue
         {
             StartQueue();
 
-            var subject = new Subject<HybridDbMessage>();
+            var subject = new ReplaySubject<HybridDbMessage>();
 
             handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+
+                session.SaveChanges();
+            }
+
+            var message = await subject.FirstAsync();
+
+            message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+        }
+
+        [Fact]
+        public async Task DequeueAndHandle_AsyncHandler_ThatContinuesOnOtherThread()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            A.CallTo(handler).WithReturnType<Task>()
+                .Invokes(async x =>
+                {
+                    output.WriteLine(Thread.CurrentThread.ManagedThreadId.ToString());
+
+                    await Task.Yield();
+                    await Task.Delay(1000);
+
+                    output.WriteLine(Thread.CurrentThread.ManagedThreadId.ToString());
+
+                    subject.OnNext(x.Arguments.Get<HybridDbMessage>(1));
+                });
 
             using (var session = store.OpenSession())
             {
@@ -91,7 +123,7 @@ namespace HybridDb.Tests.Queue
                 IdleDelay = TimeSpan.Zero
             });
 
-            var subject = new Subject<HybridDbMessage>();
+            var subject = new ReplaySubject<HybridDbMessage>();
 
             handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
 
