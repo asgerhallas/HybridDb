@@ -479,35 +479,22 @@ namespace HybridDb.Tests.Migrations
             Document<Entity>().With(x => x.Number);
             Document<OtherEntity>().With(x => x.Number);
 
-            var table = configuration.GetDesignFor<Entity>().Table;
-            var otherEntityTable = configuration.GetDesignFor<OtherEntity>().Table;
-
-            void Insert(string id, int number) =>
-                store.Insert(table, id, new
+            void Insert<T>(string id, int number) =>
+                store.Insert(configuration.GetDesignFor<T>().Table, id, new
                 {
                     AwaitsReprojection = false,
-                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Discriminator = typeof(T).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new Entity { Id = id }),
                     Number = number
                 });
 
-            void InsertOtherEntity(string id, int number) =>
-                store.Insert(otherEntityTable, id, new
-                {
-                    AwaitsReprojection = false,
-                    Discriminator = typeof(OtherEntity).AssemblyQualifiedName,
-                    Version = 0,
-                    Document = configuration.Serializer.Serialize(new OtherEntity() { Id = id }),
-                    Number = number
-                });
-
-            Insert("atest", 1);
-            Insert("aatest", 2);
-            Insert("AaAtest", 3);
-            InsertOtherEntity("vtest", 1);
-            InsertOtherEntity("aatest", 2);
-            InsertOtherEntity("AaAtest", 3);
+            Insert<Entity>("atest", 1);
+            Insert<Entity>("aatest", 2);
+            Insert<Entity>("AaAtest", 3);
+            Insert<OtherEntity>("atest", 1);
+            Insert<OtherEntity>("aatest", 2);
+            Insert<OtherEntity>("AaAtest", 3);
 
             ResetConfiguration();
 
@@ -520,14 +507,13 @@ namespace HybridDb.Tests.Migrations
 
             await store.DocumentMigration;
 
-            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
-                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
-                .ShouldBe(2);
-
-            var entities = store.OpenSession().Query<Entity>().ToList();
-            store.OpenSession().Query<OtherEntity>().ToList().Count.ShouldBe(3);
+            var session = store.OpenSession();
+            var entities = session.Query<Entity>().ToList();
             entities.Count.ShouldBe(1);
             entities.Single().Id.ShouldBe("atest");
+
+            var otherEntities = session.Query<OtherEntity>().ToList();
+            otherEntities.Count.ShouldBe(3);
         }
 
         public class TrackingCommand : DocumentRowMigrationCommand
