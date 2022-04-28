@@ -472,6 +472,64 @@ namespace HybridDb.Tests.Migrations
             entities.Single().Id.ShouldBe("atest");
         }
 
+        [Fact]
+        public async Task DeleteDocumentsFromTypedTable()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+            var otherEntityTable = configuration.GetDesignFor<OtherEntity>().Table;
+
+            void Insert(string id, int number) =>
+                store.Insert(table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity { Id = id }),
+                    Number = number
+                });
+
+            void InsertOtherEntity(string id, int number) =>
+                store.Insert(otherEntityTable, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(OtherEntity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new OtherEntity() { Id = id }),
+                    Number = number
+                });
+
+            Insert("atest", 1);
+            Insert("aatest", 2);
+            Insert("AaAtest", 3);
+            InsertOtherEntity("vtest", 1);
+            InsertOtherEntity("aatest", 2);
+            InsertOtherEntity("AaAtest", 3);
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            UseMigrations(
+                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
+
+            await store.DocumentMigration;
+
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+                .ShouldBe(2);
+
+            var entities = store.OpenSession().Query<Entity>().ToList();
+            store.OpenSession().Query<OtherEntity>().ToList().Count.ShouldBe(3);
+            entities.Count.ShouldBe(1);
+            entities.Single().Id.ShouldBe("atest");
+        }
+
         public class TrackingCommand : DocumentRowMigrationCommand
         {
             public List<string> MigratedIds { get; private set; } = new();
