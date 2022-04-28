@@ -90,7 +90,7 @@ namespace HybridDb.Queue
                                                 release();
                                                 DisposeTransaction(tx);
                                             }
-                                        }, cts.Token);
+                                        }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
                                     }
                                     catch
                                     {
@@ -141,8 +141,7 @@ namespace HybridDb.Queue
 
         void DisposeTransaction(DocumentTransaction tx)
         {
-            if (!txs.TryRemove(tx, out _))
-                throw new InvalidOperationException("Transaction was not tracked.");
+            if (!txs.TryRemove(tx, out _)) return;
 
             try
             {

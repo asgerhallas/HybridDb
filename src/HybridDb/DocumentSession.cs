@@ -229,7 +229,11 @@ namespace HybridDb
                 {
                     case EntityState.Transient:
                     {
-                        var (projections, configuredVersion, document, _) = LoadProjections(managedEntity);
+                        var projections = CreateProjections(managedEntity);
+
+                        var configuredVersion = (int)projections[DocumentTable.VersionColumn];
+                        var document = (string)projections[DocumentTable.DocumentColumn];
+
                         commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));
                         managedEntity.State = EntityState.Loaded;
                         managedEntity.Version = configuredVersion;
@@ -238,9 +242,13 @@ namespace HybridDb
                         break;
                     case EntityState.Loaded:
                     {
-                        var (projections, configuredVersion, document, metadataDocument) = LoadProjections(managedEntity);
+                        var projections = CreateProjections(managedEntity);
 
-                        if (!forceWriteUnchangedDocument &&
+                        var configuredVersion = (int)projections[DocumentTable.VersionColumn];
+                        var document = (string)projections[DocumentTable.DocumentColumn];
+                        var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
+
+                            if (!forceWriteUnchangedDocument &&
                             SafeSequenceEqual(managedEntity.Document, document) &&
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
@@ -297,15 +305,8 @@ namespace HybridDb
             return commitId;
         }
 
-        (IDictionary<string, object> projections, int configuredVersion, string document, string metadataDocument) LoadProjections(ManagedEntity managedEntity)
-        {
-            var projections = managedEntity.Design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
-
-            var configuredVersion = (int)projections[DocumentTable.VersionColumn];
-            var document = (string)projections[DocumentTable.DocumentColumn];
-            var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
-            return (projections, configuredVersion, document, metadataDocument);
-        }
+        IDictionary<string, object> CreateProjections(ManagedEntity managedEntity) => 
+            managedEntity.Design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
 
         public void Dispose() {}
 
@@ -313,6 +314,7 @@ namespace HybridDb
         {
             var key = (string)row[DocumentTable.IdColumn];
             var entityKey = new EntityKey(concreteDesign.Table, key);
+
             if (entities.TryGetValue(entityKey, out var managedEntity))
             {
                 if (managedEntity.State == EntityState.Deleted) return null;
@@ -322,26 +324,25 @@ namespace HybridDb
             var document = (string)row[DocumentTable.DocumentColumn];
             var documentVersion = (int)row[DocumentTable.VersionColumn];
 
-            //null Document from migrator results in $Deleted key that indicates that the row must be deleted. Old document is kept to be able to serialize the entity.
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, row);
             var metadataDocument = (string)row[DocumentTable.MetadataColumn];
             var metadata = metadataDocument != null
                 ? (Dictionary<string, List<string>>)store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>))
                 : null;
 
-            if (entity is DeletedDocument)
+            if (entity is DocumentMigrator.DeletedDocument)
             {
                 managedEntity = new ManagedEntity(entityKey)
-                    {
-                        Design = concreteDesign,
-                        Entity = entity,
-                        Document = document,
-                        Metadata = metadata,
-                        MetadataDocument = metadataDocument,
-                        Etag = (Guid)row[DocumentTable.EtagColumn],
-                        Version = documentVersion,
-                        State = EntityState.Deleted
-                    };
+                {
+                    Design = concreteDesign,
+                    Entity = entity,
+                    Document = document,
+                    Metadata = metadata,
+                    MetadataDocument = metadataDocument,
+                    Etag = (Guid) row[DocumentTable.EtagColumn],
+                    Version = documentVersion,
+                    State = EntityState.Deleted
+                };
 
                 entities.Add(managedEntity);
                 return null;
@@ -351,6 +352,7 @@ namespace HybridDb
             {
                 throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{entity.GetType()}'.");
             }
+
             managedEntity = new ManagedEntity(entityKey)
             {
                 Design = concreteDesign,
@@ -362,6 +364,7 @@ namespace HybridDb
                 Version = documentVersion,
                 State = EntityState.Loaded
             };
+
             entities.Add(managedEntity);
             return entity;
         }

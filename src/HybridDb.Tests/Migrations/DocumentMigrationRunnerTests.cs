@@ -432,7 +432,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public async Task DeletesRowIfMigrationChangeResultsInDeletedDocument()
+        public async Task DeleteDocument()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
@@ -445,7 +445,7 @@ namespace HybridDb.Tests.Migrations
                     AwaitsReprojection = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
-                    Document = configuration.Serializer.Serialize(new Entity()),
+                    Document = configuration.Serializer.Serialize(new Entity { Id = id }),
                     Number = number
                 });
 
@@ -459,10 +459,7 @@ namespace HybridDb.Tests.Migrations
             Document<Entity>().With(x => x.Number);
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new[] { "aatest", "AaAtest" })),
-                    (_, serializer, r) => serializer.Serialize(new DeletedDocument()))));
-
-            TouchStore();
+                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
 
             await store.DocumentMigration;
 
@@ -472,6 +469,7 @@ namespace HybridDb.Tests.Migrations
 
             var entities = store.OpenSession().Query<Entity>().ToList();
             entities.Count.ShouldBe(1);
+            entities.Single().Id.ShouldBe("atest");
         }
 
         public class TrackingCommand : DocumentRowMigrationCommand
