@@ -472,6 +472,50 @@ namespace HybridDb.Tests.Migrations
             entities.Single().Id.ShouldBe("atest");
         }
 
+        [Fact]
+        public async Task DeleteDocumentsFromTypedTable()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            void Insert<T>(string id, int number) =>
+                store.Insert(configuration.GetDesignFor<T>().Table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(T).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new { Id = id }),
+                    Number = number
+                });
+
+            Insert<Entity>("atest", 1);
+            Insert<Entity>("aatest", 2);
+            Insert<Entity>("AaAtest", 3);
+            Insert<OtherEntity>("atest", 1);
+            Insert<OtherEntity>("aatest", 2);
+            Insert<OtherEntity>("AaAtest", 3);
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            UseMigrations(
+                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
+
+            await store.DocumentMigration;
+
+            var session = store.OpenSession();
+            var entities = session.Query<Entity>().ToList();
+            entities.Count.ShouldBe(1);
+            entities.Single().Id.ShouldBe("atest");
+
+            var otherEntities = session.Query<OtherEntity>().ToList();
+            otherEntities.Count.ShouldBe(3);
+        }
+
         public class TrackingCommand : DocumentRowMigrationCommand
         {
             public List<string> MigratedIds { get; private set; } = new();
