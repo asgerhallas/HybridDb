@@ -432,7 +432,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public async Task DeletesRowIfMigrationChangeResultsInDeletedDocument()
+        public async Task DeleteDocument()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
@@ -459,9 +459,7 @@ namespace HybridDb.Tests.Migrations
             Document<Entity>().With(x => x.Number);
 
             UseMigrations(
-                new InlineMigration(1, new DeleteDocument<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
-
-            TouchStore();
+                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
 
             await store.DocumentMigration;
 
