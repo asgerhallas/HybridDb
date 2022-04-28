@@ -8,11 +8,18 @@ namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrator
     {
+        readonly string deletedDocument;
+
         readonly ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache = new();
 
         readonly Configuration configuration;
 
-        public DocumentMigrator(Configuration configuration) => this.configuration = configuration;
+        public DocumentMigrator(Configuration configuration)
+        {
+            this.configuration = configuration;
+                
+            deletedDocument = configuration.Serializer.Serialize(new DeletedDocument());
+        }
 
         public object DeserializeAndMigrate(IDocumentSession session, DocumentDesign design, IDictionary<string, object> row)
         {
@@ -39,7 +46,9 @@ namespace HybridDb.Migrations.Documents
 
             var document = migratedRow.Get(DocumentTable.DocumentColumn);
 
-            return configuration.Serializer.Deserialize(document, design.DocumentType);
+            return document.Equals(deletedDocument) 
+                ? new DeletedDocument() 
+                : configuration.Serializer.Deserialize(document, design.DocumentType);
         }
     }
 }

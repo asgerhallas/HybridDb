@@ -7,6 +7,7 @@ using HybridDb.Config;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 
 namespace HybridDb
@@ -221,25 +222,26 @@ namespace HybridDb
             {
                 var key = managedEntity.Key;
                 var design = managedEntity.Design;
-                var projections = design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
-
-                var configuredVersion = (int)projections[DocumentTable.VersionColumn];
-                var document = (string)projections[DocumentTable.DocumentColumn];
-                var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
                 var expectedEtag = !lastWriteWins ? managedEntity.Etag : null;
 
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
+                    {
+                        var (projections, configuredVersion, document, _) = LoadProjections(managedEntity);
                         commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));
                         managedEntity.State = EntityState.Loaded;
                         managedEntity.Version = configuredVersion;
                         managedEntity.Document = document;
+                    }
                         break;
                     case EntityState.Loaded:
-                        if (!forceWriteUnchangedDocument && 
-                            SafeSequenceEqual(managedEntity.Document, document) && 
+                    {
+                        var (projections, configuredVersion, document, metadataDocument) = LoadProjections(managedEntity);
+
+                        if (!forceWriteUnchangedDocument &&
+                            SafeSequenceEqual(managedEntity.Document, document) &&
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
 
@@ -248,13 +250,13 @@ namespace HybridDb
                         if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
                         {
                             store.Configuration.BackupWriter.Write(
-                                $"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak", 
+                                $"{design.DocumentType.FullName}_{key}_{managedEntity.Version}.bak",
                                 Encoding.UTF8.GetBytes(managedEntity.Document));
                         }
 
                         managedEntity.Version = configuredVersion;
                         managedEntity.Document = document;
-
+                    }
                         break;
                     case EntityState.Deleted:
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag));
@@ -295,36 +297,60 @@ namespace HybridDb
             return commitId;
         }
 
+        (IDictionary<string, object> projections, int configuredVersion, string document, string metadataDocument) LoadProjections(ManagedEntity managedEntity)
+        {
+            var projections = managedEntity.Design.Projections.ToDictionary(x => x.Key, x => x.Value.Projector(managedEntity.Entity, managedEntity.Metadata));
+
+            var configuredVersion = (int)projections[DocumentTable.VersionColumn];
+            var document = (string)projections[DocumentTable.DocumentColumn];
+            var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
+            return (projections, configuredVersion, document, metadataDocument);
+        }
+
         public void Dispose() {}
 
         internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
             var key = (string)row[DocumentTable.IdColumn];
-
             var entityKey = new EntityKey(concreteDesign.Table, key);
-
             if (entities.TryGetValue(entityKey, out var managedEntity))
             {
                 if (managedEntity.State == EntityState.Deleted) return null;
-
                 return managedEntity.Entity;
             }
 
             var document = (string)row[DocumentTable.DocumentColumn];
-            var documentVersion = (int) row[DocumentTable.VersionColumn];
+            var documentVersion = (int)row[DocumentTable.VersionColumn];
 
+            //null Document from migrator results in $Deleted key that indicates that the row must be deleted. Old document is kept to be able to serialize the entity.
             var entity = migrator.DeserializeAndMigrate(this, concreteDesign, row);
+            var metadataDocument = (string)row[DocumentTable.MetadataColumn];
+            var metadata = metadataDocument != null
+                ? (Dictionary<string, List<string>>)store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>))
+                : null;
+
+            if (entity is DeletedDocument)
+            {
+                managedEntity = new ManagedEntity(entityKey)
+                    {
+                        Design = concreteDesign,
+                        Entity = entity,
+                        Document = document,
+                        Metadata = metadata,
+                        MetadataDocument = metadataDocument,
+                        Etag = (Guid)row[DocumentTable.EtagColumn],
+                        Version = documentVersion,
+                        State = EntityState.Deleted
+                    };
+
+                entities.Add(managedEntity);
+                return null;
+            }
 
             if (entity.GetType() != concreteDesign.DocumentType)
             {
                 throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{entity.GetType()}'.");
             }
-
-            var metadataDocument = (string)row[DocumentTable.MetadataColumn];
-            var metadata = metadataDocument != null
-                ? (Dictionary<string, List<string>>) store.Configuration.Serializer.Deserialize(metadataDocument, typeof(Dictionary<string, List<string>>)) 
-                : null;
-
             managedEntity = new ManagedEntity(entityKey)
             {
                 Design = concreteDesign,
@@ -332,11 +358,10 @@ namespace HybridDb
                 Document = document,
                 Metadata = metadata,
                 MetadataDocument = metadataDocument,
-                Etag = (Guid) row[DocumentTable.EtagColumn],
+                Etag = (Guid)row[DocumentTable.EtagColumn],
                 Version = documentVersion,
                 State = EntityState.Loaded
             };
-
             entities.Add(managedEntity);
             return entity;
         }

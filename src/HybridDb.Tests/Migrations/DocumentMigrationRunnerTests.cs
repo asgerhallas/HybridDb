@@ -7,7 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq.Bonsai;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
+using Newtonsoft.Json;
 using Serilog.Events;
 using ShouldBeLike;
 using Shouldly;
@@ -427,6 +429,49 @@ namespace HybridDb.Tests.Migrations
                 .ShouldBe(1);
 
             migratedIds.ShouldBeLikeUnordered("aatest");
+        }
+
+        [Fact]
+        public async Task DeletesRowIfMigrationChangeResultsInDeletedDocument()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+
+            void Insert(string id, int number) =>
+                store.Insert(table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity()),
+                    Number = number
+                });
+
+            Insert("atest", 1);
+            Insert("aatest", 2);
+            Insert("AaAtest", 3);
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new[] { "aatest", "AaAtest" })),
+                    (_, serializer, r) => serializer.Serialize(new DeletedDocument()))));
+
+            TouchStore();
+
+            await store.DocumentMigration;
+
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+                .ShouldBe(2);
+
+            var entities = store.OpenSession().Query<Entity>().ToList();
+            entities.Count.ShouldBe(1);
         }
 
         public class TrackingCommand : DocumentRowMigrationCommand
