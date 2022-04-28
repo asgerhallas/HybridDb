@@ -78,7 +78,7 @@ namespace HybridDb.Queue
 
                                     try
                                     {
-                                        await Task.Run(async () =>
+                                        await Task.Factory.StartNew(async () =>
                                         {
                                             try
                                             {
@@ -90,7 +90,7 @@ namespace HybridDb.Queue
                                                 release();
                                                 DisposeTransaction(tx);
                                             }
-                                        }, cts.Token);
+                                        }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
                                     }
                                     catch
                                     {
