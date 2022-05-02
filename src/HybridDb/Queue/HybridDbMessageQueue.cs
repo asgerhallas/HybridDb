@@ -205,9 +205,9 @@ namespace HybridDb.Queue
 
             try
             {
-                using var session = options.CreateSession(store);
+                events.OnNext(new MessageHandling(context, message));
 
-                events.OnNext(new MessageHandling(session, context, message));
+                using var session = options.CreateSession(store);
 
                 session.Advanced.Enlist(tx);
 
