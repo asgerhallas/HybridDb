@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -11,6 +12,7 @@ using HybridDb.Config;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
+using ShinySwitch;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -1408,6 +1410,97 @@ namespace HybridDb.Tests
                 .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");
         }
 
+
+        [Fact]
+        public void BaitAndSwitch()
+        {
+            Document<Case>();
+            Document<PatchCase>();
+
+            store.Configuration.HandleEvents(x => Switch.On(x)
+                .Match<Loaded>(loaded =>
+                {
+                    if (loaded.RequestedType != typeof(Case)) return;
+                    if (loaded.Entity != null) return;
+
+                    var session2 = loaded.Session.Advanced.DocumentStore.OpenSession();
+
+                    var patchCase = session2.Load<PatchCase>(loaded.Key);
+                    var parentCase = session2.Load<Case>(patchCase.ParentCaseId);
+
+                    parentCase.Id = patchCase.Id;
+                    parentCase.Name = patchCase.PatchedName;
+
+                    session2.Advanced.ManagedEntities.TryGetValue(parentCase, out var managedEntity);
+
+                    loaded.Session.Advanced.ManagedEntities.Add(
+                        new ManagedEntity(
+                            new EntityKey(managedEntity.Table, parentCase.Id))
+                        {
+                            Entity = parentCase,
+                            Design = managedEntity.Design,
+                            Document = null,
+                            State = EntityState.Loaded,
+                            Version = managedEntity.Version,
+                            Etag = managedEntity.Etag
+                        });
+
+                    loaded.Entity = parentCase;
+                }));
+
+            using var session = store.OpenSession();
+
+            var caseId = NewId();
+
+            session.Store(new Case
+            {
+                Id = caseId,
+                Name = "Asger"
+            });
+
+            var patchCaseId = NewId();
+
+            session.Store(new PatchCase
+            {
+                Id = patchCaseId,
+                ParentCaseId = caseId,
+                PatchedName = "Lars"
+            });
+
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            var basecase = session.Load<Case>(patchCaseId);
+            var @case = basecase.ShouldBeOfType<Case>();
+            @case.Id.ShouldBe(patchCaseId);
+            @case.Name.ShouldBe("Lars");
+
+            var basecase2 = session.Load<Case>(patchCaseId);
+            var @case2 = basecase2.ShouldBeOfType<Case>();
+            @case2.Id.ShouldBe(patchCaseId);
+            @case2.Name.ShouldBe("Lars");
+            @case2.ShouldBeSameAs(@case);
+
+            var originalBaseCase = session.Load<Case>(caseId);
+            var originalCase = originalBaseCase.ShouldBeOfType<Case>();
+            originalCase.Id.ShouldBe(caseId);
+            originalCase.Name.ShouldBe("Asger");
+        }
+
+        public class Case
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+        }
+
+        public class PatchCase
+        {
+            public string Id { get; set; }
+            public string ParentCaseId { get; set; }
+
+            public string PatchedName { get; set; }
+        }
 
         public class EntityWithFunnyKey
         {

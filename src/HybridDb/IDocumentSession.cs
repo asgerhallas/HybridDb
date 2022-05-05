@@ -44,7 +44,7 @@ namespace HybridDb
         Dictionary<string, List<string>> GetMetadataFor(object entity);
         void SetMetadataFor(object entity, Dictionary<string, List<string>> metadata);
 
-        IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities { get; }
+        ManagedEntities ManagedEntities { get; }
         bool TryGetManagedEntity<T>(string key, out T entity);
 
         Dictionary<object, object> SessionData { get; }

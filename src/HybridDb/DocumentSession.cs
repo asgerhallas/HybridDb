@@ -9,6 +9,7 @@ using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
+using ShinySwitch;
 
 namespace HybridDb
 {
@@ -42,44 +43,52 @@ namespace HybridDb
         public IReadOnlyList<DmlCommand> DeferredCommands => deferredCommands;
 
         public IAdvancedDocumentSession Advanced => this;
-        public IReadOnlyDictionary<EntityKey, ManagedEntity> ManagedEntities => entities;
+        public ManagedEntities ManagedEntities => entities;
 
         public Dictionary<object, object> SessionData { get; } = new();
 
         public T Load<T>(string key) where T : class => (T)Load(typeof(T), key);
 
-        public object Load(Type type, string key)
+        public object Load(Type requestedType, string key)
         {
-            var design = store.Configuration.GetOrCreateDesignFor(type);
+            var design = store.Configuration.GetOrCreateDesignFor(requestedType);
 
             if (entities.TryGetValue(new EntityKey(design.Table, key), out var managedEntity))
             {
                 if (managedEntity.State == EntityState.Deleted) return null;
 
                 var entityType = managedEntity.Entity.GetType();
-                if (!type.IsAssignableFrom(entityType))
+                if (!requestedType.IsAssignableFrom(entityType))
                 {
-                    throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{entityType}', which is not assignable to '{type}'.");
+                    throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{entityType}', which is not assignable to '{requestedType}'.");
                 }
 
                 return managedEntity.Entity;
             }
 
             var row = Transactionally(tx => tx.Get(design.Table, key));
-            
-            if (row == null) return null;
 
-            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
-
-            // The discriminator does not map to a type that is assignable to the expected type.
-            if (!type.IsAssignableFrom(concreteDesign.DocumentType))
+            object ConvertToEntity()
             {
-                throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{concreteDesign.DocumentType}', which is not assignable to '{type}'.");
+                var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
+
+                AssertRowMatchesRequestedType(requestedType, key, concreteDesign);
+
+                return ConvertToEntityAndPutUnderManagement(concreteDesign, row);
             }
 
-            return ConvertToEntityAndPutUnderManagement(concreteDesign, row);
-        }
+            var entity = row switch
+            {
+                null => null,
+                _ => ConvertToEntity()
+            };
 
+            var loaded = new Loaded(this, requestedType, key, entity);
+            
+            store.Configuration.Notify(loaded);
+
+            return loaded.Entity;
+        }
 
         /// <summary>
         /// Query for document of type T and subtypes of T in the table assigned to T.
@@ -315,10 +324,10 @@ namespace HybridDb
             var key = (string)row[DocumentTable.IdColumn];
             var entityKey = new EntityKey(concreteDesign.Table, key);
 
-            if (entities.TryGetValue(entityKey, out var managedEntity))
+            if (entities.TryGetValue(entityKey, out var existingManagedEntity))
             {
-                if (managedEntity.State == EntityState.Deleted) return null;
-                return managedEntity.Entity;
+                if (existingManagedEntity.State == EntityState.Deleted) return null;
+                return existingManagedEntity.Entity;
             }
 
             var document = (string)row[DocumentTable.DocumentColumn];
@@ -332,7 +341,7 @@ namespace HybridDb
 
             if (entity is DocumentMigrator.DeletedDocument)
             {
-                managedEntity = new ManagedEntity(entityKey)
+                var condemnedManagedEntity = new ManagedEntity(entityKey)
                 {
                     Design = concreteDesign,
                     Entity = entity,
@@ -344,16 +353,12 @@ namespace HybridDb
                     State = EntityState.Deleted
                 };
 
-                entities.Add(managedEntity);
+                entities.Add(condemnedManagedEntity);
+
                 return null;
             }
 
-            if (entity.GetType() != concreteDesign.DocumentType)
-            {
-                throw new InvalidOperationException($"Requested a document of type '{concreteDesign.DocumentType}', but got a '{entity.GetType()}'.");
-            }
-
-            managedEntity = new ManagedEntity(entityKey)
+            var managedEntity = new ManagedEntity(entityKey)
             {
                 Design = concreteDesign,
                 Entity = entity,
@@ -365,8 +370,30 @@ namespace HybridDb
                 State = EntityState.Loaded
             };
 
+            AssertDeserializedDocumentMatchesDocumentType(managedEntity);
+
             entities.Add(managedEntity);
-            return entity;
+            return managedEntity.Entity;
+        }
+
+        static void AssertDeserializedDocumentMatchesDocumentType(ManagedEntity managedEntity)
+        {
+            // The deserialized entity must match the the design dictated by the rows discriminator
+            if (managedEntity.Entity.GetType() != managedEntity.Design.DocumentType)
+            {
+                throw new InvalidOperationException(
+                    $"Requested a document of type '{managedEntity.Design.DocumentType}', but got a '{managedEntity.Entity.GetType()}'.");
+            }
+        }
+
+        static void AssertRowMatchesRequestedType(Type requestedType, string key, DocumentDesign concreteDesign)
+        {
+            // The design dictated by the rows discriminator must assignable to the requested type
+            if (!requestedType.IsAssignableFrom(concreteDesign.DocumentType))
+            {
+                throw new InvalidOperationException(
+                    $"Document with id '{key}' exists, but is of type '{concreteDesign.DocumentType}', which is not assignable to '{requestedType}'.");
+            }
         }
 
         internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
