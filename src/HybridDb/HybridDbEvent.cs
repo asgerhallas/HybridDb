@@ -11,10 +11,7 @@ namespace HybridDb
         IDictionary<ManagedEntity, DmlCommand> DocumentCommands,
         IList<DmlCommand> OtherCommands) : IHybridDbEvent;
 
-    public record Loaded(IDocumentSession Session, Type RequestedType, string Key, object Entity) : IHybridDbEvent
-    {
-        public object Entity { get; set; } = Entity;
-    }
+    public record EntityLoaded(IDocumentSession Session, Type RequestedType, ManagedEntity ManagedEntity) : IHybridDbEvent;
 
     public record AddedToSession(IDocumentSession Session, ManagedEntity ManagedEntity) : IHybridDbEvent;
     public record RemovedFromSession(IDocumentSession Session, ManagedEntity ManagedEntity) : IHybridDbEvent;

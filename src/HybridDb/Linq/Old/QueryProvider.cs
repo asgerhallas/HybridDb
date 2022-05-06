@@ -99,7 +99,7 @@ namespace HybridDb.Linq.Old
                     // Either it's the same as TSourceElement or it is filtered by OfType<TProjection>
                     // but that is still just a filter, not a conversion
                     where typeof (TProjection).IsAssignableFrom(concreteDesign.DocumentType)
-                    let entity = session.ConvertToEntityAndPutUnderManagement(concreteDesign, (IDictionary<string, object>) row.Data)
+                    let entity = session.ConvertToEntityAndPutUnderManagement(typeof(TProjection), concreteDesign, (IDictionary<string, object>) row.Data)
                     where entity != null
                     select (TProjection) entity;
   

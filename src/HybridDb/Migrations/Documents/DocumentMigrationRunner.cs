@@ -128,7 +128,7 @@ namespace HybridDb.Migrations.Documents
             {
                 using var session = new DocumentSession(store, store.Migrator, tx);
 
-                session.ConvertToEntityAndPutUnderManagement(concreteDesign, row);
+                session.ConvertToEntityAndPutUnderManagement(concreteDesign.DocumentType, concreteDesign, row);
                 session.SaveChanges(false, true);
             }
             catch (ConcurrencyException exception)

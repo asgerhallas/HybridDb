@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -1414,38 +1413,30 @@ namespace HybridDb.Tests
         [Fact]
         public void BaitAndSwitch()
         {
+            Document<BaseCase>(tablename: "Cases");
             Document<Case>();
             Document<PatchCase>();
 
             store.Configuration.HandleEvents(x => Switch.On(x)
-                .Match<Loaded>(loaded =>
+                .Match<EntityLoaded>(loaded =>
                 {
-                    if (loaded.RequestedType != typeof(Case)) return;
-                    if (loaded.Entity != null) return;
+                    if (loaded.ManagedEntity.Entity is PatchCase patch)
+                    {
+                        var session2 = loaded.Session.Advanced.DocumentStore.OpenSession();
 
-                    var session2 = loaded.Session.Advanced.DocumentStore.OpenSession();
+                        var @case = session2.Load<Case>(patch.ParentCaseId);
 
-                    var patchCase = session2.Load<PatchCase>(loaded.Key);
-                    var parentCase = session2.Load<Case>(patchCase.ParentCaseId);
+                        @case.Id = patch.Id;
+                        @case.Name = patch.PatchedName;
 
-                    parentCase.Id = patchCase.Id;
-                    parentCase.Name = patchCase.PatchedName;
+                        var managedEntity = session2.Advanced.ManagedEntities.Values.Single();
 
-                    session2.Advanced.ManagedEntities.TryGetValue(parentCase, out var managedEntity);
-
-                    loaded.Session.Advanced.ManagedEntities.Add(
-                        new ManagedEntity(
-                            new EntityKey(managedEntity.Table, parentCase.Id))
-                        {
-                            Entity = parentCase,
-                            Design = managedEntity.Design,
-                            Document = null,
-                            State = EntityState.Loaded,
-                            Version = managedEntity.Version,
-                            Etag = managedEntity.Etag
-                        });
-
-                    loaded.Entity = parentCase;
+                        loaded.ManagedEntity.Entity = managedEntity.Entity;
+                        loaded.ManagedEntity.Design = managedEntity.Design;
+                        loaded.ManagedEntity.Document = managedEntity.Document;
+                        loaded.ManagedEntity.Etag = managedEntity.Etag;
+                        loaded.ManagedEntity.Version = managedEntity.Version;
+                    }
                 }));
 
             using var session = store.OpenSession();
@@ -1470,31 +1461,30 @@ namespace HybridDb.Tests
             session.SaveChanges();
             session.Advanced.Clear();
 
-            var basecase = session.Load<Case>(patchCaseId);
-            var @case = basecase.ShouldBeOfType<Case>();
+            var @case = session.Load<Case>(patchCaseId);
+            @case.ShouldBeOfType<Case>();
             @case.Id.ShouldBe(patchCaseId);
             @case.Name.ShouldBe("Lars");
 
-            var basecase2 = session.Load<Case>(patchCaseId);
-            var @case2 = basecase2.ShouldBeOfType<Case>();
-            @case2.Id.ShouldBe(patchCaseId);
-            @case2.Name.ShouldBe("Lars");
-            @case2.ShouldBeSameAs(@case);
-
-            var originalBaseCase = session.Load<Case>(caseId);
-            var originalCase = originalBaseCase.ShouldBeOfType<Case>();
+            var originalCase = session.Load<Case>(caseId);
+            originalCase.ShouldBeOfType<Case>();
             originalCase.Id.ShouldBe(caseId);
             originalCase.Name.ShouldBe("Asger");
         }
 
-        public class Case
+        public class BaseCase
+        {
+            
+        }
+
+        public class Case : BaseCase
         {
             public string Id { get; set; }
 
             public string Name { get; set; }
         }
 
-        public class PatchCase
+        public class PatchCase : BaseCase
         {
             public string Id { get; set; }
             public string ParentCaseId { get; set; }

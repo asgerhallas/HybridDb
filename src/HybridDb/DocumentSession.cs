@@ -9,7 +9,6 @@ using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
-using ShinySwitch;
 
 namespace HybridDb
 {
@@ -67,27 +66,12 @@ namespace HybridDb
             }
 
             var row = Transactionally(tx => tx.Get(design.Table, key));
-
-            object ConvertToEntity()
-            {
-                var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
-
-                AssertRowMatchesRequestedType(requestedType, key, concreteDesign);
-
-                return ConvertToEntityAndPutUnderManagement(concreteDesign, row);
-            }
-
-            var entity = row switch
-            {
-                null => null,
-                _ => ConvertToEntity()
-            };
-
-            var loaded = new Loaded(this, requestedType, key, entity);
             
-            store.Configuration.Notify(loaded);
+            if (row == null) return null;
 
-            return loaded.Entity;
+            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
+
+            return ConvertToEntityAndPutUnderManagement(requestedType, concreteDesign, row);
         }
 
         /// <summary>
@@ -319,7 +303,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal object ConvertToEntityAndPutUnderManagement(DocumentDesign concreteDesign, IDictionary<string, object> row)
+        internal object ConvertToEntityAndPutUnderManagement(Type requestedType, DocumentDesign concreteDesign, IDictionary<string, object> row)
         {
             var key = (string)row[DocumentTable.IdColumn];
             var entityKey = new EntityKey(concreteDesign.Table, key);
@@ -355,6 +339,8 @@ namespace HybridDb
 
                 entities.Add(condemnedManagedEntity);
 
+                AssertRequestedTypeMatches(requestedType, condemnedManagedEntity);
+
                 return null;
             }
 
@@ -370,13 +356,16 @@ namespace HybridDb
                 State = EntityState.Loaded
             };
 
-            AssertDeserializedDocumentMatchesDocumentType(managedEntity);
+            store.Configuration.Notify(new EntityLoaded(this, requestedType, managedEntity));
+
+            AssertRequestedTypeMatches(requestedType, managedEntity);
+            AssertDeserializedDocumentMatches(managedEntity);
 
             entities.Add(managedEntity);
             return managedEntity.Entity;
         }
 
-        static void AssertDeserializedDocumentMatchesDocumentType(ManagedEntity managedEntity)
+        static void AssertDeserializedDocumentMatches(ManagedEntity managedEntity)
         {
             // The deserialized entity must match the the design dictated by the rows discriminator
             if (managedEntity.Entity.GetType() != managedEntity.Design.DocumentType)
@@ -386,13 +375,13 @@ namespace HybridDb
             }
         }
 
-        static void AssertRowMatchesRequestedType(Type requestedType, string key, DocumentDesign concreteDesign)
+        static void AssertRequestedTypeMatches(Type requestedType, ManagedEntity managedEntity)
         {
             // The design dictated by the rows discriminator must assignable to the requested type
-            if (!requestedType.IsAssignableFrom(concreteDesign.DocumentType))
+            if (!requestedType.IsAssignableFrom(managedEntity.Design.DocumentType))
             {
                 throw new InvalidOperationException(
-                    $"Document with id '{key}' exists, but is of type '{concreteDesign.DocumentType}', which is not assignable to '{requestedType}'.");
+                    $"Document with id '{managedEntity.Key}' exists, but is of type '{managedEntity.Design.DocumentType}', which is not assignable to '{requestedType}'.");
             }
         }
 
