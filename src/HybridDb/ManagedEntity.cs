@@ -6,12 +6,14 @@ namespace HybridDb
 {
     public class ManagedEntity
     {
-        public ManagedEntity(EntityKey entityKey)
+        public ManagedEntity(EntityKey entityKey, bool readOnly = false)
         {
             EntityKey = entityKey ?? throw new ArgumentNullException(nameof(entityKey));
+            ReadOnly = readOnly;
         }
         
         public EntityKey EntityKey { get; }
+        public bool ReadOnly { get; }
 
         public string Key => EntityKey.Id;
         public Table Table => EntityKey.Table;
@@ -27,5 +29,6 @@ namespace HybridDb
         
         public Dictionary<string, List<string>> Metadata { get; set; }
         public string MetadataDocument { get; set; }
+
     }
 }

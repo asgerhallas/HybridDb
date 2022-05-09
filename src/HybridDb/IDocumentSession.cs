@@ -7,8 +7,8 @@ namespace HybridDb
 {
     public interface IDocumentSession : IDisposable
     {
-        T Load<T>(string key) where T : class;
-        object Load(Type type, string key);
+        T Load<T>(string key, bool readOnly = false) where T : class;
+        object Load(Type requestedType, string key, bool readOnly = false);
         
         IQueryable<T> Query<T>() where T : class;
 

@@ -1,196 +1,152 @@
-﻿using Shouldly;
+﻿using System;
+using HybridDb.Migrations.Documents;
+using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_ExistsTests : HybridDbTests
+    public class DocumentSession_ReadOnlyTests : HybridDbTests
     {
-        public DocumentSession_ExistsTests(ITestOutputHelper output) : base(output)
+        public DocumentSession_ReadOnlyTests(ITestOutputHelper output) : base(output)
         {
         }
 
         [Fact]
-        public void Exists_NotInDb_NotInSession()
+        public void ReadOnly_Modify()
         {
             Document<Entity>();
 
             var id = NewId();
 
             using var session = store.OpenSession();
+            session.Store(id, new Entity
+            {
+                Field = "Lars"
+            });
 
             session.SaveChanges();
             session.Advanced.Clear();
 
-            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(false);
-            etag.ShouldBe(null);
-        }
+            var readOnlyEntity = session.Load<Entity>(id, readOnly: true);
+            var readOnlyEtag = session.Advanced.GetEtagFor(readOnlyEntity);
+            
+            readOnlyEntity.Field = "Asger";
 
-        [Fact]
-        public void Exists_InDb()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Store(new Entity {Id = id});
-            var storedEtag = session.SaveChanges();
-            session.Advanced.Clear();
-
-            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(true);
-            etag.ShouldBe(storedEtag);
-        }
-
-        [Fact]
-        public void Exists_InDb_OtherType()
-        {
-            Document<Entity>();
-            Document<OtherEntity>();
-
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Store(new Entity {Id = id});
             session.SaveChanges();
             session.Advanced.Clear();
 
-            session.Advanced.Exists<OtherEntity>(id, out var etag).ShouldBe(false);
-            etag.ShouldBe(null);
+            var finalEntity = session.Load<Entity>(id);
+            finalEntity.Field.ShouldBe("Lars");
+            session.Advanced.GetEtagFor(finalEntity).ShouldBe(readOnlyEtag);
         }
 
         [Fact]
-        public void Exists_InDb_OtherId()
+        public void ReadOnly_Delete()
         {
             Document<Entity>();
 
             var id = NewId();
 
             using var session = store.OpenSession();
+            session.Store(id, new Entity
+            {
+                Field = "Lars"
+            });
 
-            session.Store(new Entity {Id = id});
             session.SaveChanges();
             session.Advanced.Clear();
 
-            session.Advanced.Exists<Entity>(NewId(), out var etag).ShouldBe(false);
-            etag.ShouldBe(null);
-        }
+            var readOnlyEntity = session.Load<Entity>(id, readOnly: true);
+            
+            session.Delete(readOnlyEntity);
 
-        [Fact]
-        public void Exists_InDb_DerivedType()
-        {
-            Document<AbstractEntity>();
-            Document<DerivedEntity>();
-
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Store(new DerivedEntity {Id = id});
-            var savedEtag = session.SaveChanges();
+            session.SaveChanges();
             session.Advanced.Clear();
 
-            session.Advanced.Exists<AbstractEntity>(id, out var etag).ShouldBe(true);
-            etag.ShouldBe(savedEtag);
+            session.Load<Entity>(id).ShouldNotBe(null);
         }
 
         [Fact]
-        public void Exists_InSession_Stored()
+        public void Load_Then_LoadReadOnly()
         {
             Document<Entity>();
 
             var id = NewId();
 
             using var session = store.OpenSession();
+            session.Store(id, new Entity());
 
-            session.Store(new Entity {Id = id});
-
-            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(true);
-            etag.ShouldBe(null);
-        }
-
-        [Fact]
-        public void Exists_NotInConfig_NotInSession_NotInDb()
-        {
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(false);
-            etag.ShouldBe(null);
-        }
-
-        [Fact]
-        public void Exists_InSession_Stored_AndSavedInDb()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Store(new Entity {Id = id});
-            var savedEtag = session.SaveChanges();
-
-            var x = session.Advanced.DocumentStore.Stats.NumberOfCommands;
-
-            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(true);
-            etag.ShouldBe(savedEtag);
-            session.Advanced.DocumentStore.Stats.NumberOfCommands.ShouldBe(x);
-        }
-
-        [Fact]
-        public void Exists_InSession_Loaded()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Store(new Entity {Id = id});
-            var savedEtag = session.SaveChanges();
+            session.SaveChanges();
             session.Advanced.Clear();
+
             session.Load<Entity>(id);
 
-            var x = session.Advanced.DocumentStore.Stats.NumberOfCommands;
-
-            session.Advanced.Exists<Entity>(id, out var etag).ShouldBe(true);
-            etag.ShouldBe(savedEtag);
-            session.Advanced.DocumentStore.Stats.NumberOfCommands.ShouldBe(x);
-        }
-
+            Should.Throw<InvalidOperationException>(() => session.Load<Entity>(id, readOnly: true))
+                .Message.ShouldBe("Document can not be loaded as readonly, as it is already loaded or stored in session as writable.");
+        }        
+        
         [Fact]
-        public void Exists_InSession_DerivedType()
-        {
-            Document<AbstractEntity>();
-            Document<DerivedEntity>();
-
-            var id = NewId();
-
-            using var session = store.OpenSession();
-
-            session.Store(new DerivedEntity {Id = id});
-
-            session.Advanced.Exists<AbstractEntity>(id, out var etag).ShouldBe(true);
-            etag.ShouldBe(null);
-        }
-
-        [Fact]
-        public void Exists_InSession_OtherId()
+        public void Store_Then_LoadReadOnly()
         {
             Document<Entity>();
 
             var id = NewId();
 
             using var session = store.OpenSession();
+            session.Store(id, new Entity());
 
-            session.Store(new Entity {Id = id});
+            Should.Throw<InvalidOperationException>(() => session.Load<Entity>(id, readOnly: true))
+                .Message.ShouldBe("Document can not be loaded as readonly, as it is already loaded or stored in session as writable.");
+        }
 
-            session.Advanced.Exists<Entity>(NewId(), out var etag).ShouldBe(false);
-            etag.ShouldBe(null);
+        [Fact]
+        public void LoadReadOnly_Then_Load()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+
+            using var session = store.OpenSession();
+            session.Store(id, new Entity());
+
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            session.Load<Entity>(id, readOnly: true);
+            var entity = session.Load<Entity>(id);
+
+            session.Advanced.ManagedEntities.TryGetValue(entity, out var managedEntity);
+            managedEntity.ReadOnly.ShouldBe(true);
+        }
+
+        [Fact]
+        public void DeleteMigration_LoadReadOnly()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+
+            using var session1 = store.OpenSession();
+            session1.Store(id, new Entity());
+
+            session1.SaveChanges();
+            session1.Advanced.Clear();
+
+            ResetConfiguration();
+
+            Document<Entity>();
+            UseMigrations(new InlineMigration(1, new DeleteDocuments<Entity>()));
+
+            using var session2 = store.OpenSession();
+
+            session2.Load<Entity>(id, readOnly: true).ShouldBe(null);
+
+            session2.SaveChanges();
+            session2.Advanced.Clear();
+
+            session2.Advanced.Exists<Entity>(id, out var etag).ShouldBe(false);
         }
     }
 }

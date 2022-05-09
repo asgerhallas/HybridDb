@@ -46,14 +46,20 @@ namespace HybridDb
 
         public Dictionary<object, object> SessionData { get; } = new();
 
-        public T Load<T>(string key) where T : class => (T)Load(typeof(T), key);
+        public T Load<T>(string key, bool readOnly = false) where T : class => (T)Load(typeof(T), key, readOnly);
 
-        public object Load(Type requestedType, string key)
+        public object Load(Type requestedType, string key, bool readOnly = false)
         {
             var design = store.Configuration.GetOrCreateDesignFor(requestedType);
 
             if (entities.TryGetValue(new EntityKey(design.Table, key), out var managedEntity))
             {
+                if (readOnly && !managedEntity.ReadOnly)
+                {
+                    throw new InvalidOperationException(
+                        "Document can not be loaded as readonly, as it is already loaded or stored in session as writable.");
+                }
+
                 if (managedEntity.State == EntityState.Deleted) return null;
 
                 var entityType = managedEntity.Entity.GetType();
@@ -71,7 +77,7 @@ namespace HybridDb
 
             var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
 
-            return ConvertToEntityAndPutUnderManagement(requestedType, concreteDesign, row);
+            return ConvertToEntityAndPutUnderManagement(requestedType, concreteDesign, row, readOnly);
         }
 
         /// <summary>
@@ -218,6 +224,8 @@ namespace HybridDb
 
                 var expectedEtag = !lastWriteWins ? managedEntity.Etag : null;
 
+                if (managedEntity.ReadOnly) continue;
+
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
@@ -241,7 +249,7 @@ namespace HybridDb
                         var document = (string)projections[DocumentTable.DocumentColumn];
                         var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
-                            if (!forceWriteUnchangedDocument &&
+                        if (!forceWriteUnchangedDocument &&
                             SafeSequenceEqual(managedEntity.Document, document) &&
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
@@ -303,7 +311,7 @@ namespace HybridDb
 
         public void Dispose() {}
 
-        internal object ConvertToEntityAndPutUnderManagement(Type requestedType, DocumentDesign concreteDesign, IDictionary<string, object> row)
+        internal object ConvertToEntityAndPutUnderManagement(Type requestedType, DocumentDesign concreteDesign, IDictionary<string, object> row, bool readOnly)
         {
             var key = (string)row[DocumentTable.IdColumn];
             var entityKey = new EntityKey(concreteDesign.Table, key);
@@ -311,6 +319,7 @@ namespace HybridDb
             if (entities.TryGetValue(entityKey, out var existingManagedEntity))
             {
                 if (existingManagedEntity.State == EntityState.Deleted) return null;
+                
                 return existingManagedEntity.Entity;
             }
 
@@ -344,7 +353,7 @@ namespace HybridDb
                 return null;
             }
 
-            var managedEntity = new ManagedEntity(entityKey)
+            var managedEntity = new ManagedEntity(entityKey, readOnly)
             {
                 Design = concreteDesign,
                 Entity = entity,
