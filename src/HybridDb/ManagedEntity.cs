@@ -6,19 +6,18 @@ namespace HybridDb
 {
     public class ManagedEntity
     {
-        public ManagedEntity(EntityKey entityKey, bool readOnly = false)
+        public ManagedEntity(EntityKey entityKey)
         {
             EntityKey = entityKey ?? throw new ArgumentNullException(nameof(entityKey));
-            ReadOnly = readOnly;
         }
         
         public EntityKey EntityKey { get; }
-        public bool ReadOnly { get; }
 
         public string Key => EntityKey.Id;
         public Table Table => EntityKey.Table;
 
         public EntityState State { get; set; }
+        public bool ReadOnly { get; set; } = false;
 
         public Guid? Etag { get; set; }
         public int Version { get; set; }

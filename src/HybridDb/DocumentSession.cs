@@ -353,7 +353,7 @@ namespace HybridDb
                 return null;
             }
 
-            var managedEntity = new ManagedEntity(entityKey, readOnly)
+            var managedEntity = new ManagedEntity(entityKey)
             {
                 Design = concreteDesign,
                 Entity = entity,
@@ -362,7 +362,8 @@ namespace HybridDb
                 MetadataDocument = metadataDocument,
                 Etag = (Guid)row[DocumentTable.EtagColumn],
                 Version = documentVersion,
-                State = EntityState.Loaded
+                State = EntityState.Loaded,
+                ReadOnly = readOnly
             };
 
             store.Configuration.Notify(new EntityLoaded(this, requestedType, managedEntity));
