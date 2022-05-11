@@ -50,34 +50,57 @@ namespace HybridDb
 
         public object Load(Type requestedType, string key, bool readOnly = false)
         {
+            var results = Load(requestedType, new List<string> { key }, readOnly);
+
+            return results.Count != 0 ? results.First() : null;
+        }
+
+        public IReadOnlyList<T> Load<T>(IReadOnlyList<string> keys, bool readOnly = false) where T : class => 
+            Load(typeof(T), keys, readOnly).Cast<T>().ToList();
+
+        public IReadOnlyList<object> Load(Type requestedType, IReadOnlyList<string> keys, bool readOnly = false)
+        {
             var design = store.Configuration.GetOrCreateDesignFor(requestedType);
 
-            if (entities.TryGetValue(new EntityKey(design.Table, key), out var managedEntity))
+            var result = new List<object>();
+            var missingKeys = new List<string>();
+
+            foreach (var key in keys)
             {
+                if (!entities.TryGetValue(new EntityKey(design.Table, key), out var managedEntity))
+                {
+                    missingKeys.Add(key);
+                    continue;
+                }
+
                 if (readOnly && !managedEntity.ReadOnly)
                 {
                     throw new InvalidOperationException(
                         "Document can not be loaded as readonly, as it is already loaded or stored in session as writable.");
                 }
 
-                if (managedEntity.State == EntityState.Deleted) return null;
+                if (managedEntity.State == EntityState.Deleted) continue;
 
                 var entityType = managedEntity.Entity.GetType();
                 if (!requestedType.IsAssignableFrom(entityType))
                 {
-                    throw new InvalidOperationException($"Document with id '{key}' exists, but is of type '{entityType}', which is not assignable to '{requestedType}'.");
+                    throw new InvalidOperationException(
+                        $"Document with id '{key}' exists, but is of type '{entityType}', which is not assignable to '{requestedType}'.");
                 }
 
-                return managedEntity.Entity;
+                result.Add(managedEntity.Entity);
             }
 
-            var row = Transactionally(tx => tx.Get(design.Table, key));
-            
-            if (row == null) return null;
+            var rows = Transactionally(tx => tx.Get(design.Table, missingKeys));
 
-            var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
+            foreach (var row in rows.Values)
+            {
+                var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(design, (string)row[DocumentTable.DiscriminatorColumn]);
 
-            return ConvertToEntityAndPutUnderManagement(requestedType, concreteDesign, row, readOnly);
+                result.Add(ConvertToEntityAndPutUnderManagement(requestedType, concreteDesign, row, readOnly));
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -148,14 +171,14 @@ namespace HybridDb
             managedEntity.Metadata = metadata;
         }
 
-        public void Store(object entity) => Store(null, entity);
-        public void Store(object entity, Guid? etag) => Store(null, entity, etag);
-        public void Store(string key, object entity, Guid? etag) => Store(key, entity, etag, EntityState.Loaded);
-        public void Store(string key, object entity) => Store(key, entity, null, EntityState.Transient);
+        public T Store<T>(T entity) where T : class => Store(null, entity);
+        public T Store<T>(T entity, Guid? etag) where T : class => Store(null, entity, etag);
+        public T Store<T>(string key, T entity, Guid? etag) where T : class => Store(key, entity, etag, EntityState.Loaded);
+        public T Store<T>(string key, T entity) where T : class => Store(key, entity, null, EntityState.Transient);
 
-        void Store(string key, object entity, Guid? etag, EntityState state)
+        T Store<T>(string key, T entity, Guid? etag, EntityState state) where T : class
         {
-            if (entity == null) return;
+            if (entity == null) return null;
 
             var design = store.Configuration.GetOrCreateDesignFor(entity.GetType());
 
@@ -176,7 +199,7 @@ namespace HybridDb
                     throw new HybridDbException($"Attempted to store same object '{managedEntity.Key}' with a different id '{key}'. Did you forget to evict?");
 
                 // Storing same instance is a noop
-                return;
+                return entity;
             }
 
             entities.Add(new ManagedEntity(entityKey)
@@ -186,6 +209,8 @@ namespace HybridDb
                 State = state,
                 Etag = etag
             });
+
+            return entity;
         }
 
         public void Append(int generation, EventData<byte[]> @event) => events.Add((generation, @event));

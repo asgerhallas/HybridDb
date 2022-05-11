@@ -1175,7 +1175,7 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                session.Store(null);
+                session.Store<object>(null);
                 session.SaveChanges();
             }
 

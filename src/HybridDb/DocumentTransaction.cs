@@ -55,7 +55,17 @@ namespace HybridDb
 
         public T Execute<T>(Command<T> command) => Store.Execute(this, command);
 
-        public IDictionary<string, object> Get(DocumentTable table, string key) => Execute(new GetCommand(table, key));
+        public IDictionary<string, object> Get(DocumentTable table, string key)
+        {
+            var result = Execute(new GetCommand(table, new List<string> { key }));
+
+            if (result.Count == 0) return null;
+
+            return result.Values.Single();
+        }
+
+        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) => 
+            Execute(new GetCommand(table, keys));
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
             DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 

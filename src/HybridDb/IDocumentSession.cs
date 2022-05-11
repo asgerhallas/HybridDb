@@ -9,13 +9,16 @@ namespace HybridDb
     {
         T Load<T>(string key, bool readOnly = false) where T : class;
         object Load(Type requestedType, string key, bool readOnly = false);
-        
+
+        IReadOnlyList<T> Load<T>(IReadOnlyList<string> keys, bool readOnly = false) where T : class;
+        IReadOnlyList<object> Load(Type requestedType, IReadOnlyList<string> keys, bool readOnly = false);
+
         IQueryable<T> Query<T>() where T : class;
 
-        void Store(object entity);
-        void Store(object entity, Guid? etag);
-        void Store(string key, object entity);
-        void Store(string key, object entity, Guid? etag);
+        T Store<T>(T entity) where T: class;
+        T Store<T>(T entity, Guid? etag) where T : class;
+        T Store<T>(string key, T entity) where T : class;
+        T Store<T>(string key, T entity, Guid? etag) where T : class;
 
         void Delete(object entity);
         void Append(int generation, EventData<byte[]> @event);
