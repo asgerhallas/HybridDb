@@ -83,6 +83,14 @@ namespace HybridDb
                 Expression.Convert(Expression.Constant(null), typeof(object)));
         }
 
+        protected override Expression VisitBinary(BinaryExpression node)
+        {
+            var left = Visit(node.Left)!;
+            var right = Visit(node.Right)!;
+
+            return Expression.MakeBinary(node.NodeType, left, right);
+        }
+
         bool CanBeNull(Expression expression)
         {
             // We do not allow parameters to be null

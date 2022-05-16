@@ -34,7 +34,9 @@ namespace HybridDb.Tests
             
             readOnlyEntity.Field = "Asger";
 
-            session.SaveChanges();
+            Should.Throw<InvalidOperationException>(() => session.SaveChanges())
+                .Message.ShouldBe($"Call to SaveChanges failed. 'Entity/{id}' is read only.");
+
             session.Advanced.Clear();
 
             var finalEntity = session.Load<Entity>(id);
@@ -59,13 +61,112 @@ namespace HybridDb.Tests
             session.Advanced.Clear();
 
             var readOnlyEntity = session.Load<Entity>(id, readOnly: true);
-            
+
             session.Delete(readOnlyEntity);
+
+            Should.Throw<InvalidOperationException>(() => session.SaveChanges())
+                .Message.ShouldBe($"Call to SaveChanges failed. 'Entity/{id}' is read only.");
+
+            session.Advanced.Clear();
+
+            session.Load<Entity>(id).ShouldNotBe(null);
+        }
+
+        [Fact]
+        public void ReadOnly_Store()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+
+            using var session = store.OpenSession();
+            var entity = new Entity
+            {
+                Field = "Lars"
+            };
+
+            session.Store(id, entity);
+
+            session.Advanced.ManagedEntities.TryGetValue(entity, out var managedEntity);
+            managedEntity.ReadOnly = true;
+
+            Should.Throw<InvalidOperationException>(() => session.SaveChanges())
+                .Message.ShouldBe($"Call to SaveChanges failed. 'Entity/{id}' is read only.");
+
+            session.Advanced.Clear();
+
+            session.Load<Entity>(id).ShouldBe(null);
+        }
+
+        [Fact]
+        public void ReadOnly_Atomic_Modify()
+        {
+            Document<Entity>();
+
+            var id1 = NewId();
+            var id2 = NewId();
+
+            using var session = store.OpenSession();
+            session.Store(id1, new Entity
+            {
+                Field = "Lars"
+            });
+
+            session.Store(id2, new Entity
+            {
+                Field = "Asger"
+            });
 
             session.SaveChanges();
             session.Advanced.Clear();
 
-            session.Load<Entity>(id).ShouldNotBe(null);
+            var readOnlyEntity = session.Load<Entity>(id1, readOnly: true);
+            var writableEntity = session.Load<Entity>(id2, readOnly: false);
+
+            readOnlyEntity.Field = "Peter";
+            writableEntity.Field = "Jacob";
+
+            Should.Throw<InvalidOperationException>(() => session.SaveChanges())
+                .Message.ShouldBe($"Call to SaveChanges failed. 'Entity/{id1}' is read only.");
+
+            session.Advanced.Clear();
+
+            session.Load<Entity>(id1).Field.ShouldBe("Lars");
+            session.Load<Entity>(id2).Field.ShouldBe("Asger");
+        }
+
+        [Fact]
+        public void ReadOnly_Atomic_ReadonlyEntityNotModified()
+        {
+            Document<Entity>();
+
+            var id1 = NewId();
+            var id2 = NewId();
+
+            using var session = store.OpenSession();
+            session.Store(id1, new Entity
+            {
+                Field = "Lars"
+            });
+
+            session.Store(id2, new Entity
+            {
+                Field = "Asger"
+            });
+
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            session.Load<Entity>(id1, readOnly: true);
+            var writableEntity = session.Load<Entity>(id2, readOnly: false);
+
+            writableEntity.Field = "Jacob";
+
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            session.Load<Entity>(id1).Field.ShouldBe("Lars");
+            session.Load<Entity>(id2).Field.ShouldBe("Jacob");
         }
 
         [Fact]

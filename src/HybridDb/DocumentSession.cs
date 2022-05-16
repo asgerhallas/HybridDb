@@ -249,12 +249,12 @@ namespace HybridDb
 
                 var expectedEtag = !lastWriteWins ? managedEntity.Etag : null;
 
-                if (managedEntity.ReadOnly) continue;
-
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
                     {
+                        AssertNotReadOnly(managedEntity);
+
                         var projections = CreateProjections(managedEntity);
 
                         var configuredVersion = (int)projections[DocumentTable.VersionColumn];
@@ -264,8 +264,8 @@ namespace HybridDb
                         managedEntity.State = EntityState.Loaded;
                         managedEntity.Version = configuredVersion;
                         managedEntity.Document = document;
-                    }
                         break;
+                    }
                     case EntityState.Loaded:
                     {
                         var projections = CreateProjections(managedEntity);
@@ -279,6 +279,8 @@ namespace HybridDb
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
 
+                        AssertNotReadOnly(managedEntity);
+
                         commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections));
 
                         if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
@@ -290,12 +292,16 @@ namespace HybridDb
 
                         managedEntity.Version = configuredVersion;
                         managedEntity.Document = document;
-                    }
                         break;
+                    }
                     case EntityState.Deleted:
+                    {
+                        AssertNotReadOnly(managedEntity);
+
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag));
                         entities.Remove(new EntityKey(design.Table, managedEntity.Key));
                         break;
+                    }
                 }
             }
 
@@ -329,6 +335,14 @@ namespace HybridDb
             saving = false;
 
             return commitId;
+        }
+
+        void AssertNotReadOnly(ManagedEntity managedEntity)
+        {
+            if (!managedEntity.ReadOnly) return;
+            
+            throw new InvalidOperationException(
+                $"Call to SaveChanges failed. '{managedEntity.Design.DocumentType.Name}/{managedEntity.Key}' is read only.");
         }
 
         IDictionary<string, object> CreateProjections(ManagedEntity managedEntity) => 

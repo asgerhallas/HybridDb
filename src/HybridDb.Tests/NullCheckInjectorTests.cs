@@ -232,6 +232,28 @@ namespace HybridDb.Tests
             InvokeWithNullCheck(x => x.Property is UnrelatedOtherRoot).ShouldBe(false);
         }
 
+        [Fact]
+        public void NullCoalescingOperator()
+        {
+            InvokeWithNullCheck(x => x.Property.NullableInt ?? x.Property.AnotherNullableInt ?? 5).ShouldBe(5);
+            InvokeWithNullCheck(x => x.Property.NullableInt ?? x.Property.AnotherNullableInt ?? 5, () => new()
+            {
+                Property = new Root
+                {
+                    AnotherNullableInt = 10
+                }
+            }).ShouldBe(10);
+
+            InvokeWithNullCheck(x => x.Property.NullableInt ?? x.Property.AnotherNullableInt ?? 5, () => new()
+            {
+                Property = new Root
+                {
+                    NullableInt = 1,
+                    AnotherNullableInt = 10
+                }
+            }).ShouldBe(1);
+        }
+
         static object InvokeWithoutNullCheck<T>(Expression<Func<Root, T>> exp, Func<Root> setup = null)
         {
             setup = setup ?? (() => new Root());
@@ -262,6 +284,8 @@ namespace HybridDb.Tests
             }
 
             public int NonNullableThingy { get; set; }
+            public int? NullableInt { get; set; }
+            public int? AnotherNullableInt { get; set; }
             public ValueType NonNullableThingy2 { get; set; }
             public ValueType? NullableValueType { get; set; }
             public List<Root> Properties { get; set; }
