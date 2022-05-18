@@ -20,7 +20,7 @@ namespace HybridDb.Tests
 
             configuration.HandleEvents(@event =>
             {
-                if (@event is not SavingChanges savingChanges) return;
+                if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
 
                 foreach (var (managedEntity, dmlCommand) in savingChanges.DocumentCommands)
                 {

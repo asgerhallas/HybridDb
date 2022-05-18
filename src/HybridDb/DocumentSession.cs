@@ -241,9 +241,13 @@ namespace HybridDb
 
             saving = true;
 
+            store.Configuration.Notify(new SaveChanges_BeforePrepareCommands(this));
+
             var commands = new Dictionary<ManagedEntity, DmlCommand>();
             foreach (var managedEntity in entities.Values.ToList())
             {
+                if (managedEntity.ReadOnly) continue;
+
                 var key = managedEntity.Key;
                 var design = managedEntity.Design;
 
@@ -253,8 +257,6 @@ namespace HybridDb
                 {
                     case EntityState.Transient:
                     {
-                        AssertNotReadOnly(managedEntity);
-
                         var projections = CreateProjections(managedEntity);
 
                         var configuredVersion = (int)projections[DocumentTable.VersionColumn];
@@ -279,8 +281,6 @@ namespace HybridDb
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
 
-                        AssertNotReadOnly(managedEntity);
-
                         commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections));
 
                         if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
@@ -296,8 +296,6 @@ namespace HybridDb
                     }
                     case EntityState.Deleted:
                     {
-                        AssertNotReadOnly(managedEntity);
-
                         commands.Add(managedEntity, new DeleteCommand(design.Table, key, expectedEtag));
                         entities.Remove(new EntityKey(design.Table, managedEntity.Key));
                         break;
@@ -315,7 +313,7 @@ namespace HybridDb
                 }
             }
 
-            store.Configuration.Notify(new SavingChanges(this, commands, deferredCommands));
+            store.Configuration.Notify(new SaveChanges_BeforeExecuteCommands(this, commands, deferredCommands));
 
             var commitId = Transactionally(resultingTx =>
             {
@@ -335,14 +333,6 @@ namespace HybridDb
             saving = false;
 
             return commitId;
-        }
-
-        void AssertNotReadOnly(ManagedEntity managedEntity)
-        {
-            if (!managedEntity.ReadOnly) return;
-            
-            throw new InvalidOperationException(
-                $"Call to SaveChanges failed. '{managedEntity.Design.DocumentType.Name}/{managedEntity.Key}' is read only.");
         }
 
         IDictionary<string, object> CreateProjections(ManagedEntity managedEntity) => 

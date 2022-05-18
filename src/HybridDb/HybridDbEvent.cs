@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reactive;
 
 namespace HybridDb
 {
     public interface IHybridDbEvent { }
 
-    public record SavingChanges(
+    public record SaveChanges_BeforePrepareCommands(IDocumentSession Session) : IHybridDbEvent;
+
+    public record SaveChanges_BeforeExecuteCommands(
         IDocumentSession Session, 
         IDictionary<ManagedEntity, DmlCommand> DocumentCommands,
         IList<DmlCommand> OtherCommands) : IHybridDbEvent;
