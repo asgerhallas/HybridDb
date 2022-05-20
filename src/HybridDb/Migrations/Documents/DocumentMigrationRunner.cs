@@ -51,7 +51,7 @@ namespace HybridDb.Migrations.Documents
                                 {
                                     try
                                     {
-                                        var where = command.Matches(migration?.Version);
+                                        var where = command.Matches(store, migration?.Version);
 
                                         var skip = numberOfRowsLeft > batchSize
                                             ? random.Next(0, numberOfRowsLeft)
