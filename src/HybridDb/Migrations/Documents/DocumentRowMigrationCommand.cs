@@ -28,7 +28,7 @@ namespace HybridDb.Migrations.Documents
             var builder = new SqlBuilder()
                 .Append(version != null, "Version < @version", new SqlParameter("version", version));
 
-            return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(version)));
+            return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store, version)));
         }
 
         public override bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)
