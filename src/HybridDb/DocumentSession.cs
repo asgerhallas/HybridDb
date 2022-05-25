@@ -434,6 +434,7 @@ namespace HybridDb
             entities.Clear();
             deferredCommands.Clear();
             enlistedTx = null;
+            SessionData.Clear();
         }
 
         public bool TryGetManagedEntity<T>(string key, out T entity)

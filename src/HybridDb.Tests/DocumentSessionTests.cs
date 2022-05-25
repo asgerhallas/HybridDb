@@ -346,6 +346,22 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanClearSession_SessionData()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.SessionData["Doomed"] = 1337;
+
+                session.Advanced.Clear();
+
+                session.Advanced.SessionData.ShouldNotContainKey("Doomed");
+            }
+        }
+
+        [Fact]
         public void CanCheckIfEntityIsLoadedInSession()
         {
             Document<Entity>();
