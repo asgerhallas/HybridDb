@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using HybridDb.Queue;
 using Shouldly;
@@ -19,9 +20,9 @@ namespace HybridDb.Tests.Queue
         {
             store.Execute(new EnqueueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new MyMessage("a")));
+                new HybridDbMessage("a", new MyMessage())));
 
-            var message = (MyMessage)store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> { "default" }));
 
@@ -33,9 +34,9 @@ namespace HybridDb.Tests.Queue
         {
             store.Execute(new EnqueueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new MyMessage("a") { Topic = "TopicA"}));
+                new HybridDbMessage("a", new MyMessage(), "TopicA")));
 
-            var message = (MyMessage)store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> { "TopicA" }));
 
@@ -43,20 +44,22 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
-        public void Topic_SetByCtor()
+        public void IdGenerator()
         {
-            store.Execute(new EnqueueCommand(
+            var resultingId = store.Execute(new EnqueueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new MyMessage("a") { Topic = "TopicA" },
-                "TopicB"));
+                new HybridDbMessage("a", new MyMessage())
+                {
+                    IdGenerator = commitId => commitId.ToString()
+                }));
 
-            var message = (MyMessage)store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "TopicB" }));
+                new List<string> { "default" }));
 
-            message.Topic.ShouldBe("TopicB");
+            message.Id.ShouldBe(resultingId);
         }
 
-        public record MyMessage(string Id) : HybridDbMessage(Id);
+        public record MyMessage;
     }
 }

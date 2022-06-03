@@ -9,10 +9,10 @@ namespace HybridDb.Queue
     {
         public const string DefaultTopic = "default";
 
-        public EnqueueCommand(QueueTable table, HybridDbMessage message, string topic = null)
+        public EnqueueCommand(QueueTable table, HybridDbMessage message)
         {
             Table = table;
-            Message = message with { Topic = topic ?? message.Topic ?? DefaultTopic };
+            Message = message with { Topic = message.Topic ?? DefaultTopic };
 
             if (string.IsNullOrWhiteSpace(Message.Topic)) throw new ArgumentException("Message topic can not be empty string.");
         }
@@ -24,7 +24,9 @@ namespace HybridDb.Queue
         {
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
-            var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.GetType());
+            var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
+
+            var id = command.Message.IdGenerator?.Invoke(tx.CommitId) ?? command.Message.Id;
 
             try
             {
@@ -37,10 +39,10 @@ namespace HybridDb.Queue
                     {
                         command.Message.Topic,
                         Version = options.Version.ToString(),
-                        command.Message.Id,
+                        Id = id,
                         tx.CommitId,
                         Discriminator = discriminator,
-                        Message = serializer(command.Message)
+                        Message = serializer(command.Message.Payload)
                     },
                     tx.SqlTransaction);
             }
@@ -52,7 +54,7 @@ namespace HybridDb.Queue
                 throw;
             }
 
-            return command.Message.Id;
+            return id;
         }
     }
 }

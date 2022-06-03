@@ -25,10 +25,10 @@ namespace HybridDb.Queue
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
 
-            var msg = (tx.SqlConnection.Query<(string Id, string Message, string Discriminator, string Topic)>(@$"
+            var msg = (tx.SqlConnection.Query<(string Id, string Payload, string Discriminator, string Topic)>(@$"
                     set nocount on; 
                     delete top(1) from {tablename} with (rowlock, readpast) 
-                    output deleted.Id, deleted.Message, deleted.Discriminator, deleted.Topic
+                    output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic
                     where Topic in @Topics
                     and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid);
                     set nocount off;",
@@ -42,14 +42,9 @@ namespace HybridDb.Queue
 
             if (msg == default) return null;
 
-            var type = tx.Store.Configuration.TypeMapper.ToType(typeof(HybridDbMessage), msg.Discriminator);
+            var type = tx.Store.Configuration.TypeMapper.ToType(typeof(object), msg.Discriminator);
 
-            return (HybridDbMessage) deserializer(msg.Message, type) with
-            {
-                // If someone has written directly to the row in Sql Server, the row info takes precedence
-                Id = msg.Id,
-                Topic = msg.Topic
-            };
+            return new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
@@ -232,7 +233,7 @@ namespace HybridDb.Queue
 
                 logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
 
-                tx.Execute(new EnqueueCommand(table, message, $"errors/{message.Topic}"));
+                tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
                 events.OnNext(new PoisonMessage(context, message, exception));
 
@@ -255,7 +256,7 @@ namespace HybridDb.Queue
         }
     }
 
-    public abstract record HybridDbMessage(string Id, string Topic = null)
+    public sealed record HybridDbMessage(string Id, object Payload, string Topic = null, Func<Guid, string> IdGenerator = null)
     {
         public Dictionary<string, string> Metadata { get; } = new();
     }

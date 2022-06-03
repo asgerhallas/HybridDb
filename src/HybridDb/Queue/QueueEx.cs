@@ -23,11 +23,14 @@ namespace HybridDb.Queue
                     .Else(() => decoratee(tx, command)()));
         }
 
-        public static void Enqueue(this IDocumentSession session, HybridDbMessage message, string topic = null)
+        public static void Enqueue(this IDocumentSession session, object message, string topic = null) => 
+            Enqueue(session, Guid.NewGuid().ToString(), message, topic);
+
+        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null, Func<Guid, string> idGenerator = null)
         {
             var queueTable = session.Advanced.DocumentStore.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
-            session.Advanced.Defer(new EnqueueCommand(queueTable, message, topic));
+            session.Advanced.Defer(new EnqueueCommand(queueTable, new HybridDbMessage(id, message, topic, idGenerator)));
         }
     }
 }

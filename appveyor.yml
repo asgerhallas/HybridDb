@@ -21,5 +21,7 @@
   - path: '*/**/*.nupkg'
   deploy:
   - provider: NuGet
+    on:
+      branch: master
     api_key:
       secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh

@@ -19,7 +19,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage("MyId", "Text"), "MyTopic");
+                session.Enqueue("MyId", new MyMessage("Text"), "MyTopic");
                 session.SaveChanges();
             }
 
@@ -27,13 +27,13 @@ namespace HybridDb.Tests.Queue
             var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
             store.Database.RawExecute($"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Id] = 'OtherId', [Topic] = 'OtherTopic'");
 
-            var message = (MyMessage) store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> {"MyTopic", "OtherTopic"}));
 
             message.Id.ShouldBe("OtherId");
             message.Topic.ShouldBe("OtherTopic");
-            message.Text.ShouldBe("Text");
+            ((MyMessage)message.Payload).Text.ShouldBe("Text");
         }
 
         [Theory]
@@ -57,7 +57,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage("MyId", "Text"));
+                session.Enqueue("MyId", new MyMessage("Text"));
                 session.SaveChanges();
             }
 
@@ -68,7 +68,7 @@ namespace HybridDb.Tests.Queue
                 Version = new Version(serverVersion)
             });
 
-            var message = (MyMessage) store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> { EnqueueCommand.DefaultTopic }));
 
@@ -76,6 +76,6 @@ namespace HybridDb.Tests.Queue
             else message.ShouldBe(null);
         }
 
-        public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
+        public record MyMessage(string Text);
     }
 }

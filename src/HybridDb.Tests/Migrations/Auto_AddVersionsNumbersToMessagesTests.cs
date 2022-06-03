@@ -60,6 +60,6 @@ namespace HybridDb.Tests.Migrations
             message.ShouldNotBe(null);
         }
 
-        public record Message() : HybridDbMessage(Guid.NewGuid().ToString(), "default");
+        public record Message();
     }
 }

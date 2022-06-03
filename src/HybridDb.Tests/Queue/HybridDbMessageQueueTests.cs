@@ -60,7 +60,7 @@ namespace HybridDb.Tests.Queue
             return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
 
-        public record MyMessage(string Id, string Text) : HybridDbMessage(Id);
+        public record MyMessage(string Text);
 
         [Fact]
         public async Task DequeueAndHandle()
@@ -73,14 +73,14 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+                session.Enqueue(new MyMessage("Some command"));
 
                 session.SaveChanges();
             }
 
             var message = await subject.FirstAsync();
 
-            message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+            message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
         }
 
         [Fact]
@@ -105,14 +105,14 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+                session.Enqueue(new MyMessage("Some command"));
 
                 session.SaveChanges();
             }
 
             var message = await subject.FirstAsync();
 
-            message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+            message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
         }
 
         [Fact]
@@ -131,14 +131,14 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+                session.Enqueue(new MyMessage("Some command"));
 
                 session.SaveChanges();
             }
 
             var message = await subject.FirstAsync();
 
-            message.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+            message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
         }
 
         [Fact]
@@ -151,14 +151,14 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(id, "A"));
+                session.Enqueue(id, new MyMessage("A"));
 
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(id, "B"));
+                session.Enqueue(id, new MyMessage("B"));
 
                 session.SaveChanges();
             }
@@ -166,7 +166,7 @@ namespace HybridDb.Tests.Queue
             var queue = Using(new HybridDbMessageQueue(store, handler));
 
             var messages = new List<object>();
-            queue.Events.OfType<MessageHandling>().Select(x => x.Message).Subscribe(messages.Add);
+            queue.Events.OfType<MessageHandling>().Select(x => x.Message.Payload).Subscribe(messages.Add);
             await queue.Events.OfType<QueueIdle>().FirstAsync();
 
             messages.Count.ShouldBe(1);
@@ -183,7 +183,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Some command"));
+                session.Enqueue(new MyMessage("Some command"));
 
                 session.SaveChanges();
             }
@@ -216,7 +216,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "Failing command"));
+                session.Enqueue(new MyMessage("Failing command"));
 
                 session.SaveChanges();
             }
@@ -228,11 +228,11 @@ namespace HybridDb.Tests.Queue
                 .OfType<PoisonMessage>()
                 .FirstAsync();
 
-            var message = (MyMessage) store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> {"errors/default"}));
 
-            message.Text.ShouldBe("Failing command");
+            ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
         }
 
         [Fact]
@@ -250,7 +250,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(id, "Failing command"), "mytopic");
+                session.Enqueue(id, new MyMessage("Failing command"), "mytopic");
                 session.SaveChanges();
             }
 
@@ -269,12 +269,12 @@ namespace HybridDb.Tests.Queue
                 .OfType<PoisonMessage>()
                 .FirstAsync();
 
-            var message = (MyMessage) store.Execute(new DequeueCommand(
+            var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> {"errors/myothertopic"}));
 
             message.Topic.ShouldBe("errors/myothertopic");
-            message.Text.ShouldBe("Failing command");
+            ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
         }
 
         [Fact]
@@ -284,9 +284,9 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "poison message"), "errors");
+                session.Enqueue(new MyMessage("poison message"), "errors");
 
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "edible message"));
+                session.Enqueue(new MyMessage("edible message"));
 
                 session.SaveChanges();
             }
@@ -298,7 +298,7 @@ namespace HybridDb.Tests.Queue
                 .Do(messages.Add)
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(1)));
 
-            ((MyMessage) messages.Single().Message).Text.ShouldBe("edible message");
+            ((MyMessage) messages.Single().Message.Payload).Text.ShouldBe("edible message");
         }
 
         [Fact]
@@ -321,31 +321,31 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"));
+                session.Enqueue(new MyMessage("1"));
+                session.Enqueue(new MyMessage("2"));
 
                 session.SaveChanges();
             }
 
             using (var session = store2.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"));
+                session.Enqueue(new MyMessage("3"));
+                session.Enqueue(new MyMessage("4"));
 
                 session.SaveChanges();
             }
 
             using (var session = store3.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "5"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "6"));
+                session.Enqueue(new MyMessage("5"));
+                session.Enqueue(new MyMessage("6"));
 
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "the last one"));
+                session.Enqueue(new MyMessage("the last one"));
 
                 session.SaveChanges();
             }
@@ -359,7 +359,10 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
-            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "2", "3", "4", "the last one");
+            messages.Select(x => x.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLikeUnordered("1", "2", "3", "4", "the last one");
         }        
         
         [Fact]
@@ -377,8 +380,8 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store2.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "later1"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "later2"));
+                session.Enqueue(new MyMessage("later1"));
+                session.Enqueue(new MyMessage("later2"));
 
                 session.SaveChanges();
             }
@@ -424,7 +427,7 @@ namespace HybridDb.Tests.Queue
             using (var session = store.OpenSession())
             {
                 foreach (var i in Enumerable.Range(1, 10000))
-                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                    session.Enqueue(new MyMessage(i.ToString()));
 
                 session.SaveChanges();
             }
@@ -462,7 +465,7 @@ namespace HybridDb.Tests.Queue
             {
                 foreach (var i in Enumerable.Range(1, 200))
                 {
-                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                    session.Enqueue(new MyMessage(i.ToString()));
                 }
 
                 session.SaveChanges();
@@ -489,7 +492,7 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             // Each message is handled only once
-            handled.Select(x => int.Parse(((MyMessage) x.Message).Text))
+            handled.Select(x => int.Parse(((MyMessage) x.Message.Payload).Text))
                 .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
@@ -514,7 +517,7 @@ namespace HybridDb.Tests.Queue
             {
                 foreach (var i in Enumerable.Range(1, 200))
                 {
-                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                    session.Enqueue(new MyMessage(i.ToString()));
                 }
 
                 session.SaveChanges();
@@ -546,7 +549,7 @@ namespace HybridDb.Tests.Queue
             {
                 foreach (var i in Enumerable.Range(1, 200))
                 {
-                    session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), i.ToString()));
+                    session.Enqueue(new MyMessage(i.ToString()));
                 }
 
                 session.SaveChanges();
@@ -570,10 +573,10 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "a");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "b");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"), "a");
+                session.Enqueue(new MyMessage("1"));
+                session.Enqueue(new MyMessage("2"), "a");
+                session.Enqueue(new MyMessage("3"), "b");
+                session.Enqueue(new MyMessage("4"), "a");
 
                 session.SaveChanges();
             }
@@ -585,7 +588,10 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
-            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "4");
+            messages.Select(x => x.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLikeUnordered("2", "4");
         }
 
         [Fact]
@@ -598,10 +604,10 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "a");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "b");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"), "c");
+                session.Enqueue(new MyMessage("1"));
+                session.Enqueue(new MyMessage("2"), "a");
+                session.Enqueue(new MyMessage("3"), "b");
+                session.Enqueue(new MyMessage("4"), "c");
 
                 session.SaveChanges();
             }
@@ -613,7 +619,10 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
-            messages.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "3");
+            messages.Select(x => x.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLikeUnordered("2", "3");
         }
 
         [Fact]
@@ -631,11 +640,11 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "1"));
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "2"), "a");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "3"), "b");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "4"), "a");
-                session.Enqueue(new MyMessage(Guid.NewGuid().ToString(), "5"), "c");
+                session.Enqueue(new MyMessage("1"));
+                session.Enqueue(new MyMessage("2"), "a");
+                session.Enqueue(new MyMessage("3"), "b");
+                session.Enqueue(new MyMessage("4"), "a");
+                session.Enqueue(new MyMessage("5"), "c");
 
                 session.SaveChanges();
             }
@@ -654,8 +663,15 @@ namespace HybridDb.Tests.Queue
                 .ToList()
                 .FirstAsync();
 
-            messagesA.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("2", "4", "5");
-            messagesB.OfType<MyMessage>().Select(x => x.Text).ShouldBeLikeUnordered("1", "3");
+            messagesA.Select(x => x.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLikeUnordered("2", "4", "5");
+
+            messagesB.Select(x => x.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLikeUnordered("1", "3");
         }
 
         [Fact]
