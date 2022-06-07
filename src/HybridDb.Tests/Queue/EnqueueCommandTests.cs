@@ -50,7 +50,7 @@ namespace HybridDb.Tests.Queue
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new HybridDbMessage("a", new MyMessage())
                 {
-                    IdGenerator = commitId => commitId.ToString()
+                    IdGenerator = (msg, commitId) => $"{msg.GetType().Name}/{commitId}"
                 }));
 
             var message = store.Execute(new DequeueCommand(

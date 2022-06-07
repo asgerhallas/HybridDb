@@ -26,11 +26,20 @@ namespace HybridDb.Queue
         public static void Enqueue(this IDocumentSession session, object message, string topic = null) => 
             Enqueue(session, Guid.NewGuid().ToString(), message, topic);
 
-        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null, Func<Guid, string> idGenerator = null)
+        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null)
         {
             var queueTable = session.Advanced.DocumentStore.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
-            session.Advanced.Defer(new EnqueueCommand(queueTable, new HybridDbMessage(id, message, topic, idGenerator)));
+            session.Advanced.Defer(new EnqueueCommand(queueTable, new HybridDbMessage(id, message, topic)));
+        }
+
+        public static void Enqueue<T>(this IDocumentSession session, Func<T, Guid, string> idGenerator, T message, string topic = null)
+        {
+            var queueTable = session.Advanced.DocumentStore.Configuration.Tables.Values.OfType<QueueTable>().Single();
+
+            string IdGenerator(object p, Guid etag) => idGenerator((T)p, etag);
+
+            session.Advanced.Defer(new EnqueueCommand(queueTable, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, IdGenerator)));
         }
     }
 }

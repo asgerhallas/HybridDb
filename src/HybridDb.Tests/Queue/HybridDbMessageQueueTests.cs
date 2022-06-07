@@ -84,6 +84,28 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task EnqueueWithIdGenerator()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using var session = store.OpenSession();
+
+            string IdGenerator(MyMessage m, Guid e) => $"{m.Text}/{e}";
+
+            session.Enqueue(IdGenerator, new MyMessage("Some command"));
+
+            var etag = session.SaveChanges();
+
+            var message = await subject.FirstAsync();
+
+            message.Id.ShouldBe($"Some command/{etag}");
+        }
+
+        [Fact]
         public async Task DequeueAndHandle_AsyncHandler_ThatContinuesOnOtherThread()
         {
             StartQueue();
