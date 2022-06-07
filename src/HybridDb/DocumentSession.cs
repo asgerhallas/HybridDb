@@ -329,6 +329,8 @@ namespace HybridDb
 
             store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, commitId, executedCommands));
 
+            deferredCommands.Clear();
+
             foreach (var managedEntity in commands.Keys)
             {
                 managedEntity.Etag = commitId;

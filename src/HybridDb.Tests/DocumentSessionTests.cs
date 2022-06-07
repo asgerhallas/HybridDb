@@ -11,6 +11,7 @@ using HybridDb.Config;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
+using HybridDb.Queue;
 using ShinySwitch;
 using ShouldBeLike;
 using Shouldly;
@@ -76,6 +77,27 @@ namespace HybridDb.Tests
 
             var entity = store.Query(table, out _, where: $"Id = '{id}'").SingleOrDefault();
             Assert.NotNull(entity);
+        }
+
+        [Fact]
+        public void CanDeferCommands_AreClearedOnSaveChanges()
+        {
+            configuration.UseMessageQueue();
+
+            Document<Entity>();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            using var session = store.OpenSession();
+            
+            session.Advanced.Defer(new InsertCommand(table, NewId(), new { }));
+            session.Enqueue(new object());
+            
+            session.Advanced.DeferredCommands.Count.ShouldBe(2);
+
+            session.SaveChanges();
+
+            session.Advanced.DeferredCommands.ShouldBeEmpty();
         }
 
         [Fact]
