@@ -39,7 +39,7 @@ namespace HybridDb.Queue
 
             string IdGenerator(object p, Guid etag) => idGenerator((T)p, etag);
 
-            session.Advanced.Defer(new EnqueueCommand(queueTable, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, IdGenerator)));
+            session.Advanced.Defer(new EnqueueCommand(queueTable, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic), IdGenerator));
         }
     }
 }

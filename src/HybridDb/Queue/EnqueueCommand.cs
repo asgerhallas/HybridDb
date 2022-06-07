@@ -9,15 +9,17 @@ namespace HybridDb.Queue
     {
         public const string DefaultTopic = "default";
 
-        public EnqueueCommand(QueueTable table, HybridDbMessage message)
+        public EnqueueCommand(QueueTable table, HybridDbMessage message, Func<object, Guid, string> idGenerator = null)
         {
             Table = table;
             Message = message with { Topic = message.Topic ?? DefaultTopic };
+            IdGenerator = idGenerator;
 
             if (string.IsNullOrWhiteSpace(Message.Topic)) throw new ArgumentException("Message topic can not be empty string.");
         }
 
         public QueueTable Table { get; }
+        public Func<object, Guid, string> IdGenerator { get; }
         public HybridDbMessage Message { get; }
 
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
@@ -26,7 +28,7 @@ namespace HybridDb.Queue
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
-            var id = command.Message.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ?? command.Message.Id;
+            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ?? command.Message.Id;
 
             try
             {
