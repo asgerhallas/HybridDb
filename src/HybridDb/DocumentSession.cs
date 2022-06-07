@@ -315,15 +315,19 @@ namespace HybridDb
 
             store.Configuration.Notify(new SaveChanges_BeforeExecuteCommands(this, commands, deferredCommands));
 
+            var executedCommands = new Dictionary<DmlCommand, object>();
+
             var commitId = Transactionally(resultingTx =>
             {
                 foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
                 {
-                    store.Execute(resultingTx, command);
+                    executedCommands.Add(command, store.Execute(resultingTx, command));
                 }
 
                 return resultingTx.CommitId;
             });
+
+            store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, commitId, executedCommands));
 
             foreach (var managedEntity in commands.Keys)
             {

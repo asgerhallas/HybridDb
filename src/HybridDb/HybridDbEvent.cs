@@ -12,6 +12,11 @@ namespace HybridDb
         IDictionary<ManagedEntity, DmlCommand> DocumentCommands,
         IList<DmlCommand> OtherCommands) : IHybridDbEvent;
 
+    public record SaveChanges_AfterExecuteCommands(
+        IDocumentSession Session, 
+        Guid CommitId,
+        IDictionary<DmlCommand, object> ExecutedCommands) : IHybridDbEvent;
+
     public record EntityLoaded(IDocumentSession Session, Type RequestedType, ManagedEntity ManagedEntity) : IHybridDbEvent;
 
     public record AddedToSession(IDocumentSession Session, ManagedEntity ManagedEntity) : IHybridDbEvent;

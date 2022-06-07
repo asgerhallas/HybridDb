@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using HybridDb.Commands;
+using HybridDb.Queue;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +15,7 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void Events_SavingChanges()
+        public void Events_SaveChanges_BeforeExecuteCommands()
         {
             Document<Case>();
             Document<Profile>();
@@ -71,7 +73,40 @@ namespace HybridDb.Tests
                     .Message.ShouldBe("Can not execute DeleteCommand!");
             }
         }
-        
+
+        [Fact]
+        public void Events_SaveChanges_AfterExecuteCommands()
+        {
+            Document<Case>();
+            Document<Profile>();
+
+            configuration.UseMessageQueue();
+
+            SaveChanges_AfterExecuteCommands result = null;
+            configuration.HandleEvents(@event =>
+            {
+                if (@event is not SaveChanges_AfterExecuteCommands savingChanges) return;
+
+                result = savingChanges;
+            });
+
+            using var session = store.OpenSession();
+            
+            session.Store(new Profile("asger", true));
+            session.Enqueue((m, e) => "a", new object());
+
+            var commitId = session.SaveChanges();
+
+            result.CommitId.ShouldBe(commitId);
+            var executedCommands = result.ExecutedCommands.ToList();
+
+            executedCommands[0].Key.ShouldBeOfType<InsertCommand>();
+            executedCommands[0].Value.ShouldBe(commitId);
+
+            executedCommands[1].Key.ShouldBeOfType<EnqueueCommand>();
+            executedCommands[1].Value.ShouldBe("a");
+        }
+
         public record Case(string Id, string ProfileId, string Text)
         {
             public string Text { get; set; } = Text;
