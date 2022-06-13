@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using HybridDb.Queue;
@@ -55,6 +56,35 @@ namespace HybridDb.Tests.Queue
                 new List<string> { "default" }));
 
             message.Id.ShouldBe(resultingId);
+        }
+
+        [Fact]
+        public void IdGenerator_Idempotency()
+        {
+            string IdGenerator(object msg, Guid commitId) => $"{msg.GetType().Name}";
+
+            var input = new HybridDbMessage("a", new MyMessage());
+
+            var resultingId1 = store.Execute(new EnqueueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                input, IdGenerator));
+
+            var resultingId2 = store.Execute(new EnqueueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                input, IdGenerator));
+
+            var message1 = store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "default" }));
+
+            var message2 = store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "default" }));
+
+            message1.Id.ShouldBe(resultingId1);
+            message1.Id.ShouldBe(resultingId2);
+
+            message2.ShouldBe(null);
         }
 
         public record MyMessage;

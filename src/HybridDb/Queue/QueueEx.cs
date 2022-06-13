@@ -23,14 +23,25 @@ namespace HybridDb.Queue
                     .Else(() => decoratee(tx, command)()));
         }
 
-        public static void Enqueue(this IDocumentSession session, object message, string topic = null) =>
-            Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic));
+        public static void Enqueue(this IDocumentSession session, object message, string topic = null)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
 
-        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null) => 
+            Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic));
+        }
+
+        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+
             Enqueue(session, new HybridDbMessage(id, message, topic));
+        }
 
         public static void Enqueue<T>(this IDocumentSession session, Func<T, Guid, string> idGenerator, T message, string topic = null)
         {
+            if (idGenerator == null) throw new ArgumentNullException(nameof(idGenerator));
+            if (message == null) throw new ArgumentNullException(nameof(message));
+
             string IdGenerator(object p, Guid etag) => idGenerator((T)p, etag);
 
             Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic), IdGenerator);
@@ -38,6 +49,8 @@ namespace HybridDb.Queue
 
         public static void Enqueue(this IDocumentSession session, HybridDbMessage message, Func<object, Guid, string> idGenerator = null)
         {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+
             if (message.Payload is HybridDbMessage)
             {
                 throw new ArgumentException("Enqueued message must not be of type HybridDbMessage.");

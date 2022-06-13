@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Data.SqlClient;
 using Dapper;
 
@@ -11,11 +10,12 @@ namespace HybridDb.Queue
 
         public EnqueueCommand(QueueTable table, HybridDbMessage message, Func<object, Guid, string> idGenerator = null)
         {
+            if (idGenerator == null && message.Id == null) throw new ArgumentException("Message id was null and no id generator was provided.");
+            if (message.Topic != null && string.IsNullOrWhiteSpace(message.Topic)) throw new ArgumentException("Message topic can not be empty or whitespace only.");
+
             Table = table;
             Message = message with { Topic = message.Topic ?? DefaultTopic };
             IdGenerator = idGenerator;
-
-            if (string.IsNullOrWhiteSpace(Message.Topic)) throw new ArgumentException("Message topic can not be empty string.");
         }
 
         public QueueTable Table { get; }
@@ -28,7 +28,8 @@ namespace HybridDb.Queue
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
-            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ?? command.Message.Id;
+            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId)
+                     ?? command.Message.Id;
 
             try
             {
@@ -51,7 +52,7 @@ namespace HybridDb.Queue
             catch (SqlException e)
             {
                 // Enqueuing is idempotent. It should ignore exceptions from primary key violations and just not insert the message.
-                if (e.Number == 2627) return command.Message.Id;
+                if (e.Number == 2627) return id;
 
                 throw;
             }
