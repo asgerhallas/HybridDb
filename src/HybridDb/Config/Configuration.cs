@@ -48,9 +48,9 @@ namespace HybridDb.Config
             EventStore = false;
             ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
 
-            Register<Func<DocumentStore, DdlCommand, Action>>(container => (store, command) => () => command.Execute(store));
+            Register<DdlCommandExecutor>(container => (store, command) => command.Execute(store));
 
-            Register<Func<DocumentTransaction, DmlCommand, Func<object>>>(container => (tx, command) => () => 
+            Register<DmlCommandExecutor>(container => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<InsertCommand>(insertCommand => InsertCommand.Execute(tx, insertCommand))
                     .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
@@ -293,7 +293,7 @@ namespace HybridDb.Config
 
             tables.TryAdd(tableName, new EventTable(tableName));
 
-            Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((container, decoratee) => (tx, command) => () => 
+            Decorate<DmlCommandExecutor>((container, decoratee) => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
@@ -301,7 +301,7 @@ namespace HybridDb.Config
                     .Match<ReadEventsByCommitIds>(readEvents => ReadEventsByCommitIds.Execute(tx, readEvents))
                     .Match<GetPositionOf>(getPosition => GetPositionOf.Execute(tx, getPosition))
                     .Match<LoadParentCommit>(loadParentCommit => LoadParentCommit.Execute(tx, loadParentCommit))
-                    .Else(() => decoratee(tx, command)()));
+                    .Else(() => decoratee(tx, command)));
         }
 
         public void UseColumnNameConventions(Func<Expression, string> convention) => ColumnNameConvention = convention;
@@ -342,7 +342,6 @@ namespace HybridDb.Config
             }
 
             return design;
-
         }
 
         DocumentTable GetOrAddDocumentTable(string tablename)
@@ -351,11 +350,5 @@ namespace HybridDb.Config
 
             return (DocumentTable) GetOrAddTable(new DocumentTable(tablename));
         }
-
-        public Action GetDdlCommandExecutor(DocumentStore store, DdlCommand command) => 
-            Resolve<Func<DocumentStore, DdlCommand, Action>>()(store, command);
-
-        public Func<object> GetDmlCommandExecutor(DocumentTransaction tx, DmlCommand command) => 
-            Resolve<Func<DocumentTransaction, DmlCommand, Func<object>>>()(tx, command);
     }
 }

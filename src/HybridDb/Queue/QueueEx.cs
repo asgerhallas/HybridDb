@@ -16,11 +16,11 @@ namespace HybridDb.Queue
 
             config.GetOrAddTable(new QueueTable(options.TableName));
 
-            config.Decorate<Func<DocumentTransaction, DmlCommand, Func<object>>>((_, decoratee) => (tx, command) => () =>
+            config.Decorate<DmlCommandExecutor>((_, decoratee) => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
                     .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))
-                    .Else(() => decoratee(tx, command)()));
+                    .Else(() => decoratee(tx, command)));
         }
 
         public static void Enqueue(this IDocumentSession session, object message, string topic = null)

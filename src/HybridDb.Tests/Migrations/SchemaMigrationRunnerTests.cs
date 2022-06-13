@@ -346,12 +346,6 @@ namespace HybridDb.Tests.Migrations
             new CreateTable(new Table("HybridDb",
                 new Column("SchemaVersion", typeof(int)))));
 
-        void Setup<T>(Func<DocumentStore, Action<T>> match) =>
-            configuration.Decorate<Func<DocumentStore, DdlCommand, Action>>((container, decoratee) => (documentStore, command) => () =>
-                Switch.On(command)
-                    .Match(match(documentStore))
-                    .Else(_ => decoratee(documentStore, command)()));
-
         public class FakeSchemaDiffer : ISchemaDiffer
         {
             readonly DdlCommand[] commands;

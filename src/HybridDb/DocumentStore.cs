@@ -114,21 +114,21 @@ namespace HybridDb
         {
             if (IsInitialized) throw new InvalidOperationException("Changing database schema is not allowed after store initialization.");
 
-            Configuration.GetDdlCommandExecutor(this, command)();
+            Configuration.Resolve<DdlCommandExecutor>()(this, command);
         }
 
         public object Execute(DocumentTransaction tx, DmlCommand command)
         {
             AssertInitialized();
 
-            return Configuration.GetDmlCommandExecutor(tx, command)();
+            return Configuration.Resolve<DmlCommandExecutor>()(tx, command);
         }
 
         public T Execute<T>(DocumentTransaction tx, Command<T> command)
         {
             AssertInitialized();
 
-            return (T) Configuration.GetDmlCommandExecutor(tx, command)();
+            return (T) Configuration.Resolve<DmlCommandExecutor>()(tx, command);
         }
 
         void AssertInitialized()
