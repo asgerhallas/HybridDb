@@ -87,17 +87,13 @@ namespace HybridDb.Config
 
         public void HandleEvents(Action<IHybridDbEvent> handler)
         {
-            if (TryResolve<Action<IHybridDbEvent>>(out _))
+            if (!Register(_ => handler))
             {
                 Decorate<Action<IHybridDbEvent>>((_, decoratee) => e =>
                 {
                     decoratee(e);
                     handler(e);
                 });
-            }
-            else
-            {
-                Register(_ => handler);
             }
         }
 

@@ -292,6 +292,13 @@ namespace HybridDb.Tests
                 .Message.ShouldBe("Cannot decorate a type 'HybridDb.Config.ITypeMapper'. It has already been resolved.");
         }
 
+        [Fact]
+        public void Bug_HandleEvents_FailsOnSecondHandler()
+        {
+            configuration.HandleEvents(x => {});
+            Should.NotThrow(() => configuration.HandleEvents(x => {}));
+        }
+
         public class OtherTypeMapper : ITypeMapper
         {
             readonly string discriminator;
