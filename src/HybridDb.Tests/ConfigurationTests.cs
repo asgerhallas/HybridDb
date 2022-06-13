@@ -5,6 +5,7 @@ using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using Shouldly;
+using Shouldly.Configuration;
 using Xunit;
 
 namespace HybridDb.Tests
@@ -279,6 +280,16 @@ namespace HybridDb.Tests
             configuration.UseTypeMapper(new OtherTypeMapper(string.Join("", Enumerable.Repeat("A", 1025))));
 
             Should.Throw<InvalidOperationException>(() => configuration.Document<Entity>());
+        }
+
+        [Fact]
+        public void CannotDecorateAlreadyResolvedType()
+        {
+            configuration.Register<ITypeMapper>(x => new OtherTypeMapper("test"));
+            configuration.Resolve<ITypeMapper>();
+            
+            Should.Throw<InvalidOperationException>(() => configuration.Decorate<ITypeMapper>((x, y) => new OtherTypeMapper("hest")))
+                .Message.ShouldBe("Cannot decorate a type 'HybridDb.Config.ITypeMapper'. It has already been resolved.");
         }
 
         public class OtherTypeMapper : ITypeMapper

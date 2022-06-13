@@ -23,6 +23,11 @@ namespace HybridDb.Config
 
         public void Decorate<T>(Func<IContainerActivator, T, T> factory)
         {
+            if (tracked.Any(x => x is T))
+            {
+                throw new InvalidOperationException($"Cannot decorate a type '{typeof(T)}'. It has already been resolved.");
+            }
+
             factories.AddOrUpdate(typeof(T),
                 key => throw new InvalidOperationException($"There's no {key} to decorate in the container."),
                 (key, decoratee) => new Lazy<object>(() => Track(factory(this, (T) decoratee.Value)), isThreadSafe: true));

@@ -82,7 +82,7 @@ namespace HybridDb.Tests.Queue
 
             message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
         }
-
+        
         [Fact]
         public async Task EnqueueWithIdGenerator()
         {
