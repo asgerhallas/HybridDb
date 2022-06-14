@@ -256,9 +256,9 @@ namespace HybridDb.Queue
         }
     }
 
-    public sealed record HybridDbMessage(string Id, object Payload, string Topic = null)
+    public sealed record HybridDbMessage(string Id, object Payload, string Topic = null, Dictionary<string, string> Metadata = null)
     {
-        public Dictionary<string, string> Metadata { get; } = new();
+        public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
     }
     
     public class MessageContext : Dictionary<string, object> { }

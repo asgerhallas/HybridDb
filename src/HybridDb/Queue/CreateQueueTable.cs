@@ -29,6 +29,7 @@ namespace HybridDb.Queue
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Discriminator] [nvarchar](850) NOT NULL,
 	                    [Message] [nvarchar](max) NULL,
+	                    [Metadata] [nvarchar](max) NULL,
 
                         CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )

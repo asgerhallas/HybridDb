@@ -84,6 +84,32 @@ namespace HybridDb.Tests.Queue
         }
         
         [Fact]
+        public async Task DequeueAndHandle_Metadata()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(
+                    new MyMessage("Some command"),
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["asger"] = "true"
+                    });
+
+                session.SaveChanges();
+            }
+
+            var message = await subject.FirstAsync();
+
+            message.Metadata.ShouldContainKeyAndValue("asger", "true");
+        }
+        
+        [Fact]
         public async Task EnqueueWithIdGenerator()
         {
             StartQueue();

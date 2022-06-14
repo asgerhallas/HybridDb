@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using ShinySwitch;
@@ -23,28 +24,30 @@ namespace HybridDb.Queue
                     .Else(() => decoratee(tx, command)));
         }
 
-        public static void Enqueue(this IDocumentSession session, object message, string topic = null)
+        public static void Enqueue(this IDocumentSession session, object message, string topic = null, Dictionary<string, string> metadata = null)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
-            Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic));
+            Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, metadata));
         }
 
-        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null)
+        public static void Enqueue(this IDocumentSession session, string id, object message, string topic = null, Dictionary<string, string> metadata = null)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
-            Enqueue(session, new HybridDbMessage(id, message, topic));
+            Enqueue(session, new HybridDbMessage(id, message, topic, metadata));
         }
 
-        public static void Enqueue<T>(this IDocumentSession session, Func<T, Guid, string> idGenerator, T message, string topic = null)
+        public static void Enqueue<T>(this IDocumentSession session, Func<T, Guid, string> idGenerator, T message, string topic = null, Dictionary<string, string> metadata = null)
         {
             if (idGenerator == null) throw new ArgumentNullException(nameof(idGenerator));
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             string IdGenerator(object p, Guid etag) => idGenerator((T)p, etag);
 
-            Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic), IdGenerator);
+            var envelope = new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, metadata);
+
+            Enqueue(session, envelope, IdGenerator);
         }
 
         public static void Enqueue(this IDocumentSession session, HybridDbMessage message, Func<object, Guid, string> idGenerator = null)

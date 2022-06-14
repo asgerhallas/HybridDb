@@ -25,10 +25,10 @@ namespace HybridDb.Queue
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
 
-            var msg = (tx.SqlConnection.Query<(string Id, string Payload, string Discriminator, string Topic)>(@$"
+            var msg = (tx.SqlConnection.Query<(string Id, string Payload, string Discriminator, string Topic, string Metadata)>(@$"
                     set nocount on; 
                     delete top(1) from {tablename} with (rowlock, readpast) 
-                    output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic
+                    output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic, deleted.Metadata
                     where Topic in @Topics
                     and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid);
                     set nocount off;",
@@ -44,7 +44,12 @@ namespace HybridDb.Queue
 
             var type = tx.Store.Configuration.TypeMapper.ToType(typeof(object), msg.Discriminator);
 
-            return new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic);
+            var metadata = (Dictionary<string, string>)deserializer(msg.Metadata, typeof(Dictionary<string, string>));
+
+            return new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic)
+            {
+                Metadata = metadata
+            };
         }
     }
 }
