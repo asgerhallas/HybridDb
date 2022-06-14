@@ -293,10 +293,20 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void Bug_HandleEvents_FailsOnSecondHandler()
+        public void Bug_HandleEvents_MultipleHandlers()
         {
-            configuration.HandleEvents(x => {});
-            Should.NotThrow(() => configuration.HandleEvents(x => {}));
+            string result = null;
+
+            configuration.HandleEvents(x => { result = "okay"; });
+            configuration.HandleEvents(x => { result += " hosay"; });
+
+            configuration.Notify(new TestEvent());
+
+            result.ShouldBe("okay hosay");
+        }
+
+        public class TestEvent : IHybridDbEvent
+        {
         }
 
         public class OtherTypeMapper : ITypeMapper
