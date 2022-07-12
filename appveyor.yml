@@ -8,7 +8,7 @@
   image: Visual Studio 2019
   services: mssql2017
   install:
-  - ps: ./versionize.ps1 | Update-AppveyorBuild -Version { $_ }
+  - ps: ./versionize.ps1 | Update-AppveyorBuild -Version $_
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
