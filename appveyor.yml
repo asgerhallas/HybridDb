@@ -3,10 +3,22 @@
     only:
       - master
       - appveyor-setup
-  version: 3.2.{build}
+  version: 0.0.{build}
   configuration: Release
   image: Visual Studio 2019
   services: mssql2017
+  init:
+    # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq "true")
+      {
+          Update-AppveyorBuild -Version "$($env:APPVEYOR_REPO_TAG_NAME)"
+      }
+      else
+      {
+          Update-AppveyorBuild -Version "dev-$($env:APPVEYOR_REPO_COMMIT.Substring(0, 7))"
+      }
+
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
   after_build:
@@ -22,6 +34,6 @@
   deploy:
   - provider: NuGet
     on:
-      branch: master
+      APPVEYOR_REPO_TAG: true
     api_key:
       secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
