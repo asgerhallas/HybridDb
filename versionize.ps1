@@ -7,7 +7,7 @@ if ($null -eq $git_describe) {
   $git_describe_long = $git_describe = "0.0.1-0"
 }
 
-$head_is_tagged = $git_describe -eq $git_describe_long
+$head_is_tagged = $git_describe -ne $git_describe_long
 
 if ($head_is_tagged)
 {
@@ -19,4 +19,4 @@ if ($head_is_tagged)
 # output the description without the trailing commit hash
 $match = ($git_describe | Select-String -pattern '(?<version>.+?)(-[^-]+)$').Matches[0].Groups
 
-Write-Output = $match['version'].Value
+Write-Output $match['version'].Value
