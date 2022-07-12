@@ -210,9 +210,9 @@ namespace HybridDb
 
         T InternalQuery<T>(SqlBuilder sql, object parameters, Func<SqlMapper.GridReader, T> read)
         {
-            var normalizedParameters = parameters as Parameters ?? Parameters.FromAnonymousObject(parameters);
+            var normalizedParameters = parameters as DynamicParameters ?? new DynamicParameters(parameters);
 
-            normalizedParameters.Add(new Parameters(sql.Parameters));
+            normalizedParameters.AddDynamicParams(sql.Parameters);
 
             using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
             {

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Transactions;
 using Dapper;
 using HybridDb.Migrations.Schema.Commands;
@@ -12,9 +14,12 @@ using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migrations.Schema
 {
+
+    //TODO: StartupMigrator or UpfrontMigrator
+    //BackgoundMigrator
     public class SchemaMigrationRunner
     {
-        static object locker = new object();
+        static readonly object locker = new();
 
         readonly ILogger logger;
         readonly DocumentStore store;
@@ -48,7 +53,18 @@ namespace HybridDb.Migrations.Schema
                         but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
                 }
 
-                MarkDocumentsForReprojections(RunMigrations(schemaVersion));
+                var tablesAwaitingReprojection = RunMigrations(schemaVersion);
+
+                var migrates = new List<(string Table, SqlBuilder Where)>();
+                foreach (var migration in migrations)
+                {
+                    foreach (var rowMigrationCommand in migration.Background(store.Configuration))
+                    {
+                        rowMigrationCommand.Matches()
+                    }
+                }
+
+                MarkDocumentsForBackgroundMigration(tablesAwaitingReprojection);
             });
         }
 
@@ -67,14 +83,13 @@ namespace HybridDb.Migrations.Schema
             {
                 lock (locker)
                 {
-                    using (var tx = BeginTransaction())
-                    {
-                        LockDatabase();
+                    using var tx = BeginTransaction();
+                    
+                    LockDatabase();
 
-                        action();
+                    action();
 
-                        tx.Complete();
-                    }
+                    tx.Complete();
                 }
             }
 
@@ -93,27 +108,26 @@ namespace HybridDb.Migrations.Schema
 
         void LockDatabase()
         {
-            using (var connection = store.Database.Connect(true))
+            using var connection = store.Database.Connect(true);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@Resource", $"HybridDb");
+            parameters.Add("@DbPrincipal", "public");
+            parameters.Add("@LockMode", "Exclusive");
+            parameters.Add("@LockOwner", "Transaction");
+            parameters.Add("@LockTimeout", TimeSpan.FromSeconds(300).TotalMilliseconds);
+            parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
+
+            connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+
+            var result = parameters.Get<int>("@Result");
+
+            if (result < 0)
             {
-                var parameters = new DynamicParameters();
-                parameters.Add("@Resource", $"HybridDb");
-                parameters.Add("@DbPrincipal", "public");
-                parameters.Add("@LockMode", "Exclusive");
-                parameters.Add("@LockOwner", "Transaction");
-                parameters.Add("@LockTimeout", TimeSpan.FromSeconds(300).TotalMilliseconds);
-                parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
-
-                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
-
-                var result = parameters.Get<int>("@Result");
-
-                if (result < 0)
-                {
-                    throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
-                }
-
-                connection.Complete();
+                throw new InvalidOperationException($"sp_getapplock failed with code {result}.");
             }
+
+            connection.Complete();
         }
 
         void TryCreateMetadataTable()
@@ -221,18 +235,29 @@ namespace HybridDb.Migrations.Schema
                 .ToList();
         }
 
-        void MarkDocumentsForReprojections(IEnumerable<string> requiresReprojection)
+        void MarkDocumentsForBackgroundMigration(IEnumerable<(string Table, SqlBuilder Where)> needsMigration)
         {
-            foreach (var tablename in requiresReprojection.Distinct())
+            foreach (var grouping in needsMigration.GroupBy(x => x.Table))
             {
+                var tablename = grouping.Key;
+
                 var design = store.Configuration.TryGetDesignByTablename(tablename);
                 if (design == null) continue;
 
-                store.Database.RawExecute(
-                    $"update {store.Database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection",
-                    new { AwaitsReprojection = true },
-                    schema: true,
-                    commandTimeout: 300);
+                var sql = new SqlBuilder()
+                    .Append(@$"
+                        update {store.Database.FormatTableNameAndEscape(tablename)}
+                        set AwaitsMigration=@AwaitsMigration",
+                        new SqlParameter("AwaitsMigration", true))
+                    .Append("where")
+                    .Append(grouping
+                        .Select((value, index) => (value.Where, Index: index))
+                        .Aggregate(new SqlBuilder(), (current, x) => current
+                            .Append(x.Index == 0, "(", "or (")
+                            .Append(x.Where)
+                            .Append(")")));
+
+                store.Database.RawExecute(sql.ToString(), new Parameters(sql.Parameters), schema: true, commandTimeout: 300);
             }
         }
 

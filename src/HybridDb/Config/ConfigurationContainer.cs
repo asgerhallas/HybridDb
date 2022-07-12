@@ -7,8 +7,8 @@ namespace HybridDb.Config
 {
     public class ConfigurationContainer : IContainerActivator, IDisposable
     {
-        readonly List<object> tracked = new List<object>();
-        readonly ConcurrentDictionary<Type, Lazy<object>> factories = new ConcurrentDictionary<Type, Lazy<object>>();
+        readonly List<object> tracked = new();
+        readonly ConcurrentDictionary<Type, Lazy<object>> factories = new();
 
         public bool Register<T>(Func<IContainerActivator, T> factory, bool overwriteExisting = true)
         {
