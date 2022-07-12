@@ -41,7 +41,3 @@ else
 {
     Write-Host $packageVersion
 }
-
-# Write-Host "##teamcity[setParameter name='ProjectVersion' value='$projectVersion']"
-# Write-Host "##teamcity[setParameter name='PackageVersion' value='$packageVersion']"
-# Write-Host "##teamcity[setParameter name='GitVersion' value='$packageVersion']"]]
