@@ -8,7 +8,7 @@
   image: Visual Studio 2019
   services: mssql2017
   init:
-  - ./versionize.ps1
+  - ps: versionize.ps1
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
