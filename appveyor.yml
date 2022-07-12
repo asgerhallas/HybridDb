@@ -7,7 +7,7 @@
   configuration: Release
   image: Visual Studio 2019
   services: mssql2017
-  init:
+  install:
   - ps: versionize.ps1
 
   build_script:
