@@ -1,8 +1,4 @@
 -
-  branches:
-    only:
-      - master
-      - appveyor-setup
   version: 0.0.{build}
   configuration: Release
   image: Visual Studio 2019
