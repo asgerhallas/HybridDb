@@ -13,7 +13,9 @@ $minorVersion = $git_describe['minor'].Value -as [int]
 $patchVersion = $git_describe['patch'].Value -as [int]
 $commit_count = $git_describe['commitcount'].Value -as [int]
 
-$current_branch = (git rev-parse --abbrev-ref HEAD)
+#$current_branch = (git rev-parse --abbrev-ref HEAD)
+#$current_branch = (git for-each-ref --format='%(objectname) %(refname:short)' refs/heads/) | (Select-String -pattern '(?<branch>[a-zA-Z0-9\-]+)').Matches[0].Groups['branch'].Value
+$current_branch = $env:APPVEYOR_REPO_BRANCH
 $nextPatchVersion = $patchVersion + $commit_count
 
 If ($nextPatchVersion -gt 9999)
