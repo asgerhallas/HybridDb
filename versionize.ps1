@@ -6,12 +6,14 @@ if ($git_describe -eq $null) {
   $git_describe = "0.0.1-0"
 }
 
-$git_describe = ($git_describe | Select-String -pattern '(?<major>[0-9]+)\.(?<minor>[0-9]+).(?<patch>[0-9]+)-(?<commitcount>[0-9]+)').Matches[0].Groups
+$git_describe = ($git_describe | Select-String -pattern '(?<major>[0-9]+)\.(?<minor>[0-9]+).(?<patch>[0-9]+)-(?<commitcount_or_tag1>[^-]+)-(?<commitcount_or_tag2>[^-]+)').Matches[0].Groups
 
 $majorVersion = $git_describe['major'].Value
 $minorVersion = $git_describe['minor'].Value -as [int]
 $patchVersion = $git_describe['patch'].Value -as [int]
 $commit_count = $git_describe['commitcount'].Value -as [int]
+
+Write-Host $git_describe
 
 #$current_branch = (git rev-parse --abbrev-ref HEAD)
 #$current_branch = (git for-each-ref --format='%(objectname) %(refname:short)' refs/heads/) | (Select-String -pattern '(?<branch>[a-zA-Z0-9\-]+)').Matches[0].Groups['branch'].Value
