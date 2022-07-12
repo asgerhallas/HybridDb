@@ -1,3 +1,5 @@
+$ErrorActionPreference = "Stop";
+
 $git_describe = (git describe --tags --long) 
 
 if ($git_describe -eq $null) {
