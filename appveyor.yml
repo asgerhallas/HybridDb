@@ -5,9 +5,9 @@
   services: mssql2017
   install:
   - ps: >-
-    $ErrorActionPreference = "Stop";
-    ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ } 
-    $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $(APPVEYOR_REPO_TAG_NAME))
+      $ErrorActionPreference = "Stop";
+      ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ }
+      $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $(APPVEYOR_REPO_TAG_NAME))
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
