@@ -34,5 +34,5 @@
     draft: false
     prerelease: false
     on:
-      branch: appveyor-setup
+      # branch: appveyor-setup
       APPVEYOR_REPO_TAG: true
