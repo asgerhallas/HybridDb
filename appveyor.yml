@@ -24,3 +24,14 @@
       APPVEYOR_REPO_TAG: true
     api_key:
       secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
+  - provider: GitHub
+    release: HybridDb
+    description: 'Release description'
+    auth_token:
+      secure: nLfUisFRoNH5oToYu1cos52aKjQzO8jPVEdID9FoaKLSPaIJsfXK3Bb43MeHi/eQ
+    artifact: /.*\.nupkg/
+    draft: false
+    prerelease: false
+    on:
+      branch: appveyor-setup
+      APPVEYOR_REPO_TAG: true
