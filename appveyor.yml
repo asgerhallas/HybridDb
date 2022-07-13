@@ -9,6 +9,8 @@
 
       ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ };
 
+      # Environment variables are truncated to the first line in appveyor (see https://github.com/appveyor/ci/issues/1688) 
+      # so we join these together as html - and it finally works. We take the message from the tag and use as release message.
       $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME | Where-Object {$_}) -join "<br />"
 
   build_script:
@@ -31,7 +33,7 @@
       secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
   - provider: GitHub
     release: $(APPVEYOR_BUILD_VERSION)
-    tag: $(APPVEYOR_REPO_TAG_NAME)
+    tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
     description: $(REPO_TAG_DESCRIPTION)
     auth_token:
       secure: nLfUisFRoNH5oToYu1cos52aKjQzO8jPVEdID9FoaKLSPaIJsfXK3Bb43MeHi/eQ
@@ -39,5 +41,5 @@
     draft: false
     prerelease: false
     on:
-      # branch: master
+      # branch: master    # right now we can't restrict the release to master only as tags are counted as branches too. We'll delete the prereleases manually.
       APPVEYOR_REPO_TAG: true
