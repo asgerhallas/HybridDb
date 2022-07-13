@@ -35,4 +35,4 @@
     prerelease: false
     on:
       branch: appveyor-setup
-      #APPVEYOR_REPO_TAG: true
+      APPVEYOR_REPO_TAG: true
