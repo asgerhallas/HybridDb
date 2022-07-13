@@ -8,14 +8,14 @@
       $ErrorActionPreference = "Stop";
 
       ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ };
-      
+
       $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME);
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
   after_build:
   - cmd: >-
-      dotnet test --no-build
+      rem dotnet test --no-build
 
       dotnet pack src/HybridDb/ -c Release --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=%APPVEYOR_BUILD_VERSION%
       
