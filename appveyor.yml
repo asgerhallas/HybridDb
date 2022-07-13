@@ -9,7 +9,7 @@
 
       ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ };
 
-      $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME).replace("\n", "<br/>");
+      $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME | Out-String);
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
