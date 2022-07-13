@@ -4,7 +4,10 @@
   image: Visual Studio 2019
   services: mssql2017
   install:
-  - ps: ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ }
+  - ps: >-
+    $ErrorActionPreference = "Stop";
+    ./versionize.ps1 | %{ Update-AppveyorBuild -Version $_ } 
+    $env:REPO_TAG_DESCRIPTION=(git tag -l --format='%(contents)' $(APPVEYOR_REPO_TAG_NAME))
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
@@ -27,7 +30,7 @@
   - provider: GitHub
     release: $(APPVEYOR_BUILD_VERSION)
     tag: $(APPVEYOR_REPO_TAG_NAME)
-    description: 'Release description'
+    description: $(REPO_TAG_DESCRIPTION)
     auth_token:
       secure: nLfUisFRoNH5oToYu1cos52aKjQzO8jPVEdID9FoaKLSPaIJsfXK3Bb43MeHi/eQ
     artifact: /.*\.nupkg/
