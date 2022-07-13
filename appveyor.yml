@@ -28,7 +28,7 @@
       release: HybridDb $(APPVEYOR_BUILD_VERSION)
       description: 'Release description'
       auth_token:
-        secure: <your encrypted token> # your encrypted token from GitHub
+        secure: nLfUisFRoNH5oToYu1cos52aKjQzO8jPVEdID9FoaKLSPaIJsfXK3Bb43MeHi/eQ # your encrypted token from GitHub
       artifact: /.*\.nupkg/            # upload all NuGet packages to release assets
       draft: false
       prerelease: false
