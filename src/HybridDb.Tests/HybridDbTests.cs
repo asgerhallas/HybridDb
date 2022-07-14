@@ -180,7 +180,15 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        protected string NewId() => Guid.NewGuid().ToString();
+        List<string> Ids = new List<string>();
+
+        protected string Id(int index = 1) => Ids[index - 1];
+        protected string NewId()
+        {
+            var id = Guid.NewGuid().ToString();
+            Ids.Add(id);
+            return id;
+        }
 
         public void Dispose()
         {

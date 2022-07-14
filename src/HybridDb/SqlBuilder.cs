@@ -9,15 +9,15 @@ namespace HybridDb
     public class SqlBuilder
     {
         readonly StringBuilder fragments;
-        public readonly List<SqlParameter> parameters;
+        public readonly HybridDbParameters parameters;
 
         public SqlBuilder()
         {
             fragments = new StringBuilder();
-            parameters = new List<SqlParameter>();
+            parameters = new HybridDbParameters();
         }
 
-        public IEnumerable<SqlParameter> Parameters => parameters;
+        public HybridDbParameters Parameters => parameters;
 
         public SqlBuilder Append(string sql, params SqlParameter[] args)
         {
@@ -45,7 +45,7 @@ namespace HybridDb
         public SqlBuilder Append(SqlBuilder builder)
         {
             fragments.Append(builder.fragments);
-            parameters.AddRange(builder.parameters);
+            parameters.Add(builder.parameters);
             return this;
         }
 

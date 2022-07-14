@@ -24,7 +24,7 @@ namespace HybridDb.Commands
             // row was already deleted, which would result in 0 resulting rows changed
 
             var sql = new SqlBuilder();
-            var parameters = new Parameters();
+            var parameters = new HybridDbParameters();
 
             if (tx.Store.Configuration.SoftDelete)
             {
@@ -35,7 +35,7 @@ namespace HybridDb.Commands
                     .Append($"where {DocumentTable.IdColumn.Name} = @Id")
                     .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name} = @ExpectedEtag");
 
-                parameters.Add("@NewId", $"{command.Key}/{Guid.NewGuid()}", SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
+                parameters.Add("@NewId", $"{command.Key}/{Guid.NewGuid()}", DocumentTable.IdColumn);
             }
             else
             {
@@ -45,11 +45,11 @@ namespace HybridDb.Commands
                     .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name} = @ExpectedEtag");
             }
 
-            parameters.Add("@Id", command.Key, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
+            parameters.Add("@Id", command.Key, DocumentTable.IdColumn);
 
             if (!command.LastWriteWins)
             {
-                parameters.Add("@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(DocumentTable.EtagColumn).DbType, null);
+                parameters.Add("@ExpectedEtag", command.ExpectedEtag, DocumentTable.EtagColumn);
             }
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand

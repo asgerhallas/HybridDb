@@ -37,13 +37,13 @@ namespace HybridDb.Commands
                 .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")
                 .ToString();
 
-            var parameters = Parameters.FromProjections(projections);
+            var parameters = projections.ToHybridDbParameters();
 
-            parameters.Add("@Id", command.Id, SqlTypeMap.Convert(DocumentTable.IdColumn).DbType, null);
+            parameters.Add("@Id", command.Id, DocumentTable.IdColumn);
 
             if (!command.LastWriteWins)
             {
-                parameters.Add("@ExpectedEtag", command.ExpectedEtag, SqlTypeMap.Convert(DocumentTable.EtagColumn).DbType, null);
+                parameters.Add("@ExpectedEtag", command.ExpectedEtag, DocumentTable.EtagColumn);
             }
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand

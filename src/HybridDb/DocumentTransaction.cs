@@ -210,14 +210,13 @@ namespace HybridDb
 
         T InternalQuery<T>(SqlBuilder sql, object parameters, Func<SqlMapper.GridReader, T> read)
         {
-            var normalizedParameters = parameters as Parameters ?? Parameters.FromAnonymousObject(parameters);
+            var hybridDbParameters = parameters.ToHybridDbParameters();
 
-            normalizedParameters.Add(new Parameters(sql.Parameters));
-
-            using (var reader = SqlConnection.QueryMultiple(sql.ToString(), normalizedParameters, SqlTransaction))
-            {
-                return read(reader);
-            }
+            hybridDbParameters.Add(sql.Parameters);
+            
+            using var reader = SqlConnection.QueryMultiple(sql.ToString(), hybridDbParameters, SqlTransaction);
+            
+            return read(reader);
         }
 
         public IEnumerable<Row<T>> ReadRow<T>(SqlMapper.GridReader reader)
@@ -307,7 +306,7 @@ namespace HybridDb
     public class SqlDatabaseCommand
     {
         public string Sql { get; set; }
-        public Parameters Parameters { get; set; }
+        public HybridDbParameters Parameters { get; set; }
         public int ExpectedRowCount { get; set; }
     }
 }

@@ -35,35 +35,26 @@ namespace HybridDb
 
         public int RawExecute(string sql, object parameters = null, bool schema = false, int? commandTimeout = null)
         {
-            if (parameters is IEnumerable<SqlParameter> sqlParameters)
-            {
-                parameters = new Parameters(sqlParameters);
-            }
-
             store.Logger.LogDebug(sql);
 
-            using (var connection = Connect(schema))
-            {
-                var result = connection.Connection.Execute(sql, parameters, commandTimeout: commandTimeout);
-                connection.Complete();
+            using var connection = Connect(schema);
+            
+            var result = connection.Connection.Execute(sql, parameters.ToHybridDbParameters(), commandTimeout: commandTimeout);
+            
+            connection.Complete();
 
-                return result;
-            }
+            return result;
         }
 
         public IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false)
         {
-            if (parameters is IEnumerable<SqlParameter> sqlParameters)
-            {
-                parameters = new Parameters(sqlParameters);
-            }
-
             store.Logger.LogDebug(sql);
 
-            using (var connection = Connect(schema))
-            {
-                return connection.Connection.Query<T>(sql, parameters);
-            }
+            using var connection = Connect(schema);
+            
+            var hybridDbParameters = parameters.ToHybridDbParameters();
+
+            return connection.Connection.Query<T>(sql, hybridDbParameters);
         }
 
         public class TableInfo

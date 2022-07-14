@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
+using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
@@ -909,6 +911,28 @@ namespace HybridDb.Tests
             ).ToList();
 
             result.Count.ShouldBe(5);
+        }
+
+        [Fact]
+        public void QueryWithListParameters()
+        {
+            Document<Entity>();
+
+            using var session = store.OpenSession();
+
+            session.Store(NewId(), new Entity());
+            session.Store(NewId(), new Entity());
+            session.Store(NewId(), new Entity());
+
+            session.SaveChanges();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            var rows = store.Query<IDictionary<string, object>>(table.Table, out _, select: "Id", where: "Id in @Ids", parameters: new
+            {
+                Ids = ListOf(Id(1), Id(2))
+            }).ToList();
+
+            rows.Select(x => x.Data["Id"]).ShouldBeLikeUnordered(Id(1), Id(2));
         }
 
         public class Case

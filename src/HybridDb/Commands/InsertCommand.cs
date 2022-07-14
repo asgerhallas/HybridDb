@@ -33,7 +33,7 @@ namespace HybridDb.Commands
                 ({string.Join(", ", from column in projections.Keys select tx.Store.Database.Escape(column.Name))}) 
                 values ({string.Join(", ", from column in projections.Keys select "@" + column.Name)});";
 
-            var parameters = Parameters.FromProjections(projections);
+            var parameters = projections.ToHybridDbParameters();
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
