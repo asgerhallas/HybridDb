@@ -16,9 +16,13 @@ namespace HybridDb
         readonly List<SqlParameter> parameters = new();
 
         public int Count => parameters.Count;
-        
+
+        public IReadOnlyList<SqlParameter> Parameters => parameters;
+
         public void Add(object addition)
         {
+            if (addition == null) return;
+
             Switch.On(addition)
                 .Match<HybridDbParameters>(x => parameters.AddRange(x.parameters))
                 .Match<SqlParameter>(x => parameters.Add(x))
