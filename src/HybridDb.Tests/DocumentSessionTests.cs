@@ -1412,9 +1412,11 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact(Skip = "Feature on holds")]
+        [Fact]
         public void CanProjectCollection()
         {
+            Document<Entity>().With(x => x.Children);
+
             var id = NewId();
             using (var session = store.OpenSession())
             {
@@ -1429,7 +1431,11 @@ namespace HybridDb.Tests
                 };
 
                 session.Store(entity1);
+                session.SaveChanges();
             }
+
+            var row = store.Get(store.Configuration.GetDesignFor<Entity>().Table, id);
+            row["Children"].ShouldBe("");
         }
 
         [Fact]

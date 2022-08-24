@@ -36,7 +36,10 @@ namespace HybridDb.Config
 
             Logger = NullLoggerProvider.Instance.CreateLogger("HybridDb");
 
-            UseSerializer(new DefaultSerializer());
+            var defaultSerializer = new DefaultSerializer();
+            defaultSerializer.EnableAutomaticBackReferences();
+
+            UseSerializer(defaultSerializer);
             UseTypeMapper(new ShortNameTypeMapper());
 
             Migrations = new List<Migration>();
@@ -122,7 +125,7 @@ namespace HybridDb.Config
         }
 
         public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null) => 
-            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof(TEntity), tablename, discriminator), ColumnNameConvention);
+            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof(TEntity), tablename, discriminator), this);
 
         public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null, string discriminator = null)
         {
