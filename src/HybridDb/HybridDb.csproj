@@ -1,33 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
-    <Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
-    <Copyright>Copyright 2013</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <LangVersion>9</LangVersion>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
+		<Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
+		<Copyright>Copyright 2013</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
+		<DebugType>full</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<LangVersion>9</LangVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.123" />
-    <PackageReference Include="Indentional" Version="1.0.61" PrivateAssets="All" GeneratePathProperty="true" />
-    <PackageReference Include="Inflector" Version="1.0.0" PrivateAssets="All" GeneratePathProperty="true">
-      <NoWarn>NU1701</NoWarn>
-    </PackageReference>
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.2" />
-    <PackageReference Include="ShinySwitch" Version="1.0.76" />
-    <PackageReference Include="Sprache" Version="2.3.1" PrivateAssets="All" GeneratePathProperty="true" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />
-    <PackageReference Include="System.Reactive" Version="4.4.1" />    
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.0.123" />
+		<PackageReference Include="Indentional" Version="1.0.61" PrivateAssets="All" GeneratePathProperty="true" />
+		<PackageReference Include="Inflector" Version="1.0.0" PrivateAssets="All" GeneratePathProperty="true">
+			<NoWarn>NU1701</NoWarn>
+		</PackageReference>
+		<PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.2" />
+		<PackageReference Include="ShinySwitch" Version="1.0.76" />
+		<PackageReference Include="Sprache" Version="2.3.1" PrivateAssets="All" GeneratePathProperty="true" />
+		<PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />
+		<PackageReference Include="System.Reactive" Version="4.4.1" />
+	</ItemGroup>
 
-  <Target Name="ILRepack" AfterTargets="AfterBuild">
-	  <Exec Command="&quot;$(PkgILRepack)\tools\ilrepack.exe&quot; /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net45\Inflector.dll&quot; &quot;$(PkgSprache)\lib\netstandard2.0\Sprache.dll&quot;" /> </Target>
+	<Target Name="ILRepack" AfterTargets="AfterBuild">
+		<Exec Command="$(PkgILRepack)\tools\ilrepack.exe /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net45\Inflector.dll&quot; &quot;$(PkgSprache)\lib\netstandard2.0\Sprache.dll&quot;" />
+	</Target>
 </Project>

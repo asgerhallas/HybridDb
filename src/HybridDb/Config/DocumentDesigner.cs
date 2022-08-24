@@ -10,8 +10,7 @@ namespace HybridDb.Config
     public class DocumentDesigner<TEntity>
     {
         readonly DocumentDesign design;
-        private readonly Configuration configuration;
-
+        readonly Configuration configuration;
 
         public DocumentDesigner(DocumentDesign design, Configuration configuration )
         {

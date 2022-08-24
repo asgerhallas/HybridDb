@@ -5,7 +5,7 @@ namespace HybridDb.Config
 {
     public class IndexDesigner<TIndex, TEntity>
     {
-        private readonly Configuration configuration;
+        readonly Configuration configuration;
         readonly DocumentDesigner<TEntity> designer;
 
         public IndexDesigner(DocumentDesign design, Configuration configuration)
