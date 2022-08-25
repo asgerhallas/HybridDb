@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
@@ -933,6 +932,22 @@ namespace HybridDb.Tests
             }).ToList();
 
             rows.Select(x => x.Data["Id"]).ShouldBeLikeUnordered(Id(1), Id(2));
+        }
+
+        [Fact]
+        public void QueryWithPropertyOfComplexType()
+        {
+            Document<Entity>().With(x => x.Complex).With(x => x.Number);
+
+            using var session = store.OpenSession();
+
+            session.Store(NewId(), new Entity { Number = 2, Complex = new Entity.ComplexType { A = "", B = 1 } });
+            session.SaveChanges();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            var row = store.Query<Entity>(table.Table, out _, select: "Number, Complex").Single();
+            row.Data.Complex.ShouldBeLike(new Entity.ComplexType { A = "", B = 1 });
+
         }
 
         public class Case

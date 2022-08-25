@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using HybridDb.Linq;
+using Dapper;
 using HybridDb.Linq.Old;
 
 namespace HybridDb.Config
@@ -37,6 +37,7 @@ namespace HybridDb.Config
         {
             if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TReturn)) ?? typeof(TReturn)) == null)
             {
+                SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration));
                 return With(projector, (x) => configuration.Serializer.Serialize(x));
             }
 
