@@ -1435,7 +1435,10 @@ namespace HybridDb.Tests
             }
 
             var row = store.Get(store.Configuration.GetDesignFor<Entity>().Table, id);
-            row["Children"].ShouldBe("");
+            row["Children"]
+                .ShouldBe(string.Format(
+                    "[{0}\"NestedDouble\":0.0,\"NestedProperty\":\"A\"{1},{0}\"NestedDouble\":0.0,\"NestedProperty\":\"B\"{1}]",
+                    "{", "}"));
         }
 
         [Fact]
