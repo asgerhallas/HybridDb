@@ -282,7 +282,7 @@ namespace HybridDb.Tests
             configuration.Document<Entity<OtherEntity>>().With(x => x.Value);
 
             ProjectionsFor<Entity<OtherEntity>>()["Value"].Projector(new Entity<OtherEntity>{Value =  new OtherEntity{String = "ThisIsAString"}}, null)
-                .ShouldBe(String.Format("{0}\"{1}\":\"{2}\"{3}", "{", "String" , "ThisIsAString", "}" ));
+                .ShouldBe($"{{\"String\":\"ThisIsAString\"}}");
         }
 
         public class Entity
