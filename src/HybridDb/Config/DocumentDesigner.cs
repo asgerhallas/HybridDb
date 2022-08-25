@@ -10,12 +10,12 @@ namespace HybridDb.Config
     public class DocumentDesigner<TEntity>
     {
         readonly DocumentDesign design;
-        readonly Func<Expression, string> columnNameConvention;
+        readonly Configuration configuration;
 
-        public DocumentDesigner(DocumentDesign design, Func<Expression, string> columnNameConvention)
+        public DocumentDesigner(DocumentDesign design, Configuration configuration )
         {
             this.design = design;
-            this.columnNameConvention = columnNameConvention;
+            this.configuration = configuration;
         }
 
         public DocumentDesigner<TEntity> Key(Func<TEntity, string> projector)
@@ -25,17 +25,21 @@ namespace HybridDb.Config
         }
 
         public DocumentDesigner<TEntity> With<TMember>(Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
-            With(columnNameConvention(projector), projector, x => x, options);
+            With(configuration.ColumnNameConvention(projector), projector, x => x, options);
 
         public DocumentDesigner<TEntity> With<TMember>(string name, Expression<Func<TEntity, TMember>> projector, params Option[] options) => 
             With(name, projector, x => x, options);
 
         public DocumentDesigner<TEntity> With<TMember, TReturn>(Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options) =>
-            With(columnNameConvention(projector), projector, converter, options);
-
+            With(configuration.ColumnNameConvention(projector), projector, converter, options);
 
         public DocumentDesigner<TEntity> With<TMember, TReturn>(string name, Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options)
         {
+            if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TReturn)) ?? typeof(TReturn)) == null)
+            {
+                return With(projector, (x) => configuration.Serializer.Serialize(x));
+            }
+
             if (typeof (TReturn) == typeof (string))
             {
                 options = options.Concat(new MaxLength(850)).ToArray();
@@ -53,7 +57,7 @@ namespace HybridDb.Config
                 var lengthOption = options
                     .OfType<MaxLength>()
                     .FirstOrDefault();
-
+                
                 column = design.Table.Add(new Column<TReturn>(name, lengthOption?.Length));
             }
 
@@ -111,7 +115,7 @@ namespace HybridDb.Config
 
         public DocumentDesigner<TEntity> Extend<TIndex>(Action<IndexDesigner<TIndex, TEntity>> extender)
         {
-            extender(new IndexDesigner<TIndex, TEntity>(design, columnNameConvention));
+            extender(new IndexDesigner<TIndex, TEntity>(design, configuration));
             return this;
         }
 

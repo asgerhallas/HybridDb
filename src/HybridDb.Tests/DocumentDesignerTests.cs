@@ -259,11 +259,42 @@ namespace HybridDb.Tests
             configuration.Document<Namespace2.DerivedEntity>(tablename: "v", discriminator: "u");
         }
 
+
+        [Fact]
+        public void JsonProjection()
+        {
+            configuration.Document<Entity>().With(x => x.Strings);
+
+            ProjectionsFor<Entity>()["Strings"].Projector(new Entity { Strings = new List<string>{"hej","okay"} }, null).ShouldBe("[\"hej\",\"okay\"]");
+        }
+
+        [Fact]
+        public void JsonProjection_Object()
+        {
+            configuration.Document<Entity<object>>().With(x => x.Value);
+
+            ProjectionsFor<Entity<object>>()["Value"].Projector(new Entity<object> { Value = new object()}, null).ShouldBe("{}");
+        }
+
+        [Fact]
+        public void JsonProjection_ComplexType()
+        {
+            configuration.Document<Entity<OtherEntity>>().With(x => x.Value);
+
+            ProjectionsFor<Entity<OtherEntity>>()["Value"].Projector(new Entity<OtherEntity>{Value =  new OtherEntity{String = "ThisIsAString"}}, null)
+                .ShouldBe($"{{\"String\":\"ThisIsAString\"}}");
+        }
+
         public class Entity
         {
             public string String { get; set; }
             public List<string> Strings { get; set; }
             public int Number { get; set; }
+        }
+
+        public class Entity<T>
+        {
+            public T Value { get; set; }
         }
 
         public class OtherEntity
