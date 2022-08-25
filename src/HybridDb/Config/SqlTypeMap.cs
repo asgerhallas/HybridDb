@@ -29,7 +29,9 @@ namespace HybridDb.Config
 
         public static SqlTypeMapping ForNetType(Type type)
         {
-            return sqlTypeMappings.SingleOrDefault(x => x.NetType == type);
+            var checkType = type.IsEnum ? typeof(Enum) : type;
+            
+            return sqlTypeMappings.SingleOrDefault(x => x.NetType == checkType);
         }
 
         public static SqlTypeMapping ForSqlType(string type)

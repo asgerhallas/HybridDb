@@ -285,6 +285,14 @@ namespace HybridDb.Tests
                 .ShouldBe("{\"String\":\"ThisIsAString\"}");
         }
 
+        [Fact]
+        public void ProjectionWithEnumTypes()
+        {
+            configuration.Document<Entity<EnumType>>().With(x => x.Value);
+
+            ProjectionsFor<Entity<EnumType>>()["Value"].Projector(new Entity<EnumType> { Value = EnumType.Something }, null).ShouldBe(EnumType.Something);
+        }
+
         public class Entity
         {
             public string String { get; set; }
@@ -300,6 +308,13 @@ namespace HybridDb.Tests
         public class OtherEntity
         {
             public string String { get; set; }
+        }
+
+        public enum EnumType
+        {
+            Something = 1,
+            SomethingElse = 2,
+            SomethingCompletelyDifferent = 3
         }
 
         public abstract class AbstractEntity
