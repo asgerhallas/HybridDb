@@ -1436,7 +1436,7 @@ namespace HybridDb.Tests
 
             var row = store.Get(store.Configuration.GetDesignFor<Entity>().Table, id);
             row["Children"]
-                .ShouldBe($"[{{\"NestedDouble\":0.0,\"NestedProperty\":\"A\"}},{{\"NestedDouble\":0.0,\"NestedProperty\":\"B\"}}]");
+                .ShouldBe("[{\"NestedDouble\":0.0,\"NestedProperty\":\"A\"},{\"NestedDouble\":0.0,\"NestedProperty\":\"B\"}]");
         }
 
         [Fact]
