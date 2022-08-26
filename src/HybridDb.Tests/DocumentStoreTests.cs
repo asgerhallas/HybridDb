@@ -10,7 +10,6 @@ using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 using static HybridDb.Helpers;
-using Column = HybridDb.Config.Column;
 
 namespace HybridDb.Tests
 {
