@@ -1,29 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Text;
 using Dapper;
-using HybridDb.Config;
 
 namespace HybridDb
 {
     public class JsonTypeHandler<T> : SqlMapper.TypeHandler<T>
     {
-        readonly Configuration configuration;
+        readonly ISerializer serializer;
 
-        public JsonTypeHandler(Configuration configuration)
-        {
-            this.configuration = configuration;
-        }
+        public JsonTypeHandler(ISerializer serializer) => this.serializer = serializer;
 
-        public override void SetValue(IDbDataParameter parameter, T value)
-        {
-            //logic for serializing is in DocumentDesigner class
-        }
+        public override void SetValue(IDbDataParameter parameter, T value) => throw new NotSupportedException("Logic for serializing is in DocumentDesigner class");
 
-        public override T Parse(object value)
-        {
-            return (T)configuration.Serializer.Deserialize(value.ToString(), typeof(T));
-        }
+        public override T Parse(object value) => (T)serializer.Deserialize(value.ToString(), typeof(T));
     }
 }
