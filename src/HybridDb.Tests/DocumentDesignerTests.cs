@@ -293,6 +293,21 @@ namespace HybridDb.Tests
             ProjectionsFor<Entity<EnumType>>()["Value"].Projector(new Entity<EnumType> { Value = EnumType.Something }, null).ShouldBe(EnumType.Something);
         }
 
+        [Fact]
+        public void CorrectLengthOnJsonProperty()
+        {
+            configuration.Document<Entity<object>>().With(x => x.Value);
+            TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(-1);
+        }
+
+        [Fact]
+        public void CorrectLengthOnJsonPropertyWhenOverwritingLength()
+        {
+            configuration.Document<Entity<object>>().With(x => x.Value, new MaxLength(50));
+
+            TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(50);
+        }
+
         public class Entity
         {
             public string String { get; set; }

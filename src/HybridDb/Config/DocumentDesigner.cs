@@ -37,7 +37,7 @@ namespace HybridDb.Config
         {
             if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TReturn)) ?? typeof(TReturn)) == null)
             {
-                return With(projector, (x) => configuration.Serializer.Serialize(x));
+                return With(projector, (x) => configuration.Serializer.Serialize(x), options.Concat(new MaxLength()).ToArray());
             }
 
             if (typeof (TReturn) == typeof (string))
