@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
@@ -933,6 +932,72 @@ namespace HybridDb.Tests
             }).ToList();
 
             rows.Select(x => x.Data["Id"]).ShouldBeLikeUnordered(Id(1), Id(2));
+        }
+
+        [Fact]
+        public void QueryWithPropertyOfComplexType()
+        {
+            Document<Entity>().With(x => x.Complex).With(x => x.Number);
+
+            using var session = store.OpenSession();
+
+            session.Store(NewId(), new Entity { Number = 2, Complex = new Entity.ComplexType { A = "", B = 1 } });
+            session.SaveChanges();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            var row = store.Query<Entity>(table.Table, out _, select: "Number, Complex").Single();
+            row.Data.Complex.ShouldBeLike(new Entity.ComplexType { A = "", B = 1 });
+        }
+
+        [Fact]
+        public void QueryWithPropertyOfComplexTypes()
+        {
+            Document<Entity>().With(x => x.Complex)
+                .With(x => x.TheChild)
+                .With(x => x.Property);
+
+            var entity = new Entity
+            {
+                Complex = new Entity.ComplexType { A = "It's me, string", B = 54 },
+                TheChild = new Entity.Child { NestedDouble = 59.3, NestedProperty = "Child" },
+            };
+            
+            using var session = store.OpenSession();
+            session.Store(NewId(), entity);
+            session.SaveChanges();
+
+            var table = store.Configuration.GetDesignFor<Entity>();
+            var row = store.Query<Entity>(table.Table, out _, select: "Complex, TheChild").Single();
+            row.Data.ShouldBeLike(entity);
+        }
+
+        [Fact]
+        public void QueryWithListsOfComplexType()
+        {
+            Document<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>()
+                .With(x => x.Things)
+                .With(x => x.OtherThings);
+
+            using var session = store.OpenSession();
+
+            var firstList = new List<OtherEntityWithSomeSimilarities>{ new() {Id = Guid.Empty, StringProp = "Is real life" },new (){Id = Guid.Empty,StringProp = "Is it just fantasy"}};
+            var secondList = new List<Case> { new (){ By = "By1" }, new() { By = "By2" } };
+            var entity = new EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case> { Things = firstList, OtherThings = secondList };
+
+            session.Store(NewId(), entity);
+            session.SaveChanges();
+
+            var table = store.Configuration.GetDesignFor<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>();
+            var row = store.Query<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>(table.Table, out _, select: "Things, OtherThings").Single();
+            
+            row.Data.ShouldBeLike(entity);
+        }
+
+
+        public class EntityWithListOfObjects<TThings, TOtherThings>
+        {
+            public IEnumerable<TThings> Things { get; set; }
+            public IEnumerable<TOtherThings> OtherThings { get; set; }
         }
 
         public class Case

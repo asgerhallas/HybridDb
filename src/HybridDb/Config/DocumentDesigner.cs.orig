@@ -37,8 +37,12 @@ namespace HybridDb.Config
         {
             if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TReturn)) ?? typeof(TReturn)) == null)
             {
-                SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration.Serializer));
+<<<<<<< HEAD
                 return With(projector, (x) => configuration.Serializer.Serialize(x), options.Concat(new MaxLength()).ToArray());
+=======
+                SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration.Serializer));
+                return With(projector, (x) => configuration.Serializer.Serialize(x));
+>>>>>>> fd5aef2b6eecf8361811d9a8a127abb8dbfeb3f5
             }
 
             if (typeof (TReturn) == typeof (string))
