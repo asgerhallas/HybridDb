@@ -38,6 +38,25 @@ namespace HybridDb.Migrations.Documents
                                 .Concat((null, new UpdateProjectionsMigration()))
                                 .Where(x => x.Command.Matches(configuration, table));
 
+                            // Get the commands. For each command run a "marking query". 
+                            // Move above to Upfront time
+                            // In background runner:
+                            // For each table check if there are any marked documents - maybe check commands for optimization
+                            // Load marked documents and check for sanity or throw
+                            // Migrate and save the document
+
+                            // For single loads:
+                            // Check if the document is marked and migrate if so. Sanity checks apply.
+
+                            // Motivation: 
+                            // 1. Matchers that run on the background migrations are not applied to single loads
+                            // So we need to use the matchers to mark docs instead of use them for background query
+                            // to avoid migrating documents that were actually filtered away by an sql matcher
+                            // 
+                            // 2. If a row is loaded, that does not match a migration (like PatchCase when the migration is for Case)
+                            // we don't want the background runner to load it at all (for performance) - or at least not try to save it (for side effects).
+                            // Single loads will already not migrate based on the document type, and will not save if there are no changes.
+
                             foreach (var migrationAndCommand in commands)
                             {
                                 var (migration, command) = migrationAndCommand;

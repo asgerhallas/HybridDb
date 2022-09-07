@@ -17,7 +17,7 @@ namespace HybridDb.Config
             DocumentColumn = AddFixed(new Column<string>("Document", length: -1));
             MetadataColumn = AddFixed(new Column<string>("Metadata"));
             DiscriminatorColumn = AddFixed(new Column<string>("Discriminator", length: 850));
-            AwaitsReprojectionColumn = AddFixed(new Column<bool>("AwaitsReprojection"));
+            AwaitsMigrationColumn = AddFixed(new Column<bool>("AwaitsMigration"));
             VersionColumn = AddFixed(new Column<int>("Version"));
             TimestampColumn = AddFixed(new Column<int>("Timestamp", SqlDbType.Timestamp));
             LastOperationColumn = AddFixed(new Column<byte>("LastOperation", SqlDbType.TinyInt));
@@ -32,7 +32,7 @@ namespace HybridDb.Config
         public static Column<string> DocumentColumn { get; }
         public static Column<string> MetadataColumn { get; }
         public static Column<string> DiscriminatorColumn { get; }
-        public static Column<bool> AwaitsReprojectionColumn { get; }
+        public static Column<bool> AwaitsMigrationColumn { get; }
         public static Column<int> VersionColumn { get; }
         public static Column<int> TimestampColumn { get; }
         public static Column<byte> LastOperationColumn { get; }
