@@ -21,6 +21,7 @@ namespace HybridDb.Queue
                 Switch<object>.On(command)
                     .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
                     .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))
+                    .Match<ReadMessageStatsCommand>(readMessageStatsCommand => ReadMessageStatsCommand.Execute(tx, readMessageStatsCommand))
                     .Else(() => decoratee(tx, command)));
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -9,7 +10,6 @@ using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
-using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
 using ShouldBeLike;
 using Shouldly;
@@ -81,6 +81,39 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+        }
+
+        [Fact]
+        public async Task ReadNumberOfMessages()
+        {
+            var queue = StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            //handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+            handler.Call(asserter =>
+            {
+                using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
+                var result = tx.Execute(new ReadMessageStatsCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single()));
+
+                subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1));
+            });
+            
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Some command"));
+                session.Enqueue(new MyMessage("Some command"));
+                session.Enqueue(new MyMessage("Some command"));
+
+                session.SaveChanges();
+            }
+
+            await queue.Events.OfType<MessageHandled>().FirstAsync();
+
+            using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
+            var result = tx.Execute(new ReadMessageStatsCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single()));
+
+            result.ShouldBe(2);
         }
         
         [Fact]
