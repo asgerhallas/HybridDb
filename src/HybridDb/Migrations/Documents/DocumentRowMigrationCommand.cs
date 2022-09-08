@@ -18,6 +18,23 @@ namespace HybridDb.Migrations.Documents
         public Type Type { get; }
         public IDocumentMigrationMatcher[] Matchers { get; }
 
+        public override string GetTable(Configuration configuration)
+        {
+            return configuration.TryGetDesignFor(Type)?.Table.Name;
+        }
+
+        public override SqlBuilder GetMatches(IDocumentStore store, int version)
+        {
+            var builder = new SqlBuilder()
+                .Append("Version < @version", new SqlParameter("version", version));
+
+            return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store)));
+
+            // TODO: Only correct discriminator
+
+            return builder;
+        }
+
         public override bool Matches(Configuration configuration, Table table) =>
             table is DocumentTable && (
                 Type == null || configuration.TryGetDesignFor(Type)?.Table == table
@@ -28,11 +45,13 @@ namespace HybridDb.Migrations.Documents
             var builder = new SqlBuilder()
                 .Append(version != null, "Version < @version", new SqlParameter("version", version));
 
-            return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store, version)));
+            return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store)));
         }
 
         public override bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)
         {
+            //TODO: Check at row er AwaitsMigration
+
             if (row.Get(DocumentTable.DiscriminatorColumn) != design.Discriminator)
             {
                 throw new ArgumentException(Indent(@$"

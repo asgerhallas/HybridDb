@@ -4,10 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
-using ShinySwitch;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,9 +13,9 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class SchemaMigrationRunnerTests : HybridDbTests
+    public class UpfrontMigrationRunnerTests : HybridDbTests
     {
-        public SchemaMigrationRunnerTests(ITestOutputHelper output) : base(output)
+        public UpfrontMigrationRunnerTests(ITestOutputHelper output) : base(output)
         {
             NoInitialize();
             UseRealTables();
@@ -26,7 +24,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void AutomaticallyCreatesMetadataTable()
         {
-            var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new SchemaDiffer());
 
             runner.Run();
 
@@ -37,7 +35,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNothingGivenNoMigrations()
         {
-            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
 
@@ -57,7 +55,7 @@ namespace HybridDb.Tests.Migrations
                 new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                 new AddColumn("Testing", new Column("Noget", typeof (int))))));
 
-            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
 
@@ -81,7 +79,7 @@ namespace HybridDb.Tests.Migrations
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
                 new AddColumn("Testing", new Column("Noget", typeof(int))))));
 
-            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
 
@@ -101,7 +99,7 @@ namespace HybridDb.Tests.Migrations
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
                 new AddColumn("Testing", new Column("Noget", typeof(int))))));
 
-            var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new SchemaDiffer());
 
             runner.Run();
 
@@ -116,7 +114,7 @@ namespace HybridDb.Tests.Migrations
         {
             CreateMetadataTable();
 
-            var runner = new SchemaMigrationRunner(store,
+            var runner = new UpfrontMigrationRunner(store,
                 new FakeSchemaDiffer(
                     new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                     new AddColumn("Testing", new Column("Noget", typeof (int)))));
@@ -143,7 +141,7 @@ namespace HybridDb.Tests.Migrations
                         new AddColumn("Testing", new Column("Noget", typeof(int)))),
                     after: ListOf<DdlCommand>(new RenameColumn(table, "NogetNyt", "NogetVirkeligNyt"))));
 
-            var runner = new SchemaMigrationRunner(store,
+            var runner = new UpfrontMigrationRunner(store,
                 new FakeSchemaDiffer(new RenameColumn(table, "Noget", "NogetNyt")));
 
             runner.Run();
@@ -164,7 +162,7 @@ namespace HybridDb.Tests.Migrations
 
             var command = new UnsafeCountingCommand();
 
-            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer(command));
+            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer(command));
 
             runner.Run();
 
@@ -181,7 +179,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
-            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
 
@@ -197,7 +195,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
-            var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
 
             runner.Run();
             runner.Run();
@@ -214,7 +212,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
-            new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
+            new UpfrontMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             ResetConfiguration();
 
@@ -222,7 +220,7 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(1, after: ListOf<DdlCommand>(new ThrowingCommand())), 
                 new InlineMigration(2, after: ListOf<DdlCommand>(command)));
 
-            new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
+            new UpfrontMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             command.NumberOfTimesCalled.ShouldBe(2);
         }
@@ -234,11 +232,11 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(new CountingCommand())));
 
-            new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run();
+            new UpfrontMigrationRunner(store, new FakeSchemaDiffer()).Run();
 
             ResetConfiguration();
 
-            Should.Throw<InvalidOperationException>(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run())
+            Should.Throw<InvalidOperationException>(() => new UpfrontMigrationRunner(store, new FakeSchemaDiffer()).Run())
                 .Message.ShouldBe("Database schema is ahead of configuration. Schema is version 1, but the highest migration version number is 0.");
         }
 
@@ -253,7 +251,7 @@ namespace HybridDb.Tests.Migrations
                 new InlineMigration(1, after: ListOf<DdlCommand>(countingCommand)), 
                 new InlineMigration(2, after: ListOf<DdlCommand>(countingCommand)));
 
-            Should.NotThrow(() => new SchemaMigrationRunner(store, new FakeSchemaDiffer()).Run());
+            Should.NotThrow(() => new UpfrontMigrationRunner(store, new FakeSchemaDiffer()).Run());
 
             countingCommand.NumberOfTimesCalled.ShouldBe(2);
         }
@@ -265,7 +263,7 @@ namespace HybridDb.Tests.Migrations
 
             try
             {
-                var runner = new SchemaMigrationRunner(store,
+                var runner = new UpfrontMigrationRunner(store,
                     new FakeSchemaDiffer(
                         new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                         new ThrowingCommand()));
@@ -302,16 +300,16 @@ namespace HybridDb.Tests.Migrations
 
             ResetStore();
 
-            var runner = new SchemaMigrationRunner(store, 
+            var runner = new UpfrontMigrationRunner(store, 
                 new FakeSchemaDiffer(
                     new AddColumn("Entities", new Column("NewCol", typeof(int))),
                     new AddColumn("AbstractEntities", new Column("NewCol", typeof(int)))));
             
             runner.Run();
 
-            store.Database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x == true);
-            store.Database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x == true);
-            store.Database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => x == false);
+            store.Database.RawQuery<bool>("select AwaitsMigration from Entities").ShouldAllBe(x => x == true);
+            store.Database.RawQuery<bool>("select AwaitsMigration from AbstractEntities").ShouldAllBe(x => x == true);
+            store.Database.RawQuery<bool>("select AwaitsMigration from OtherEntities").ShouldAllBe(x => x == false);
         }
 
         [Fact]
@@ -321,8 +319,8 @@ namespace HybridDb.Tests.Migrations
 
             var command = new CountingCommand();
 
-            Func<SchemaMigrationRunner> runnerFactory = () => 
-                new SchemaMigrationRunner(store, new SchemaDiffer());
+            Func<UpfrontMigrationRunner> runnerFactory = () => 
+                new UpfrontMigrationRunner(store, new SchemaDiffer());
 
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(
                 new AddColumn("Other", new Column("Asger", typeof(int))),

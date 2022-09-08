@@ -4,13 +4,12 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Linq.Old;
 using Microsoft.Extensions.Logging;
 using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
 {
-    public class DocumentMigrationRunner
+    public class BackgroundMigrationRunner
     {
         public Task Run(DocumentStore store)
         {
@@ -32,11 +31,7 @@ namespace HybridDb.Migrations.Documents
 
                         foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
                         {
-                            var commands = configuration.Migrations
-                                .SelectMany(x => x.Background(configuration),
-                                    (migration, command) => (Migration: migration, Command: command))
-                                .Concat((null, new UpdateProjectionsMigration()))
-                                .Where(x => x.Command.Matches(configuration, table));
+                            //TODO: Skip if no matching commands... but remember implicit reprojection. Can it be done?
 
                             // Get the commands. For each command run a "marking query". 
                             // Move above to Upfront time
@@ -57,60 +52,55 @@ namespace HybridDb.Migrations.Documents
                             // we don't want the background runner to load it at all (for performance) - or at least not try to save it (for side effects).
                             // Single loads will already not migrate based on the document type, and will not save if there are no changes.
 
-                            foreach (var migrationAndCommand in commands)
+                            var baseDesign = configuration.TryGetDesignByTablename(table.Name)
+                                             ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
+
+                            var numberOfRowsLeft = 0;
+
+                            while (true)
                             {
-                                var (migration, command) = migrationAndCommand;
-
-                                var baseDesign = configuration.TryGetDesignByTablename(table.Name)
-                                                 ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
-
-                                var numberOfRowsLeft = 0;
-
-                                while (true)
+                                try
                                 {
-                                    try
-                                    {
-                                        var where = command.Matches(store, migration?.Version);
+                                    var skip = numberOfRowsLeft > batchSize
+                                        ? random.Next(0, numberOfRowsLeft)
+                                        : 0;
 
-                                        var skip = numberOfRowsLeft > batchSize
-                                            ? random.Next(0, numberOfRowsLeft)
-                                            : 0;
+                                    var rows = store
+                                        .Query(table, out var stats,
+                                            select: "*",
+                                            where: $"[{DocumentTable.AwaitsMigrationColumn.Name}] = 1",
+                                            window: new SkipTake(skip, batchSize))
+                                        .ToList();
 
-                                        var rows = store
-                                            .Query(table, out var stats,
-                                                select: "*",
-                                                where: where.ToString(),
-                                                window: new SkipTake(skip, batchSize),
-                                                parameters: where.Parameters)
-                                            .ToList();
+                                    if (stats.TotalResults == 0) break;
 
-                                        if (stats.TotalResults == 0) break;
+                                    numberOfRowsLeft = stats.TotalResults - stats.RetrievedResults;
 
-                                        numberOfRowsLeft = stats.TotalResults - stats.RetrievedResults;
-
-                                        logger.LogInformation(Indent(@"
+                                    logger.LogInformation(Indent(@"
                                             Migrating {NumberOfDocumentsInBatch} documents from {Table}. 
                                             {NumberOfPendingDocuments} documents left."
-                                        ), stats.RetrievedResults, table.Name, stats.TotalResults);
+                                    ), stats.RetrievedResults, table.Name, stats.TotalResults);
 
-                                        using var tx = store.BeginTransaction();
+                                    using var tx = store.BeginTransaction();
 
-                                        foreach (var row in rows)
-                                        {
-                                            if (!await MigrateAndSave(store, tx, baseDesign, row))
-                                                goto nextTable;
-                                        }
-
-                                        tx.Complete();
-                                    }
-                                    catch (SqlException exception)
+                                    foreach (var row in rows)
                                     {
-                                        store.Logger.LogWarning(exception,
-                                            "SqlException while migrating documents from table '{table}'. Will retry in 1s.",
-                                            table.Name);
-
-                                        await Task.Delay(1000);
+                                        // TODO: Can be parallel
+                                        if (!await MigrateAndSave(store, tx, baseDesign, row))
+                                        {
+                                            goto nextTable;
+                                        }
                                     }
+
+                                    tx.Complete();
+                                }
+                                catch (SqlException exception)
+                                {
+                                    store.Logger.LogWarning(exception,
+                                        "SqlException while migrating documents from table '{table}'. Will retry in 1s.",
+                                        table.Name);
+
+                                    await Task.Delay(1000);
                                 }
                             }
 
@@ -120,12 +110,11 @@ namespace HybridDb.Migrations.Documents
 
                             nextTable: ;
                         }
-
                     }
                     catch (Exception e)
                     {
                         logger.LogError(e, Indent(@"
-                            DocumentMigrationRunner failed and stopped. 
+                            BackgroundMigrationRunner failed and stopped. 
                             Documents will not be migrated in background until you restart the runner.
                             They will still be migrated on Session.Load() and Session.Query()."));
                     }
@@ -134,14 +123,18 @@ namespace HybridDb.Migrations.Documents
                         configuration.Notify(new MigrationEnded(store));
                     }
                 });
-;
         }
 
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)
         {
-            var key = (string) row[DocumentTable.IdColumn];
-            var discriminator = ((string) row[DocumentTable.DiscriminatorColumn]).Trim();
+            var key = row.Get(DocumentTable.IdColumn);
+            var discriminator = row.Get(DocumentTable.DiscriminatorColumn).Trim();
             var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
+
+            if (!row.Get(DocumentTable.AwaitsMigrationColumn))
+            {
+                throw new ArgumentException($"Row '{key}' is not marked for migration.");
+            }
 
             try
             {

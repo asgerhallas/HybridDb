@@ -11,7 +11,7 @@ namespace HybridDb.Migrations.Documents
         
         public string IdPrefix { get; }
 
-        public SqlBuilder Matches(IDocumentStore store, int? version) => new SqlBuilder()
+        public SqlBuilder Matches(IDocumentStore store) => new SqlBuilder()
             .Append(!string.IsNullOrEmpty(IdPrefix), " and Id LIKE @idPrefix + '%'", new SqlParameter("idPrefix", IdPrefix));
 
         public bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)

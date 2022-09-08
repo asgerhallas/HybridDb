@@ -33,7 +33,7 @@ namespace HybridDb.Config
                         ? configuration.Serializer.Serialize(metadata)
                         : null),
                 [DocumentTable.VersionColumn] = Projection.From<int>(_ => configuration.ConfiguredVersion),
-                [DocumentTable.AwaitsReprojectionColumn] = Projection.From<bool>(_ => false)
+                [DocumentTable.AwaitsMigrationColumn] = Projection.From<bool>(_ => false)
             };
         }
 

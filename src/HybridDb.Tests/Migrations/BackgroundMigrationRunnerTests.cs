@@ -19,14 +19,14 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class DocumentMigrationRunnerTests : HybridDbTests
+    public class BackgroundMigrationRunnerTests : HybridDbTests
     {
-        public DocumentMigrationRunnerTests(ITestOutputHelper output) : base(output) { }
+        public BackgroundMigrationRunnerTests(ITestOutputHelper output) : base(output) { }
 
         [Theory]
         [InlineData(true, 42)]
         [InlineData(false, 0)]
-        public void ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
+        public void ReprojectsWhenAwaitingReprojection(bool awaitsMigration, int result)
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
@@ -35,22 +35,22 @@ namespace HybridDb.Tests.Migrations
             var table = new DocumentTable("Entities");
             store.Insert(table, id, new
             {
-                AwaitsReprojection = awaitsReprojection, 
+                AwaitsMigration = awaitsMigration, 
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
-            new DocumentMigrationRunner().Run(store).Wait();
+            new BackgroundMigrationRunner().Run(store).Wait();
 
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
-            row["AwaitsReprojection"].ShouldBe(false);
+            row.Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(false);
             row[DocumentTable.VersionColumn].ShouldBe(0);
         }
 
         [Fact]
-        public async Task DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
+        public async Task DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeeded()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             Document<Entity>().With(x => x.Number);
@@ -61,7 +61,7 @@ namespace HybridDb.Tests.Migrations
 
             store.Insert(table, id, new
             {
-                AwaitsReprojection = false,
+                AwaitsMigration = false,
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 1,
                 Document = configuration.Serializer.Serialize(new Entity())
@@ -82,13 +82,14 @@ namespace HybridDb.Tests.Migrations
 
             await store.DocumentMigration;
 
-            // 3 UpdateProjections (DocumentTables)
-            // + 2 for inline migrations
-            store.Stats.NumberOfQueries.ShouldBe(5);
+            // One for each DocumentTable: Documents, Entities, OtherEntities
+            store.Stats.NumberOfQueries.ShouldBe(3);
             store.Stats.NumberOfGets.ShouldBe(0);
             store.Stats.NumberOfCommands.ShouldBe(0);
 
             var row = store.Get(table, id);
+            
+            // We don't want it to open/update version, if there's no need
             row[DocumentTable.VersionColumn].ShouldBe(1);
         }
 
@@ -116,8 +117,8 @@ namespace HybridDb.Tests.Migrations
             var sw = Stopwatch.StartNew();
             
             Task.WaitAll(
-                new DocumentMigrationRunner().Run(store),
-                new DocumentMigrationRunner().Run(store));
+                new BackgroundMigrationRunner().Run(store),
+                new BackgroundMigrationRunner().Run(store));
 
             // Only for a ballpark estimate
             // Takes about 26000ms on my machine
@@ -125,7 +126,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void AcceptsConcurrentWrites()
+        public async Task AcceptsConcurrentWrites()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             UseRealTables();
@@ -138,7 +139,8 @@ namespace HybridDb.Tests.Migrations
             {
                 Discriminator = typeof(Entity).AssemblyQualifiedName,
                 Version = 0,
-                Document = configuration.Serializer.Serialize(new Entity())
+                Document = configuration.Serializer.Serialize(new Entity()),
+                AwaitsMigration = 1
             });
 
             var gate1 = new ManualResetEvent(false);
@@ -147,27 +149,23 @@ namespace HybridDb.Tests.Migrations
             UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) =>
             {
                 gate1.Set();
-                Thread.Sleep(1000);
+                gate2.WaitOne();
                 return bytes;
             })));
 
             bool? failed = null;
 
-            new DocumentMigrationRunner()
-                .Run(store)
-                .ContinueWith(x =>
-                {
-                    failed = x.IsFaulted;
-                    gate2.Set();
-                });
+            var migrationTask = new BackgroundMigrationRunner().Run(store);
 
             gate1.WaitOne();
 
             store.Update(table, id, etag, new {});
 
-            gate2.WaitOne();
+            gate2.Set();
 
-            failed.ShouldBe(false);
+            await migrationTask;
+
+            migrationTask.IsFaulted.ShouldBe(false);
         }
 
         [Fact]
@@ -176,13 +174,13 @@ namespace HybridDb.Tests.Migrations
             DisableBackgroundMigrations();
             Document<Entity>().With(x => x.Number);
 
-            new DocumentMigrationRunner().Run(store).Wait();
+            new BackgroundMigrationRunner().Run(store).Wait();
 
             store.Stats.NumberOfRequests.ShouldBe(0);
         }
 
         [Fact]
-        public void StopsIfMigrationFails()
+        public async Task StopsIfMigrationFails()
         {
             Document<Entity>().With(x => x.Number);
 
@@ -196,14 +194,11 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
             Document<Entity>().With(x => x.Number);
 
-            TouchStore();
-
             UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((x, y) => throw new Exception())));
 
-            Should.NotThrow(() =>
-            {
-                new DocumentMigrationRunner().Run(store).Wait(1000);
-            });
+            TouchStore();
+
+            await store.DocumentMigration;
 
             var numberOfErrors = log.Count(x =>
                 x.RenderMessage() == $"Unrecoverable exception while migrating document of type '\"HybridDb.Tests.HybridDbTests+Entity\"' with id '\"{id}\"'. Stopping migrator for table '\"Entities\"'.");
@@ -213,7 +208,7 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
-        public void StopsIfMigrationFails_BeforeLoadingDocument()
+        public async Task StopsIfMigrationFails_BeforeLoadingDocument()
         {
             Document<Entity>().With(x => x.Number);
 
@@ -227,14 +222,18 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
             Document<Entity>().With(x => x.Number);
 
+            // I'm not totally sure this is a needed try/catch any more. But we have it.
+            configuration.HandleEvents(x =>
+            {
+                if (x is MigrationStarted) throw new InvalidOperationException();
+            });
+
             TouchStore();
 
-            UseMigrations(new InlineMigration(1, new MigrationFailsBeforeLoadingDocument(typeof(Entity))));
-
-            Should.NotThrow(() => new DocumentMigrationRunner().Run(store).Wait(1000));
+            await store.DocumentMigration;
 
             var numberOfErrors = log.Count(x => 
-                x.RenderMessage() == "DocumentMigrationRunner failed and stopped. Documents will not be migrated in background until you restart the runner. They will still be migrated on Session.Load() and Session.Query().");
+                x.RenderMessage() == "BackgroundMigrationRunner failed and stopped. Documents will not be migrated in background until you restart the runner. They will still be migrated on Session.Load() and Session.Query().");
 
             numberOfErrors.ShouldBe(1);
         }
@@ -276,7 +275,7 @@ namespace HybridDb.Tests.Migrations
             void Insert(string id) =>
                 store.Insert(table, id, new
                 {
-                    AwaitsReprojection = false,
+                    AwaitsMigration = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new Entity())
@@ -309,7 +308,7 @@ namespace HybridDb.Tests.Migrations
             TouchStore();
 
             await store.DocumentMigration;
-            
+
             log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
                 .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
                 .ShouldBe(4);
@@ -328,7 +327,7 @@ namespace HybridDb.Tests.Migrations
             void Insert(string id) =>
                 store.Insert(table, id, new
                 {
-                    AwaitsReprojection = false,
+                    AwaitsMigration = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new Entity())
@@ -380,7 +379,7 @@ namespace HybridDb.Tests.Migrations
             void Insert(string id) =>
                 store.Insert(table, id, new
                 {
-                    AwaitsReprojection = false,
+                    AwaitsMigration = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new Entity())
@@ -442,7 +441,7 @@ namespace HybridDb.Tests.Migrations
             void Insert(string id, int number) =>
                 store.Insert(table, id, new
                 {
-                    AwaitsReprojection = false,
+                    AwaitsMigration = false,
                     Discriminator = typeof(Entity).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new Entity { Id = id }),
@@ -482,7 +481,7 @@ namespace HybridDb.Tests.Migrations
             void Insert<T>(string id, int number) =>
                 store.Insert(configuration.GetDesignFor<T>().Table, id, new
                 {
-                    AwaitsReprojection = false,
+                    AwaitsMigration = false,
                     Discriminator = typeof(T).AssemblyQualifiedName,
                     Version = 0,
                     Document = configuration.Serializer.Serialize(new { Id = id }),

@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Transactions;
 using Dapper;
 using HybridDb.Migrations.Schema.Commands;
@@ -14,10 +13,7 @@ using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migrations.Schema
 {
-
-    //TODO: StartupMigrator or UpfrontMigrator
-    //BackgoundMigrator
-    public class SchemaMigrationRunner
+    public class UpfrontMigrationRunner
     {
         static readonly object locker = new();
 
@@ -26,7 +22,7 @@ namespace HybridDb.Migrations.Schema
         readonly IReadOnlyList<Migration> migrations;
         readonly ISchemaDiffer differ;
 
-        public SchemaMigrationRunner(DocumentStore store, ISchemaDiffer differ)
+        public UpfrontMigrationRunner(DocumentStore store, ISchemaDiffer differ)
         {
             this.store = store;
             this.differ = differ;
@@ -44,27 +40,31 @@ namespace HybridDb.Migrations.Schema
             {
                 TryCreateMetadataTable();
 
-                var schemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
+                var oldSchemaVersion = GetAndUpdateSchemaVersion(store.Configuration.ConfiguredVersion);
 
-                if (schemaVersion > store.Configuration.ConfiguredVersion)
+                if (oldSchemaVersion > store.Configuration.ConfiguredVersion)
                 {
                     throw new InvalidOperationException(Indent($@"
-                        Database schema is ahead of configuration. Schema is version {schemaVersion},
+                        Database schema is ahead of configuration. Schema is version {oldSchemaVersion},
                         but the highest migration version number is {store.Configuration.ConfiguredVersion}."));
                 }
 
-                var tablesAwaitingReprojection = RunMigrations(schemaVersion);
+                var awaitsMigration = RunMigrations(oldSchemaVersion)
+                    .Select(x => (x, new SqlBuilder().Append("1=1")))
+                    .ToList();
 
-                var migrates = new List<(string Table, SqlBuilder Where)>();
                 foreach (var migration in migrations)
                 {
+                    //TODO: Only migrations later than oldSchemaVersion
                     foreach (var rowMigrationCommand in migration.Background(store.Configuration))
                     {
-                        rowMigrationCommand.Matches()
+                        awaitsMigration.Add((
+                            rowMigrationCommand.GetTable(store.Configuration), 
+                            rowMigrationCommand.GetMatches(store, migration.Version)));
                     }
                 }
 
-                MarkDocumentsForBackgroundMigration(tablesAwaitingReprojection);
+                MarkDocumentsForBackgroundMigration(awaitsMigration);
             });
         }
 
@@ -257,7 +257,7 @@ namespace HybridDb.Migrations.Schema
                             .Append(x.Where)
                             .Append(")")));
 
-                store.Database.RawExecute(sql.ToString(), new Parameters(sql.Parameters), schema: true, commandTimeout: 300);
+                store.Database.RawExecute(sql.ToString(), sql.Parameters, schema: true, commandTimeout: 300);
             }
         }
 

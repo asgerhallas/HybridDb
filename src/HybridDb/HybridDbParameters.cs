@@ -96,7 +96,7 @@ namespace HybridDb
             }
         }
 
-        static string Clean(string name)
+        public static string Clean(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
             

@@ -8,11 +8,26 @@ namespace HybridDb
 {
     public class SqlBuilder
     {
+        const string signs = "abcdefghijklmnopqrstuvxyz";
+
+        readonly string uniquePrefix;
+        readonly HashSet<string> usedUniquePrefixes = new();
+
         readonly StringBuilder fragments;
         public readonly HybridDbParameters parameters;
 
         public SqlBuilder()
         {
+            var signsLength = signs.Length;
+
+            uniquePrefix = new string(
+                Guid.NewGuid().ToByteArray()
+                    .Take(8)
+                    .Select(x => signs[x % signsLength])
+                    .ToArray());
+
+            usedUniquePrefixes.Add(uniquePrefix);
+
             fragments = new StringBuilder();
             parameters = new HybridDbParameters();
         }
@@ -23,6 +38,17 @@ namespace HybridDb
         {
             foreach (var arg in args)
             {
+                var oldParameterName = HybridDbParameters.Clean(arg.ParameterName);
+                var newParameterName = $"{uniquePrefix}_{oldParameterName}";
+                
+                var newSql = sql.Replace($"@{oldParameterName}", $"@{newParameterName}");
+
+                if (newSql != sql)
+                {
+                    sql = newSql;
+                    arg.ParameterName = newParameterName;
+                }
+
                 parameters.Add(arg);
             }
 
@@ -44,8 +70,13 @@ namespace HybridDb
 
         public SqlBuilder Append(SqlBuilder builder)
         {
+            if (usedUniquePrefixes.Overlaps(builder.usedUniquePrefixes))
+                throw new InvalidOperationException("UniquePrefixes are not unique.");
+
+            usedUniquePrefixes.UnionWith(builder.usedUniquePrefixes);
             fragments.Append(builder.fragments);
             parameters.Add(builder.parameters);
+
             return this;
         }
 
