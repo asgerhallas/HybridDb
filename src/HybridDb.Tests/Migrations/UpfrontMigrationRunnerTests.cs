@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Migrations;
+using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
@@ -55,7 +58,7 @@ namespace HybridDb.Tests.Migrations
                 new CreateTable(new Table("Testing", new Column("Id", typeof (Guid), isPrimaryKey: true))),
                 new AddColumn("Testing", new Column("Noget", typeof (int))))));
 
-            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new SchemaDiffer());
 
             runner.Run();
 
@@ -195,7 +198,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(command)));
 
-            var runner = new UpfrontMigrationRunner(store, new FakeSchemaDiffer());
+            var runner = new UpfrontMigrationRunner(store, new SchemaDiffer());
 
             runner.Run();
             runner.Run();
@@ -339,6 +342,163 @@ namespace HybridDb.Tests.Migrations
 
             command.NumberOfTimesCalled.ShouldBe(1);
         }
+
+        [Fact]
+        public void AwaitsMigration_Versions()
+        {
+            DisableBackgroundMigrations();
+            Document<Entity>().With(x => x.Number);
+
+            store.Initialize();
+
+            var entityDesign = configuration.GetDesignFor<Entity>();
+            store.Insert(entityDesign.Table, NewId(), new
+            {
+                AwaitsMigration = false,
+                Discriminator = entityDesign.Discriminator,
+                Version = 1,
+                Document = configuration.Serializer.Serialize(new Entity())
+            });
+            
+            store.Insert(entityDesign.Table, NewId(), new
+            {
+                AwaitsMigration = false,
+                Discriminator = entityDesign.Discriminator,
+                Version = 2,
+                Document = configuration.Serializer.Serialize(new Entity())
+            });
+
+            ResetStore();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)),
+                new InlineMigration(2, new ChangeDocument<Entity>((serializer, bytes) => bytes)));
+
+            store.Initialize();
+
+            store.Get(entityDesign.Table, Id(1))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(true);
+
+            store.Get(entityDesign.Table, Id(2))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(false);
+        }
+
+        [Fact]
+        public void AwaitsMigration_SchemaVersion()
+        {
+            DisableBackgroundMigrations();
+            Document<Entity>().With(x => x.Number);
+
+            store.Initialize();
+
+            using var session = store.OpenSession();
+
+            session.Store(NewId(), new Entity());
+            session.Store(NewId(), new Entity());
+            session.SaveChanges();
+
+            ResetStore();
+
+            var i = new StrongBox<int>();
+
+            UseMigrations(
+                new InlineMigration(1, background: () =>
+                {
+                    i.Value++;
+                    return ListOf(new ChangeDocument<Entity>((serializer, bytes) => bytes));
+                }));
+
+            store.Initialize();
+            
+            ResetStore();
+            store.Initialize();
+
+            i.Value.ShouldBe(1);
+
+            store.Get(configuration.GetDesignFor<Entity>().Table, Id(1))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(true);
+
+            store.Get(configuration.GetDesignFor<Entity>().Table, Id(2))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(true);
+        }
+        
+        [Fact]
+        public void AwaitsMigration_Table()
+        {
+            DisableBackgroundMigrations();
+            Document<Entity>().With(x => x.Number);
+            Document<OtherEntity>().With(x => x.Number);
+
+            store.Initialize();
+
+            using var session = store.OpenSession();
+
+            session.Store(NewId(), new Entity());
+            session.Store(NewId(), new OtherEntity());
+            session.SaveChanges();
+
+            ResetStore();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) => bytes)));
+
+            store.Initialize();
+
+            store.Get(configuration.GetDesignFor<Entity>().Table, Id(1))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(true);
+
+            store.Get(configuration.GetDesignFor<OtherEntity>().Table, Id(2))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(false);
+        }
+
+        [Theory]
+        [InlineData(typeof(DerivedEntity), false, true, true, true)]
+        [InlineData(typeof(MoreDerivedEntity1), false, false, true, false)]
+        [InlineData(typeof(Entity), true, false, false, false)]
+        [InlineData(typeof(ISomeInterface), true, true, true, true)]
+        public void AwaitsMigration_Type(Type type, bool a, bool b, bool c, bool d)
+        {
+            DisableBackgroundMigrations();
+            //UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>("ents").With(x => x.Number);
+            Document<DerivedEntity>("ents").With(x => x.Number);
+            Document<MoreDerivedEntity1>("ents").With(x => x.Number);
+
+            store.Initialize();
+
+            using var session = store.OpenSession();
+
+            session.Store(NewId(), new Entity());
+            session.Store(NewId(), new DerivedEntity());
+            session.Store(NewId(), new MoreDerivedEntity1());
+            session.Store(NewId(), new MoreDerivedEntity2());
+            session.SaveChanges();
+
+            ResetConfiguration();
+
+            DisableBackgroundMigrations();
+            Document<Entity>("ents").With(x => x.Number);
+            Document<DerivedEntity>("ents").With(x => x.Number);
+            Document<MoreDerivedEntity1>("ents").With(x => x.Number);
+
+            UseMigrations(
+                new InlineMigration(1, new NoopMigration(type)));
+
+            store.Initialize();
+
+            store.Get(configuration.GetDesignFor<Entity>().Table, Id(1))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(a);
+
+            store.Get(configuration.GetDesignFor<DerivedEntity>().Table, Id(2))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(b);
+
+            store.Get(configuration.GetDesignFor<MoreDerivedEntity1>().Table, Id(3))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(c);
+
+            store.Get(configuration.GetDesignFor<MoreDerivedEntity2>().Table, Id(4))
+                .Get(DocumentTable.AwaitsMigrationColumn).ShouldBe(d);
+        }
+        
 
         void CreateMetadataTable() => store.Execute(
             new CreateTable(new Table("HybridDb",

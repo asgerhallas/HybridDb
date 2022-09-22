@@ -74,10 +74,30 @@ namespace HybridDb
                 throw new InvalidOperationException("UniquePrefixes are not unique.");
 
             usedUniquePrefixes.UnionWith(builder.usedUniquePrefixes);
+
+            if (fragments.Length != 0) fragments.Append(" ");
+            
             fragments.Append(builder.fragments);
             parameters.Add(builder.parameters);
 
             return this;
+        }
+
+        public static SqlBuilder Join(string separator, params SqlBuilder[] builders)
+        {
+            var sqlBuilder = new SqlBuilder();
+
+            var nonEmptyBuilders = builders
+                .Where(x => x.fragments.Length > 0)
+                .Select((x, index) => (x, index));
+
+            foreach (var (builder, index) in nonEmptyBuilders)
+            {
+                if (index > 0) sqlBuilder.Append(separator);
+                sqlBuilder.Append(builder);
+            }
+
+            return sqlBuilder;
         }
 
         public override string ToString() => string.Join(" ", fragments);

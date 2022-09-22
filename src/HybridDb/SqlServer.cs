@@ -46,15 +46,13 @@ namespace HybridDb
             return result;
         }
 
-        public IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false)
+        public IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false, int? commandTimeout = null)
         {
             store.Logger.LogDebug(sql);
 
             using var connection = Connect(schema);
-            
-            var hybridDbParameters = parameters.ToHybridDbParameters();
 
-            return connection.Connection.Query<T>(sql, hybridDbParameters);
+            return connection.Connection.Query<T>(sql, parameters.ToHybridDbParameters(), commandTimeout: commandTimeout);
         }
 
         public class TableInfo

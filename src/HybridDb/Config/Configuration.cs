@@ -24,15 +24,14 @@ namespace HybridDb.Config
 
         readonly object gate = new();
 
-        readonly ConcurrentDictionary<string, Table> tables;
-        readonly List<DocumentDesign> documentDesigns;
+        readonly ConcurrentDictionary<string, Table> tables = new();
+        readonly Dictionary<string, DocumentDesign> designByDiscriminator = new();
+        readonly Dictionary<Type, DocumentDesign> designByType = new();
+        readonly List<DocumentDesign> documentDesigns = new();
 
         public Configuration()
         {
             ConnectionString = "data source=.;Integrated Security=True";
-
-            tables = new ConcurrentDictionary<string, Table>();
-            documentDesigns = new List<DocumentDesign>();
 
             Logger = NullLoggerProvider.Instance.CreateLogger("HybridDb");
 
@@ -83,7 +82,7 @@ namespace HybridDb.Config
         public bool EventStore { get; private set; }
         public Func<Expression, string> ColumnNameConvention { get; private set; }
 
-        public IReadOnlyDictionary<string, Table> Tables => tables.ToDictionary();
+        public IReadOnlyDictionary<string, Table> Tables => tables;
         public IReadOnlyList<DocumentDesign> DocumentDesigns => documentDesigns;
 
         static string GetTableNameByConventionFor(Type type) => Inflector.Inflector.Pluralize(type.Name);
@@ -131,15 +130,59 @@ namespace HybridDb.Config
         {
             lock (gate)
             {
-                discriminator ??= TypeMapper.ToDiscriminator(type);
+                // special treatment for interfaces: 
+                //    if ambigious table => fail
+                //    if no match exists => fail
+                // 
 
-                // for interfaces we find the first design for a class that is assignable to the interface or fallback to the design for typeof(object)
-                if (type.IsInterface)
+                var existingDesign = documentDesigns.SingleOrDefault(x => x.DocumentType == type);
+
+                if (existingDesign != null)
                 {
-                    return DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
+                    if (tablename != null && tablename != existingDesign.Table.Name)
+                    {
+                        throw new InvalidOperationException(Indent($@"
+                            You tried to add a design for type '{type}' assigned to table '{tablename}',
+                            but a design already exists for this type assigned to table '{existingDesign.Table.Name}'."));
+                    }
+
+                    if (discriminator != null && discriminator != existingDesign.Discriminator)
+                    {
+                        throw new InvalidOperationException(Indent($@"
+                            You tried to add a design for type '{type}' with discriminator '{discriminator}',
+                            but a design already exists for this type with discriminator '{existingDesign.Discriminator}'."));
+                    }
+
+                    return existingDesign;
                 }
 
-                //TODO: Table equals base design... model it?
+                var existingParentDesign = documentDesigns
+                    .LastOrDefault(x => (tablename == null || tablename == x.Table.Name) && x.DocumentType.IsAssignableFrom(type));
+
+                if (existingParentDesign == null)
+                {
+                    return AddDesign(new DocumentDesign(this, 
+                        GetOrAddDocumentTable(tablename ?? GetTableNameByConventionFor(type)),
+                        type, 
+                        discriminator ?? TypeMapper.ToDiscriminator(type)));
+                }
+
+                // a table and base design exists for type, add the derived type as a child design
+                return AddDesign(new DocumentDesign(this, 
+                    existingParentDesign,
+                    type, 
+                    discriminator ?? TypeMapper.ToDiscriminator(type)));
+
+                // find matching table
+                // if parent match exists in table
+                //    if ambigious table => fail
+                //    
+                //     
+
+
+
+
+                //TODO: Table equals one or more base design... model it?
                 var existing = TryGetDesignFor(type);
 
                 // no design for type, nor a base design, add new table and base design
@@ -175,6 +218,11 @@ namespace HybridDb.Config
             }
         }
 
+        public DocumentDesign GetDesignByDiscriminator(string dicriminator) =>
+            designByDiscriminator.TryGetValue(dicriminator, out var design)
+                ? design
+                : null;
+
         public DocumentDesign GetOrCreateDesignByDiscriminator(DocumentDesign design, string discriminator)
         {
             lock (gate)
@@ -209,7 +257,21 @@ namespace HybridDb.Config
             // get most specific type by searching backwards
             lock (gate)
             {
+                if (type.IsInterface)
+                {
+                    return DocumentDesigns.FirstOrDefault(x => type.IsAssignableFrom(x.DocumentType)) ?? DocumentDesigns[0];
+                }
+
                 return DocumentDesigns.LastOrDefault(x => x.DocumentType.IsAssignableFrom(type));
+            }
+        }
+
+        
+        public IReadOnlyList<DocumentDesign> TryGetDesignsAssignableTo(Type type)
+        {
+            lock (gate)
+            {
+                return DocumentDesigns.Where(x => type.IsAssignableFrom(x.DocumentType)).ToList();
             }
         }
 
@@ -339,6 +401,9 @@ namespace HybridDb.Config
 
                 documentDesigns.Add(design);
             }
+
+            designByDiscriminator.Add(design.Discriminator, design);
+            designByType.Add(design.DocumentType, design);
 
             return design;
         }

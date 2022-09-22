@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
@@ -9,9 +10,22 @@ namespace HybridDb.Tests
 {
     public class InlineMigration : Migration
     {
-        readonly IEnumerable<DdlCommand> before;
-        readonly IEnumerable<DdlCommand> after;
-        readonly IEnumerable<RowMigrationCommand> documentCommands;
+        readonly Func<IEnumerable<DdlCommand>> before;
+        readonly Func<IEnumerable<DdlCommand>> after;
+        readonly Func<IEnumerable<RowMigrationCommand>> documentCommands;
+
+        public InlineMigration(int version,
+            Func<IEnumerable<DdlCommand>> before = null,
+            Func<IEnumerable<DdlCommand>> after = null,
+            Func<IEnumerable<RowMigrationCommand>> background = null
+        ) : base(version)
+        {
+            this.before = before ?? (() => new List<DdlCommand>());
+            this.after = after ?? (() => new List<DdlCommand>());
+
+            documentCommands = background ?? (() => new List<RowMigrationCommand>());
+        }
+
 
         public InlineMigration(int version, 
             IEnumerable<DdlCommand> before = null, 
@@ -19,10 +33,10 @@ namespace HybridDb.Tests
             IEnumerable<RowMigrationCommand> background = null
         ) : base(version)
         {
-            this.before = before ?? new List<DdlCommand>();
-            this.after = after ?? new List<DdlCommand>();
+            this.before = () => before ?? new List<DdlCommand>();
+            this.after = () => after ?? new List<DdlCommand>();
 
-            documentCommands = background ?? new List<RowMigrationCommand>();
+            documentCommands = () => background ?? new List<RowMigrationCommand>();
         }
 
         public InlineMigration(int version) 
@@ -31,8 +45,8 @@ namespace HybridDb.Tests
         public InlineMigration(int version, params RowMigrationCommand[] commands) 
             : this(version, new List<DdlCommand>(), new List<DdlCommand>(), commands.ToList()) { }
 
-        public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration) => before;
-        public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration) => after;
-        public override IEnumerable<RowMigrationCommand> Background(Configuration configuration) => documentCommands;
+        public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration) => before();
+        public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration) => after();
+        public override IEnumerable<RowMigrationCommand> Background(Configuration configuration) => documentCommands();
     }
 }

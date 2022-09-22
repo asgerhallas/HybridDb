@@ -16,6 +16,6 @@ namespace HybridDb
         string FormatTableNameAndEscape(string tablename);
 
         int RawExecute(string sql, object parameters = null, bool schema = false, int? commandTimeout = null);
-        IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false);
+        IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false, int? commandTimeout = null);
     }
 }

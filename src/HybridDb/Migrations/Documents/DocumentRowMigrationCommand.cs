@@ -28,6 +28,14 @@ namespace HybridDb.Migrations.Documents
             var builder = new SqlBuilder()
                 .Append("Version < @version", new SqlParameter("version", version));
 
+            var discriminators = store.Configuration.TryGetDesignsAssignableTo(Type)
+                .SelectMany(x => x.DecendentsAndSelf)
+                .Select(x => x.Key);
+
+            builder = builder.Append(
+                $"and [{DocumentTable.DiscriminatorColumn.Name}] in @discriminator",
+                new SqlParameter("discriminator", discriminators));
+
             return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store)));
 
             // TODO: Only correct discriminator
@@ -37,7 +45,7 @@ namespace HybridDb.Migrations.Documents
 
         public override bool Matches(Configuration configuration, Table table) =>
             table is DocumentTable && (
-                Type == null || configuration.TryGetDesignFor(Type)?.Table == table
+                Type == null || configuration.TryGetDesignFor(Type).Table == table
             );
 
         public override SqlBuilder Matches(IDocumentStore store, int? version)
