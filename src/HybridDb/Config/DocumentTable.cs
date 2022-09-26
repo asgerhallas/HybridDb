@@ -36,11 +36,5 @@ namespace HybridDb.Config
         public static Column<int> VersionColumn { get; }
         public static Column<int> TimestampColumn { get; }
         public static Column<byte> LastOperationColumn { get; }
-
-        static Column<T> AddFixed<T>(Column<T> column)
-        {
-            commonColumns.Add(column);
-            return column;
-        }
     }
 }

@@ -8,6 +8,7 @@ namespace HybridDb.Config
 {
     public class Table
     {
+        readonly Dictionary<string, Column> builtInColums;
         readonly Dictionary<string, Column> columns;
 
         public Table(string name) : this(name, Enumerable.Empty<Column>()) {}
@@ -32,6 +33,12 @@ namespace HybridDb.Config
         public Column<T> Add<T>(Column<T> column)
         {
             columns.Add(column.Name, column);
+            return column;
+        }
+
+        protected static Column<T> AddFixed<T>(Column<T> column)
+        {
+            builtinColumns.Add(column);
             return column;
         }
 
