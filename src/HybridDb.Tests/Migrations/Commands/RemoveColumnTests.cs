@@ -52,7 +52,9 @@ namespace HybridDb.Tests.Migrations.Commands
 
         [Theory]
         [InlineData("Document")]
+        [InlineData("DOCUMENT")]
         [InlineData("Id")]
+        [InlineData("DISCrimiNator")]
         public void ThrowsOnBuiltInColumns(string columnName)
         {
             Should.Throw<InvalidOperationException>(() => new RemoveColumn(new DocumentTable("test"), columnName))

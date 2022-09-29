@@ -8,7 +8,7 @@ namespace HybridDb.Config
 {
     public class Table
     {
-        readonly Dictionary<string, Column> builtInColumns = new();
+        readonly Dictionary<string, Column> builtInColumns;
         readonly Dictionary<string, Column> allColumns;
 
         public Table(string name) : this(name, Enumerable.Empty<Column>(), Enumerable.Empty<Column>()) {}
@@ -23,8 +23,8 @@ namespace HybridDb.Config
             if (allColumns == null) throw new ArgumentNullException(nameof(allColumns));
             if (builtInColumns == null) throw new ArgumentNullException(nameof(builtInColumns));
 
-            this.allColumns = allColumns.ToDictionary(x => x.Name, x => x);
-            this.builtInColumns = builtInColumns.ToDictionary(x => x.Name, x => x);
+            this.allColumns = allColumns.ToDictionary(x => x.Name, x => x, StringComparer.InvariantCultureIgnoreCase);
+            this.builtInColumns = builtInColumns.ToDictionary(x => x.Name, x => x, StringComparer.InvariantCultureIgnoreCase);
 
             foreach (var column in this.builtInColumns.Where(column => !this.allColumns.ContainsKey(column.Key)))
             {
