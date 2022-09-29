@@ -1,29 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace HybridDb.Config
 {
-    public class DocumentTable : Table
+    public class DocumentTable : BuiltInTable<DocumentTable>
     {
-        static readonly List<Column> commonColumns = new List<Column>();
-
         static DocumentTable()
         {
-            IdColumn = AddFixed(new Column<string>("Id", length: 850, isPrimaryKey: true));
-            EtagColumn = AddFixed(new Column<Guid>("Etag"));
-            CreatedAtColumn = AddFixed(new Column<DateTimeOffset>("CreatedAt"));
-            ModifiedAtColumn = AddFixed(new Column<DateTimeOffset>("ModifiedAt"));
-            DocumentColumn = AddFixed(new Column<string>("Document", length: -1));
-            MetadataColumn = AddFixed(new Column<string>("Metadata"));
-            DiscriminatorColumn = AddFixed(new Column<string>("Discriminator", length: 850));
-            AwaitsReprojectionColumn = AddFixed(new Column<bool>("AwaitsReprojection"));
-            VersionColumn = AddFixed(new Column<int>("Version"));
-            TimestampColumn = AddFixed(new Column<int>("Timestamp", SqlDbType.Timestamp));
-            LastOperationColumn = AddFixed(new Column<byte>("LastOperation", SqlDbType.TinyInt));
+            IdColumn = AddBuiltIn(new Column<string>("Id", length: 850, isPrimaryKey: true));
+            EtagColumn = AddBuiltIn(new Column<Guid>("Etag"));
+            CreatedAtColumn = AddBuiltIn(new Column<DateTimeOffset>("CreatedAt"));
+            ModifiedAtColumn = AddBuiltIn(new Column<DateTimeOffset>("ModifiedAt"));
+            DocumentColumn = AddBuiltIn(new Column<string>("Document", length: -1));
+            MetadataColumn = AddBuiltIn(new Column<string>("Metadata"));
+            DiscriminatorColumn = AddBuiltIn(new Column<string>("Discriminator", length: 850));
+            AwaitsReprojectionColumn = AddBuiltIn(new Column<bool>("AwaitsReprojection"));
+            VersionColumn = AddBuiltIn(new Column<int>("Version"));
+            TimestampColumn = AddBuiltIn(new Column<int>("Timestamp", SqlDbType.Timestamp));
+            LastOperationColumn = AddBuiltIn(new Column<byte>("LastOperation", SqlDbType.TinyInt));
         }
 
-        public DocumentTable(string name) : base(name, commonColumns) {}
+        public DocumentTable(string name) : base(name, Enumerable.Empty<Column>()) {}
 
         public static Column<string> IdColumn { get; }
         public static Column<Guid> EtagColumn { get; }

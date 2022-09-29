@@ -8,37 +8,39 @@ namespace HybridDb.Config
 {
     public class Table
     {
-        readonly Dictionary<string, Column> builtInColums;
-        readonly Dictionary<string, Column> columns;
+        readonly Dictionary<string, Column> builtInColumns = new();
+        readonly Dictionary<string, Column> allColumns;
 
-        public Table(string name) : this(name, Enumerable.Empty<Column>()) {}
-        public Table(string name, params Column[] columns)  : this(name, columns.ToList()) { }
+        public Table(string name) : this(name, Enumerable.Empty<Column>(), Enumerable.Empty<Column>()) {}
+        public Table(string name, params Column[] columns)  : this(name, Enumerable.Empty<Column>(), columns.ToList()) { }
 
-        public Table(string name, IEnumerable<Column> columns)
+        public Table(string name, IEnumerable<Column> builtInColumns, IEnumerable<Column> allColumns)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
 
             if (name.EndsWith("_")) throw new NotSupportedException("A table name can not end with '_'.");
 
-            if (columns == null) throw new ArgumentNullException(nameof(columns));
+            if (allColumns == null) throw new ArgumentNullException(nameof(allColumns));
+            if (builtInColumns == null) throw new ArgumentNullException(nameof(builtInColumns));
 
-            this.columns = columns.ToDictionary(x => x.Name, x => x);
+            this.allColumns = allColumns.ToDictionary(x => x.Name, x => x);
+            this.builtInColumns = builtInColumns.ToDictionary(x => x.Name, x => x);
+
+            foreach (var column in this.builtInColumns.Where(column => !this.allColumns.ContainsKey(column.Key)))
+            {
+                throw new ArgumentException($"AllColumns did not contain BuiltInColumn '{column.Key}'.");
+            }
         }
 
         public string Name { get; }
-        public IEnumerable<Column> Columns => columns.Values;
+        public IReadOnlyCollection<Column> Columns => allColumns.Values;
+        public IReadOnlyDictionary<string, Column> BuiltInColumns => builtInColumns;
 
-        public Column this[string name] => columns.TryGetValue(name, out var value) ? value : null;
+        public Column this[string name] => allColumns.TryGetValue(name, out var value) ? value : null;
 
         public Column<T> Add<T>(Column<T> column)
         {
-            columns.Add(column.Name, column);
-            return column;
-        }
-
-        protected static Column<T> AddFixed<T>(Column<T> column)
-        {
-            builtinColumns.Add(column);
+            allColumns.Add(column.Name, column);
             return column;
         }
 

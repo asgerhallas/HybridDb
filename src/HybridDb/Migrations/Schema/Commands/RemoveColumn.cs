@@ -1,3 +1,4 @@
+using System;
 using HybridDb.Config;
 
 namespace HybridDb.Migrations.Schema.Commands
@@ -6,6 +7,9 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public RemoveColumn(Table table, string name)
         {
+            if (table.BuiltInColumns.ContainsKey(name))
+                throw new InvalidOperationException($"You can not remove build in column {name}.");
+
             Safe = false;
 
             Table = table;

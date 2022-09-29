@@ -1,3 +1,4 @@
+using System;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
@@ -47,6 +48,27 @@ namespace HybridDb.Tests.Migrations.Commands
         public void IsAlwaysUnsafe(string columnName, bool isUnsafe)
         {
             new RemoveColumn(new Table("Entities"), columnName).Safe.ShouldBe(!isUnsafe);
+        }
+
+        [Theory]
+        [InlineData("Document")]
+        [InlineData("Id")]
+        public void ThrowsOnBuiltInColumns(string columnName)
+        {
+            Should.Throw<InvalidOperationException>(() => new RemoveColumn(new DocumentTable("test"), columnName))
+                .Message.ShouldBe($"You can not remove build in column {columnName}.");
+        }
+
+        [Theory]
+        [InlineData("DocumentX")]
+        [InlineData("IdY")]
+        public void NoThrowOnNotBuiltInColumns(string columnName)
+        {
+            var documentTable = new DocumentTable("test");
+            documentTable.Add(new Column<string>("DocumentX", defaultValue: "asger"));
+            documentTable.Add(new Column<Guid>("IdY", defaultValue: Guid.Empty));
+
+            Should.NotThrow(() => new RemoveColumn(documentTable, columnName));
         }
 
         [Fact]
