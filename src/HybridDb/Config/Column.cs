@@ -60,18 +60,18 @@ namespace HybridDb.Config
             }
         }
 
-        public string Name { get; protected set; }
-        public Type Type { get; protected set; }        
+        public string Name { get; }
+        public Type Type { get; }        
         public SqlDbType DbType { get; protected set; }        
-        public int? Length { get; protected set; }
+        public int? Length { get; }
         public bool Nullable { get; set; }
-        public object DefaultValue { get; protected set; }
-        public bool IsPrimaryKey { get; protected set; }
+        public object DefaultValue { get; }
+        public bool IsPrimaryKey { get; }
 
         public override string ToString() => $"{Name} ({Type})";
 
         protected bool Equals(Column other) =>
-            Name == other.Name &&
+            string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase) &&
             Type == other.Type &&
             Length == other.Length &&
             Nullable == other.Nullable &&
@@ -90,7 +90,7 @@ namespace HybridDb.Config
         {
             unchecked
             {
-                var hashCode = (Name != null ? Name.GetHashCode() : 0);
+                var hashCode = (Name != null ? Name.ToLowerInvariant().GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (Type != null ? Type.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ Length.GetHashCode();
                 hashCode = (hashCode*397) ^ Nullable.GetHashCode();

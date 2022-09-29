@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations;
@@ -303,6 +304,13 @@ namespace HybridDb.Tests
             configuration.Notify(new TestEvent());
 
             result.ShouldBe("okay hosay");
+        }
+
+        [Fact]
+        public void Table_ColumnNamesAreCaseInsensitive()
+        {
+            Should.Throw<ArgumentException>(() => new Table("test", new Column<int>("ASGER"), new Column<int>("asger")))
+                .Message.ShouldBe("An item with the same key has already been added. Key: asger");
         }
 
         public class TestEvent : IHybridDbEvent
