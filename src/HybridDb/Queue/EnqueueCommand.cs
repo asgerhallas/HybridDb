@@ -28,8 +28,10 @@ namespace HybridDb.Queue
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
-            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId)
-                     ?? command.Message.Id;
+            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ?? 
+                     command.Message.Id;
+
+            command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString();
 
             try
             {
