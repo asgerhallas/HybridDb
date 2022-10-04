@@ -11,6 +11,7 @@ using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
+using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -731,6 +732,30 @@ namespace HybridDb.Tests.Queue
             });
 
             Should.NotThrow(() => new HybridDbMessageQueue(store, handler).Dispose());
+        }
+
+        [Fact]
+        public async Task DequeueAndHandle_Timestamp()
+        {
+            var before = DateTimeOffset.Now;
+
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Some command"));
+                session.SaveChanges();
+            }
+
+            var message = await subject.FirstAsync();
+
+            DateTimeOffset.TryParse(message.Metadata[HybridDbMessage.EnqueuedAtKey], out var date).ShouldBe(true);
+            
+            date.ShouldBeInRange(before, DateTimeOffset.Now);
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)
