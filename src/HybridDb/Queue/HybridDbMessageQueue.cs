@@ -208,7 +208,7 @@ namespace HybridDb.Queue
 
                 using var session = options.CreateSession(store);
 
-                session.Advanced.SessionData.Add(HybridDbMessage.CorrelationIdsKey, context);
+                session.Advanced.SessionData.Add(MessageContext.Key, context);
                 session.Advanced.Enlist(tx);
 
                 await handler(session, message);

@@ -781,8 +781,8 @@ namespace HybridDb.Tests.Queue
 
             var messages = await subject.Take(2).ToList();
 
-            messages[0].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1").ToString());
-            messages[1].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1", "id2").ToString());
+            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
+            messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
         }
         
         [Fact]
@@ -819,10 +819,10 @@ namespace HybridDb.Tests.Queue
             var messages = await subject.Take(4).ToList();
             var orderedMessages = messages.OrderBy(x => x.Id).ToList();
 
-            orderedMessages[0].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1").ToString());
-            orderedMessages[1].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1", "id2").ToString());
-            orderedMessages[2].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1", "id3").ToString());
-            orderedMessages[3].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1", "id3", "id4").ToString());
+            orderedMessages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
+            orderedMessages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
+            orderedMessages[2].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3").ToString());
+            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3", "id4").ToString());
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)
