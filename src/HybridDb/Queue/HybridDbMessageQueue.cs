@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
@@ -258,6 +257,7 @@ namespace HybridDb.Queue
 
     public sealed record HybridDbMessage(string Id, object Payload, string Topic = null, Dictionary<string, string> Metadata = null)
     {
+        public const string EnqueuedAtKey = "enqueued-at";
         public const string CorrelationIdsKey = "correlation-ids";
 
         public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();

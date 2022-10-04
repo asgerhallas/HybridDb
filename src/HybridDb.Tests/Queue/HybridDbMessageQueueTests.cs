@@ -736,6 +736,30 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task DequeueAndHandle_Timestamp()
+        {
+            var before = DateTimeOffset.Now;
+
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Some command"));
+                session.SaveChanges();
+            }
+
+            var message = await subject.FirstAsync();
+
+            DateTimeOffset.TryParse(message.Metadata[HybridDbMessage.EnqueuedAtKey], out var date).ShouldBe(true);
+            
+            date.ShouldBeInRange(before, DateTimeOffset.Now);
+        }
+
+        [Fact]
         public async Task Correlation()
         {
             StartQueue();
@@ -760,7 +784,7 @@ namespace HybridDb.Tests.Queue
             messages[0].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1").ToString());
             messages[1].Metadata.ShouldContainKeyAndValue("Correlation-Ids", new JArray("id1", "id2").ToString());
         }
-
+        
         [Fact]
         public async Task Correlation_MoreMessages()
         {
