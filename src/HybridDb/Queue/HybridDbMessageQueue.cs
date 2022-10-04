@@ -18,6 +18,8 @@ namespace HybridDb.Queue
         //     subsequent redelivery with the same id.
         // [ ] Allow faster handling of messages by handling multiple messages (a given max batch size) in one transaction
 
+        public const string MessageContextKey = nameof(HybridDbMessageQueue);
+
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
@@ -31,7 +33,6 @@ namespace HybridDb.Queue
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
 
         public Task MainLoop { get; }
-
         public IObservable<IHybridDbQueueEvent> Events { get; }
 
         public HybridDbMessageQueue(
@@ -72,7 +73,7 @@ namespace HybridDb.Queue
                             try
                             {
                                 var release = await WaitAsync(semaphore);
-
+                                    
                                 try
                                 {
                                     var (tx, message) = await NextMessage();
@@ -202,7 +203,7 @@ namespace HybridDb.Queue
 
         async Task HandleMessage(DocumentTransaction tx, HybridDbMessage message)
         {
-            var context = new MessageContext();
+            var context = new MessageContext(message);
 
             try
             {
@@ -210,6 +211,7 @@ namespace HybridDb.Queue
 
                 using var session = options.CreateSession(store);
 
+                session.Advanced.SessionData.Add(MessageContextKey, context);
                 session.Advanced.Enlist(tx);
 
                 await handler(session, message);
@@ -260,6 +262,14 @@ namespace HybridDb.Queue
     {
         public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
     }
-    
-    public class MessageContext : Dictionary<string, object> { }
+
+    public class MessageContext : Dictionary<string, object>
+    {
+        public MessageContext(HybridDbMessage incomingMessage)
+        {
+            IncomingMessage = incomingMessage;
+        }
+
+        public HybridDbMessage IncomingMessage { get; }
+    }
 }

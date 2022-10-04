@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using HybridDb.Config;
+using Newtonsoft.Json.Linq;
 using ShinySwitch;
 
 namespace HybridDb.Queue
@@ -59,9 +61,32 @@ namespace HybridDb.Queue
                 throw new ArgumentException("Enqueued message must not be of type HybridDbMessage.");
             }
 
+            message.Metadata.Add("Correlation-Ids", GetNextCorrelationIds(session, message));
+
             var queueTable = session.Advanced.DocumentStore.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
             session.Advanced.Defer(new EnqueueCommand(queueTable, message, idGenerator));
+        }
+
+        static string GetNextCorrelationIds(IDocumentSession session, HybridDbMessage message)
+        {
+            var nextCorrelationIds = new JArray();
+
+            if (session.Advanced.SessionData.TryGetValue(HybridDbMessageQueue.MessageContextKey, out var value) &&
+                value is MessageContext messageContext)
+            {
+                if (messageContext.IncomingMessage.Metadata.TryGetValue("Correlation-Ids", out var currentCorrelationIds))
+                {
+                    foreach (var jCurrentCorrelationId in JArray.Parse(currentCorrelationIds))
+                    {
+                        nextCorrelationIds.Add(jCurrentCorrelationId);
+                    }
+                }
+            }
+
+            nextCorrelationIds.Add(message.Id);
+            
+            return nextCorrelationIds.ToString();
         }
     }
 }
