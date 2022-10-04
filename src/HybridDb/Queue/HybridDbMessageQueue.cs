@@ -18,8 +18,6 @@ namespace HybridDb.Queue
         //     subsequent redelivery with the same id.
         // [ ] Allow faster handling of messages by handling multiple messages (a given max batch size) in one transaction
 
-        public const string MessageContextKey = nameof(HybridDbMessageQueue);
-
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
@@ -211,7 +209,7 @@ namespace HybridDb.Queue
 
                 using var session = options.CreateSession(store);
 
-                session.Advanced.SessionData.Add(MessageContextKey, context);
+                session.Advanced.SessionData.Add(HybridDbMessage.CorrelationIdsKey, context);
                 session.Advanced.Enlist(tx);
 
                 await handler(session, message);
@@ -260,11 +258,15 @@ namespace HybridDb.Queue
 
     public sealed record HybridDbMessage(string Id, object Payload, string Topic = null, Dictionary<string, string> Metadata = null)
     {
+        public const string CorrelationIdsKey = "correlation-ids";
+
         public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
     }
 
     public class MessageContext : Dictionary<string, object>
     {
+        public const string Key = nameof(MessageContext);
+
         public MessageContext(HybridDbMessage incomingMessage)
         {
             IncomingMessage = incomingMessage;

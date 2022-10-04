@@ -61,7 +61,7 @@ namespace HybridDb.Queue
                 throw new ArgumentException("Enqueued message must not be of type HybridDbMessage.");
             }
 
-            message.Metadata.Add("Correlation-Ids", GetNextCorrelationIds(session, message));
+            message.Metadata.Add(HybridDbMessage.CorrelationIdsKey, GetNextCorrelationIds(session, message));
 
             var queueTable = session.Advanced.DocumentStore.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
@@ -70,23 +70,17 @@ namespace HybridDb.Queue
 
         static string GetNextCorrelationIds(IDocumentSession session, HybridDbMessage message)
         {
-            var nextCorrelationIds = new JArray();
-
-            if (session.Advanced.SessionData.TryGetValue(HybridDbMessageQueue.MessageContextKey, out var value) &&
-                value is MessageContext messageContext)
+            if (session.Advanced.SessionData.TryGetValue(MessageContext.Key, out var value) &&
+                value is MessageContext messageContext && 
+                messageContext.IncomingMessage.Metadata.TryGetValue(HybridDbMessage.CorrelationIdsKey, out var currentCorrelationIds))
             {
-                if (messageContext.IncomingMessage.Metadata.TryGetValue("Correlation-Ids", out var currentCorrelationIds))
-                {
-                    foreach (var jCurrentCorrelationId in JArray.Parse(currentCorrelationIds))
-                    {
-                        nextCorrelationIds.Add(jCurrentCorrelationId);
-                    }
-                }
+                var nextCorrelationIds = JArray.Parse(currentCorrelationIds);
+                nextCorrelationIds.Add(message.Id);
+
+                return nextCorrelationIds.ToString();
             }
 
-            nextCorrelationIds.Add(message.Id);
-            
-            return nextCorrelationIds.ToString();
+            return new JArray(message.Id).ToString();
         }
     }
 }
