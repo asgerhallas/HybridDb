@@ -16,6 +16,7 @@ using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static BoyBoy.BoyBoy;
 using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Queue
@@ -470,12 +471,12 @@ namespace HybridDb.Tests.Queue
         {
             configuration.UseMessageQueue(new MessageQueueOptions
             {
-                MaxConcurrency = 10,
+                MaxConcurrency = 100,
             }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             using (var session = store.OpenSession())
             {
-                foreach (var i in Enumerable.Range(1, 10000))
+                foreach (var i in Enumerable.Range(1, 20000))
                     session.Enqueue(new MyMessage(i.ToString()));
 
                 session.SaveChanges();
@@ -756,6 +757,72 @@ namespace HybridDb.Tests.Queue
             DateTimeOffset.TryParse(message.Metadata[HybridDbMessage.EnqueuedAtKey], out var date).ShouldBe(true);
             
             date.ShouldBeInRange(before, DateTimeOffset.Now);
+        }
+
+        [Fact]
+        public async Task Correlation()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            A.CallTo(handler).Invokes(call =>
+            {
+                call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"));
+                
+                subject.OnNext(call.Arguments.Get<HybridDbMessage>(1));
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command"));
+                session.SaveChanges();
+            }
+
+            var messages = await subject.Take(2).ToList();
+
+            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
+            messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
+        }
+        
+        [Fact]
+        public async Task Correlation_MoreMessages()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            A.CallTo(handler).Invokes(call =>
+            {
+                var incomingMessage = call.Arguments.Get<HybridDbMessage>(1);
+
+                if (incomingMessage.Id == "id1")
+                {
+                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"));
+                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id3", new MyMessage("Next command"));
+                }
+
+                if (incomingMessage.Id == "id3")
+                {
+                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id4", new MyMessage("Next command"));
+                }
+
+                subject.OnNext(incomingMessage);
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command"));
+                session.SaveChanges();
+            }
+
+            var messages = await subject.Take(4).ToList();
+            var orderedMessages = messages.OrderBy(x => x.Id).ToList();
+
+            orderedMessages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
+            orderedMessages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
+            orderedMessages[2].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3").ToString());
+            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3", "id4").ToString());
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)
