@@ -4,7 +4,7 @@ namespace HybridDb.Queue
 {
     public interface IHybridDbQueueEvent { }
 
-    public record MessageRetrieved(MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
+    public record MessageReceived(MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
     public record MessageHandling(IDocumentSession Session, MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
     public record MessageHandled(IDocumentSession Session, MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
     public record MessageCommitted(IDocumentSession Session, MessageContext Context, HybridDbMessage Message) : IHybridDbQueueEvent;
