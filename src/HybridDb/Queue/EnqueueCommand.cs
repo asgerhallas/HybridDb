@@ -31,7 +31,7 @@ namespace HybridDb.Queue
             var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ?? 
                      command.Message.Id;
 
-            command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString();
+            command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
 
             try
             {

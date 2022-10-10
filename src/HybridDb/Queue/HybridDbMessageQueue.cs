@@ -204,24 +204,30 @@ namespace HybridDb.Queue
 
             try
             {
-                events.OnNext(new MessageHandling(context, message));
+                events.OnNext(new MessageReceived(context, message));
 
                 using var session = options.CreateSession(store);
 
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
                 session.Advanced.Enlist(tx);
 
+                events.OnNext(new MessageHandling(session, context, message));
+
                 await handler(session, message);
+
+                events.OnNext(new MessageHandled(session, context, message));
 
                 session.SaveChanges();
 
-                events.OnNext(new MessageHandled(session, context, message));
+                tx.Complete();
+
+                events.OnNext(new MessageCommitted(session, context, message));
             }
             catch (Exception exception)
             {
-                events.OnNext(new MessageFailed(context, message, exception));
-
                 var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
+
+                events.OnNext(new MessageFailed(context, message, exception, failures));
 
                 if (failures < 5)
                 {
@@ -234,12 +240,12 @@ namespace HybridDb.Queue
 
                 tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
+                tx.Complete();
+
                 events.OnNext(new PoisonMessage(context, message, exception));
 
                 retries.TryRemove(message.Id, out _);
             }
-
-            tx.Complete();
         }
 
         public void Dispose()

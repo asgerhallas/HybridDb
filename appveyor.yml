@@ -38,7 +38,7 @@
     tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
     description: $(REPO_TAG_DESCRIPTION)
     auth_token:
-      secure: nLfUisFRoNH5oToYu1cos52aKjQzO8jPVEdID9FoaKLSPaIJsfXK3Bb43MeHi/eQ
+      secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
     artifact: /.*\.nupkg/
     draft: false
     prerelease: false

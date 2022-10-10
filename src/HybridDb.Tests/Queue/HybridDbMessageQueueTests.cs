@@ -403,7 +403,7 @@ namespace HybridDb.Tests.Queue
             var queue = Using(new HybridDbMessageQueue(store2, handler));
 
             var messages = await queue.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .Take(5)
                 .Select(x => x.Message)
                 .ToList()
@@ -439,7 +439,7 @@ namespace HybridDb.Tests.Queue
             var queue = Using(new HybridDbMessageQueue(store, handler));
 
             await Should.ThrowAsync<TimeoutException>(async () => await queue.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .FirstAsync()
                 .Timeout(TimeSpan.FromSeconds(15)));
         }
@@ -485,7 +485,7 @@ namespace HybridDb.Tests.Queue
             var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
             var messages = await queue.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(10)))
                 .ToList()
                 .FirstAsync();
@@ -525,9 +525,9 @@ namespace HybridDb.Tests.Queue
             var q2Count = 0;
             var q3Count = 0;
 
-            queue1.Events.OfType<MessageHandled>().Subscribe(_ => q1Count++);
-            queue2.Events.OfType<MessageHandled>().Subscribe(_ => q2Count++);
-            queue3.Events.OfType<MessageHandled>().Subscribe(_ => q3Count++);
+            queue1.Events.OfType<MessageCommitted>().Subscribe(_ => q1Count++);
+            queue2.Events.OfType<MessageCommitted>().Subscribe(_ => q2Count++);
+            queue3.Events.OfType<MessageCommitted>().Subscribe(_ => q3Count++);
 
             var allDiagnostics = new List<IHybridDbQueueEvent>();
 
@@ -536,7 +536,7 @@ namespace HybridDb.Tests.Queue
                 .Do(allDiagnostics.Add);
 
             var handled = await diagnostics
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();
@@ -573,7 +573,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await queue.Events.OfType<MessageHandled>()
+            await queue.Events.OfType<MessageCommitted>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();
@@ -605,7 +605,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var threads = await queue.Events.OfType<MessageHandled>()
+            var threads = await queue.Events.OfType<MessageCommitted>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();
@@ -632,7 +632,7 @@ namespace HybridDb.Tests.Queue
             }
 
             var messages = await queue.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .Take(2)
                 .Select(x => x.Message)
                 .ToList()
@@ -663,7 +663,7 @@ namespace HybridDb.Tests.Queue
             }
 
             var messages = await queue.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .Take(2)
                 .Select(x => x.Message)
                 .ToList()
@@ -700,14 +700,14 @@ namespace HybridDb.Tests.Queue
             }
 
             var messagesA = await queue1.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .Take(3)
                 .Select(x => x.Message)
                 .ToList()
                 .FirstAsync();
 
             var messagesB = await queue2.Events
-                .OfType<MessageHandled>()
+                .OfType<MessageCommitted>()
                 .Take(2)
                 .Select(x => x.Message)
                 .ToList()
