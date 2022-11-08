@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Data.SqlClient;
 using Dapper;
 
@@ -43,7 +44,7 @@ namespace HybridDb.Queue
                     new
                     {
                         command.Message.Topic,
-                        Version = options.Version.ToString(),
+                        Version = options.Version,
                         Id = id,
                         tx.CommitId,
                         Discriminator = discriminator,

@@ -24,15 +24,15 @@ namespace HybridDb.Queue
                 begin
                     CREATE TABLE [dbo].[{tableName}] (
                         [Topic] [nvarchar](850) NOT NULL,
-                        [Version] [nvarchar](40) NOT NULL,
+                        [Version] [hierarchyid] NOT NULL,
 	                    [Id] [nvarchar](850) NOT NULL,
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Discriminator] [nvarchar](850) NOT NULL,
 	                    [Message] [nvarchar](max) NULL,
 	                    [Metadata] [nvarchar](max) NULL,
-
-                        CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
+    
+                    CREATE UNIQUE NONCLUSTERED INDEX [{tableName}_Topic_Id] ON [dbo].[{tableName}] ([Topic], [Id])  
                 end", schema: true);
         }
     }

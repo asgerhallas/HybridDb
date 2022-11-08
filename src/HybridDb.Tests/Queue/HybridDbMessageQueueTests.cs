@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
@@ -189,6 +190,32 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+        }
+
+        [Fact]
+        public async Task DequeueAndHandle_ByInsertionOrder()
+        {
+            var queue = StartQueue();
+
+            using (var session = store.OpenSession())
+            {
+                foreach (var i in Enumerable.Range(1, 100))
+                    session.Enqueue(new MyMessage(i.ToString()));
+
+                session.SaveChanges();
+            }
+
+            var messages = await queue.Events
+                .OfType<MessageCommitted>()
+                .Take(100)
+                .ToList()
+                .FirstAsync();
+
+            messages
+                .Select(x => x.Message.Payload)
+                .Cast<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBe(Enumerable.Range(1, 100).Select(x => x.ToString()));
         }
 
         [Fact]
