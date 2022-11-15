@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -31,7 +30,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         {
             UseRealTables();
 
-            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql");
+            Setup(SiblingFile("HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql"));
 
             var before = store.Query(new DocumentTable("Cases"), out _).Single();
 
@@ -65,7 +64,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         {
             UseRealTables();
 
-            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql");
+            Setup(SiblingFile("HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql"));
 
             ResetConfiguration();
 
@@ -96,7 +95,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         {
             UseRealTables();
 
-            Setup("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql");
+            Setup(SiblingFile("HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql"));
 
             UseTypeMapper(new OtherTypeMapper());
             Document<JObject>("BuildingParts", discriminator: "UValueCalculator.Models.RefBuildingPart, UValueCalculator, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
@@ -122,20 +121,6 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             after["Document"].ShouldNotBe(null);
             after["Document"].ShouldBe(expectedDocument);
-        }
-
-        void Setup(string filename)
-        {
-            var commands = File.ReadAllText($"Migrations\\BuiltIn\\{filename}").Split(new[] {"GO"}, StringSplitOptions.RemoveEmptyEntries);
-
-            using (var cnn = new SqlConnection(connectionString))
-            {
-                foreach (var command in commands)
-                {
-                    cnn.Execute(command);
-                }
-            }
-
         }
 
         public class OtherTypeMapper : ITypeMapper

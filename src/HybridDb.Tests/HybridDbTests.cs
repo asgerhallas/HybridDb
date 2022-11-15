@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.IO;
 using System.Transactions;
 using Dapper;
 using HybridDb.Config;
@@ -24,7 +25,9 @@ namespace HybridDb.Tests
         protected readonly ITestOutputHelper output;
         protected readonly List<LogEvent> log = new List<LogEvent>();
         protected readonly ILogger logger;
+        
         protected string connectionString;
+        
         bool autoInitialize = true;
 
         Lazy<DocumentStore> activeStore;
@@ -48,6 +51,7 @@ namespace HybridDb.Tests
             UseGlobalTempTables();
         }
 
+        // ReSharper disable once InconsistentNaming
         protected DocumentStore store
         {
             get
@@ -69,7 +73,7 @@ namespace HybridDb.Tests
 
             return isAppveyor
                 ? "Server=(local)\\SQL2017;Database=master;User ID=sa;Password=Password12!"
-                : "Data Source=(LocalDb)\\MSSQLLocalDB; Integrated Security=True";
+                : "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True";
         }
 
         protected void NoInitialize() => autoInitialize = false;
@@ -120,7 +124,7 @@ namespace HybridDb.Tests
                 connection.Execute($"ALTER DATABASE {uniqueDbName} SET ALLOW_SNAPSHOT_ISOLATION ON;");
             }
 
-            connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
+            connectionString = $"{GetConnectionString()};Initial Catalog={uniqueDbName}";
 
             configuration.UseConnectionString(connectionString);
             
@@ -172,6 +176,34 @@ namespace HybridDb.Tests
             var currentStore = store;
 
             activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize))); 
+        }
+
+        protected string SiblingFile(string filename)
+        {
+            var type = GetType();
+
+            var assemblyName = type.Assembly.GetName().Name;
+
+            var relativePath = Path.Combine(
+                type.Namespace!
+                    .Replace($"{assemblyName}.", "")
+                    .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries));
+
+            var basePath = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory!;
+
+            return Path.Combine(basePath, relativePath, filename);
+        }
+
+        protected void Setup(string path)
+        {
+            var commands = File.ReadAllText(path).Split(new[] { "GO" }, StringSplitOptions.RemoveEmptyEntries);
+
+            using var cnn = new SqlConnection(connectionString);
+
+            foreach (var command in commands)
+            {
+                cnn.Execute(command);
+            }
         }
 
         protected T Using<T>(T disposable) where T : IDisposable

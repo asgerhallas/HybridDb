@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 using System.Data.SqlClient;
 using Dapper;
 
@@ -44,7 +43,7 @@ namespace HybridDb.Queue
                     new
                     {
                         command.Message.Topic,
-                        Version = options.Version,
+                        Version = options.Version.ToString(),
                         Id = id,
                         tx.CommitId,
                         Discriminator = discriminator,
@@ -55,8 +54,8 @@ namespace HybridDb.Queue
             }
             catch (SqlException e)
             {
-                // Enqueuing is idempotent. It should ignore exceptions from primary key violations and just not insert the message.
-                if (e.Number == 2627) return id;
+                // Enqueuing is idempotent. It should ignore exceptions from primary key or unique index violations.
+                if (e.Number is 2627 or 2601) return id;
 
                 throw;
             }
