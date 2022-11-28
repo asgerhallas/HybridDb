@@ -60,6 +60,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
                         NoCollation = true,
                     }));
 
+            
             join.ShouldBe(File.ReadAllText(SiblingFile("HybridDb_3_11_0_Tests_After.sql")));
 
             database.Tables["messages_old"].ShouldBe(null);
