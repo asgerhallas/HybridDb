@@ -58,6 +58,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
                         DriAll = true,
                         NoFileGroup = true,
                         NoCollation = true,
+
                     }));
 
             
