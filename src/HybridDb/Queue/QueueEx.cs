@@ -10,6 +10,8 @@ namespace HybridDb.Queue
 {
     public static class QueueEx
     {
+        static string DefaultMessageOrderKey = "default-message-order";
+
         public static void UseMessageQueue(this Configuration config, MessageQueueOptions options = null)
         {
             options ??= new MessageQueueOptions();
@@ -24,6 +26,11 @@ namespace HybridDb.Queue
                     .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
                     .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))
                     .Else(() => decoratee(tx, command)));
+        }
+
+        public static void SetDefaultMessageOrder(this IDocumentSession session, int order)
+        {
+            session.Advanced.SessionData[DefaultMessageOrderKey] = order;
         }
 
         public static HybridDbMessage Enqueue(this IDocumentSession session, object message, string topic = null, Dictionary<string, string> metadata = null)

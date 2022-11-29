@@ -1300,7 +1300,7 @@ namespace HybridDb.Tests
                 session.Store(entity);
                 session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
                 {
-                    ["key"] = new List<string> { "value1", "value2" }
+                    ["key"] = new() { "value1", "value2" }
                 });
 
                 session.SaveChanges();
@@ -1311,7 +1311,7 @@ namespace HybridDb.Tests
                 var entity = session.Load<Entity>(id);
                 session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
                 {
-                    ["another-key"] = new List<string> { "value" }
+                    ["another-key"] = new() { "value" }
                 });
                 session.SaveChanges();
             }

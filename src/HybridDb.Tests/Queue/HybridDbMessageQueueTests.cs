@@ -113,7 +113,7 @@ namespace HybridDb.Tests.Queue
         }
         
         [Fact]
-        public async Task EnqueueWithIdGenerator()
+        public async Task Enqueue_WithIdGenerator()
         {
             StartQueue();
 
@@ -132,6 +132,24 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             message.Id.ShouldBe($"Some command/{etag}");
+        }
+
+        [Fact]
+        public async Task Enqueue_WithOrderFromContext()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
+
+            using var session = store.OpenSession();
+
+            session.SetDefaultMessageOrder(1);
+
+            //var (id, payload, topic, order, metadata) = session.Enqueue(new MyMessage("Some command"));
+
+            //order.ShouldBe(1);
         }
 
         [Fact]
