@@ -28,11 +28,12 @@ namespace HybridDb.Queue
                         [Position] [bigint] NOT NULL IDENTITY(0,1),
 	                    [Discriminator] [nvarchar](850) NOT NULL,
 	                    [Id] [nvarchar](850) NOT NULL,
+                        [Order] [int] NOT NULL default (1),
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Message] [nvarchar](max) NULL,
 	                    [Metadata] [nvarchar](max) NULL default '{{}}',
 
-                        CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Position] ASC)
+                        CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Order] ASC, [Position] ASC)
                     )
     
                     CREATE UNIQUE NONCLUSTERED INDEX [{tableName}_Topic_Id] ON [dbo].[{tableName}] ([Topic], [Id])  

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
@@ -10,14 +9,12 @@ using System.Threading.Tasks;
 using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
-using HybridDb.Linq.Bonsai;
 using HybridDb.Queue;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
-using static BoyBoy.BoyBoy;
 using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Queue
@@ -43,7 +40,7 @@ namespace HybridDb.Tests.Queue
         IDocumentStore CreateOtherStore(Action<Configuration> configurator)
         {
             var newConfiguration = new Configuration();
-            
+
             newConfiguration.UseConnectionString(connectionString);
 
             configurator(newConfiguration);
@@ -85,7 +82,7 @@ namespace HybridDb.Tests.Queue
 
             message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
         }
-        
+
         [Fact]
         public async Task DequeueAndHandle_Metadata()
         {
@@ -111,7 +108,7 @@ namespace HybridDb.Tests.Queue
 
             message.Metadata.ShouldContainKeyAndValue("asger", "true");
         }
-        
+
         [Fact]
         public async Task Enqueue_WithIdGenerator()
         {
@@ -132,24 +129,6 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             message.Id.ShouldBe($"Some command/{etag}");
-        }
-
-        [Fact]
-        public async Task Enqueue_WithOrderFromContext()
-        {
-            StartQueue();
-
-            var subject = new ReplaySubject<HybridDbMessage>();
-
-            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
-
-            using var session = store.OpenSession();
-
-            session.SetDefaultMessageOrder(1);
-
-            //var (id, payload, topic, order, metadata) = session.Enqueue(new MyMessage("Some command"));
-
-            //order.ShouldBe(1);
         }
 
         [Fact]
@@ -237,6 +216,43 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task DequeueAndHandle_ByOrder()
+        {
+            var queue = StartQueue();
+
+            using var session = store.OpenSession();
+
+            session.Enqueue(new MyMessage("order-default-1"));
+            session.Enqueue(new MyMessage("order-default-2"));
+            session.Enqueue(new MyMessage("order-2.1"), order: 2);
+            session.Enqueue(new MyMessage("order-2.2"), order: 2);
+            session.Enqueue(new MyMessage("order-1.1"), order: 1);
+            session.Enqueue(new MyMessage("order-1.2"), order: 1);
+
+            session.SaveChanges();
+
+            var messages = await queue.Events
+                .OfType<MessageCommitted>()
+                .Take(6)
+                .ToList()
+                .FirstAsync();
+
+            messages
+                .Select(x => x.Message.Payload)
+                .Cast<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBe(new List<string>
+                {
+                    "order-1.1",
+                    "order-1.2",
+                    "order-2.1",
+                    "order-2.2",
+                    "order-default-1",
+                    "order-default-2"
+                });
+        }
+
+        [Fact]
         public async Task Enqueue_Idempotent()
         {
             configuration.UseMessageQueue(new MessageQueueOptions()
@@ -265,7 +281,7 @@ namespace HybridDb.Tests.Queue
             await queue.Events.OfType<QueueIdle>().FirstAsync();
 
             messages.Count.ShouldBe(1);
-            ((MyMessage) messages.Single()).Text.ShouldBe("A");
+            ((MyMessage)messages.Single()).Text.ShouldBe("A");
         }
 
         [Fact]
@@ -307,7 +323,7 @@ namespace HybridDb.Tests.Queue
             var queue = StartQueue();
 
             A.CallTo(handler).WithReturnType<Task>()
-                .Invokes(x => throw new ArgumentException());
+                .Invokes(_ => throw new ArgumentException());
 
             using (var session = store.OpenSession())
             {
@@ -325,7 +341,7 @@ namespace HybridDb.Tests.Queue
 
             var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> {"errors/default"}));
+                new List<string> { "errors/default" }));
 
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
         }
@@ -334,7 +350,7 @@ namespace HybridDb.Tests.Queue
         public async Task Poison_GoesToErrorTopic_TopicIsReadFromColumn()
         {
             A.CallTo(handler).WithReturnType<Task>()
-                .Invokes(x => throw new ArgumentException());
+                .Invokes(_ => throw new ArgumentException());
 
             configuration.UseMessageQueue(new MessageQueueOptions
             {
@@ -366,7 +382,7 @@ namespace HybridDb.Tests.Queue
 
             var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> {"errors/myothertopic"}));
+                new List<string> { "errors/myothertopic" }));
 
             message.Topic.ShouldBe("errors/myothertopic");
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
@@ -393,7 +409,7 @@ namespace HybridDb.Tests.Queue
                 .Do(messages.Add)
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(1)));
 
-            ((MyMessage) messages.Single().Message.Payload).Text.ShouldBe("edible message");
+            ((MyMessage)messages.Single().Message.Payload).Text.ShouldBe("edible message");
         }
 
         [Fact]
@@ -408,7 +424,7 @@ namespace HybridDb.Tests.Queue
             {
                 Version = new Version("1.2.4")
             }));
-            
+
             var store3 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
             {
                 Version = new Version("1.2.5")
@@ -458,8 +474,8 @@ namespace HybridDb.Tests.Queue
                 .OfType<MyMessage>()
                 .Select(x => x.Text)
                 .ShouldBeLikeUnordered("1", "2", "3", "4", "the last one");
-        }        
-        
+        }
+
         [Fact]
         public async Task DequeueAndHandle_NotLaterVersions()
         {
@@ -508,7 +524,7 @@ namespace HybridDb.Tests.Queue
 
             // was around 70.000 rounds in 7secs on my pc
             // not that it really matters
-            output.WriteLine(messages.Count.ToString());
+            output.WriteLine($"{DateTime.Now.ToString("s").Replace("T", " ")} [Information] IdlePerformance: {messages.Count}");
         }
 
         [Fact]
@@ -516,13 +532,13 @@ namespace HybridDb.Tests.Queue
         {
             configuration.UseMessageQueue(new MessageQueueOptions
             {
-                MaxConcurrency = 100,
+                MaxConcurrency = 100
             }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             using (var session = store.OpenSession())
             {
-                foreach (var i in Enumerable.Range(1, 20000))
-                    session.Enqueue(new MyMessage(i.ToString()));
+                foreach (var j in Enumerable.Range(1, 100000))
+                    session.Enqueue(new MyMessage(j.ToString()));
 
                 session.SaveChanges();
             }
@@ -536,7 +552,7 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             // around 6300 messages on my machine
-            output.WriteLine(messages.Count.ToString());
+            output.WriteLine($"{DateTime.Now.ToString("s").Replace("T", " ")} [Information] ReadPerformance: {messages.Count}");
         }
 
         [Fact]
@@ -545,7 +561,7 @@ namespace HybridDb.Tests.Queue
             configuration.UseMessageQueue(new MessageQueueOptions());
 
             Should.Throw<HybridDbException>(() => configuration
-                .UseMessageQueue(new MessageQueueOptions()))
+                    .UseMessageQueue(new MessageQueueOptions()))
                 .Message.ShouldBe("Only one message queue can be enabled per store.");
         }
 
@@ -587,7 +603,7 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             // Each message is handled only once
-            handled.Select(x => int.Parse(((MyMessage) x.Message.Payload).Text))
+            handled.Select(x => int.Parse(((MyMessage)x.Message.Payload).Text))
                 .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
@@ -800,7 +816,7 @@ namespace HybridDb.Tests.Queue
             var message = await subject.FirstAsync();
 
             DateTimeOffset.TryParse(message.Metadata[HybridDbMessage.EnqueuedAtKey], out var date).ShouldBe(true);
-            
+
             date.ShouldBeInRange(before, DateTimeOffset.Now);
         }
 
@@ -814,7 +830,7 @@ namespace HybridDb.Tests.Queue
             A.CallTo(handler).Invokes(call =>
             {
                 call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"));
-                
+
                 subject.OnNext(call.Arguments.Get<HybridDbMessage>(1));
             });
 
@@ -826,10 +842,12 @@ namespace HybridDb.Tests.Queue
 
             var messages = await subject.Take(2).ToList();
 
-            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
-            messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
+            messages[0].Metadata
+                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
+            messages[1].Metadata
+                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
         }
-        
+
         [Fact]
         public async Task Correlation_MoreMessages()
         {
@@ -864,10 +882,14 @@ namespace HybridDb.Tests.Queue
             var messages = await subject.Take(4).ToList();
             var orderedMessages = messages.OrderBy(x => x.Id).ToList();
 
-            orderedMessages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
-            orderedMessages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
-            orderedMessages[2].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3").ToString());
-            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3", "id4").ToString());
+            orderedMessages[0].Metadata
+                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1").ToString());
+            orderedMessages[1].Metadata
+                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
+            orderedMessages[2].Metadata
+                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3").ToString());
+            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
+                new JArray("id1", "id3", "id4").ToString());
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)
