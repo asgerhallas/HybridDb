@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +33,7 @@ namespace HybridDb.Queue
         public IObservable<IHybridDbQueueEvent> Events { get; }
 
         public HybridDbMessageQueue(
-            IDocumentStore store, 
+            IDocumentStore store,
             Func<IDocumentSession, HybridDbMessage, Task> handler)
         {
             this.store = store;
@@ -42,7 +41,8 @@ namespace HybridDb.Queue
 
             if (!store.Configuration.TryResolve(out options))
             {
-                throw new HybridDbException("MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
+                throw new HybridDbException(
+                    "MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
             }
 
             Events = options.ObserveEvents(events);
@@ -71,7 +71,7 @@ namespace HybridDb.Queue
                             try
                             {
                                 var release = await WaitAsync(semaphore);
-                                    
+
                                 try
                                 {
                                     var (tx, message) = await NextMessage();
@@ -105,9 +105,7 @@ namespace HybridDb.Queue
                                     throw;
                                 }
                             }
-                            catch (TaskCanceledException)
-                            {
-                            }
+                            catch (TaskCanceledException) { }
                             catch (Exception exception)
                             {
                                 events.OnNext(new QueueFailed(exception));
@@ -125,7 +123,7 @@ namespace HybridDb.Queue
                     TaskScheduler.Default)
                 .Unwrap()
                 .ContinueWith(
-                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
+                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."),
                     TaskContinuationOptions.OnlyOnFaulted);
         }
 
@@ -147,7 +145,7 @@ namespace HybridDb.Queue
             {
                 tx.Dispose();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.LogWarning(ex, "Dispose transaction failed.");
             }
@@ -158,7 +156,7 @@ namespace HybridDb.Queue
             await semaphore.WaitAsync();
 
             var released = 0;
-            
+
             return () =>
             {
                 if (Interlocked.Exchange(ref released, 1) == 1) return;
@@ -226,7 +224,7 @@ namespace HybridDb.Queue
             }
             catch (Exception exception)
             {
-                var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
+                var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
                 events.OnNext(new MessageFailed(context, message, exception, failures));
 
@@ -237,7 +235,9 @@ namespace HybridDb.Queue
                     return;
                 }
 
-                logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
+                logger.LogError(exception,
+                    "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.",
+                    message.Id);
 
                 tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
@@ -252,17 +252,24 @@ namespace HybridDb.Queue
         public void Dispose()
         {
             cts.Cancel();
-            
-            try { MainLoop.Wait(); }
+
+            try
+            {
+                MainLoop.Wait();
+            }
             catch (TaskCanceledException) { }
             catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex) { logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose."); }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
+            }
 
             eventsSubscription.Dispose();
         }
     }
 
-    public sealed record HybridDbMessage(string Id, object Payload, string Topic = null, Dictionary<string, string> Metadata = null)
+    public sealed record HybridDbMessage(string Id, object Payload, string Topic = null,
+        Dictionary<string, string> Metadata = null, int Order = int.MaxValue)
     {
         public const string EnqueuedAtKey = "enqueued-at";
         public const string CorrelationIdsKey = "correlation-ids";

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using HybridDb.Config;
 using Newtonsoft.Json.Linq;
@@ -19,28 +18,31 @@ namespace HybridDb.Queue
 
             config.GetOrAddTable(new QueueTable(options.TableName));
 
-            config.Decorate<DmlCommandExecutor>((_, decoratee) => (tx, command) => 
+            config.Decorate<DmlCommandExecutor>((_, decoratee) => (tx, command) =>
                 Switch<object>.On(command)
                     .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
                     .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))
                     .Else(() => decoratee(tx, command)));
         }
 
-        public static HybridDbMessage Enqueue(this IDocumentSession session, object message, string topic = null, Dictionary<string, string> metadata = null)
+        public static HybridDbMessage Enqueue(this IDocumentSession session, object message, string topic = null, Dictionary<string, string> metadata = null,
+            int order = int.MaxValue)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
-            return Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, metadata));
+            return Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, metadata, order));
         }
 
-        public static HybridDbMessage Enqueue(this IDocumentSession session, string id, object message, string topic = null, Dictionary<string, string> metadata = null)
+        public static HybridDbMessage Enqueue(this IDocumentSession session, string id, object message, string topic = null, Dictionary<string, string> metadata = null,
+            int order = int.MaxValue)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
-            return Enqueue(session, new HybridDbMessage(id, message, topic, metadata));
+            return Enqueue(session, new HybridDbMessage(id, message, topic, metadata, order));
         }
 
-        public static HybridDbMessage Enqueue<T>(this IDocumentSession session, Func<T, Guid, string> idGenerator, T message, string topic = null, Dictionary<string, string> metadata = null)
+        public static HybridDbMessage Enqueue<T>(this IDocumentSession session, Func<T, Guid, string> idGenerator, T message, string topic = null,
+            Dictionary<string, string> metadata = null, int order = int.MaxValue)
         {
             if (idGenerator == null) throw new ArgumentNullException(nameof(idGenerator));
             if (message == null) throw new ArgumentNullException(nameof(message));
@@ -73,7 +75,7 @@ namespace HybridDb.Queue
         static string GetNextCorrelationIds(IDocumentSession session, HybridDbMessage message)
         {
             if (session.Advanced.SessionData.TryGetValue(MessageContext.Key, out var value) &&
-                value is MessageContext messageContext && 
+                value is MessageContext messageContext &&
                 messageContext.IncomingMessage.Metadata.TryGetValue(HybridDbMessage.CorrelationIdsKey, out var correlationIds))
             {
                 var nextCorrelationIds = JArray.Parse(correlationIds);

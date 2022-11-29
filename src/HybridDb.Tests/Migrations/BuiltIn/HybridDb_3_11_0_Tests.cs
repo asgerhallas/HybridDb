@@ -1,7 +1,6 @@
 using System;
 using System.Data.Common;
 using System.IO;
-using System.Linq;
 using HybridDb.Migrations.BuiltIn;
 using HybridDb.Queue;
 using Microsoft.Data.SqlClient;
@@ -31,7 +30,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             configuration.UseMessageQueue();
 
-            UseMigrations(new InlineMigration(1, before: ListOf(new HybridDb_3_11_0())));
+            UseMigrations(new InlineMigration(1, ListOf(new HybridDb_3_11_0())));
 
             TouchStore();
 
@@ -39,7 +38,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             var server = new Server(new ServerConnection(sqlConnection));
 
-            var parser = new DbConnectionStringBuilder()
+            var parser = new DbConnectionStringBuilder
             {
                 ConnectionString = connectionString
             };
@@ -47,7 +46,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
             var databaseName = (string)parser["initial catalog"];
             var database = server.Databases[databaseName];
             var join = string.Join(
-                $"{Environment.NewLine}GO{Environment.NewLine}", 
+                $"{Environment.NewLine}GO{Environment.NewLine}",
                 database.Tables["messages"]
                     .EnumScript(new ScriptingOptions
                     {
@@ -57,14 +56,12 @@ namespace HybridDb.Tests.Migrations.BuiltIn
                         ScriptData = true,
                         DriAll = true,
                         NoFileGroup = true,
-                        NoCollation = true,
-
+                        NoCollation = true
                     }));
 
-            
             join.ShouldBe(File.ReadAllText(SiblingFile("HybridDb_3_11_0_Tests_After.sql")));
 
             database.Tables["messages_old"].ShouldBe(null);
-        }        
+        }
     }
 }
