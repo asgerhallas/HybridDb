@@ -202,7 +202,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(100)
                 .ToList()
@@ -231,7 +231,7 @@ namespace HybridDb.Tests.Queue
 
             session.SaveChanges();
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(6)
                 .ToList()
@@ -277,8 +277,8 @@ namespace HybridDb.Tests.Queue
             var queue = Using(new HybridDbMessageQueue(store, handler));
 
             var messages = new List<object>();
-            queue.Events.OfType<MessageHandling>().Select(x => x.Message.Payload).Subscribe(messages.Add);
-            await queue.Events.OfType<QueueIdle>().FirstAsync();
+            queue.ReplayedEvents.OfType<MessageHandling>().Select(x => x.Message.Payload).Subscribe(messages.Add);
+            await queue.ReplayedEvents.OfType<QueueIdle>().FirstAsync();
 
             messages.Count.ShouldBe(1);
             ((MyMessage)messages.Single()).Text.ShouldBe("A");
@@ -301,7 +301,7 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<object>();
 
-            await queue.Events
+            await queue.ReplayedEvents
                 .Do(messages.Add)
                 .OfType<PoisonMessage>()
                 .FirstAsync();
@@ -334,7 +334,7 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<object>();
 
-            await queue.Events
+            await queue.ReplayedEvents
                 .Do(messages.Add)
                 .OfType<PoisonMessage>()
                 .FirstAsync();
@@ -375,7 +375,7 @@ namespace HybridDb.Tests.Queue
             // start the queue late, after above manipulation
             var queue = Using(new HybridDbMessageQueue(store, handler));
 
-            await queue.Events
+            await queue.ReplayedEvents
                 .Do(messages.Add)
                 .OfType<PoisonMessage>()
                 .FirstAsync();
@@ -404,7 +404,7 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<MessageHandling>();
 
-            await queue.Events
+            await queue.ReplayedEvents
                 .OfType<MessageHandling>()
                 .Do(messages.Add)
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(1)));
@@ -423,7 +423,7 @@ namespace HybridDb.Tests.Queue
             var store2 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
             {
                 Version = new Version("1.2.4")
-            }));
+            }.ReplayEvents(TimeSpan.FromSeconds(60))));
 
             var store3 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
             {
@@ -463,7 +463,7 @@ namespace HybridDb.Tests.Queue
 
             var queue = Using(new HybridDbMessageQueue(store2, handler));
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(5)
                 .Select(x => x.Message)
@@ -482,7 +482,7 @@ namespace HybridDb.Tests.Queue
             configuration.UseMessageQueue(new MessageQueueOptions
             {
                 Version = new Version("1.2.3")
-            });
+            }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             var store2 = CreateOtherStore(c => c.UseMessageQueue(new MessageQueueOptions
             {
@@ -499,7 +499,7 @@ namespace HybridDb.Tests.Queue
 
             var queue = Using(new HybridDbMessageQueue(store, handler));
 
-            await Should.ThrowAsync<TimeoutException>(async () => await queue.Events
+            await Should.ThrowAsync<TimeoutException>(async () => await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .FirstAsync()
                 .Timeout(TimeSpan.FromSeconds(15)));
@@ -516,7 +516,7 @@ namespace HybridDb.Tests.Queue
 
             var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<QueueIdle>()
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(7)))
                 .ToList()
@@ -545,7 +545,7 @@ namespace HybridDb.Tests.Queue
 
             var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(10)))
                 .ToList()
@@ -586,14 +586,14 @@ namespace HybridDb.Tests.Queue
             var q2Count = 0;
             var q3Count = 0;
 
-            queue1.Events.OfType<MessageCommitted>().Subscribe(_ => q1Count++);
-            queue2.Events.OfType<MessageCommitted>().Subscribe(_ => q2Count++);
-            queue3.Events.OfType<MessageCommitted>().Subscribe(_ => q3Count++);
+            queue1.ReplayedEvents.OfType<MessageCommitted>().Subscribe(_ => q1Count++);
+            queue2.ReplayedEvents.OfType<MessageCommitted>().Subscribe(_ => q2Count++);
+            queue3.ReplayedEvents.OfType<MessageCommitted>().Subscribe(_ => q3Count++);
 
             var allDiagnostics = new List<IHybridDbQueueEvent>();
 
             var diagnostics = Observable
-                .Merge(queue1.Events, queue2.Events, queue3.Events)
+                .Merge(queue1.ReplayedEvents, queue2.ReplayedEvents, queue3.ReplayedEvents)
                 .Do(allDiagnostics.Add);
 
             var handled = await diagnostics
@@ -634,7 +634,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await queue.Events.OfType<MessageCommitted>()
+            await queue.ReplayedEvents.OfType<MessageCommitted>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();
@@ -666,7 +666,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var threads = await queue.Events.OfType<MessageCommitted>()
+            var threads = await queue.ReplayedEvents.OfType<MessageCommitted>()
                 .Take(200)
                 .ToList()
                 .FirstAsync();
@@ -692,7 +692,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(2)
                 .Select(x => x.Message)
@@ -723,7 +723,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var messages = await queue.Events
+            var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(2)
                 .Select(x => x.Message)
@@ -760,14 +760,14 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var messagesA = await queue1.Events
+            var messagesA = await queue1.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(3)
                 .Select(x => x.Message)
                 .ToList()
                 .FirstAsync();
 
-            var messagesB = await queue2.Events
+            var messagesB = await queue2.ReplayedEvents
                 .OfType<MessageCommitted>()
                 .Take(2)
                 .Select(x => x.Message)

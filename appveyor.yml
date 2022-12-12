@@ -35,12 +35,6 @@
       APPVEYOR_REPO_TAG: true
     api_key:
       secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
-  - provider: NuGet
-    on:
-      APPVEYOR_REPO_TAG: false
-    server: https://ci.appveyor.com/nuget/energysystems
-    api_key:
-      secure: Hxqy4IUBieFLM60pqbAlxfTlrkY6IYe5JWgX0fVjmNM=
   - provider: GitHub
     release: $(APPVEYOR_BUILD_VERSION)
     tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively

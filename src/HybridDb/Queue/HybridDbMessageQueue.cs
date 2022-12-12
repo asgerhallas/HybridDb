@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,18 @@ using Microsoft.Extensions.Logging;
 
 namespace HybridDb.Queue
 {
+    public class ThrowingSubject<T> : ISubject<T>
+    {
+        public void OnNext(T value) { }
+        public void OnError(Exception error) { }
+        public void OnCompleted() { }
+
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            throw new InvalidOperationException("Replay is not enabled in queue options.");
+        }
+    }
+
     public class HybridDbMessageQueue : IDisposable
     {
         // This implementation misses a few pieces:
@@ -20,17 +33,18 @@ namespace HybridDb.Queue
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
-        readonly Subject<IHybridDbQueueEvent> events = new();
+        readonly Subject<IHybridDbQueueEvent> events = new ();
 
         readonly IDocumentStore store;
         readonly ILogger logger;
         readonly QueueTable table;
         readonly MessageQueueOptions options;
-        readonly IDisposable eventsSubscription;
+        readonly Stack<IDisposable> disposables = new();
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
 
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
+        public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
 
         public HybridDbMessageQueue(
             IDocumentStore store,
@@ -45,9 +59,16 @@ namespace HybridDb.Queue
                     "MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
             }
 
-            Events = options.ObserveEvents(events);
+            Events = events;
 
-            eventsSubscription = options.SubscribeEvents(Events);
+            if (options.Replay != null)
+            {
+                disposables.Push(events.Subscribe(options.Replay));
+
+                ReplayedEvents = options.Replay;
+            }
+
+            disposables.Push(options.Subscribe(events));
 
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
@@ -126,6 +147,9 @@ namespace HybridDb.Queue
                     t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."),
                     TaskContinuationOptions.OnlyOnFaulted);
         }
+
+        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) => 
+            throw new InvalidOperationException("You must set MessageQueueOptions.Replay if you want to subscribe to replayed events.");
 
         DocumentTransaction BeginTransaction()
         {
@@ -264,7 +288,10 @@ namespace HybridDb.Queue
                 logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
             }
 
-            eventsSubscription.Dispose();
+            foreach (var disposable in disposables)
+            {
+                disposable.Dispose();
+            }
         }
     }
 
