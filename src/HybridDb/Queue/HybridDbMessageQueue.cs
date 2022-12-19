@@ -299,7 +299,7 @@ namespace HybridDb.Queue
         string Id, 
         object Payload, 
         string Topic = null, 
-        int Order = int.MaxValue,
+        int Order = 0,
         Dictionary<string, string> Metadata = null)
     {
         public const string EnqueuedAtKey = "enqueued-at";
