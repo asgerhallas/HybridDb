@@ -34,9 +34,9 @@ namespace HybridDb.Tests.Queue
             session.SetDefaultMessageOrder(9);
             session.ClearDefaultMessageOrder();
 
-            session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(int.MaxValue);
-            session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(int.MaxValue);
-            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(int.MaxValue);
+            session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(0);
+            session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(0);
+            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(0);
         }
 
         [Fact]
@@ -44,9 +44,9 @@ namespace HybridDb.Tests.Queue
         {
             using var session = store.OpenSession();
 
-            session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(int.MaxValue);
-            session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(int.MaxValue);
-            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(int.MaxValue);
+            session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(0);
+            session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(0);
+            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(0);
         }
 
         [Fact]

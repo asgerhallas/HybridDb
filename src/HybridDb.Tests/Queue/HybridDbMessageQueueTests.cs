@@ -243,12 +243,12 @@ namespace HybridDb.Tests.Queue
                 .Select(x => x.Text)
                 .ShouldBe(new List<string>
                 {
+                    "order-default-1",
+                    "order-default-2",
                     "order-1.1",
                     "order-1.2",
                     "order-2.1",
-                    "order-2.2",
-                    "order-default-1",
-                    "order-default-2"
+                    "order-2.2"
                 });
         }
 

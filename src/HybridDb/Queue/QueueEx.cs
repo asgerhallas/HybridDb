@@ -106,7 +106,7 @@ namespace HybridDb.Queue
                 : null;
 
         static int GetMessageOrder(IDocumentSession session, int? order) =>
-            order ?? TryGetDefaultMessageOrder(session) ?? int.MaxValue;
+            order ?? TryGetDefaultMessageOrder(session) ?? 0;
 
         static string GetNextCorrelationIds(IDocumentSession session, HybridDbMessage message)
         {
