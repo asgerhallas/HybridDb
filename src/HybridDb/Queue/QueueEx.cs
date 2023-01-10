@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using HybridDb.Config;
 using Newtonsoft.Json.Linq;
@@ -10,7 +9,7 @@ namespace HybridDb.Queue
 {
     public static class QueueEx
     {
-        static string DefaultMessageOrderKey = "default-message-order";
+        const string DefaultMessageOrderKey = "default-message-order";
 
         public static void UseMessageQueue(this Configuration config, MessageQueueOptions options = null)
         {
@@ -28,39 +27,42 @@ namespace HybridDb.Queue
                     .Else(() => decoratee(tx, command)));
         }
 
-        public static HybridDbMessage Enqueue(this IDocumentSession session, 
-            object message, 
+        public static HybridDbMessage Enqueue(this IDocumentSession session,
+            object message,
             string topic = null,
             int? order = null,
-            Dictionary<string, string> metadata = null)
+            Dictionary<string, string> metadata = null,
+            bool addCorrelationIds = true)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             var resultingOrder = GetMessageOrder(session, order);
 
-            return Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, resultingOrder, metadata));
+            return Enqueue(session, new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, resultingOrder, metadata), null, addCorrelationIds);
         }
 
-        public static HybridDbMessage Enqueue(this IDocumentSession session, 
-            string id, 
-            object message, 
+        public static HybridDbMessage Enqueue(this IDocumentSession session,
+            string id,
+            object message,
             string topic = null,
             int? order = null,
-            Dictionary<string, string> metadata = null)
+            Dictionary<string, string> metadata = null,
+            bool addCorrelationIds = true)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             var resultingOrder = GetMessageOrder(session, order);
-            
-            return Enqueue(session, new HybridDbMessage(id, message, topic, resultingOrder, metadata));
+
+            return Enqueue(session, new HybridDbMessage(id, message, topic, resultingOrder, metadata), null, addCorrelationIds);
         }
 
         public static HybridDbMessage Enqueue<T>(this IDocumentSession session,
-            Func<T, Guid, string> idGenerator, 
-            T message, 
-            string topic = null, 
+            Func<T, Guid, string> idGenerator,
+            T message,
+            string topic = null,
             int? order = null,
-            Dictionary<string, string> metadata = null)
+            Dictionary<string, string> metadata = null,
+            bool addCorrelationIds = true)
         {
             if (idGenerator == null) throw new ArgumentNullException(nameof(idGenerator));
             if (message == null) throw new ArgumentNullException(nameof(message));
@@ -71,12 +73,13 @@ namespace HybridDb.Queue
 
             var envelope = new HybridDbMessage(Guid.NewGuid().ToString(), message, topic, resultingOrder, metadata);
 
-            return Enqueue(session, envelope, IdGenerator);
+            return Enqueue(session, envelope, IdGenerator, addCorrelationIds);
         }
 
-        public static HybridDbMessage Enqueue(this IDocumentSession session, 
-            HybridDbMessage message, 
-            Func<object, Guid, string> idGenerator = null)
+        public static HybridDbMessage Enqueue(this IDocumentSession session,
+            HybridDbMessage message,
+            Func<object, Guid, string> idGenerator = null,
+            bool addCorrelationIds = true)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
@@ -85,7 +88,10 @@ namespace HybridDb.Queue
                 throw new ArgumentException("Enqueued message must not be of type HybridDbMessage.");
             }
 
-            message.Metadata.Add(HybridDbMessage.CorrelationIdsKey, GetNextCorrelationIds(session, message));
+            if (addCorrelationIds)
+            {
+                message.Metadata.Add(HybridDbMessage.CorrelationIdsKey, GetNextCorrelationIds(session, message));
+            }
 
             var queueTable = session.GetQueueTable();
 
@@ -99,6 +105,9 @@ namespace HybridDb.Queue
 
         public static void ClearDefaultMessageOrder(this IDocumentSession session) =>
             session.Advanced.SessionData.Remove(DefaultMessageOrderKey);
+
+        public static int GetDefaultMessageOrder(this IDocumentSession session) =>
+            TryGetDefaultMessageOrder(session) ?? 0;
 
         static int? TryGetDefaultMessageOrder(IDocumentSession session) =>
             session.Advanced.SessionData.TryGetValue(DefaultMessageOrderKey, out var defaultOrder)

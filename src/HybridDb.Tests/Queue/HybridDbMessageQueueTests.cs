@@ -849,6 +849,34 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task NoCorrelation()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            A.CallTo(handler).Invokes(call =>
+            {
+                call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"), null, null, null, false);
+
+                subject.OnNext(call.Arguments.Get<HybridDbMessage>(1));
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command"), null, null, null, false);
+                session.SaveChanges();
+            }
+
+            var messages = await subject.Take(2).ToList();
+
+            messages[0].Metadata
+                .ShouldNotContainKey(HybridDbMessage.CorrelationIdsKey);
+            messages[1].Metadata
+                .ShouldNotContainKey(HybridDbMessage.CorrelationIdsKey);
+        }
+
+        [Fact]
         public async Task Correlation_MoreMessages()
         {
             StartQueue();

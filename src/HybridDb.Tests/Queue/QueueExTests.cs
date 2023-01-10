@@ -61,5 +61,17 @@ namespace HybridDb.Tests.Queue
             session.Enqueue("id", new MyMessage("Some command"), order: 26).Order.ShouldBe(26);
             session.Enqueue((x, y) => "id", new MyMessage("Some command"), order: 27).Order.ShouldBe(27);
         }
+
+        [Fact]
+        public void GetDefaultMessageOrder()
+        {
+            using var session = store.OpenSession();
+
+            session.GetDefaultMessageOrder().ShouldBe(0);
+
+            session.SetDefaultMessageOrder(123);
+
+            session.GetDefaultMessageOrder().ShouldBe(123);
+        }
     }
 }
