@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using HybridDb.Config;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Queue;
@@ -30,12 +29,12 @@ namespace HybridDb.Migrations.BuiltIn
                     "select column_name from information_schema.columns where table_name = @TableName",
                     new { TableName = $"{table.Name}_old" });
 
-                var columns = string.Join(", ", columnNames);
+                var columns = string.Join(", ", columnNames.Where(x => x != "Position").Select(x => store.Database.Escape(x)));
 
                 // Move the data from the old to the new table
                 store.Database.RawExecute(@$"
                     insert into {tableNameEscaped} ({columns})
-                    select {columns} from {oldTableNameEscaped};");
+                    select {columns} from {oldTableNameEscaped}");
 
                 store.Database.RawExecute($"drop table {oldTableNameEscaped};");
             }
