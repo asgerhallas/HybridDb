@@ -636,8 +636,8 @@ namespace HybridDb.Tests
             var documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
             {
                 c.UseConnectionString(connectionString);
-                c.DisableBackgroundMigrations();
             }));
+
             var session = documentStore.OpenSession();
 
             return new Query<T>(new QueryProvider((DocumentSession)session, null));
