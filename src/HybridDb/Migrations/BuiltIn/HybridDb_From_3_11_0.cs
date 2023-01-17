@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using HybridDb.Config;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Queue;
