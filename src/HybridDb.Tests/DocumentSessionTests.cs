@@ -360,7 +360,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var tx = store.BeginTransaction();
+                using var tx = store.BeginTransaction();
                 session.Advanced.Enlist(tx);
                 session.Advanced.Clear();
                 session.Advanced.DocumentTransaction.ShouldBe(null);

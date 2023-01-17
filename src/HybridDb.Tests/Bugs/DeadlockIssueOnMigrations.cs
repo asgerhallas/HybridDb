@@ -19,7 +19,7 @@ namespace HybridDb.Tests.Bugs
             
             Parallel.For(0, 10, i =>
             {
-                var realstore = DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
+                using var realstore = DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
                 {
                     c.UseConnectionString(connectionString);
 
@@ -58,8 +58,6 @@ namespace HybridDb.Tests.Bugs
                         .With(x => x.Property)
                         .With(x => x.Complex.A);
                 });
-
-                realstore.Dispose();
             });
         }
 
