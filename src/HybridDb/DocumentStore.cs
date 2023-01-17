@@ -37,6 +37,7 @@ namespace HybridDb
             Configuration = configuration;
             Logger = configuration.Logger;
             TableMode = store.TableMode;
+            DocumentMigrationRunner = new DocumentMigrationRunner(this);
             Database = store.Database;
 
             if (initialize) Initialize();
