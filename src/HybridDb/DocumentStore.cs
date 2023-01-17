@@ -65,7 +65,11 @@ namespace HybridDb
         public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) => 
             new(mode, configuration ?? new Configuration(), initialize);
 
-        public void Dispose() => Database.Dispose();
+        public void Dispose()
+        {
+            Configuration.Dispose();
+            Database.Dispose();
+        }
 
         public IDatabase Database { get; }
         public ILogger Logger { get;  }

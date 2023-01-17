@@ -1448,7 +1448,7 @@ namespace HybridDb.Tests
             
             ResetStore();
 
-            var tx = store.BeginTransaction();
+            using var tx = store.BeginTransaction();
 
             Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
                 .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");

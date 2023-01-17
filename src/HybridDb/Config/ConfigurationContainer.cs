@@ -68,7 +68,8 @@ namespace HybridDb.Config
 
         T Track<T>(T obj)
         {
-            tracked.Add(obj);
+            // Last inserted must be first disposed
+            tracked.Insert(0, obj);
             return obj;
         }
     }
