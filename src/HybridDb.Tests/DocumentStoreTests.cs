@@ -670,6 +670,7 @@ namespace HybridDb.Tests
 
             void configurator(Configuration x)
             {
+                x.DisableBackgroundMigrations();
                 x.UseConnectionString(connectionString);
                 x.UseTableNamePrefix(prefix);
                 x.Document<Case>();
