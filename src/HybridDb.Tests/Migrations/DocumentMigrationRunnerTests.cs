@@ -41,7 +41,7 @@ namespace HybridDb.Tests.Migrations
                 Document = configuration.Serializer.Serialize(new Entity { Number = 42 })
             });
 
-            new DocumentMigrationRunner().Run(store).Wait();
+            new DocumentMigrationRunner(store).Run().Wait();
 
             var row = store.Get(table, id);
             row["Number"].ShouldBe(result);
@@ -116,8 +116,8 @@ namespace HybridDb.Tests.Migrations
             var sw = Stopwatch.StartNew();
             
             Task.WaitAll(
-                new DocumentMigrationRunner().Run(store),
-                new DocumentMigrationRunner().Run(store));
+                new DocumentMigrationRunner(store).Run(),
+                new DocumentMigrationRunner(store).Run());
 
             // Only for a ballpark estimate
             // Takes about 26000ms on my machine
@@ -153,8 +153,8 @@ namespace HybridDb.Tests.Migrations
 
             bool? failed = null;
 
-            new DocumentMigrationRunner()
-                .Run(store)
+            new DocumentMigrationRunner(store)
+                .Run()
                 .ContinueWith(x =>
                 {
                     failed = x.IsFaulted;
@@ -176,7 +176,7 @@ namespace HybridDb.Tests.Migrations
             DisableBackgroundMigrations();
             Document<Entity>().With(x => x.Number);
 
-            new DocumentMigrationRunner().Run(store).Wait();
+            new DocumentMigrationRunner(store).Run().Wait();
 
             store.Stats.NumberOfRequests.ShouldBe(0);
         }
@@ -202,7 +202,7 @@ namespace HybridDb.Tests.Migrations
 
             Should.NotThrow(() =>
             {
-                new DocumentMigrationRunner().Run(store).Wait(1000);
+                new DocumentMigrationRunner(store).Run().Wait(1000);
             });
 
             var numberOfErrors = log.Count(x =>
@@ -231,7 +231,7 @@ namespace HybridDb.Tests.Migrations
 
             UseMigrations(new InlineMigration(1, new MigrationFailsBeforeLoadingDocument(typeof(Entity))));
 
-            Should.NotThrow(() => new DocumentMigrationRunner().Run(store).Wait(1000));
+            Should.NotThrow(() => new DocumentMigrationRunner(store).Run().Wait(1000));
 
             var numberOfErrors = log.Count(x => 
                 x.RenderMessage() == "DocumentMigrationRunner failed and stopped. Documents will not be migrated in background until you restart the runner. They will still be migrated on Session.Load() and Session.Query().");
