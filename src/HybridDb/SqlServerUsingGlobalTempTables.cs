@@ -33,12 +33,15 @@ namespace HybridDb
             prefix = $"##{store.Configuration.TableNamePrefix}_";
 
             schemaBuilderConnection = new SqlConnection(connectionString);
+
+            Global.ConnectionCreated();
             schemaBuilderConnection.Open();
         }
 
         public override void Dispose()
         {
             schemaBuilderConnection?.Dispose();
+            Global.ConnectionDisposed();
 
             if (numberOfManagedConnections > 0)
             {
@@ -67,13 +70,15 @@ namespace HybridDb
             }
 
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); Global.ConnectionDisposed(); };
 
             try
             {
                 Interlocked.Increment(ref numberOfManagedConnections);
 
                 var connection = new SqlConnection(connectionString);
+
+                Global.ConnectionCreated();
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
