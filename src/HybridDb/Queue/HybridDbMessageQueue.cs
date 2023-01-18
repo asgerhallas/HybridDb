@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
@@ -31,20 +33,17 @@ namespace HybridDb.Queue
         // [ ] Allow faster handling of messages by handling multiple messages (a given max batch size) in one transaction
 
         readonly CancellationTokenSource cts;
+        readonly Stack<IDisposable> disposables = new();
+        readonly Subject<IHybridDbQueueEvent> events = new();
+        readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
+        readonly ILogger logger;
+        readonly MessageQueueOptions options;
         readonly ConcurrentDictionary<string, int> retries = new();
-        readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
-        readonly Subject<IHybridDbQueueEvent> events = new ();
 
         readonly IDocumentStore store;
-        readonly ILogger logger;
         readonly QueueTable table;
-        readonly MessageQueueOptions options;
-        readonly Stack<IDisposable> disposables = new();
-        readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
-
-        public Task MainLoop { get; }
-        public IObservable<IHybridDbQueueEvent> Events { get; }
-        public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
+        readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
+        Stopwatch stopwatch;
 
         public HybridDbMessageQueue(
             IDocumentStore store,
@@ -77,6 +76,10 @@ namespace HybridDb.Queue
 
             MainLoop = Task.Factory.StartNew(async () =>
                     {
+                        stopwatch = new Stopwatch();
+
+                        stopwatch.Start();
+
                         events.OnNext(new QueueStarting());
 
                         logger.LogInformation($@"
@@ -88,7 +91,6 @@ namespace HybridDb.Queue
                         using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
 
                         while (!cts.Token.IsCancellationRequested)
-                        {
                             try
                             {
                                 var release = await WaitAsync(semaphore);
@@ -103,7 +105,7 @@ namespace HybridDb.Queue
                                         {
                                             try
                                             {
-                                                await HandleMessage(tx, message);
+                                                await HandleMessage(cts.Token, tx, message);
                                             }
                                             finally
                                             {
@@ -133,11 +135,11 @@ namespace HybridDb.Queue
 
                                 logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
                             }
-                        }
 
                         foreach (var tx in txs) DisposeTransaction(tx.Key);
 
-                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
+                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped. It ran for {stopwatch.ElapsedMilliseconds} ms.");
+                        Debug.WriteLine($"{nameof(HybridDbMessageQueue)} stopped. It ran for {stopwatch.ElapsedMilliseconds} ms.");
                     },
                     cts.Token,
                     TaskCreationOptions.LongRunning,
@@ -148,15 +150,46 @@ namespace HybridDb.Queue
                     TaskContinuationOptions.OnlyOnFaulted);
         }
 
-        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) => 
+        public Task MainLoop { get; }
+        public IObservable<IHybridDbQueueEvent> Events { get; }
+        public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
+
+        public void Dispose()
+        {
+            logger.LogInformation($"{nameof(HybridDbMessageQueue)} disposed. It ran for {stopwatch.ElapsedMilliseconds} ms.");
+            Debug.WriteLine($"{nameof(HybridDbMessageQueue)} disposed. It ran for {stopwatch.ElapsedMilliseconds} ms.");
+
+            cts.Cancel();
+            // The MainLoop will continue to run until completion.
+            // However, we do not wait for it to complete.
+            /*try
+            {
+                MainLoop.Wait();
+            }
+            catch (TaskCanceledException) { }
+            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
+            }*/
+
+            foreach (var tx in txs) DisposeTransaction(tx.Key);
+            foreach (var disposable in disposables) disposable.Dispose();
+        }
+
+        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _)
+        {
             throw new InvalidOperationException("You must set MessageQueueOptions.Replay if you want to subscribe to replayed events.");
+        }
 
         DocumentTransaction BeginTransaction()
         {
             var tx = store.BeginTransaction();
 
             if (!txs.TryAdd(tx, 0))
+            {
                 throw new InvalidOperationException("Transaction could not be tracked.");
+            }
 
             return tx;
         }
@@ -175,7 +208,7 @@ namespace HybridDb.Queue
             }
         }
 
-        async Task<Action> WaitAsync(SemaphoreSlim semaphore)
+        static async Task<Action> WaitAsync(SemaphoreSlim semaphore)
         {
             await semaphore.WaitAsync();
 
@@ -221,7 +254,7 @@ namespace HybridDb.Queue
             }
         }
 
-        async Task HandleMessage(DocumentTransaction tx, HybridDbMessage message)
+        async Task HandleMessage(CancellationToken ct, DocumentTransaction tx, HybridDbMessage message)
         {
             var context = new MessageContext(message);
 
@@ -259,6 +292,12 @@ namespace HybridDb.Queue
                     return;
                 }
 
+                // On cancellation we are possible in a state where is it impossible to update the database (see Dispose).
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 logger.LogError(exception,
                     "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.",
                     message.Id);
@@ -272,33 +311,12 @@ namespace HybridDb.Queue
                 retries.TryRemove(message.Id, out _);
             }
         }
-
-        public void Dispose()
-        {
-            try
-            {
-                cts.Cancel();
-
-                foreach (var tx in txs) DisposeTransaction(tx.Key);
-
-                foreach (var disposable in disposables)
-                {
-                    disposable.Dispose();
-                }
-            }
-            catch (TaskCanceledException) { }
-            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
-            }
-        }
     }
 
     public sealed record HybridDbMessage(
-        string Id, 
-        object Payload, 
-        string Topic = null, 
+        string Id,
+        object Payload,
+        string Topic = null,
         int Order = 0,
         Dictionary<string, string> Metadata = null)
     {

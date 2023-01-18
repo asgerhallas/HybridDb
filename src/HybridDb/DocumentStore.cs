@@ -29,7 +29,16 @@ namespace HybridDb
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
 
-            if (initialize) Initialize();
+            if (initialize)
+                try
+                {
+                    Initialize();
+                }
+                catch
+                {
+                    Dispose();
+                    throw;
+                }
         }
 
         public DocumentStore(DocumentStore store, Configuration configuration, bool initialize)

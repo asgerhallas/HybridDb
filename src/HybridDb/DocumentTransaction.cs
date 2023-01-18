@@ -71,7 +71,7 @@ namespace HybridDb
             {
                 SqlTransaction = SqlConnection.BeginTransaction(level);
 
-                Global.TransactionCreated();
+                Counter.TransactionCreated();
             }
 
             CommitId = commitId;
@@ -86,7 +86,7 @@ namespace HybridDb
         public void Dispose()
         {
             SqlTransaction?.Dispose();
-            Global.TransactionDisposed();
+            Counter.TransactionDisposed();
             managedConnection.Dispose();
         }
 

@@ -2,7 +2,7 @@
 
 namespace HybridDb
 {
-    public static class Global
+    public static class Counter
     {
         static int connections;
         static int transactions;

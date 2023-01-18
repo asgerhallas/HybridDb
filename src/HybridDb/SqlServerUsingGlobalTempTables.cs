@@ -23,7 +23,7 @@ namespace HybridDb
 
         public override void Initialize()
         {
-            // already initialized?
+            // Already initialized?
             if (prefix != null) return;
 
             if (string.IsNullOrEmpty(store.Configuration.TableNamePrefix))
@@ -35,22 +35,23 @@ namespace HybridDb
 
             schemaBuilderConnection = new SqlConnection(connectionString);
 
-            Global.ConnectionCreated();
+            Counter.ConnectionCreated();
             schemaBuilderConnection.Open();
-
-            ManagedConnection.ConnectionStrings.TryAdd(schemaBuilderConnection, "schema");
+            
+            //ManagedConnection.ConnectionStrings.TryAdd(schemaBuilderConnection, "schema");
         }
 
         public override void Dispose()
         {
-            if (!ManagedConnection.ConnectionStrings.TryUpdate(schemaBuilderConnection, "schema disposed", "schema"))
+            /*if (!ManagedConnection.ConnectionStrings.ContainsKey(schemaBuilderConnection) && !ManagedConnection.ConnectionStrings.TryUpdate(schemaBuilderConnection, "schema disposed", "schema"))
             {
                 throw new Exception("hvaba");
             }
 
-            if (schemaBuilderConnection == null) throw new Exception("test");
+            if (schemaBuilderConnection == null) throw new Exception("test");*/
+
             schemaBuilderConnection?.Dispose();
-            Global.ConnectionDisposed();
+            Counter.ConnectionDisposed();
 
             if (numberOfManagedConnections > 0)
             {
@@ -80,7 +81,7 @@ namespace HybridDb
             }
 
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); Global.ConnectionDisposed(); };
+            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); Counter.ConnectionDisposed(); };
 
             try
             {
@@ -88,7 +89,7 @@ namespace HybridDb
 
                 var connection = new SqlConnection(connectionString);
 
-                Global.ConnectionCreated();
+                Counter.ConnectionCreated();
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
