@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +12,6 @@ using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Queue;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
@@ -64,9 +62,7 @@ namespace HybridDb.Tests.Queue
             return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
 
-        public record MyMessage(string Text);
-
-        public static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
         {
             async Task AwaitPartition(IEnumerator<T> partition)
             {
@@ -85,69 +81,83 @@ namespace HybridDb.Tests.Queue
                     .Create(source)
                     .GetPartitions(maxDoP)
                     .AsParallel()
-                    .Select(p => AwaitPartition(p)));
+                    .Select(AwaitPartition));
         }
 
         [Fact]
         public async Task FastAndFurious()
         {
+            var started = 0;
+            var completed = 0;
+            var disposed = 0;
+            var failed = 0;
+
+            void WriteLine(string s)
+            {
+                s += $" (S:{started}/C:{completed}/D:{disposed}/F:{failed}) (C:{Counter.Connections}/T:{Counter.Transactions})";
+                Debug.WriteLine(s);
+                output.WriteLine(s);
+            }
+
             async Task Selector(int x)
             {
                 var tableName = $"Queue{x}";
-
                 var subject = new ReplaySubject<int>();
 
-                Debug.WriteLine($"Start {x}");
+                Interlocked.Increment(ref started);
+
+                WriteLine($"[INFORMATION] #{x} Start");
                 try
                 {
-                    var s = DocumentStore.ForTesting(TableMode.GlobalTempTables, x =>
+                    var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, cfg =>
                     {
-                        x.UseConnectionString(connectionString);
-                        x.UseMessageQueue(new MessageQueueOptions
+                        cfg.DisableBackgroundMigrations();
+                        cfg.UseConnectionString(connectionString);
+                        cfg.UseMessageQueue(new MessageQueueOptions
                         {
                             TableName = tableName,
-                            IdleDelay = TimeSpan.FromMilliseconds(1)
+                            IdleDelay = TimeSpan.FromMilliseconds(300)
                         }.ReplayEvents(TimeSpan.FromSeconds(60)));
                     });
-
                     try
                     {
-                        using var queue = new HybridDbMessageQueue(s, async (x, y) => subject.OnNext(1));
+                        using var queue = new HybridDbMessageQueue(documentStore, (_, _) =>
+                        {
+                            subject.OnNext(1);
+                            return Task.CompletedTask;
+                        });
 
-                        using var session = s.OpenSession();
+                        using var session = documentStore.OpenSession();
 
                         session.Enqueue(new MyMessage("Some command"));
                         session.SaveChanges();
 
                         await subject.FirstAsync();
 
-                        Debug.WriteLine($"Done {x}");
-                        s.Dispose();
-                        Debug.WriteLine($"Dispose {x}");
+                        Interlocked.Increment(ref completed);
+
+                        WriteLine($"[INFORMATION] #{x} Completed");
                     }
                     finally
                     {
+                        documentStore.Dispose();
+
+                        Interlocked.Increment(ref disposed);
+
+                        WriteLine($"[INFORMATION] #{x} Dispose");
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    Debug.WriteLine($"Timeout {x}");
+                    Interlocked.Increment(ref failed);
+
+                    WriteLine($"[ERROR] #{x} {ex.Message}");
                 }
             }
 
             await ParallelForEachAsync(Enumerable.Range(0, 100), Selector, 200);
 
-
-            //using (var session = store.OpenSession())
-            //{
-            //    session.Enqueue(new MyMessage("Some command"));
-
-            //    session.SaveChanges();
-            //}
-
-            //var message = await subject.FirstAsync();
-
-            //message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+            WriteLine("All tasks completed");
         }
 
         [Fact]
@@ -1023,5 +1033,7 @@ namespace HybridDb.Tests.Queue
                 counter.Release();
             };
         }
+
+        public record MyMessage(string Text);
     }
 }
