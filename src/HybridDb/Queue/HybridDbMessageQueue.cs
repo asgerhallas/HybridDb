@@ -275,22 +275,22 @@ namespace HybridDb.Queue
 
         public void Dispose()
         {
-            cts.Cancel();
-
             try
             {
-                MainLoop.Wait();
+                cts.Cancel();
+
+                foreach (var tx in txs) DisposeTransaction(tx.Key);
+
+                foreach (var disposable in disposables)
+                {
+                    disposable.Dispose();
+                }
             }
             catch (TaskCanceledException) { }
             catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
-            }
-
-            foreach (var disposable in disposables)
-            {
-                disposable.Dispose();
             }
         }
     }
