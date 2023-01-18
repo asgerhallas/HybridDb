@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -96,13 +97,17 @@ namespace HybridDb.Tests.Queue
 
                 var subject = new ReplaySubject<int>();
 
-                output.WriteLine($"Start {x}");
+                Debug.WriteLine($"Start {x}");
                 try
                 {
                     var s = DocumentStore.ForTesting(TableMode.GlobalTempTables, x =>
                     {
                         x.UseConnectionString(connectionString);
-                        x.UseMessageQueue(new MessageQueueOptions { TableName = tableName }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                        x.UseMessageQueue(new MessageQueueOptions
+                        {
+                            TableName = tableName,
+                            IdleDelay = TimeSpan.FromMilliseconds(1)
+                        }.ReplayEvents(TimeSpan.FromSeconds(60)));
                     });
 
                     try
@@ -116,17 +121,17 @@ namespace HybridDb.Tests.Queue
 
                         await subject.FirstAsync();
 
-                        output.WriteLine($"Done {x}");
+                        Debug.WriteLine($"Done {x}");
+                        s.Dispose();
+                        Debug.WriteLine($"Dispose {x}");
                     }
                     finally
                     {
-                        output.WriteLine($"Dispose {x}");
-                        s.Dispose();
                     }
                 }
                 catch
                 {
-                    output.WriteLine($"Timeout {x}");
+                    Debug.WriteLine($"Timeout {x}");
                 }
             }
 

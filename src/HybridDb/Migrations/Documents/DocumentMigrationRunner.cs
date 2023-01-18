@@ -138,7 +138,7 @@ namespace HybridDb.Migrations.Documents
 
             try
             {
-                loop.Wait();
+                //loop.Wait();
             }
             catch (TaskCanceledException) { }
             catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
