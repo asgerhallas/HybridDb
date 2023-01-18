@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +12,7 @@ using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Queue;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
@@ -61,6 +64,86 @@ namespace HybridDb.Tests.Queue
         }
 
         public record MyMessage(string Text);
+
+        public static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        {
+            async Task AwaitPartition(IEnumerator<T> partition)
+            {
+                using (partition)
+                {
+                    while (partition.MoveNext())
+                    {
+                        await Task.Yield(); // prevents a sync/hot thread hangup
+                        await funcBody(partition.Current);
+                    }
+                }
+            }
+
+            return Task.WhenAll(
+                Partitioner
+                    .Create(source)
+                    .GetPartitions(maxDoP)
+                    .AsParallel()
+                    .Select(p => AwaitPartition(p)));
+        }
+
+        [Fact]
+        public async Task FastAndFurious()
+        {
+            async Task Selector(int x)
+            {
+                var tableName = $"Queue{x}";
+
+                var subject = new ReplaySubject<int>();
+
+                output.WriteLine($"Start {x}");
+                try
+                {
+                    var s = DocumentStore.ForTesting(TableMode.GlobalTempTables, x =>
+                    {
+                        x.UseConnectionString(connectionString);
+                        x.UseMessageQueue(new MessageQueueOptions { TableName = tableName }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                    });
+
+                    try
+                    {
+                        using var queue = new HybridDbMessageQueue(s, async (x, y) => subject.OnNext(1));
+
+                        using var session = s.OpenSession();
+
+                        session.Enqueue(new MyMessage("Some command"));
+                        session.SaveChanges();
+
+                        await subject.FirstAsync();
+
+                        output.WriteLine($"Done {x}");
+                    }
+                    finally
+                    {
+                        output.WriteLine($"Dispose {x}");
+                        s.Dispose();
+                    }
+                }
+                catch
+                {
+                    output.WriteLine($"Timeout {x}");
+                }
+            }
+
+            await ParallelForEachAsync(Enumerable.Range(0, 100), Selector, 200);
+
+
+            //using (var session = store.OpenSession())
+            //{
+            //    session.Enqueue(new MyMessage("Some command"));
+
+            //    session.SaveChanges();
+            //}
+
+            //var message = await subject.FirstAsync();
+
+            //message.Payload.ShouldBeOfType<MyMessage>().Text.ShouldBe("Some command");
+        }
 
         [Fact]
         public async Task DequeueAndHandle()

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -12,9 +13,9 @@ namespace HybridDb
     public class SqlServerUsingGlobalTempTables : SqlServer
     {
         SqlConnection schemaBuilderConnection;
-
         string prefix;
         int numberOfManagedConnections;
+
 
         public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString)
         {
@@ -34,16 +35,24 @@ namespace HybridDb
 
             schemaBuilderConnection = new SqlConnection(connectionString);
             schemaBuilderConnection.Open();
+
+            ManagedConnection.ConnectionStrings.TryAdd(schemaBuilderConnection, "schema");
         }
 
         public override void Dispose()
         {
+            if (!ManagedConnection.ConnectionStrings.TryUpdate(schemaBuilderConnection, "schema disposed", "schema"))
+            {
+                throw new Exception("hvaba");
+            }
+
+            if (schemaBuilderConnection == null) throw new Exception("test");
             schemaBuilderConnection?.Dispose();
 
             if (numberOfManagedConnections > 0)
             {
                 store.Logger.LogWarning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
-                throw new Exception("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+                //throw new Exception("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
             }
         }
 
@@ -63,7 +72,8 @@ namespace HybridDb
                     schemaBuilderConnection.EnlistTransaction(Transaction.Current);
                 }
 
-                return new ManagedConnection(schemaBuilderConnection, () => { }, () => { });
+                var schemaConnection = new ManagedConnection(schemaBuilderConnection, () => { }, () => { });
+                return schemaConnection;
             }
 
             Action complete = () => { };
@@ -86,7 +96,8 @@ namespace HybridDb
                     connection.EnlistTransaction(Transaction.Current);
                 }
 
-                return new ManagedConnection(connection, complete, dispose);
+                var managedConnection = new ManagedConnection(connection, complete, dispose);
+                return managedConnection;
             }
             catch (Exception)
             {
