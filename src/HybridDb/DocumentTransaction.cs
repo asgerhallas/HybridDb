@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Transactions;
 using Dapper;
@@ -29,6 +30,8 @@ namespace HybridDb
             if (Transaction.Current == null)
             {
                 SqlTransaction = SqlConnection.BeginTransaction(level);
+
+                GlobalStats.TransactionCreated();
             }
 
             CommitId = commitId;
@@ -37,6 +40,7 @@ namespace HybridDb
         public void Dispose()
         {
             SqlTransaction?.Dispose();
+            GlobalStats.TransactionDisposed();
             managedConnection.Dispose();
         }
 

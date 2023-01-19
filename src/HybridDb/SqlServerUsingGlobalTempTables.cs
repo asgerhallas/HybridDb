@@ -16,9 +16,7 @@ namespace HybridDb
         string prefix;
         int numberOfManagedConnections;
 
-        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString)
-        {
-        }
+        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString) { }
 
         public override void Initialize()
         {
@@ -33,12 +31,16 @@ namespace HybridDb
             prefix = $"##{store.Configuration.TableNamePrefix}_";
 
             schemaBuilderConnection = new SqlConnection(connectionString);
+
+            GlobalStats.ConnectionCreated();
+
             schemaBuilderConnection.Open();
         }
 
         public override void Dispose()
         {
             schemaBuilderConnection?.Dispose();
+            GlobalStats.ConnectionDisposed();
 
             if (numberOfManagedConnections > 0)
             {
@@ -67,13 +69,19 @@ namespace HybridDb
             }
 
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            Action dispose = () =>
+            {
+                Interlocked.Decrement(ref numberOfManagedConnections);
+                GlobalStats.ConnectionDisposed();
+            };
 
             try
             {
                 Interlocked.Increment(ref numberOfManagedConnections);
 
                 var connection = new SqlConnection(connectionString);
+
+                GlobalStats.ConnectionCreated();
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
@@ -114,6 +122,5 @@ namespace HybridDb
 
             return schema;
         }
-
     }
 }

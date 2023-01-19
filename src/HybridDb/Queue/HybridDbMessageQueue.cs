@@ -284,18 +284,6 @@ namespace HybridDb.Queue
 
             foreach (var tx in txs) DisposeTransaction(tx.Key);
             foreach (var disposable in disposables) disposable.Dispose();
-
-            try
-            {
-                using (new TimeOperation("MainLoop.Wait"))
-                {
-                    MainLoop.Wait();
-                }
-            }
-            catch
-            {
-                // ignored
-            }
         }
 
         public class TimeOperation : IDisposable

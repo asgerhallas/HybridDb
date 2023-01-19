@@ -1,23 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using BoyBoy;
-using FakeItEasy;
-using HybridDb.Config;
-using HybridDb.Queue;
-using Newtonsoft.Json.Linq;
-using ShouldBeLike;
-using Shouldly;
-using Xunit;
-using Xunit.Abstractions;
-using static HybridDb.Helpers;
-
-namespace HybridDb.Tests.Queue
+﻿ ﻿using System;
+ using System.Collections.Concurrent;
+ using System.Collections.Generic;
+ using System.Diagnostics;
+ using System.Linq;
+ using System.Reactive.Linq;
+ using System.Reactive.Subjects;
+ using System.Runtime.CompilerServices;
+ using System.Threading;
+ using System.Threading.Tasks;
+ using BoyBoy;
+ using FakeItEasy;
+ using HybridDb.Config;
+ using HybridDb.Queue;
+ using Newtonsoft.Json.Linq;
+ using ShouldBeLike;
+ using Shouldly;
+ using Xunit;
+ using Xunit.Abstractions;
+ using static HybridDb.Helpers;
+ 
+ namespace HybridDb.Tests.Queue
 {
     public class HybridDbMessageQueueTests : HybridDbTests
     {
@@ -59,8 +61,104 @@ namespace HybridDb.Tests.Queue
 
             return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
+ 
+        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        {
+            async Task AwaitPartition(IEnumerator<T> partition)
+            {
+                using (partition)
+                {
+                    while (partition.MoveNext())
+                    {
+                        await Task.Yield(); // prevents a sync/hot thread hangup
+                        await funcBody(partition.Current);
+                    }
+                }
+            }
 
-        public record MyMessage(string Text);
+            return Task.WhenAll(
+                Partitioner
+                    .Create(source)
+                    .GetPartitions(maxDoP)
+                    .AsParallel()
+                    .Select(AwaitPartition));
+        }
+
+        [Fact]
+        public async Task FastAndFurious()
+        {
+            var started = 0;
+            var completed = 0;
+            var disposed = 0;
+            var failed = 0;
+
+            void WriteLine(string s)
+            {
+                s += $" (S:{started}/C:{completed}/D:{disposed}/F:{failed}) (UC:{GlobalStats.NumberOfNumberUndisposedConnections}/UT:{GlobalStats.NumberOfUndisposedTransactions})";
+                Debug.WriteLine(s);
+                output.WriteLine(s);
+            }
+
+            async Task Selector(int x)
+            {
+                var tableName = $"Queue{x}";
+                var subject = new ReplaySubject<int>();
+
+                Interlocked.Increment(ref started);
+
+                WriteLine($"[INFORMATION] #{x} Start");
+                try
+                {
+                    var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, cfg =>
+                    {
+                        cfg.DisableBackgroundMigrations();
+                        cfg.UseConnectionString(connectionString);
+                        cfg.UseMessageQueue(new MessageQueueOptions
+                        {
+                            IdleDelay = TimeSpan.Zero,
+                            TableName = tableName
+                        }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                    });
+                    try
+                    {
+                        using var queue = new HybridDbMessageQueue(documentStore, (_, _) =>
+                        {
+                            subject.OnNext(1);
+                            return Task.CompletedTask;
+                        });
+
+                        using var session = documentStore.OpenSession();
+
+                        session.Enqueue(new MyMessage("Some command"));
+                        session.SaveChanges();
+
+                        await subject.FirstAsync();
+
+                        Interlocked.Increment(ref completed);
+
+                        WriteLine($"[INFORMATION] #{x} Completed");
+                    }
+                    finally
+                    {
+                        documentStore.Dispose();
+
+                        Interlocked.Increment(ref disposed);
+
+                        WriteLine($"[INFORMATION] #{x} Dispose");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Interlocked.Increment(ref failed);
+
+                    WriteLine($"[ERROR] #{x} {ex.Message}");
+                }
+            }
+
+            await ParallelForEachAsync(Enumerable.Range(0, 100), Selector, 200);
+
+            WriteLine("All tasks completed");
+        }
 
         [Fact]
         public async Task DequeueAndHandle()
@@ -243,12 +341,12 @@ namespace HybridDb.Tests.Queue
                 .Select(x => x.Text)
                 .ShouldBe(new List<string>
                 {
-                    "order-default-1",
-                    "order-default-2",
-                    "order-1.1",
-                    "order-1.2",
-                    "order-2.1",
-                    "order-2.2"
+                     "order-default-1",
+                     "order-default-2",
+                     "order-1.1",
+                     "order-1.2",
+                     "order-2.1",
+                     "order-2.2"
                 });
         }
 
@@ -935,5 +1033,7 @@ namespace HybridDb.Tests.Queue
                 counter.Release();
             };
         }
+
+        public record MyMessage(string Text);
     }
 }

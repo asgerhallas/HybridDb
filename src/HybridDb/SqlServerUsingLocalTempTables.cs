@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Threading;
 using System.Transactions;
 using Dapper;
 using Microsoft.Extensions.Logging;
@@ -14,14 +13,20 @@ namespace HybridDb
         int numberOfManagedConnections;
         SqlConnection ambientConnectionForTesting;
 
-        public SqlServerUsingLocalTempTables(DocumentStore store, string connectionString) : base(store, connectionString) {}
+        public SqlServerUsingLocalTempTables(DocumentStore store, string connectionString) : base(store, connectionString) { }
 
         public override string FormatTableName(string tablename) => "#" + tablename;
 
         public override ManagedConnection Connect(bool schema = false)
         {
             void Complete() { }
-            void Dispose() => numberOfManagedConnections--;
+
+            void Dispose()
+            {
+                numberOfManagedConnections--;
+
+                GlobalStats.ConnectionDisposed();
+            }
 
             try
             {
@@ -30,6 +35,9 @@ namespace HybridDb
                 if (ambientConnectionForTesting == null)
                 {
                     ambientConnectionForTesting = new SqlConnection(connectionString);
+
+                    GlobalStats.ConnectionCreated();
+
                     ambientConnectionForTesting.InfoMessage += (obj, args) => OnMessage(args);
                     ambientConnectionForTesting.Open();
                 }
@@ -50,6 +58,8 @@ namespace HybridDb
                 Dispose();
 
                 ambientConnectionForTesting.Dispose();
+
+                GlobalStats.ConnectionDisposed();
 
                 throw;
             }
@@ -86,9 +96,8 @@ INNER JOIN tempdb.sys.columns AS c
 ON t.[object_id] = c.[object_id]
 WHERE t.name LIKE '#%[_][_][_]%'
 AND t.[object_id] = OBJECT_ID('tempdb..' + SUBSTRING(t.name, 1, CHARINDEX('___', t.name)-1))
-OPTION (FORCE ORDER);", 
-  
-    Tuple.Create, splitOn: "column_name");
+OPTION (FORCE ORDER);",
+                    Tuple.Create, splitOn: "column_name");
 
                 foreach (var columnByTable in columns.GroupBy(x => x.Item1))
                 {

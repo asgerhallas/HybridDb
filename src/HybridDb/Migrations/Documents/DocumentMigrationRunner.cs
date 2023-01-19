@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq.Old;
-using HybridDb.Queue;
 using Microsoft.Extensions.Logging;
 using static Indentional.Text;
 
@@ -138,15 +137,6 @@ namespace HybridDb.Migrations.Documents
         public void Dispose()
         {
             cts.Cancel();
-
-            /*try
-            {
-                loop.Wait();
-            }
-            catch
-            {
-                // ignored
-            }*/
         }
 
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)
