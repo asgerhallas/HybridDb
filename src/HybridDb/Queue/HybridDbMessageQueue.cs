@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
@@ -13,18 +12,6 @@ using Microsoft.Extensions.Logging;
 
 namespace HybridDb.Queue
 {
-    public class ThrowingSubject<T> : ISubject<T>
-    {
-        public void OnNext(T value) { }
-        public void OnError(Exception error) { }
-        public void OnCompleted() { }
-
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            throw new InvalidOperationException("Replay is not enabled in queue options.");
-        }
-    }
-
     public class HybridDbMessageQueue : IDisposable
     {
         // This implementation misses a few pieces:
@@ -74,6 +61,8 @@ namespace HybridDb.Queue
 
             cts = options.GetCancellationTokenSource();
 
+            id = NextId;
+
             MainLoop = Task.Factory.StartNew(async () =>
                     {
                         stopwatch = new Stopwatch();
@@ -93,11 +82,19 @@ namespace HybridDb.Queue
                         while (!cts.Token.IsCancellationRequested)
                             try
                             {
-                                var release = await WaitAsync(semaphore);
+                                Action release;
+                                using (new TimeOperation($"[INFORMATION] Queue #{id} WaitAsync"))
+                                {
+                                    release = await WaitAsync(semaphore);
+                                }
 
                                 try
                                 {
-                                    var (tx, message) = await NextMessage();
+                                    var (tx, message) = ((DocumentTransaction)null, (HybridDbMessage)null);
+                                    using (new TimeOperation($"[INFORMATION] Queue #{id} NextMessage"))
+                                    {
+                                        (tx, message) = await NextMessage();
+                                    }
 
                                     try
                                     {
@@ -105,7 +102,10 @@ namespace HybridDb.Queue
                                         {
                                             try
                                             {
-                                                await HandleMessage(cts.Token, tx, message);
+                                                using (new TimeOperation($"[INFORMATION] Queue #{id} HandleMessage"))
+                                                {
+                                                    await HandleMessage(cts.Token, tx, message);
+                                                }
                                             }
                                             finally
                                             {
@@ -138,8 +138,8 @@ namespace HybridDb.Queue
 
                         foreach (var tx in txs) DisposeTransaction(tx.Key);
 
-                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped. It ran for {stopwatch.ElapsedMilliseconds} ms.");
-                        Debug.WriteLine($"{nameof(HybridDbMessageQueue)} stopped. It ran for {stopwatch.ElapsedMilliseconds} ms.");
+                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms.");
+                        Debug.WriteLine($"{nameof(HybridDbMessageQueue)} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms.");
                     },
                     cts.Token,
                     TaskCreationOptions.LongRunning,
@@ -156,8 +156,8 @@ namespace HybridDb.Queue
 
         public void Dispose()
         {
-            logger.LogInformation($"{nameof(HybridDbMessageQueue)} disposed. It ran for {stopwatch.ElapsedMilliseconds} ms.");
-            Debug.WriteLine($"{nameof(HybridDbMessageQueue)} disposed. It ran for {stopwatch.ElapsedMilliseconds} ms.");
+            logger.LogInformation($"{nameof(HybridDbMessageQueue)} disposed. Ran for {stopwatch.ElapsedMilliseconds} ms.");
+            Debug.WriteLine($"{nameof(HybridDbMessageQueue)} disposed. Ran for {stopwatch.ElapsedMilliseconds} ms.");
 
             cts.Cancel();
             // The MainLoop will continue to run until completion.
@@ -232,7 +232,12 @@ namespace HybridDb.Queue
                 {
                     // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
-                    var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
+                    HybridDbMessage message;
+
+                    using (new TimeOperation($"[INFORMATION] Queue #{id} DequeueCommand"))
+                    {
+                        message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
+                    }
 
                     if (message != null) return (tx, message);
 
@@ -309,6 +314,30 @@ namespace HybridDb.Queue
                 events.OnNext(new PoisonMessage(context, message, exception));
 
                 retries.TryRemove(message.Id, out _);
+            }
+        }
+
+        static int currentId;
+        readonly int id;
+
+        public static int NextId => Interlocked.Increment(ref currentId);
+
+        public class TimeOperation : IDisposable
+        {
+            readonly Stopwatch stopwatch = new();
+            readonly string title;
+
+            public TimeOperation(string title)
+            {
+                this.title = title;
+                stopwatch.Start();
+                Debug.WriteLine($"{title} started");
+            }
+
+            public void Dispose()
+            {
+                stopwatch.Stop();
+                Debug.WriteLine($"{title} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms");
             }
         }
     }

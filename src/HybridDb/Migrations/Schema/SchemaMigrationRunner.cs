@@ -12,7 +12,7 @@ using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace HybridDb.Migrations.Schema
 {
-    public class SchemaMigrationRunner
+    public class SchemaMigrationRunner : IDisposable
     {
         static object locker = new object();
 
@@ -249,6 +249,11 @@ namespace HybridDb.Migrations.Schema
             store.Execute(command);
 
             yield return command;
+        }
+
+        public void Dispose()
+        {
+            store?.Dispose();
         }
     }
 }
