@@ -136,7 +136,6 @@ namespace HybridDb.Queue
                                     events.OnNext(new QueueFailed(exception));
 
                                     logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
-
                                 }
                             }
 

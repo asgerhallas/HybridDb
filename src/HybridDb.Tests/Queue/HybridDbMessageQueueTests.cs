@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Queue
             return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
 
-        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 24)
+        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
         {
             async Task AwaitPartition(IEnumerator<T> partition)
             {
