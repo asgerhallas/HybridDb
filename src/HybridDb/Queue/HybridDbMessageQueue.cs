@@ -131,9 +131,13 @@ namespace HybridDb.Queue
                             catch (TaskCanceledException) { }
                             catch (Exception exception)
                             {
-                                events.OnNext(new QueueFailed(exception));
+                                if (!cts.IsCancellationRequested)
+                                {
+                                    events.OnNext(new QueueFailed(exception));
 
-                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                    logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+
+                                }
                             }
 
                         foreach (var tx in txs) DisposeTransaction(tx.Key);

@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Queue
             return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
 
-        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 24)
         {
             async Task AwaitPartition(IEnumerator<T> partition)
             {
@@ -116,7 +116,7 @@ namespace HybridDb.Tests.Queue
                         cfg.UseMessageQueue(new MessageQueueOptions
                         {
                             TableName = tableName,
-                            IdleDelay = TimeSpan.FromMilliseconds(300)
+                            IdleDelay = TimeSpan.FromMilliseconds(1)
                         }.ReplayEvents(TimeSpan.FromSeconds(60)));
                     });
                     try
