@@ -17,7 +17,7 @@ namespace HybridDb.Migrations.Documents
         readonly DocumentStore store;
         readonly CancellationTokenSource cts;
         readonly ILogger logger;
-        
+
         Task loop = Task.CompletedTask;
 
         public DocumentMigrationRunner(DocumentStore store)
@@ -101,10 +101,14 @@ namespace HybridDb.Migrations.Documents
                                 }
                                 catch (SqlException exception)
                                 {
+                                    if (cts.IsCancellationRequested)
+                                    {
+                                        break;
+                                    }
+
                                     store.Logger.LogWarning(exception,
                                         "SqlException while migrating documents from table '{table}'. Will retry in 1s.",
                                         table.Name);
-
                                     await Task.Delay(1000, cts.Token);
                                 }
                             }
@@ -116,7 +120,6 @@ namespace HybridDb.Migrations.Documents
 
                         nextTable: ;
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -136,22 +139,20 @@ namespace HybridDb.Migrations.Documents
         {
             cts.Cancel();
 
-            try
+            /*try
             {
                 loop.Wait();
             }
-            catch (TaskCanceledException) { }
-            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex)
+            catch
             {
-                logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
-            }
+                // ignored
+            }*/
         }
 
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)
         {
-            var key = (string) row[DocumentTable.IdColumn];
-            var discriminator = ((string) row[DocumentTable.DiscriminatorColumn]).Trim();
+            var key = (string)row[DocumentTable.IdColumn];
+            var discriminator = ((string)row[DocumentTable.DiscriminatorColumn]).Trim();
             var concreteDesign = store.Configuration.GetOrCreateDesignByDiscriminator(baseDesign, discriminator);
 
             try

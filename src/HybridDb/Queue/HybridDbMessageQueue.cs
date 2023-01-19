@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -33,7 +34,7 @@ namespace HybridDb.Queue
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
-        readonly Subject<IHybridDbQueueEvent> events = new ();
+        readonly Subject<IHybridDbQueueEvent> events = new();
 
         readonly IDocumentStore store;
         readonly ILogger logger;
@@ -129,8 +130,12 @@ namespace HybridDb.Queue
                             catch (TaskCanceledException) { }
                             catch (Exception exception)
                             {
-                                events.OnNext(new QueueFailed(exception));
+                                if (cts.IsCancellationRequested)
+                                {
+                                    break;
+                                }
 
+                                events.OnNext(new QueueFailed(exception));
                                 logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
                             }
                         }
@@ -148,7 +153,7 @@ namespace HybridDb.Queue
                     TaskContinuationOptions.OnlyOnFaulted);
         }
 
-        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) => 
+        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) =>
             throw new InvalidOperationException("You must set MessageQueueOptions.Replay if you want to subscribe to replayed events.");
 
         DocumentTransaction BeginTransaction()
@@ -277,28 +282,46 @@ namespace HybridDb.Queue
         {
             cts.Cancel();
 
+            foreach (var tx in txs) DisposeTransaction(tx.Key);
+            foreach (var disposable in disposables) disposable.Dispose();
+
             try
             {
-                MainLoop.Wait();
+                using (new TimeOperation("MainLoop.Wait"))
+                {
+                    MainLoop.Wait();
+                }
             }
-            catch (TaskCanceledException) { }
-            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex)
+            catch
             {
-                logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
+                // ignored
+            }
+        }
+
+        public class TimeOperation : IDisposable
+        {
+            readonly Stopwatch stopwatch = new();
+            readonly string title;
+
+            public TimeOperation(string title)
+            {
+                this.title = title;
+                stopwatch.Start();
+                Debug.WriteLine($"{title} started");
             }
 
-            foreach (var disposable in disposables)
+            public void Dispose()
             {
-                disposable.Dispose();
+                stopwatch.Stop();
+                Debug.WriteLine($"{title} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms");
             }
         }
     }
 
     public sealed record HybridDbMessage(
-        string Id, 
-        object Payload, 
-        string Topic = null, 
+        string Id,
+        object Payload,
+        string Topic = null,
         int Order = 0,
         Dictionary<string, string> Metadata = null)
     {

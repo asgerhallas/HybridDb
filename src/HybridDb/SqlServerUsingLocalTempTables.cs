@@ -106,6 +106,7 @@ OPTION (FORCE ORDER);",
             if (numberOfManagedConnections > 0)
             {
                 store.Logger.LogWarning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+                // TODO throw new Exception("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
             }
 
             ambientConnectionForTesting?.Dispose();

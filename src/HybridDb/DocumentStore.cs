@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using HybridDb.Config;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using Microsoft.Extensions.Logging;
@@ -29,7 +30,19 @@ namespace HybridDb
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
 
-            if (initialize) Initialize();
+            if (!initialize) return;
+
+            // A connection is created when invoking SqlServerUsingGlobalTempTables.Initalize.
+            // If opening the connection fails we will end up with a merory leak.
+            try
+            {
+                Initialize();
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public DocumentStore(DocumentStore store, Configuration configuration, bool initialize)
@@ -40,7 +53,19 @@ namespace HybridDb
             DocumentMigrationRunner = new DocumentMigrationRunner(this);
             Database = store.Database;
 
-            if (initialize) Initialize();
+            if (!initialize) return;
+
+            // A connection is created when invoking SqlServerUsingGlobalTempTables.Initalize.
+            // If opening the connection fails we will end up with a merory leak.
+            try
+            {
+                Initialize();
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public static DocumentStore Create(Action<Configuration> configure, bool initialize = true)
