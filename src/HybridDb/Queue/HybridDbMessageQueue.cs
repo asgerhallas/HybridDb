@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
@@ -196,7 +197,12 @@ namespace HybridDb.Queue
 
         async Task<(DocumentTransaction, HybridDbMessage)> NextMessage()
         {
-            var tx = BeginTransaction();
+            DocumentTransaction tx;
+
+            using (new TimeOperation("NextMessage.BeginTransaction"))
+            {
+                tx = BeginTransaction();
+            }
 
             try
             {
@@ -214,7 +220,10 @@ namespace HybridDb.Queue
 
                     await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
-                    tx = BeginTransaction();
+                    using (new TimeOperation("NextMessage.BeginTransaction"))
+                    {
+                        tx = BeginTransaction();
+                    }
                 }
 
                 return (tx, await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false));
@@ -298,10 +307,22 @@ namespace HybridDb.Queue
                 Debug.WriteLine($"{title} started");
             }
 
+            
             public void Dispose()
             {
                 stopwatch.Stop();
-                Debug.WriteLine($"{title} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms");
+                
+                var tagDefs  = new List<Tuple<int, string>>()
+                {
+                    new (1000, "[1000]"),
+                    new (5000, "[5000]"),
+                    new (10000, "[10000]"),
+                    new (15000, "[15000]")
+                };
+                
+                var tags = string.Join("", tagDefs.Where(x => x.Item1 <= stopwatch.ElapsedMilliseconds).Select(x => x.Item2));
+
+                Debug.WriteLine($"{title} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms {tags}");
             }
         }
     }
