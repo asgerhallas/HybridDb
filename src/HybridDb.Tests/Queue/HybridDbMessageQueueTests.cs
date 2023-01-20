@@ -121,22 +121,29 @@ namespace HybridDb.Tests.Queue
                     });
                     try
                     {
-                        using var queue = new HybridDbMessageQueue(documentStore, (_, _) =>
+                        var queue = new HybridDbMessageQueue(documentStore, (_, _) =>
                         {
                             subject.OnNext(1);
                             return Task.CompletedTask;
                         });
+                        try
+                        {
 
-                        using var session = documentStore.OpenSession();
+                            using var session = documentStore.OpenSession();
 
-                        session.Enqueue(new MyMessage("Some command"));
-                        session.SaveChanges();
+                            session.Enqueue(new MyMessage("Some command"));
+                            session.SaveChanges();
 
-                        await subject.FirstAsync();
+                            await subject.FirstAsync();
 
-                        Interlocked.Increment(ref completed);
+                            Interlocked.Increment(ref completed);
 
-                        WriteLine($"[INFORMATION] #{x} Completed");
+                            WriteLine($"[INFORMATION] #{x} Completed");
+                        }
+                        finally
+                        {
+                            queue.Dispose();
+                        }
                     }
                     finally
                     {

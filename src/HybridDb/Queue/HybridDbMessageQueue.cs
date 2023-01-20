@@ -14,6 +14,7 @@ namespace HybridDb.Queue
 {
     public class HybridDbMessageQueue : IDisposable
     {
+        static int currentId;
         // This implementation misses a few pieces:
         // [ ] Handling of messages could be idempotent too, by soft deleting them when done, but still keeping it around to guard against
         //     subsequent redelivery with the same id.
@@ -23,6 +24,7 @@ namespace HybridDb.Queue
         readonly Stack<IDisposable> disposables = new();
         readonly Subject<IHybridDbQueueEvent> events = new();
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
+        readonly int id;
         readonly ILogger logger;
         readonly MessageQueueOptions options;
         readonly ConcurrentDictionary<string, int> retries = new();
@@ -82,19 +84,11 @@ namespace HybridDb.Queue
                         while (!cts.Token.IsCancellationRequested)
                             try
                             {
-                                Action release;
-                                using (new TimeOperation($"[INFORMATION] Queue #{id} WaitAsync"))
-                                {
-                                    release = await WaitAsync(semaphore);
-                                }
+                                var release = await WaitAsync(semaphore);
 
                                 try
                                 {
-                                    var (tx, message) = ((DocumentTransaction)null, (HybridDbMessage)null);
-                                    using (new TimeOperation($"[INFORMATION] Queue #{id} NextMessage"))
-                                    {
-                                        (tx, message) = await NextMessage();
-                                    }
+                                    var (tx, message) = await NextMessage();
 
                                     try
                                     {
@@ -102,10 +96,7 @@ namespace HybridDb.Queue
                                         {
                                             try
                                             {
-                                                using (new TimeOperation($"[INFORMATION] Queue #{id} HandleMessage"))
-                                                {
-                                                    await HandleMessage(cts.Token, tx, message);
-                                                }
+                                                await HandleMessage(tx, message);
                                             }
                                             finally
                                             {
@@ -141,15 +132,15 @@ namespace HybridDb.Queue
 
                         foreach (var tx in txs) DisposeTransaction(tx.Key);
 
-                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms.");
-                        Debug.WriteLine($"{nameof(HybridDbMessageQueue)} stopped. Ran for {stopwatch.ElapsedMilliseconds} ms.");
+                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped (#{id}). Ran for {stopwatch.ElapsedMilliseconds} ms.");
+                        Debug.WriteLine($"{nameof(HybridDbMessageQueue)} stopped (#{id}). Ran for {stopwatch.ElapsedMilliseconds} ms.");
                     },
                     cts.Token,
                     TaskCreationOptions.LongRunning,
                     TaskScheduler.Default)
                 .Unwrap()
                 .ContinueWith(
-                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."),
+                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} (#{id}) failed and stopped."),
                     TaskContinuationOptions.OnlyOnFaulted);
         }
 
@@ -157,10 +148,12 @@ namespace HybridDb.Queue
         public IObservable<IHybridDbQueueEvent> Events { get; }
         public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
 
+        public static int NextId => Interlocked.Increment(ref currentId);
+
         public void Dispose()
         {
-            logger.LogInformation($"{nameof(HybridDbMessageQueue)} disposed. Ran for {stopwatch.ElapsedMilliseconds} ms.");
-            Debug.WriteLine($"{nameof(HybridDbMessageQueue)} disposed. Ran for {stopwatch.ElapsedMilliseconds} ms.");
+            logger.LogInformation($"{nameof(HybridDbMessageQueue)} disposed (#{id}). Ran for {stopwatch.ElapsedMilliseconds} ms.");
+            Debug.WriteLine($"{nameof(HybridDbMessageQueue)} disposed (#{id}). Ran for {stopwatch.ElapsedMilliseconds} ms.");
 
             cts.Cancel();
             // The MainLoop will continue to run until completion.
@@ -227,7 +220,12 @@ namespace HybridDb.Queue
 
         async Task<(DocumentTransaction, HybridDbMessage)> NextMessage()
         {
-            var tx = BeginTransaction();
+            DocumentTransaction tx;
+
+            using (new TimeOperation($"[INFORMATION] Queue #{id} NextMessage.BeginTransaction"))
+            {
+                tx = BeginTransaction();
+            }
 
             try
             {
@@ -235,12 +233,7 @@ namespace HybridDb.Queue
                 {
                     // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
-                    HybridDbMessage message;
-
-                    using (new TimeOperation($"[INFORMATION] Queue #{id} DequeueCommand"))
-                    {
-                        message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
-                    }
+                    var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
 
                     if (message != null) return (tx, message);
 
@@ -250,7 +243,10 @@ namespace HybridDb.Queue
 
                     await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
-                    tx = BeginTransaction();
+                    using (new TimeOperation($"[INFORMATION] Queue #{id} NextMessage.BeginTransaction"))
+                    {
+                        tx = BeginTransaction();
+                    }
                 }
 
                 return (tx, await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false));
@@ -262,7 +258,7 @@ namespace HybridDb.Queue
             }
         }
 
-        async Task HandleMessage(CancellationToken ct, DocumentTransaction tx, HybridDbMessage message)
+        async Task HandleMessage(DocumentTransaction tx, HybridDbMessage message)
         {
             var context = new MessageContext(message);
 
@@ -301,7 +297,7 @@ namespace HybridDb.Queue
                 }
 
                 // On cancellation we are possible in a state where is it impossible to update the database (see Dispose).
-                if (ct.IsCancellationRequested)
+                if (cts.Token.IsCancellationRequested)
                 {
                     return;
                 }
@@ -319,11 +315,6 @@ namespace HybridDb.Queue
                 retries.TryRemove(message.Id, out _);
             }
         }
-
-        static int currentId;
-        readonly int id;
-
-        public static int NextId => Interlocked.Increment(ref currentId);
 
         public class TimeOperation : IDisposable
         {
