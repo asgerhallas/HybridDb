@@ -17,7 +17,7 @@ namespace HybridDb.Migrations.Documents
         readonly CancellationTokenSource cts;
         readonly ILogger logger;
 
-        Task loop = Task.CompletedTask;
+        public Task MainLoop = Task.CompletedTask;
 
         public DocumentMigrationRunner(DocumentStore store)
         {
@@ -32,9 +32,9 @@ namespace HybridDb.Migrations.Documents
             var configuration = store.Configuration;
 
             if (!configuration.RunBackgroundMigrations)
-                return loop;
+                return MainLoop;
 
-            return loop = Task.Run(async () =>
+            return MainLoop = Task.Run(async () =>
             {
                 try
                 {
@@ -102,7 +102,7 @@ namespace HybridDb.Migrations.Documents
                                 {
                                     if (cts.IsCancellationRequested)
                                     {
-                                        break;
+                                        throw new TaskCanceledException("Migration was cancelled.");
                                     }
 
                                     store.Logger.LogWarning(exception,

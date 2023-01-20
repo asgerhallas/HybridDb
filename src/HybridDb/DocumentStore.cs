@@ -97,6 +97,15 @@ namespace HybridDb
             DocumentMigrationRunner.Dispose();
             Configuration.Dispose();
             Database.Dispose();
+
+            try
+            {
+                DocumentMigrationRunner.MainLoop.Wait();
+            }
+            catch
+            {
+                // ignored
+            }
         }
 
         public IDatabase Database { get; }
