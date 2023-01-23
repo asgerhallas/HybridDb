@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -823,6 +827,108 @@ namespace HybridDb.Tests.Queue
             orderedMessages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id2").ToString());
             orderedMessages[2].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3").ToString());
             orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey, new JArray("id1", "id3", "id4").ToString());
+        }
+
+        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        {
+            async Task AwaitPartition(IEnumerator<T> partition)
+            {
+                using (partition)
+                {
+                    while (partition.MoveNext())
+                    {
+                        await Task.Yield(); // prevents a sync/hot thread hangup
+                        await funcBody(partition.Current);
+                    }
+                }
+            }
+
+            return Task.WhenAll(
+                Partitioner
+                    .Create(source)
+                    .GetPartitions(maxDoP)
+                    .AsParallel()
+                    .Select(AwaitPartition));
+        }
+
+        [Fact]
+        public async Task FastAndFurious()
+        {
+            var started = 0;
+            var completed = 0;
+            var disposed = 0;
+            var failed = 0;
+
+            void WriteLine(string s)
+            {
+                Debug.WriteLine(s);
+                output.WriteLine(s);
+            }
+
+            async Task Selector(int x)
+            {
+                var tableName = $"Queue{x}";
+                var subject = new ReplaySubject<int>();
+
+                Interlocked.Increment(ref started);
+
+                WriteLine($"[INFORMATION] #{x} Start");
+                try
+                {
+                    var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, cfg =>
+                    {
+                        cfg.DisableBackgroundMigrations();
+                        cfg.UseConnectionString(connectionString);
+                        cfg.UseMessageQueue(new MessageQueueOptions
+                        {
+                            IdleDelay = TimeSpan.Zero,
+                            TableName = tableName,
+                            MaxConcurrency = 1
+                        }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                    });
+                    WriteLine($"[INFORMATION] #{x} Started");
+                    try
+                    {
+                        var eventLoopScheduler = new EventLoopScheduler();
+                        using var queue = new HybridDbMessageQueue(documentStore, (_, _) =>
+                        {
+                            subject.OnNext(1);
+                            return Task.CompletedTask;
+                        });
+
+                        using var session = documentStore.OpenSession();
+
+                        session.Enqueue(new MyMessage("Some command"));
+                        session.SaveChanges();
+
+                        WriteLine($"[INFORMATION] #{x} message sent");
+
+                        await Task.WhenAny(queue.Events.OfType<MessageCommitted>().FirstAsync().ToTask(), queue.MainLoop);
+
+                        Interlocked.Increment(ref completed);
+
+                        WriteLine($"[INFORMATION] #{x} Completed");
+                    }
+                    finally
+                    {
+                        documentStore.Dispose();
+
+                        Interlocked.Increment(ref disposed);
+
+                        WriteLine($"[INFORMATION] #{x} Dispose");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Interlocked.Increment(ref failed);
+
+                    WriteLine($"[ERROR] #{x} {ex.Message}");
+                }
+            }
+
+            await ParallelForEachAsync(Enumerable.Range(0, 100), Selector, 200);
+
+            WriteLine("All tasks completed");
         }
 
         Func<IDocumentSession, HybridDbMessage, Task> MaxConcurrencyCounter(StrongBox<int> max)

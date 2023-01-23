@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +32,8 @@ namespace HybridDb.Queue
         readonly MessageQueueOptions options;
         readonly IDisposable eventsSubscription;
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
+        readonly DedicatedThreadScheduler readerScheduler;
+        readonly DedicatedThreadScheduler handlerScheduler;
 
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
@@ -53,6 +58,8 @@ namespace HybridDb.Queue
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
             cts = options.GetCancellationTokenSource();
+            readerScheduler = new DedicatedThreadScheduler();
+            handlerScheduler = new DedicatedThreadScheduler();
 
             MainLoop = Task.Factory.StartNew(async () =>
                     {
@@ -90,7 +97,7 @@ namespace HybridDb.Queue
                                                 release();
                                                 DisposeTransaction(tx);
                                             }
-                                        }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
+                                        }, cts.Token, TaskCreationOptions.DenyChildAttach, handlerScheduler);
                                     }
                                     catch
                                     {
@@ -105,9 +112,7 @@ namespace HybridDb.Queue
                                     throw;
                                 }
                             }
-                            catch (TaskCanceledException)
-                            {
-                            }
+                            catch (TaskCanceledException) { }
                             catch (Exception exception)
                             {
                                 events.OnNext(new QueueFailed(exception));
@@ -115,14 +120,14 @@ namespace HybridDb.Queue
                                 logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
                             }
                         }
-
-                        foreach (var tx in txs) DisposeTransaction(tx.Key);
+                        
+                        DisposeAllTransactions();
 
                         logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
                     },
                     cts.Token,
                     TaskCreationOptions.LongRunning,
-                    TaskScheduler.Default)
+                    readerScheduler)
                 .Unwrap()
                 .ContinueWith(
                     t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
@@ -131,6 +136,8 @@ namespace HybridDb.Queue
 
         DocumentTransaction BeginTransaction()
         {
+            cts.Token.ThrowIfCancellationRequested();
+
             var tx = store.BeginTransaction();
 
             if (!txs.TryAdd(tx, 0))
@@ -153,17 +160,31 @@ namespace HybridDb.Queue
             }
         }
 
+        void DisposeAllTransactions()
+        {
+            foreach (var tx in txs) DisposeTransaction(tx.Key);
+        }
+
         async Task<Action> WaitAsync(SemaphoreSlim semaphore)
         {
-            await semaphore.WaitAsync();
+            await semaphore.WaitAsync(cts.Token);
 
             var released = 0;
             
             return () =>
             {
                 if (Interlocked.Exchange(ref released, 1) == 1) return;
+                
+                if (cts.IsCancellationRequested) return;
 
                 semaphore.Release();
+                try
+                {
+                }
+                catch (ObjectDisposedException e)
+                {
+                    Console.WriteLine(e);
+                }
             };
         }
 
@@ -226,6 +247,8 @@ namespace HybridDb.Queue
             }
             catch (Exception exception)
             {
+                if (cts.IsCancellationRequested) return;
+
                 var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
 
                 events.OnNext(new MessageFailed(context, message, exception, failures));
@@ -252,13 +275,29 @@ namespace HybridDb.Queue
         public void Dispose()
         {
             cts.Cancel();
-            
-            try { MainLoop.Wait(); }
-            catch (TaskCanceledException) { }
-            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex) { logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose."); }
+
+            try
+            {
+                MainLoop.Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            DisposeAllTransactions();
 
             eventsSubscription.Dispose();
+
+            handlerScheduler.Dispose();
+            readerScheduler.Dispose();
+        }
+
+        public Task AwaitShutdown()
+        {
+            if (!cts.IsCancellationRequested) throw new InvalidOperationException();
+            
+            return MainLoop;
         }
     }
 
