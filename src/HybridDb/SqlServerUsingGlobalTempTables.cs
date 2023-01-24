@@ -16,9 +16,7 @@ namespace HybridDb
         string prefix;
         int numberOfManagedConnections;
 
-        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString)
-        {
-        }
+        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString) { }
 
         public override void Initialize()
         {
@@ -33,12 +31,19 @@ namespace HybridDb
             prefix = $"##{store.Configuration.TableNamePrefix}_";
 
             schemaBuilderConnection = new SqlConnection(connectionString);
+
+            store.Stats.ConnectionCreated(schemaBuilderConnection);
+
             schemaBuilderConnection.Open();
         }
 
         public override void Dispose()
         {
-            schemaBuilderConnection?.Dispose();
+            if (schemaBuilderConnection != null)
+            {
+                store.Stats.ConnectionDisposed(schemaBuilderConnection);
+                schemaBuilderConnection.Dispose();
+            }
 
             if (numberOfManagedConnections > 0)
             {
@@ -65,19 +70,29 @@ namespace HybridDb
                 return new ManagedConnection(schemaBuilderConnection, () => { }, () => { });
             }
 
+            SqlConnection connection = null;
+
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            Action dispose = () =>
+            {
+                Interlocked.Decrement(ref numberOfManagedConnections);
+
+                // ReSharper disable once AccessToModifiedClosure
+                store.Stats.ConnectionDisposed(connection);
+            };
 
             try
             {
                 Interlocked.Increment(ref numberOfManagedConnections);
 
-                var connection = new SqlConnection(connectionString);
+                connection = new SqlConnection(connectionString);
+
+                store.Stats.ConnectionCreated(connection);
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
 
-                connection.InfoMessage += (obj, args) => OnMessage(args);
+                connection.InfoMessage += (_, args) => OnMessage(args);
                 connection.Open();
 
                 if (Transaction.Current != null)
@@ -113,6 +128,5 @@ namespace HybridDb
 
             return schema;
         }
-
     }
 }

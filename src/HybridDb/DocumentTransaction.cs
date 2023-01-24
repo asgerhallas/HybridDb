@@ -14,14 +14,11 @@ namespace HybridDb
 {
     public class DocumentTransaction : IDisposable
     {
-        readonly StoreStats storeStats;
         readonly ManagedConnection managedConnection;
 
-        public DocumentTransaction(DocumentStore store, Guid commitId, IsolationLevel level, StoreStats storeStats)
+        public DocumentTransaction(IDocumentStore store, Guid commitId, IsolationLevel level)
         {
             Store = store;
-
-            this.storeStats = storeStats;
 
             managedConnection = store.Database.Connect();
             SqlConnection = managedConnection.Connection;
@@ -29,6 +26,8 @@ namespace HybridDb
             if (Transaction.Current == null)
             {
                 SqlTransaction = SqlConnection.BeginTransaction(level);
+
+                store.Stats.TransactionCreated(SqlTransaction);
             }
 
             CommitId = commitId;
@@ -36,7 +35,12 @@ namespace HybridDb
 
         public void Dispose()
         {
-            SqlTransaction?.Dispose();
+            if (SqlTransaction != null)
+            {
+                Store.Stats.TransactionDisposed(SqlTransaction);
+                SqlTransaction.Dispose();
+            }
+
             managedConnection.Dispose();
         }
 
@@ -59,20 +63,18 @@ namespace HybridDb
         {
             var result = Execute(new GetCommand(table, new List<string> { key }));
 
-            if (result.Count == 0) return null;
-
-            return result.Values.Single();
+            return result.Count == 0 ? null : result.Values.Single();
         }
 
-        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) => 
+        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) =>
             Execute(new GetCommand(table, keys));
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 
+            DocumentTable table, string join, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
-            storeStats.NumberOfRequests++;
-            storeStats.NumberOfQueries++;
+            Store.Stats.NumberOfRequests++;
+            Store.Stats.NumberOfQueries++;
 
             if (string.IsNullOrEmpty(select) || select == "*")
             {
@@ -89,14 +91,14 @@ namespace HybridDb
                 case false when includeDeleted:
                     throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
                 case true when !includeDeleted:
-                    @where = string.IsNullOrEmpty(@where)
+                    where = string.IsNullOrEmpty(where)
                         ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
-                        : $"({@where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
+                        : $"({where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
                     break;
             }
 
-            QueryStats stats = null;
-            IEnumerable<QueryResult<TProjection>> result = null;
+            QueryStats stats;
+            IEnumerable<QueryResult<TProjection>> result;
             var timer = Stopwatch.StartNew();
             var sqlx = new SqlBuilder();
             var isWindowed = window != null;
@@ -106,17 +108,17 @@ namespace HybridDb
             if (isWindowed || top1)
             {
                 sqlx.Append("select count(*) as TotalResults")
-                    .Append($"from {@from}")
+                    .Append($"from {from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(";");
 
                 sqlx.Append(string.IsNullOrEmpty(select), @"with WithRowNumber as (select *", $@"with WithRowNumber as (select {select}")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
-                    .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
-                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} as __RowVersion")
-                    .Append($"from {@from}")
+                    .Append($", {from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
+                    .Append($", {from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
+                    .Append($", {from}.{DocumentTable.TimestampColumn.Name} as __RowVersion")
+                    .Append($"from {from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
                     .Append(")")
@@ -137,8 +139,10 @@ namespace HybridDb
                         break;
                     }
                     case SkipToId skipToId:
-                        sqlx.Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
-                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
+                        sqlx.Append(
+                                "where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
+                            .Append(
+                                "and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
                             .Append("order by RowNumber", new SqlParameter("__Id", skipToId.Id), new SqlParameter("__PageSize", skipToId.PageSize));
                         break;
                     case null: break;
@@ -162,15 +166,15 @@ namespace HybridDb
             else
             {
                 sqlx.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
-                    .Append($", 0 as RowNumber")
-                    .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} AS __LastOperation")
-                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} AS __RowVersion")
-                    .Append($"from {@from}")
+                    .Append(", 0 as RowNumber")
+                    .Append($", {from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
+                    .Append($", {from}.{DocumentTable.LastOperationColumn.Name} AS __LastOperation")
+                    .Append($", {from}.{DocumentTable.TimestampColumn.Name} AS __RowVersion")
+                    .Append($"from {from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
-                
+
                 result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)
                     .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion))
                     .ToList();
@@ -192,17 +196,17 @@ namespace HybridDb
 
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns =
-                from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
+                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                 let column = split[0]
                 let alias = split.Length > 1 ? split[1] : null
                 where neededColumns.Contains(alias)
-                select new {column, alias = alias ?? column};
+                select new { column, alias = alias ?? column };
 
             var missingColumns =
                 from column in neededColumns
                 where !selectedColumns.Select(x => x.alias).Contains(column)
-                select new {column, alias = column};
+                select new { column, alias = column };
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
@@ -213,9 +217,9 @@ namespace HybridDb
             var hybridDbParameters = parameters.ToHybridDbParameters();
 
             hybridDbParameters.Add(sql.Parameters);
-            
+
             using var reader = SqlConnection.QueryMultiple(sql.ToString(), hybridDbParameters, SqlTransaction);
-            
+
             return read(reader);
         }
 
@@ -225,15 +229,15 @@ namespace HybridDb
             {
                 return (IEnumerable<Row<T>>)reader
                     .Read<object, RowExtras, Row<IDictionary<string, object>>>(
-                        (a, b) => CreateRow((IDictionary<string, object>)a, b), 
-                        "RowNumber", 
+                        (a, b) => CreateRow((IDictionary<string, object>)a, b),
+                        "RowNumber",
                         buffered: true);
             }
 
             return reader.Read<T, RowExtras, Row<T>>(CreateRow, "RowNumber", buffered: true);
         }
 
-        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new Row<T>(data, extras);
+        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new(data, extras);
 
         public class RowExtras
         {
@@ -261,7 +265,7 @@ namespace HybridDb
             public byte[] RowVersion { get; set; }
         }
 
-        static readonly HashSet<Type> simpleTypes = new HashSet<Type>
+        static readonly HashSet<Type> simpleTypes = new()
         {
             typeof(byte),
             typeof(sbyte),

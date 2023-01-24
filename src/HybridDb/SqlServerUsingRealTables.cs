@@ -12,24 +12,33 @@ namespace HybridDb
     {
         int numberOfManagedConnections;
 
-        public SqlServerUsingRealTables(DocumentStore store, string connectionString) : base(store, connectionString)
-        {
-        }
+        public SqlServerUsingRealTables(DocumentStore store, string connectionString) : base(store, connectionString) { }
 
         public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
 
         public override ManagedConnection Connect(bool schema = false)
         {
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            SqlConnection connection = null;
+
+            Action dispose = () =>
+            {
+                Interlocked.Decrement(ref numberOfManagedConnections);
+
+                // ReSharper disable once AccessToModifiedClosure
+                store.Stats.ConnectionDisposed(connection);
+            };
 
             try
             {
-                var connection = new SqlConnection(connectionString);
+                connection = new SqlConnection(connectionString);
+
+                store.Stats.ConnectionCreated(connection);
+
                 dispose += connection.Dispose;
 
                 Interlocked.Increment(ref numberOfManagedConnections);
 
-                connection.InfoMessage += (obj, args) => OnMessage(args);
+                connection.InfoMessage += (_, args) => OnMessage(args);
                 connection.Open();
 
                 return new ManagedConnection(
@@ -48,9 +57,9 @@ namespace HybridDb
         {
             var schema = new Dictionary<string, List<string>>();
 
-            using (var managedConnection = Connect())
-            {
-                var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
+            using var managedConnection = Connect();
+
+            var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
 SELECT 
    table_name = t.table_name,
    full_table_name = t.table_name,
@@ -75,20 +84,18 @@ INNER JOIN sys.columns AS c
 ON OBJECT_ID(t.table_name) = c.[object_id]
 WHERE t.table_type='BASE TABLE' and t.table_name LIKE '{store.Configuration.TableNamePrefix}%'
 OPTION (FORCE ORDER);",
+                Tuple.Create, splitOn: "column_name");
 
-                    Tuple.Create, splitOn: "column_name");
+            foreach (var columnByTable in columns.GroupBy(x => x.Item1))
+            {
+                var tableName = columnByTable.Key.table_name.Remove(0, store.Configuration.TableNamePrefix.Length);
 
-                foreach (var columnByTable in columns.GroupBy(x => x.Item1))
-                {
-                    var tableName = columnByTable.Key.table_name.Remove(0, store.Configuration.TableNamePrefix.Length);
-
-                    schema.Add(tableName, columnByTable.Select(column => column.Item2.column_name).ToList());
-                }
-
-                return schema;
+                schema.Add(tableName, columnByTable.Select(column => column.Item2.column_name).ToList());
             }
+
+            return schema;
         }
-        
+
         public override void Dispose()
         {
             if (numberOfManagedConnections > 0)
