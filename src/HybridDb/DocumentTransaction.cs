@@ -29,6 +29,8 @@ namespace HybridDb
             if (Transaction.Current == null)
             {
                 SqlTransaction = SqlConnection.BeginTransaction(level);
+
+                storeStats.TransactionCreated(SqlTransaction);
             }
 
             CommitId = commitId;
@@ -36,7 +38,12 @@ namespace HybridDb
 
         public void Dispose()
         {
-            SqlTransaction?.Dispose();
+            if (SqlTransaction != null)
+            {
+                storeStats.TransactionDisposed(SqlTransaction);
+                SqlTransaction.Dispose();
+            }
+
             managedConnection.Dispose();
         }
 
@@ -64,11 +71,11 @@ namespace HybridDb
             return result.Values.Single();
         }
 
-        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) => 
+        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) =>
             Execute(new GetCommand(table, keys));
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 
+            DocumentTable table, string join, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             storeStats.NumberOfRequests++;
@@ -137,8 +144,10 @@ namespace HybridDb
                         break;
                     }
                     case SkipToId skipToId:
-                        sqlx.Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
-                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
+                        sqlx.Append(
+                                $"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
+                            .Append(
+                                $"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
                             .Append("order by RowNumber", new SqlParameter("__Id", skipToId.Id), new SqlParameter("__PageSize", skipToId.PageSize));
                         break;
                     case null: break;
@@ -170,7 +179,7 @@ namespace HybridDb
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
-                
+
                 result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)
                     .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion))
                     .ToList();
@@ -192,17 +201,17 @@ namespace HybridDb
 
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns =
-                from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
+                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                 let column = split[0]
                 let alias = split.Length > 1 ? split[1] : null
                 where neededColumns.Contains(alias)
-                select new {column, alias = alias ?? column};
+                select new { column, alias = alias ?? column };
 
             var missingColumns =
                 from column in neededColumns
                 where !selectedColumns.Select(x => x.alias).Contains(column)
-                select new {column, alias = column};
+                select new { column, alias = column };
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
@@ -213,9 +222,9 @@ namespace HybridDb
             var hybridDbParameters = parameters.ToHybridDbParameters();
 
             hybridDbParameters.Add(sql.Parameters);
-            
+
             using var reader = SqlConnection.QueryMultiple(sql.ToString(), hybridDbParameters, SqlTransaction);
-            
+
             return read(reader);
         }
 
@@ -225,8 +234,8 @@ namespace HybridDb
             {
                 return (IEnumerable<Row<T>>)reader
                     .Read<object, RowExtras, Row<IDictionary<string, object>>>(
-                        (a, b) => CreateRow((IDictionary<string, object>)a, b), 
-                        "RowNumber", 
+                        (a, b) => CreateRow((IDictionary<string, object>)a, b),
+                        "RowNumber",
                         buffered: true);
             }
 

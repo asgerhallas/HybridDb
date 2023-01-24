@@ -11,25 +11,36 @@ namespace HybridDb
     public class SqlServerUsingRealTables : SqlServer
     {
         int numberOfManagedConnections;
+        readonly StoreStats storeStats;
 
-        public SqlServerUsingRealTables(DocumentStore store, string connectionString) : base(store, connectionString)
+        public SqlServerUsingRealTables(DocumentStore store, string connectionString, StoreStats storeStats) : base(store, connectionString)
         {
+            this.storeStats = storeStats;
         }
 
         public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
 
         public override ManagedConnection Connect(bool schema = false)
         {
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            SqlConnection connection = null;
+
+            Action dispose = () =>
+            {
+                Interlocked.Decrement(ref numberOfManagedConnections);
+                storeStats.ConnectionDisposed(connection);
+            };
 
             try
             {
-                var connection = new SqlConnection(connectionString);
+                connection = new SqlConnection(connectionString);
+
+                storeStats.ConnectionCreated(connection);
+
                 dispose += connection.Dispose;
 
                 Interlocked.Increment(ref numberOfManagedConnections);
 
-                connection.InfoMessage += (obj, args) => OnMessage(args);
+                connection.InfoMessage += (_, args) => OnMessage(args);
                 connection.Open();
 
                 return new ManagedConnection(
@@ -75,7 +86,6 @@ INNER JOIN sys.columns AS c
 ON OBJECT_ID(t.table_name) = c.[object_id]
 WHERE t.table_type='BASE TABLE' and t.table_name LIKE '{store.Configuration.TableNamePrefix}%'
 OPTION (FORCE ORDER);",
-
                     Tuple.Create, splitOn: "column_name");
 
                 foreach (var columnByTable in columns.GroupBy(x => x.Item1))
@@ -88,7 +98,7 @@ OPTION (FORCE ORDER);",
                 return schema;
             }
         }
-        
+
         public override void Dispose()
         {
             if (numberOfManagedConnections > 0)

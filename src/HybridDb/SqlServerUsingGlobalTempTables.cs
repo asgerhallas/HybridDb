@@ -12,12 +12,14 @@ namespace HybridDb
     public class SqlServerUsingGlobalTempTables : SqlServer
     {
         SqlConnection schemaBuilderConnection;
+        readonly StoreStats storeStats;
 
         string prefix;
         int numberOfManagedConnections;
 
-        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString)
+        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString, StoreStats storeStats) : base(store, connectionString)
         {
+            this.storeStats = storeStats;
         }
 
         public override void Initialize()
@@ -33,12 +35,19 @@ namespace HybridDb
             prefix = $"##{store.Configuration.TableNamePrefix}_";
 
             schemaBuilderConnection = new SqlConnection(connectionString);
+
+            storeStats.ConnectionCreated(schemaBuilderConnection);
+
             schemaBuilderConnection.Open();
         }
 
         public override void Dispose()
         {
-            schemaBuilderConnection?.Dispose();
+            if (schemaBuilderConnection != null)
+            {
+                storeStats.ConnectionDisposed(schemaBuilderConnection);
+                schemaBuilderConnection.Dispose();
+            }
 
             if (numberOfManagedConnections > 0)
             {
@@ -65,19 +74,23 @@ namespace HybridDb
                 return new ManagedConnection(schemaBuilderConnection, () => { }, () => { });
             }
 
+            SqlConnection connection = null;
+
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
+            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); storeStats.ConnectionDisposed(connection); };
 
             try
             {
                 Interlocked.Increment(ref numberOfManagedConnections);
 
-                var connection = new SqlConnection(connectionString);
+                connection = new SqlConnection(connectionString);
+
+                storeStats.ConnectionCreated(connection);
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
 
-                connection.InfoMessage += (obj, args) => OnMessage(args);
+                connection.InfoMessage += (_, args) => OnMessage(args);
                 connection.Open();
 
                 if (Transaction.Current != null)

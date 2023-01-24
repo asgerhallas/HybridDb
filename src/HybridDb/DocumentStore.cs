@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Data;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
 using Microsoft.Extensions.Logging;
-using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
 {
@@ -19,10 +19,10 @@ namespace HybridDb
             switch (mode)
             {
                 case TableMode.RealTables:
-                    Database = new SqlServerUsingRealTables(this, configuration.ConnectionString);
+                    Database = new SqlServerUsingRealTables(this, configuration.ConnectionString, Stats);
                     break;
                 case TableMode.GlobalTempTables:
-                    Database = new SqlServerUsingGlobalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb");
+                    Database = new SqlServerUsingGlobalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb", Stats);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
@@ -50,7 +50,7 @@ namespace HybridDb
             return new DocumentStore(TableMode.RealTables, configuration, initialize);
         }
 
-        public static DocumentStore Create(Configuration configuration = null, bool initialize = true) => 
+        public static DocumentStore Create(Configuration configuration = null, bool initialize = true) =>
             new(TableMode.RealTables, configuration ?? new Configuration(), initialize);
 
         public static DocumentStore ForTesting(TableMode mode, Action<Configuration> configure, bool initialize = true)
@@ -62,13 +62,13 @@ namespace HybridDb
             return ForTesting(mode, configuration, initialize);
         }
 
-        public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) => 
+        public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) =>
             new(mode, configuration ?? new Configuration(), initialize);
 
         public void Dispose() => Database.Dispose();
 
         public IDatabase Database { get; }
-        public ILogger Logger { get;  }
+        public ILogger Logger { get; }
         public Configuration Configuration { get; }
         public TableMode TableMode { get; }
         public StoreStats Stats { get; } = new StoreStats();
@@ -84,7 +84,7 @@ namespace HybridDb
             // No use of the store for handling documents is allowed before this is run.
             // The SchemaMigrationRunner will initialize the Database and initialize/freeze the configuration.
             new SchemaMigrationRunner(this, new SchemaDiffer()).Run();
-            
+
             Migrator = Configuration.Resolve<DocumentMigrator>();
 
             // Set as initialized before invoking document migrations, to avoid errors when the runner
@@ -103,6 +103,7 @@ namespace HybridDb
         }
 
         public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);
+
         public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted)
         {
             AssertInitialized();
@@ -128,12 +129,12 @@ namespace HybridDb
         {
             AssertInitialized();
 
-            return (T) Configuration.Resolve<DmlCommandExecutor>()(tx, command);
+            return (T)Configuration.Resolve<DmlCommandExecutor>()(tx, command);
         }
 
         void AssertInitialized()
         {
             if (!IsInitialized) throw new InvalidOperationException("Store is not initialized. Please call Initialize().");
         }
-   }
+    }
 }

@@ -123,7 +123,7 @@ namespace HybridDb.Tests
             connectionString = GetConnectionString() + ";Initial Catalog=" + uniqueDbName;
 
             configuration.UseConnectionString(connectionString);
-            
+
             disposables.Push(() =>
             {
                 using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
@@ -161,7 +161,7 @@ namespace HybridDb.Tests
             configuration.UseConnectionString(connectionString);
             configuration.UseLogger(logger);
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize))); 
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize)));
         }
 
         /// <summary>
@@ -171,7 +171,7 @@ namespace HybridDb.Tests
         {
             var currentStore = store;
 
-            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize))); 
+            activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(currentStore, configuration, autoInitialize)));
         }
 
         protected T Using<T>(T disposable) where T : IDisposable
@@ -180,9 +180,10 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        List<string> Ids = new List<string>();
+        readonly List<string> Ids = new List<string>();
 
         protected string Id(int index = 1) => Ids[index - 1];
+
         protected string NewId()
         {
             var id = Guid.NewGuid().ToString();
@@ -195,6 +196,14 @@ namespace HybridDb.Tests
             while (disposables.TryPop(out var dispose))
             {
                 dispose();
+            }
+
+            if (activeStore.IsValueCreated)
+            {
+                var stats = activeStore?.Value?.Stats;
+
+                activeStore?.Value?.Dispose();
+                stats?.CheckLeaks();
             }
 
             Transaction.Current.ShouldBe(null);
@@ -210,9 +219,7 @@ namespace HybridDb.Tests
             string Property { get; }
         }
 
-        public interface IUnusedInterface
-        {
-        }
+        public interface IUnusedInterface { }
 
         public class Entity : ISomeInterface
         {
@@ -272,7 +279,9 @@ namespace HybridDb.Tests
         }
 
         public class DerivedEntity : AbstractEntity { }
+
         public class MoreDerivedEntity1 : DerivedEntity, IOtherInterface { }
+
         public class MoreDerivedEntity2 : DerivedEntity { }
 
         public enum SomeFreakingEnum
@@ -287,13 +296,11 @@ namespace HybridDb.Tests
                 : base((session, serializer, row) =>
                 {
                     var jObject = (JObject)serializer.Deserialize(row.Get(DocumentTable.DocumentColumn), typeof(JObject));
-                    
+
                     change(jObject);
-                    
+
                     return serializer.Serialize(jObject);
-                })
-            {
-            }
+                }) { }
         }
     }
 

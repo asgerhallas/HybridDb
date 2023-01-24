@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -8,7 +7,6 @@ using System.Text;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
 using HybridDb.Queue;
@@ -89,10 +87,10 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             using var session = store.OpenSession();
-            
+
             session.Advanced.Defer(new InsertCommand(table, NewId(), new { }));
             session.Enqueue(new object());
-            
+
             session.Advanced.DeferredCommands.Count.ShouldBe(2);
 
             session.SaveChanges();
@@ -121,7 +119,7 @@ namespace HybridDb.Tests
             var entity = store.Query(table, out _).SingleOrDefault();
             Assert.NotNull(entity);
             Assert.NotNull(entity["Document"]);
-            Assert.NotEqual(0, ((string) entity["Document"]).Length);
+            Assert.NotEqual(0, ((string)entity["Document"]).Length);
         }
 
         [Fact]
@@ -360,7 +358,8 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var tx = store.BeginTransaction();
+                using var tx = store.BeginTransaction();
+
                 session.Advanced.Enlist(tx);
                 session.Advanced.Clear();
                 session.Advanced.DocumentTransaction.ShouldBe(null);
@@ -602,15 +601,15 @@ namespace HybridDb.Tests
 
             session.Store(new EntityWithDateTimeOffset
             {
-                Id = NewId(), 
-                Property = "Asger", 
+                Id = NewId(),
+                Property = "Asger",
                 From = new DateTimeOffset(new DateTime(2001, 12, 1))
             });
 
             session.Store(new EntityWithDateTimeOffset
             {
-                Id = NewId(), 
-                Property = "Lars", 
+                Id = NewId(),
+                Property = "Lars",
                 From = new DateTimeOffset(new DateTime(2001, 12, 2))
             });
 
@@ -634,8 +633,8 @@ namespace HybridDb.Tests
             var newId = NewId();
             session.Store(new EntityWithDateTimeOffset
             {
-                Id = newId, 
-                Property = "Asger", 
+                Id = newId,
+                Property = "Asger",
                 From = new DateTimeOffset(new DateTime(2001, 12, 1))
             });
 
@@ -897,7 +896,7 @@ namespace HybridDb.Tests
             Document<MoreDerivedEntity2>();
 
             UseMigrations(
-                new InlineMigration(1, 
+                new InlineMigration(1,
                     new ChangeDocumentAsJObject<AbstractEntity>(x => { x["Property"] = x["Property"] + " er cool"; }),
                     new ChangeDocumentAsJObject<MoreDerivedEntity2>(x => { x["Property"] = x["Property"] + "io"; })));
 
@@ -1181,9 +1180,9 @@ namespace HybridDb.Tests
             Document<EntityWithoutId>();
 
             using var session = store.OpenSession();
-            
+
             session.Store("mykey", new EntityWithoutId { Data = "1" });
-            
+
             Should.Throw<HybridDbException>(() => session.Store("mykey", new EntityWithoutId { Data = "2" }))
                 .Message.ShouldBe("Attempted to store a different object with id 'mykey'.");
         }
@@ -1197,7 +1196,7 @@ namespace HybridDb.Tests
 
             var entity = new EntityWithoutId { Data = "1" };
             session.Store("mykey", entity);
-            
+
             var before = session.Advanced.ManagedEntities.Single();
 
             session.Store("mykey", entity);
@@ -1425,8 +1424,8 @@ namespace HybridDb.Tests
                     Id = id,
                     Children =
                     {
-                        new Entity.Child {NestedProperty = "A"},
-                        new Entity.Child {NestedProperty = "B"}
+                        new Entity.Child { NestedProperty = "A" },
+                        new Entity.Child { NestedProperty = "B" }
                     }
                 };
 
@@ -1445,10 +1444,10 @@ namespace HybridDb.Tests
             Document<Entity>();
 
             using var session = store.OpenSession();
-            
+
             ResetStore();
 
-            var tx = store.BeginTransaction();
+            using var tx = store.BeginTransaction();
 
             Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
                 .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");
@@ -1517,10 +1516,7 @@ namespace HybridDb.Tests
             originalCase.Name.ShouldBe("Asger");
         }
 
-        public class BaseCase
-        {
-            
-        }
+        public class BaseCase { }
 
         public class Case : BaseCase
         {
