@@ -102,12 +102,12 @@ namespace HybridDb
             return new DocumentSession(this, Migrator, tx);
         }
 
-        public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted) => BeginTransaction(Guid.NewGuid(), level);
-        public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted)
+        public DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted, int timeout = 15) => BeginTransaction(Guid.NewGuid(), level, timeout);
+        public DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted, int timeout = 15)
         {
             AssertInitialized();
 
-            return new DocumentTransaction(this, commitId, level, Stats);
+            return new DocumentTransaction(this, commitId, level, Stats, timeout);
         }
 
         public void Execute(DdlCommand command)

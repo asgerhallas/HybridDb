@@ -7,7 +7,7 @@ namespace HybridDb
     {
         void Initialize();
 
-        ManagedConnection Connect(bool schema = false);
+        ManagedConnection Connect(bool schema = false, int timeout = 15);
 
         Dictionary<string, List<string>> QuerySchema();
 

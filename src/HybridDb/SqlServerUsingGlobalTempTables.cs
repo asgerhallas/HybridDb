@@ -53,7 +53,7 @@ namespace HybridDb
             return $"{prefix}{tablename}";
         }
 
-        public override ManagedConnection Connect(bool schema = false)
+        public override ManagedConnection Connect(bool schema = false, int timeout = 15)
         {
             if (schema)
             {
@@ -72,7 +72,7 @@ namespace HybridDb
             {
                 Interlocked.Increment(ref numberOfManagedConnections);
 
-                var connection = new SqlConnection(connectionString);
+                var connection = new SqlConnection(connectionString + $";Connection Timeout={timeout}");
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;

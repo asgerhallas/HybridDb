@@ -854,6 +854,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task FastAndFurious()
         {
+            var semaphoreSlim = new SemaphoreSlim(50);
+
             var started = 0;
             var completed = 0;
             var disposed = 0;
@@ -875,6 +877,8 @@ namespace HybridDb.Tests.Queue
                 WriteLine($"[INFORMATION] #{x} Start");
                 try
                 {
+                    await semaphoreSlim.WaitAsync();
+
                     var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, cfg =>
                     {
                         cfg.DisableBackgroundMigrations();
@@ -890,10 +894,12 @@ namespace HybridDb.Tests.Queue
                     try
                     {
                         var eventLoopScheduler = new EventLoopScheduler();
-                        using var queue = new HybridDbMessageQueue(documentStore, (_, _) =>
+                        using var queue = new HybridDbMessageQueue(documentStore, async (_, _) =>
                         {
-                            subject.OnNext(1);
-                            return Task.CompletedTask;
+                            await Task.Delay(1000);
+                            WriteLine($"[INFORMATION] #{x} message handled 1");
+                            subject.OnNext(1);  
+                            WriteLine($"[INFORMATION] #{x} message handled 2");
                         });
 
                         using var session = documentStore.OpenSession();
@@ -903,7 +909,7 @@ namespace HybridDb.Tests.Queue
 
                         WriteLine($"[INFORMATION] #{x} message sent");
 
-                        await Task.WhenAny(queue.Events.OfType<MessageCommitted>().FirstAsync().ToTask(), queue.MainLoop);
+                        await Task.WhenAny(subject.ObserveOn(eventLoopScheduler).FirstAsync().ToTask(), queue.MainLoop);
 
                         Interlocked.Increment(ref completed);
 
@@ -923,6 +929,10 @@ namespace HybridDb.Tests.Queue
                     Interlocked.Increment(ref failed);
 
                     WriteLine($"[ERROR] #{x} {ex.Message}");
+                }
+                finally
+                {
+                    semaphoreSlim.Release();
                 }
             }
 

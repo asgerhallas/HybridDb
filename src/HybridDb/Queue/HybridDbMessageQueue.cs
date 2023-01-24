@@ -61,84 +61,89 @@ namespace HybridDb.Queue
             readerScheduler = new DedicatedThreadScheduler();
             handlerScheduler = new DedicatedThreadScheduler();
 
-            MainLoop = Task.Factory.StartNew(async () =>
+            MainLoop = Task.Factory
+                .StartNew(async () =>
+                {
+                    events.OnNext(new QueueStarting());
+
+                    logger.LogInformation($@"
+                        Queue started. 
+                        Reading messages with version {options.Version} or older, 
+                        from topics '{string.Join("', '", options.InboxTopics)}'.
+                    ".Indent());
+
+                    using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
+
+                    while (!cts.Token.IsCancellationRequested)
                     {
-                        events.OnNext(new QueueStarting());
-
-                        logger.LogInformation($@"
-                            Queue started. 
-                            Reading messages with version {options.Version} or older, 
-                            from topics '{string.Join("', '", options.InboxTopics)}'.
-                        ".Indent());
-
-                        using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
-
-                        while (!cts.Token.IsCancellationRequested)
+                        try
                         {
+                            var release = await WaitAsync(semaphore);
+                                
                             try
                             {
-                                var release = await WaitAsync(semaphore);
-                                    
+                                var (tx, message) = await NextMessage();
+
                                 try
                                 {
-                                    var (tx, message) = await NextMessage();
-
-                                    try
+                                    await Task.Factory.StartNew(async () =>
                                     {
-                                        await Task.Factory.StartNew(async () =>
+                                        try
                                         {
-                                            try
-                                            {
-                                                await HandleMessage(tx, message);
-                                            }
-                                            finally
-                                            {
-                                                // open the gate for the next message, when this message is handled.
-                                                release();
-                                                DisposeTransaction(tx);
-                                            }
-                                        }, cts.Token, TaskCreationOptions.DenyChildAttach, handlerScheduler);
-                                    }
-                                    catch
-                                    {
-                                        release();
-                                        DisposeTransaction(tx);
-                                        throw;
-                                    }
+                                            using var _ = Time("HandleMessage");
+
+                                            await HandleMessage(tx, message);
+                                        }
+                                        finally
+                                        {
+                                            // open the gate for the next message, when this message is handled.
+                                            release();
+                                            DisposeTransaction(tx);
+                                        }
+                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, handlerScheduler);
                                 }
                                 catch
                                 {
                                     release();
+                                    DisposeTransaction(tx);
                                     throw;
                                 }
                             }
-                            catch (TaskCanceledException) { }
-                            catch (Exception exception)
+                            catch
                             {
-                                events.OnNext(new QueueFailed(exception));
-
-                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                release();
+                                throw;
                             }
                         }
-                        
-                        DisposeAllTransactions();
+                        catch (TaskCanceledException) { }
+                        catch (Exception exception)
+                        {
+                            events.OnNext(new QueueFailed(exception));
 
-                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
-                    },
-                    cts.Token,
-                    TaskCreationOptions.LongRunning,
-                    readerScheduler)
-                .Unwrap()
-                .ContinueWith(
-                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
-                    TaskContinuationOptions.OnlyOnFaulted);
+                            logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+
+                            await Task.Delay(TimeSpan.FromSeconds(15), cts.Token);
+                        }
+                    }
+                    
+                    DisposeAllTransactions();
+
+                    logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
+                },
+                cts.Token,
+                TaskCreationOptions.LongRunning,
+                readerScheduler)
+            .Unwrap()
+            .ContinueWith(
+                t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
+                TaskContinuationOptions.OnlyOnFaulted);
         }
 
         DocumentTransaction BeginTransaction()
         {
             cts.Token.ThrowIfCancellationRequested();
 
-            var tx = store.BeginTransaction();
+            var tx = store.BeginTransaction(timeout: 1);
 
             if (!txs.TryAdd(tx, 0))
                 throw new InvalidOperationException("Transaction could not be tracked.");
@@ -178,13 +183,6 @@ namespace HybridDb.Queue
                 if (cts.IsCancellationRequested) return;
 
                 semaphore.Release();
-                try
-                {
-                }
-                catch (ObjectDisposedException e)
-                {
-                    Console.WriteLine(e);
-                }
             };
         }
 
@@ -278,7 +276,9 @@ namespace HybridDb.Queue
 
             try
             {
-                MainLoop.Wait();
+                using var _ = Time("dispose");
+
+                MainLoop.ContinueWith(x => x).Wait();
             }
             catch (Exception e)
             {
@@ -298,6 +298,16 @@ namespace HybridDb.Queue
             if (!cts.IsCancellationRequested) throw new InvalidOperationException();
             
             return MainLoop;
+        }
+
+        public IDisposable Time(string text)
+        {
+            var startNew = Stopwatch.StartNew();
+
+            return Disposable.Create(() =>
+            {
+                Debug.WriteLine($"{text}: " + startNew.ElapsedMilliseconds);
+            });
         }
     }
 

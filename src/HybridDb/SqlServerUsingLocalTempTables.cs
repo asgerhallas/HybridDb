@@ -18,7 +18,7 @@ namespace HybridDb
 
         public override string FormatTableName(string tablename) => "#" + tablename;
 
-        public override ManagedConnection Connect(bool schema = false)
+        public override ManagedConnection Connect(bool schema = false, int timeout = 15)
         {
             void Complete() { }
             void Dispose() => numberOfManagedConnections--;
