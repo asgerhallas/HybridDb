@@ -16,17 +16,12 @@ namespace HybridDb
             Logger = configuration.Logger;
             TableMode = mode;
 
-            switch (mode)
+            Database = mode switch
             {
-                case TableMode.RealTables:
-                    Database = new SqlServerUsingRealTables(this, configuration.ConnectionString, Stats);
-                    break;
-                case TableMode.GlobalTempTables:
-                    Database = new SqlServerUsingGlobalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb", Stats);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
-            }
+                TableMode.RealTables => new SqlServerUsingRealTables(this, configuration.ConnectionString),
+                TableMode.GlobalTempTables => new SqlServerUsingGlobalTempTables(this, configuration.ConnectionString + ";Initial Catalog=TempDb"),
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+            };
 
             if (initialize) Initialize();
         }
@@ -71,7 +66,7 @@ namespace HybridDb
         public ILogger Logger { get; }
         public Configuration Configuration { get; }
         public TableMode TableMode { get; }
-        public StoreStats Stats { get; } = new StoreStats();
+        public StoreStats Stats { get; } = new();
 
         public bool IsInitialized { get; private set; }
         public DocumentMigrator Migrator { get; private set; }
@@ -108,7 +103,7 @@ namespace HybridDb
         {
             AssertInitialized();
 
-            return new DocumentTransaction(this, commitId, level, Stats);
+            return new DocumentTransaction(this, commitId, level);
         }
 
         public void Execute(DdlCommand command)

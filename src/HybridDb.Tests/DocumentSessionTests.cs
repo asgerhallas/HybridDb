@@ -359,7 +359,6 @@ namespace HybridDb.Tests
             using (var session = store.OpenSession())
             {
                 using var tx = store.BeginTransaction();
-
                 session.Advanced.Enlist(tx);
                 session.Advanced.Clear();
                 session.Advanced.DocumentTransaction.ShouldBe(null);

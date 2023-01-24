@@ -11,12 +11,8 @@ namespace HybridDb
     public class SqlServerUsingRealTables : SqlServer
     {
         int numberOfManagedConnections;
-        readonly StoreStats storeStats;
 
-        public SqlServerUsingRealTables(DocumentStore store, string connectionString, StoreStats storeStats) : base(store, connectionString)
-        {
-            this.storeStats = storeStats;
-        }
+        public SqlServerUsingRealTables(DocumentStore store, string connectionString) : base(store, connectionString) { }
 
         public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
 
@@ -27,14 +23,16 @@ namespace HybridDb
             Action dispose = () =>
             {
                 Interlocked.Decrement(ref numberOfManagedConnections);
-                storeStats.ConnectionDisposed(connection);
+
+                // ReSharper disable once AccessToModifiedClosure
+                store.Stats.ConnectionDisposed(connection);
             };
 
             try
             {
                 connection = new SqlConnection(connectionString);
 
-                storeStats.ConnectionCreated(connection);
+                store.Stats.ConnectionCreated(connection);
 
                 dispose += connection.Dispose;
 
@@ -59,9 +57,9 @@ namespace HybridDb
         {
             var schema = new Dictionary<string, List<string>>();
 
-            using (var managedConnection = Connect())
-            {
-                var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
+            using var managedConnection = Connect();
+
+            var columns = managedConnection.Connection.Query<TableInfo, QueryColumn, Tuple<TableInfo, QueryColumn>>($@"
 SELECT 
    table_name = t.table_name,
    full_table_name = t.table_name,
@@ -86,17 +84,16 @@ INNER JOIN sys.columns AS c
 ON OBJECT_ID(t.table_name) = c.[object_id]
 WHERE t.table_type='BASE TABLE' and t.table_name LIKE '{store.Configuration.TableNamePrefix}%'
 OPTION (FORCE ORDER);",
-                    Tuple.Create, splitOn: "column_name");
+                Tuple.Create, splitOn: "column_name");
 
-                foreach (var columnByTable in columns.GroupBy(x => x.Item1))
-                {
-                    var tableName = columnByTable.Key.table_name.Remove(0, store.Configuration.TableNamePrefix.Length);
+            foreach (var columnByTable in columns.GroupBy(x => x.Item1))
+            {
+                var tableName = columnByTable.Key.table_name.Remove(0, store.Configuration.TableNamePrefix.Length);
 
-                    schema.Add(tableName, columnByTable.Select(column => column.Item2.column_name).ToList());
-                }
-
-                return schema;
+                schema.Add(tableName, columnByTable.Select(column => column.Item2.column_name).ToList());
             }
+
+            return schema;
         }
 
         public override void Dispose()

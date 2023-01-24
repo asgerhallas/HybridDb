@@ -12,15 +12,11 @@ namespace HybridDb
     public class SqlServerUsingGlobalTempTables : SqlServer
     {
         SqlConnection schemaBuilderConnection;
-        readonly StoreStats storeStats;
 
         string prefix;
         int numberOfManagedConnections;
 
-        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString, StoreStats storeStats) : base(store, connectionString)
-        {
-            this.storeStats = storeStats;
-        }
+        public SqlServerUsingGlobalTempTables(DocumentStore store, string connectionString) : base(store, connectionString) { }
 
         public override void Initialize()
         {
@@ -36,7 +32,7 @@ namespace HybridDb
 
             schemaBuilderConnection = new SqlConnection(connectionString);
 
-            storeStats.ConnectionCreated(schemaBuilderConnection);
+            store.Stats.ConnectionCreated(schemaBuilderConnection);
 
             schemaBuilderConnection.Open();
         }
@@ -45,7 +41,7 @@ namespace HybridDb
         {
             if (schemaBuilderConnection != null)
             {
-                storeStats.ConnectionDisposed(schemaBuilderConnection);
+                store.Stats.ConnectionDisposed(schemaBuilderConnection);
                 schemaBuilderConnection.Dispose();
             }
 
@@ -77,7 +73,13 @@ namespace HybridDb
             SqlConnection connection = null;
 
             Action complete = () => { };
-            Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); storeStats.ConnectionDisposed(connection); };
+            Action dispose = () =>
+            {
+                Interlocked.Decrement(ref numberOfManagedConnections);
+
+                // ReSharper disable once AccessToModifiedClosure
+                store.Stats.ConnectionDisposed(connection);
+            };
 
             try
             {
@@ -85,7 +87,7 @@ namespace HybridDb
 
                 connection = new SqlConnection(connectionString);
 
-                storeStats.ConnectionCreated(connection);
+                store.Stats.ConnectionCreated(connection);
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
@@ -126,6 +128,5 @@ namespace HybridDb
 
             return schema;
         }
-
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Data.SqlClient;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace HybridDb
 {
@@ -16,52 +18,63 @@ namespace HybridDb
         public int NumberOfNumberUndisposedConnections => connections.Count;
         public int NumberOfUndisposedTransactions => transactions.Count;
 
-        public static event EventHandler<OnConnectionCreatedEventArgs> OnConnectionCreated;
-        public static event EventHandler<OnConnectionDisposedEventArgs> OnConnectionDisposed;
-        public static event EventHandler<OnTransactionCreatedEventArgs> OnTransactionCreated;
-        public static event EventHandler<OnTransactionDisposedEventArgs> OnTransactionDisposed;
-
-        readonly ConcurrentDictionary<SqlConnection, object> connections = new();
-        readonly ConcurrentDictionary<SqlTransaction, object> transactions = new();
+        readonly ConcurrentDictionary<SqlConnection, (string FilePath, int LineNumber, string MemberName)> connections = new();
+        readonly ConcurrentDictionary<SqlTransaction, (string FilePath, int LineNumber, string MemberName)> transactions = new();
 
         public void CheckLeaks()
         {
-            if (NumberOfNumberUndisposedConnections != 0 || NumberOfUndisposedTransactions != 0)
+            if (NumberOfNumberUndisposedConnections == 0 && NumberOfUndisposedTransactions == 0) return;
+
+            var sb = new StringBuilder();
+
+            foreach (var connection in connections)
             {
-                throw new Exception("Possible connection/transaction leaking detected.");
+                sb.AppendLine($"Instance: {nameof(connection)}");
+                sb.AppendLine($"File Path: {connection.Value.FilePath}");
+                sb.AppendLine($"Line Number: {connection.Value.LineNumber}");
+                sb.AppendLine($"Member Name: {connection.Value.MemberName}");
+                sb.AppendLine();
             }
+
+            foreach (var transaction in transactions)
+            {
+                sb.AppendLine($"Instance: {nameof(transaction)}");
+                sb.AppendLine($"File Path: {transaction.Value.FilePath}");
+                sb.AppendLine($"Line Number: {transaction.Value.LineNumber}");
+                sb.AppendLine($"Member Name: {transaction.Value.MemberName}");
+                sb.AppendLine();
+            }
+
+            throw new Exception($"Possible connection/transaction leaking detected:\n\n{sb}");
         }
 
-        internal void ConnectionCreated(SqlConnection connection)
+        internal void ConnectionCreated(
+            SqlConnection connection,
+            [CallerFilePath] string filePath = "",
+            [CallerLineNumber] int lineNumber = 0,
+            [CallerMemberName] string memberName = "")
+
         {
-            connections.TryAdd(connection, null);
-            OnConnectionCreated?.Invoke(connection, new OnConnectionCreatedEventArgs());
+            connections.TryAdd(connection, (filePath, lineNumber, memberName));
         }
 
         internal void ConnectionDisposed(SqlConnection connection)
         {
             connections.TryRemove(connection, out _);
-            OnConnectionDisposed?.Invoke(connection, new OnConnectionDisposedEventArgs());
         }
 
-        internal void TransactionCreated(SqlTransaction transaction)
+        internal void TransactionCreated(
+            SqlTransaction transaction,
+            [CallerFilePath] string filePath = "",
+            [CallerLineNumber] int lineNumber = 0,
+            [CallerMemberName] string memberName = "")
         {
-            transactions.TryAdd(transaction, null);
-            OnTransactionCreated?.Invoke(transaction, new OnTransactionCreatedEventArgs());
+            transactions.TryAdd(transaction, (filePath, lineNumber, memberName));
         }
 
         internal void TransactionDisposed(SqlTransaction transaction)
         {
             transactions.TryRemove(transaction, out _);
-            OnTransactionDisposed?.Invoke(transaction, new OnTransactionDisposedEventArgs());
         }
-
-        public class OnConnectionCreatedEventArgs : EventArgs { }
-
-        public class OnConnectionDisposedEventArgs : EventArgs { }
-
-        public class OnTransactionCreatedEventArgs : EventArgs { }
-
-        public class OnTransactionDisposedEventArgs : EventArgs { }
     }
 }

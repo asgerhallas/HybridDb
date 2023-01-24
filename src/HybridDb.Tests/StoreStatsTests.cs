@@ -1,3 +1,4 @@
+using System;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -7,6 +8,27 @@ namespace HybridDb.Tests
     public class StoreStatsTests : HybridDbTests
     {
         public StoreStatsTests(ITestOutputHelper output) : base(output) { }
+
+        [Fact]
+        public void CheckLeaksException()
+        {
+            configuration.DisableBackgroundMigrations();
+
+            using var tx = store.BeginTransaction();
+
+            Should.Throw<Exception>(store.Stats.CheckLeaks,
+@"Possible connection/transaction leaking detected:
+
+Instance: connection
+File Path: C:\Git\HybridDb\src\HybridDb\SqlServerUsingGlobalTempTables.cs
+Line Number: 86
+Member Name: Connect
+
+Instance: transaction
+File Path: C:\Git\HybridDb\src\HybridDb\DocumentTransaction.cs
+Line Number: 30
+Member Name: .ctor");
+        }
 
         [Fact]
         public void GlobalTempTables()
@@ -54,13 +76,14 @@ namespace HybridDb.Tests
             documentStore.Stats.NumberOfUndisposedTransactions.ShouldBe(1);
 
             documentTransaction.Dispose();
-            documentTransaction = null;
 
             documentStore.Stats.NumberOfNumberUndisposedConnections.ShouldBe(0);
             documentStore.Stats.NumberOfUndisposedTransactions.ShouldBe(0);
 
             documentStore.Dispose();
-            documentStore = null;
+
+            documentStore.Stats.NumberOfNumberUndisposedConnections.ShouldBe(0);
+            documentStore.Stats.NumberOfUndisposedTransactions.ShouldBe(0);
         }
     }
 }

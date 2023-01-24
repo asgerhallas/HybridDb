@@ -22,7 +22,7 @@ namespace HybridDb.Tests
         readonly ConcurrentStack<Action> disposables;
 
         protected readonly ITestOutputHelper output;
-        protected readonly List<LogEvent> log = new List<LogEvent>();
+        protected readonly List<LogEvent> log = new();
         protected readonly ILogger logger;
         protected string connectionString;
         bool autoInitialize = true;
@@ -126,16 +126,15 @@ namespace HybridDb.Tests
 
             disposables.Push(() =>
             {
-                using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
-                {
-                    connection.Open();
+                using var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master");
 
-                    // Disposed connections are not actually closed, but returned to the connection pool. Thus there might
-                    // still be an open connection to the database when trying to remove it. We use the below command
-                    // to drop all connections before dropping the database. See the test HowAnEscalationToMSDTCCameToBe for details.
-                    connection.Execute($"ALTER DATABASE {uniqueDbName} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
-                    connection.Execute($"DROP DATABASE {uniqueDbName}");
-                }
+                connection.Open();
+
+                // Disposed connections are not actually closed, but returned to the connection pool. Thus there might
+                // still be an open connection to the database when trying to remove it. We use the below command
+                // to drop all connections before dropping the database. See the test HowAnEscalationToMSDTCCameToBe for details.
+                connection.Execute($"ALTER DATABASE {uniqueDbName} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
+                connection.Execute($"DROP DATABASE {uniqueDbName}");
             });
 
             activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration, autoInitialize)));
@@ -180,7 +179,7 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        readonly List<string> Ids = new List<string>();
+        readonly List<string> Ids = new();
 
         protected string Id(int index = 1) => Ids[index - 1];
 
@@ -200,10 +199,10 @@ namespace HybridDb.Tests
 
             if (activeStore.IsValueCreated)
             {
-                var stats = activeStore?.Value?.Stats;
+                var stats = activeStore.Value.Stats;
 
-                activeStore?.Value?.Dispose();
-                stats?.CheckLeaks();
+                activeStore.Value.Dispose();
+                stats.CheckLeaks();
             }
 
             Transaction.Current.ShouldBe(null);
@@ -293,7 +292,7 @@ namespace HybridDb.Tests
         public class ChangeDocumentAsJObject<T> : ChangeDocument<T>
         {
             public ChangeDocumentAsJObject(Action<JObject> change)
-                : base((session, serializer, row) =>
+                : base((_, serializer, row) =>
                 {
                     var jObject = (JObject)serializer.Deserialize(row.Get(DocumentTable.DocumentColumn), typeof(JObject));
 
