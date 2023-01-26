@@ -32,7 +32,7 @@ namespace HybridDb.Queue
         readonly MessageQueueOptions options;
         readonly IDisposable eventsSubscription;
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
-        readonly DedicatedThreadScheduler readerScheduler;
+        readonly DedicatedThreadScheduler mainLoopScheduler;
         readonly DedicatedThreadScheduler handlerScheduler;
 
         public Task MainLoop { get; }
@@ -58,6 +58,9 @@ namespace HybridDb.Queue
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
             cts = options.GetCancellationTokenSource();
+
+            mainLoopScheduler = new DedicatedThreadScheduler(1);
+            handlerScheduler = new DedicatedThreadScheduler(options.MaxConcurrency);
 
             MainLoop = Task.Factory
                 .StartNew(async () =>
@@ -98,7 +101,7 @@ namespace HybridDb.Queue
                                             release();
                                             DisposeTransaction(tx);
                                         }
-                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
+                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, handlerScheduler);
                                 }
                                 catch
                                 {
@@ -130,7 +133,7 @@ namespace HybridDb.Queue
                 },
                 cts.Token,
                 TaskCreationOptions.LongRunning,
-                TaskScheduler.Default)
+                mainLoopScheduler)
             .Unwrap()
             .ContinueWith(
                 t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
@@ -286,6 +289,8 @@ namespace HybridDb.Queue
             DisposeAllTransactions();
 
             eventsSubscription.Dispose();
+            handlerScheduler.Dispose();
+            mainLoopScheduler.Dispose();
         }
 
         public Task AwaitShutdown()
