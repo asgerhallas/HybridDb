@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Transactions;
@@ -43,6 +44,9 @@ namespace HybridDb
             if (numberOfManagedConnections > 0)
             {
                 store.Logger.LogWarning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
+
+                Debugger.Launch();
+
                 throw new Exception("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
             }
         }
@@ -54,7 +58,7 @@ namespace HybridDb
             return $"{prefix}{tablename}";
         }
 
-        public override ManagedConnection Connect(bool schema = false)
+        public override ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null)
         {
             if (schema)
             {
@@ -73,7 +77,11 @@ namespace HybridDb
             {
                 Interlocked.Increment(ref numberOfManagedConnections);
 
-                var connection = new SqlConnection(connectionString);
+                var finalConnectionString = connectionTimeout is { } timeout
+                    ? connectionString + $";Connection Timeout={timeout.TotalSeconds}"
+                    : connectionString;
+
+                var connection = new SqlConnection(finalConnectionString);
 
                 complete = connection.Dispose + complete;
                 dispose = connection.Dispose + dispose;
