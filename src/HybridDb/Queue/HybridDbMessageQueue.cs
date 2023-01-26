@@ -144,7 +144,7 @@ namespace HybridDb.Queue
         {
             cts.Token.ThrowIfCancellationRequested();
 
-            var tx = store.BeginTransaction(timeout: 1);
+            var tx = store.BeginTransaction(connectionTimeout: TimeSpan.FromSeconds(1));
 
             if (!txs.TryAdd(tx, 0))
                 throw new InvalidOperationException("Transaction could not be tracked.");
@@ -291,13 +291,6 @@ namespace HybridDb.Queue
             eventsSubscription.Dispose();
             handlerScheduler.Dispose();
             mainLoopScheduler.Dispose();
-        }
-
-        public Task AwaitShutdown()
-        {
-            if (!cts.IsCancellationRequested) throw new InvalidOperationException();
-            
-            return MainLoop;
         }
 
         public IDisposable Time(string text)

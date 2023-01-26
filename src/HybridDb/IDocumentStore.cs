@@ -15,8 +15,8 @@ namespace HybridDb
         void Initialize();
 
         IDocumentSession OpenSession(DocumentTransaction tx = null);
-        DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted, int timeout = 15);
-        DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted, int timeout = 15);
+        DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted, TimeSpan? connectionTimeout = null);
+        DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted, TimeSpan? connectionTimeout = null);
 
         void Execute(DdlCommand command);
         object Execute(DocumentTransaction tx, DmlCommand command);

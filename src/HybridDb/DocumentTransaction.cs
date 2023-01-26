@@ -18,14 +18,17 @@ namespace HybridDb
         readonly ManagedConnection managedConnection;
 
         public DocumentTransaction(
-            DocumentStore store, Guid commitId, IsolationLevel level, StoreStats storeStats,
-            int timeout = 15)
+            DocumentStore store, 
+            Guid commitId, 
+            IsolationLevel level, 
+            StoreStats storeStats,
+            TimeSpan? connectionTimeout = null)
         {
             Store = store;
 
             this.storeStats = storeStats;
 
-            managedConnection = store.Database.Connect(timeout: timeout);
+            managedConnection = store.Database.Connect(connectionTimeout: connectionTimeout);
             SqlConnection = managedConnection.Connection;
 
             if (Transaction.Current == null)

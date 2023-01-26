@@ -18,13 +18,17 @@ namespace HybridDb
 
         public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
 
-        public override ManagedConnection Connect(bool schema = false, int timeout = 15)
+        public override ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null)
         {
             Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
 
             try
             {
-                var connection = new SqlConnection(connectionString);
+                var finalConnectionString = connectionTimeout is { } timeout
+                    ? connectionString + $";Connection Timeout={timeout.TotalSeconds}"
+                    : connectionString;
+
+                var connection = new SqlConnection(finalConnectionString);
                 dispose += connection.Dispose;
 
                 Interlocked.Increment(ref numberOfManagedConnections);

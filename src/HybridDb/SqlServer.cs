@@ -23,7 +23,7 @@ namespace HybridDb
 
         public virtual void Initialize() { }
 
-        public abstract ManagedConnection Connect(bool schema = false, int timeout = 15);
+        public abstract ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null);
 
         public abstract Dictionary<string, List<string>> QuerySchema();
         public abstract string FormatTableName(string tablename);
