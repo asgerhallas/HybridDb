@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
@@ -29,6 +30,8 @@ namespace HybridDb.Queue
         readonly MessageQueueOptions options;
         readonly IDisposable eventsSubscription;
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
+        readonly DedicatedThreadScheduler mainLoopScheduler;
+        readonly DedicatedThreadScheduler handlerScheduler;
 
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
@@ -54,84 +57,92 @@ namespace HybridDb.Queue
 
             cts = options.GetCancellationTokenSource();
 
-            MainLoop = Task.Factory.StartNew(async () =>
+            mainLoopScheduler = new DedicatedThreadScheduler(1);
+            handlerScheduler = new DedicatedThreadScheduler(options.MaxConcurrency);
+
+            MainLoop = Task.Factory
+                .StartNew(async () =>
+                {
+                    events.OnNext(new QueueStarting());
+
+                    logger.LogInformation($@"
+                        Queue started. 
+                        Reading messages with version {options.Version} or older, 
+                        from topics '{string.Join("', '", options.InboxTopics)}'.
+                    ".Indent());
+
+                    using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
+
+                    while (!cts.Token.IsCancellationRequested)
                     {
-                        events.OnNext(new QueueStarting());
-
-                        logger.LogInformation($@"
-                            Queue started. 
-                            Reading messages with version {options.Version} or older, 
-                            from topics '{string.Join("', '", options.InboxTopics)}'.
-                        ".Indent());
-
-                        using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
-
-                        while (!cts.Token.IsCancellationRequested)
+                        try
                         {
+                            var release = await WaitAsync(semaphore);
+                                
                             try
                             {
-                                var release = await WaitAsync(semaphore);
-                                    
+                                var (tx, message) = await NextMessage();
+
                                 try
                                 {
-                                    var (tx, message) = await NextMessage();
-
-                                    try
+                                    await Task.Factory.StartNew(async () =>
                                     {
-                                        await Task.Factory.StartNew(async () =>
+                                        try
                                         {
-                                            try
-                                            {
-                                                await HandleMessage(tx, message);
-                                            }
-                                            finally
-                                            {
-                                                // open the gate for the next message, when this message is handled.
-                                                release();
-                                                DisposeTransaction(tx);
-                                            }
-                                        }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
-                                    }
-                                    catch
-                                    {
-                                        release();
-                                        DisposeTransaction(tx);
-                                        throw;
-                                    }
+                                            using var _ = Time("HandleMessage");
+
+                                            await HandleMessage(tx, message);
+                                        }
+                                        finally
+                                        {
+                                            // open the gate for the next message, when this message is handled.
+                                            release();
+                                            DisposeTransaction(tx);
+                                        }
+                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, handlerScheduler);
                                 }
                                 catch
                                 {
                                     release();
+                                    DisposeTransaction(tx);
                                     throw;
                                 }
                             }
-                            catch (TaskCanceledException)
+                            catch
                             {
-                            }
-                            catch (Exception exception)
-                            {
-                                events.OnNext(new QueueFailed(exception));
-
-                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                release();
+                                throw;
                             }
                         }
+                        catch (TaskCanceledException) { }
+                        catch (Exception exception)
+                        {
+                            events.OnNext(new QueueFailed(exception));
 
-                        foreach (var tx in txs) DisposeTransaction(tx.Key);
+                            logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
-                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
-                    },
-                    cts.Token,
-                    TaskCreationOptions.LongRunning,
-                    TaskScheduler.Default)
-                .Unwrap()
-                .ContinueWith(
-                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
-                    TaskContinuationOptions.OnlyOnFaulted);
+                            await Task.Delay(options.ExceptionBackoff, cts.Token);
+                        }
+                    }
+                    
+                    DisposeAllTransactions();
+
+                    logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
+                },
+                cts.Token,
+                TaskCreationOptions.LongRunning,
+                mainLoopScheduler)
+            .Unwrap()
+            .ContinueWith(
+                t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
+                TaskContinuationOptions.OnlyOnFaulted);
         }
 
         DocumentTransaction BeginTransaction()
         {
-            var tx = store.BeginTransaction();
+            cts.Token.ThrowIfCancellationRequested();
+
+            var tx = store.BeginTransaction(connectionTimeout: options.ConnectionTimeout);
 
             if (!txs.TryAdd(tx, 0))
                 throw new InvalidOperationException("Transaction could not be tracked.");
@@ -153,15 +164,25 @@ namespace HybridDb.Queue
             }
         }
 
+        void DisposeAllTransactions()
+        {
+            foreach (var tx in txs) DisposeTransaction(tx.Key);
+        }
+
         async Task<Action> WaitAsync(SemaphoreSlim semaphore)
         {
-            await semaphore.WaitAsync();
+            await semaphore.WaitAsync(cts.Token);
 
             var released = 0;
             
             return () =>
             {
                 if (Interlocked.Exchange(ref released, 1) == 1) return;
+                
+                // Release could be called after the main loop has ended, and the semaprhore has 
+                // been disposed, if a handler thread is still working during shutdown. We don't 
+                // wait for handlers to run to completion as it would risk the queue to hang during shutdown.
+                if (cts.IsCancellationRequested) return;
 
                 semaphore.Release();
             };
@@ -226,6 +247,8 @@ namespace HybridDb.Queue
             }
             catch (Exception exception)
             {
+                if (cts.IsCancellationRequested) return;
+
                 var failures = retries.AddOrUpdate(message.Id, key => 1, (key, current) => current + 1);
 
                 events.OnNext(new MessageFailed(context, message, exception, failures));
@@ -252,13 +275,23 @@ namespace HybridDb.Queue
         public void Dispose()
         {
             cts.Cancel();
-            
-            try { MainLoop.Wait(); }
-            catch (TaskCanceledException) { }
-            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex) { logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose."); }
+
+            using (Time("dispose, wait for shutdown"))
+                MainLoop.ContinueWith(x => x).Wait();
+
+            DisposeAllTransactions();
 
             eventsSubscription.Dispose();
+            handlerScheduler.Dispose();
+            mainLoopScheduler.Dispose();
+        }
+
+        public IDisposable Time(string text)
+        {
+            var startNew = Stopwatch.StartNew();
+
+            return Disposable.Create(() => store.Configuration.Logger
+                .LogDebug($"HybridDbMessageQueue: Timed {text}: {startNew.ElapsedMilliseconds}ms."));
         }
     }
 
