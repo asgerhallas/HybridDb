@@ -3,9 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,7 +121,7 @@ namespace HybridDb.Queue
 
                             logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
-                            await Task.Delay(TimeSpan.FromSeconds(15), cts.Token);
+                            await Task.Delay(options.ExceptionBackoff, cts.Token);
                         }
                     }
                     
@@ -144,7 +142,7 @@ namespace HybridDb.Queue
         {
             cts.Token.ThrowIfCancellationRequested();
 
-            var tx = store.BeginTransaction(connectionTimeout: TimeSpan.FromSeconds(1));
+            var tx = store.BeginTransaction(connectionTimeout: options.ConnectionTimeout);
 
             if (!txs.TryAdd(tx, 0))
                 throw new InvalidOperationException("Transaction could not be tracked.");
@@ -181,6 +179,9 @@ namespace HybridDb.Queue
             {
                 if (Interlocked.Exchange(ref released, 1) == 1) return;
                 
+                // Release could be called after the main loop has ended, and the semaprhore has 
+                // been disposed, if a handler thread is still working during shutdown. We don't 
+                // wait for handlers to run to completion as it would risk the queue to hang during shutdown.
                 if (cts.IsCancellationRequested) return;
 
                 semaphore.Release();
@@ -275,16 +276,8 @@ namespace HybridDb.Queue
         {
             cts.Cancel();
 
-            try
-            {
-                using var _ = Time("dispose");
-
+            using (Time("dispose, wait for shutdown"))
                 MainLoop.ContinueWith(x => x).Wait();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
 
             DisposeAllTransactions();
 
@@ -297,10 +290,8 @@ namespace HybridDb.Queue
         {
             var startNew = Stopwatch.StartNew();
 
-            return Disposable.Create(() =>
-            {
-                Debug.WriteLine($"{text}: " + startNew.ElapsedMilliseconds);
-            });
+            return Disposable.Create(() => store.Configuration.Logger
+                .LogDebug($"HybridDbMessageQueue: Timed {text}: {startNew.ElapsedMilliseconds}ms."));
         }
     }
 

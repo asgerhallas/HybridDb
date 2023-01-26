@@ -854,12 +854,10 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task FastAndFurious()
         {
-            var semaphoreSlim = new SemaphoreSlim(50);
+            // This test is to asses parallel runs of many queues, as we often do this in application testing.
+            // There's is no assertion, but it should run, handle and dispose all queues reasonably timely.
 
-            var started = 0;
-            var completed = 0;
-            var disposed = 0;
-            var failed = 0;
+            var semaphoreSlim = new SemaphoreSlim(50);
 
             void WriteLine(string s)
             {
@@ -871,8 +869,6 @@ namespace HybridDb.Tests.Queue
             {
                 var tableName = $"Queue{x}";
                 var subject = new ReplaySubject<int>();
-
-                Interlocked.Increment(ref started);
 
                 WriteLine($"[INFORMATION] #{x} Start");
                 try
@@ -911,23 +907,17 @@ namespace HybridDb.Tests.Queue
 
                         await Task.WhenAny(subject.ObserveOn(eventLoopScheduler).FirstAsync().ToTask(), queue.MainLoop);
 
-                        Interlocked.Increment(ref completed);
-
                         WriteLine($"[INFORMATION] #{x} Completed");
                     }
                     finally
                     {
                         documentStore.Dispose();
 
-                        Interlocked.Increment(ref disposed);
-
                         WriteLine($"[INFORMATION] #{x} Dispose");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Interlocked.Increment(ref failed);
-
                     WriteLine($"[ERROR] #{x} {ex.Message}");
                 }
                 finally
