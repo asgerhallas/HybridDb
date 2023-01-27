@@ -15,6 +15,7 @@ namespace HybridDb
             Configuration = configuration;
             Logger = configuration.Logger;
             TableMode = mode;
+            DocumentMigrationRunner = new DocumentMigrationRunner(this);
 
             switch (mode)
             {
@@ -36,6 +37,7 @@ namespace HybridDb
             Configuration = configuration;
             Logger = configuration.Logger;
             TableMode = store.TableMode;
+            DocumentMigrationRunner = new DocumentMigrationRunner(this);
             Database = store.Database;
 
             if (initialize) Initialize();
@@ -65,16 +67,23 @@ namespace HybridDb
         public static DocumentStore ForTesting(TableMode mode, Configuration configuration = null, bool initialize = true) => 
             new(mode, configuration ?? new Configuration(), initialize);
 
-        public void Dispose() => Database.Dispose();
+        public void Dispose()
+        {
+            DocumentMigrationRunner.Dispose();
+            Configuration.Dispose();
+            Database.Dispose();
+        }
 
         public IDatabase Database { get; }
         public ILogger Logger { get;  }
         public Configuration Configuration { get; }
         public TableMode TableMode { get; }
         public StoreStats Stats { get; } = new StoreStats();
+        public DocumentMigrationRunner DocumentMigrationRunner { get; }
 
         public bool IsInitialized { get; private set; }
         public DocumentMigrator Migrator { get; private set; }
+
         public Task DocumentMigration { get; private set; }
 
         public void Initialize()
@@ -92,7 +101,7 @@ namespace HybridDb
             // documents is permitted from this time on.
             IsInitialized = true;
 
-            DocumentMigration = new DocumentMigrationRunner().Run(this);
+            DocumentMigration = DocumentMigrationRunner.Run();
         }
 
         public IDocumentSession OpenSession(DocumentTransaction tx = null)

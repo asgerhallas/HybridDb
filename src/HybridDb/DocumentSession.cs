@@ -259,7 +259,7 @@ namespace HybridDb
                     {
                         var projections = CreateProjections(managedEntity);
 
-                        var configuredVersion = (int)projections[DocumentTable.VersionColumn];
+                        var configuredVersion = projections.Get(DocumentTable.VersionColumn);
                         var document = (string)projections[DocumentTable.DocumentColumn];
 
                         commands.Add(managedEntity, new InsertCommand(design.Table, key, projections));

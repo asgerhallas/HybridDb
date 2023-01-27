@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -14,17 +13,21 @@ namespace HybridDb
             CanBeTrustedToNeverReturnNull = true;
 
             return Expression.Lambda(
-                Expression.Convert(Visit(node.Body), typeof(object)), 
+                Expression.Convert(Visit(node.Body), typeof(object)),
                 node.Parameters);
         }
 
         protected override Expression VisitUnary(UnaryExpression node)
         {
             if (node.NodeType == ExpressionType.TypeAs)
+            {
                 CanBeTrustedToNeverReturnNull = false;
+            }
 
             if (node.NodeType == ExpressionType.Convert)
+            {
                 return Visit(node.Operand);
+            }
 
             return base.VisitUnary(node);
         }
@@ -32,7 +35,9 @@ namespace HybridDb
         protected override Expression VisitConstant(ConstantExpression node)
         {
             if (node.Value == null)
+            {
                 CanBeTrustedToNeverReturnNull = false;
+            }
 
             return node;
         }
@@ -43,9 +48,11 @@ namespace HybridDb
 
             // Check for extension method
             if (receiver == null && node.Method.IsDefined(typeof(ExtensionAttribute)))
+            {
                 receiver = node.Arguments[0];
+            }
 
-            var nullCheckedReceiver = receiver != null ? Visit(receiver): node;
+            var nullCheckedReceiver = receiver != null ? Visit(receiver) : node;
 
             if (node.Type.CanBeNull())
             {
@@ -72,14 +79,14 @@ namespace HybridDb
                 CanBeTrustedToNeverReturnNull = false;
             }
 
-            if (!CanBeNull(nullCheckedReceiver)/* && !node.Type.CanBeNull()*/)
+            if (!CanBeNull(nullCheckedReceiver) /* && !node.Type.CanBeNull()*/)
             {
                 return node;
             }
 
             return Expression.Condition(
-                Expression.ReferenceNotEqual(nullCheckedReceiver, Expression.Constant(null)), 
-                Expression.Convert(node, typeof (object)), 
+                Expression.ReferenceNotEqual(nullCheckedReceiver, Expression.Constant(null)),
+                Expression.Convert(node, typeof(object)),
                 Expression.Convert(Expression.Constant(null), typeof(object)));
         }
 
@@ -94,7 +101,7 @@ namespace HybridDb
         bool CanBeNull(Expression expression)
         {
             // We do not allow parameters to be null
-            return expression.NodeType != ExpressionType.Parameter && 
+            return expression.NodeType != ExpressionType.Parameter &&
                    expression.Type.CanBeNull();
         }
     }

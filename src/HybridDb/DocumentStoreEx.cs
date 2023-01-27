@@ -36,16 +36,15 @@ namespace HybridDb
             this IDocumentStore store, DocumentTable table, string @join, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
-            using (var tx = store.BeginTransaction())
-            {
-                var (queryStats, rows) = tx.Query<T>(table, @join, top1, @select, @where, window, @orderby, includeDeleted, parameters);
+            using var tx = store.BeginTransaction();
+            
+            var (queryStats, rows) = tx.Query<T>(table, join, top1, select, where, window, orderby, includeDeleted, parameters);
 
-                tx.Complete();
+            tx.Complete();
 
-                stats = queryStats;
+            stats = queryStats;
 
-                return rows;
-            }
+            return rows;
         }
 
         public static IEnumerable<QueryResult<T>> Query<T>(
@@ -87,14 +86,13 @@ namespace HybridDb
 
         public static T Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, T> func)
         {
-            using (var tx = store.BeginTransaction(isolationLevel))
-            {
-                var result = func(tx);
+            using var tx = store.BeginTransaction(isolationLevel);
+            
+            var result = func(tx);
 
-                tx.Complete();
+            tx.Complete();
 
-                return result;
-            }
+            return result;
         }
 
         public static Task<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, Task<T>> func) => 
@@ -102,14 +100,13 @@ namespace HybridDb
 
         public static async Task<T> Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, Task<T>> func)
         {
-            using (var tx = store.BeginTransaction(isolationLevel))
-            {
-                var result = await func(tx);
+            using var tx = store.BeginTransaction(isolationLevel);
+            
+            var result = await func(tx);
 
-                tx.Complete();
+            tx.Complete();
 
-                return result;
-            }
+            return result;
         }
 
         public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, IEnumerable<T>> func) => 
@@ -117,15 +114,14 @@ namespace HybridDb
 
         public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, IEnumerable<T>> func)
         {
-            using (var tx = store.BeginTransaction(isolationLevel))
+            using var tx = store.BeginTransaction(isolationLevel);
+            
+            foreach (var x in func(tx))
             {
-                foreach (var x in func(tx))
-                {
-                    yield return x;
-                }
-
-                tx.Complete();
+                yield return x;
             }
+
+            tx.Complete();
         }
     }
 }

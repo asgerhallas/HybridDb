@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Transactions;
@@ -44,7 +45,6 @@ namespace HybridDb
             {
                 store.Logger.LogWarning("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
 
-                //throw new Exception("A ManagedConnection was not properly disposed. You may be leaking sql connections or transactions.");
             }
         }
 

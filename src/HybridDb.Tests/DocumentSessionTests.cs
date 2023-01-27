@@ -360,7 +360,7 @@ namespace HybridDb.Tests
             var id = NewId();
             using (var session = store.OpenSession())
             {
-                var tx = store.BeginTransaction();
+                using var tx = store.BeginTransaction();
                 session.Advanced.Enlist(tx);
                 session.Advanced.Clear();
                 session.Advanced.DocumentTransaction.ShouldBe(null);
@@ -1300,7 +1300,7 @@ namespace HybridDb.Tests
                 session.Store(entity);
                 session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
                 {
-                    ["key"] = new List<string> { "value1", "value2" }
+                    ["key"] = new() { "value1", "value2" }
                 });
 
                 session.SaveChanges();
@@ -1311,7 +1311,7 @@ namespace HybridDb.Tests
                 var entity = session.Load<Entity>(id);
                 session.Advanced.SetMetadataFor(entity, new Dictionary<string, List<string>>
                 {
-                    ["another-key"] = new List<string> { "value" }
+                    ["another-key"] = new() { "value" }
                 });
                 session.SaveChanges();
             }

@@ -8,14 +8,14 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class Auto_AddVersionsNumbersToMessagesTests : HybridDbTests
+    public class Auto_AddColumnsToMessagesTests : HybridDbTests
     {
-        public Auto_AddVersionsNumbersToMessagesTests(ITestOutputHelper output) : base(output)
+        public Auto_AddColumnsToMessagesTests(ITestOutputHelper output) : base(output)
         {
         }
 
         [Fact]
-        public void AutoMigratesMessageQueueTable_AddVersion()
+        public void AddVersion()
         {
             var tablename = "messages";
             var tableNameFormatted = store.Database.FormatTableName(tablename);
@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Migrations
         }
         
         [Fact]
-        public void AutoMigratesMessageQueueTable_AddMetadata()
+        public void AddMetadata()
         {
             var tablename = "messages";
             var tableNameFormatted = store.Database.FormatTableName(tablename);

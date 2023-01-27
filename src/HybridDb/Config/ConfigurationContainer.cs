@@ -7,8 +7,9 @@ namespace HybridDb.Config
 {
     public class ConfigurationContainer : IContainerActivator, IDisposable
     {
-        readonly List<object> tracked = new List<object>();
-        readonly ConcurrentDictionary<Type, Lazy<object>> factories = new ConcurrentDictionary<Type, Lazy<object>>();
+        // Last inserted must be first disposed
+        readonly Stack<object> tracked = new();
+        readonly ConcurrentDictionary<Type, Lazy<object>> factories = new();
 
         public bool Register<T>(Func<IContainerActivator, T> factory, bool overwriteExisting = true)
         {
@@ -68,7 +69,7 @@ namespace HybridDb.Config
 
         T Track<T>(T obj)
         {
-            tracked.Add(obj);
+            tracked.Push(obj);
             return obj;
         }
     }

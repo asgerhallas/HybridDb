@@ -10,8 +10,10 @@ namespace HybridDb.Queue
 
         public EnqueueCommand(QueueTable table, HybridDbMessage message, Func<object, Guid, string> idGenerator = null)
         {
-            if (idGenerator == null && message.Id == null) throw new ArgumentException("Message id was null and no id generator was provided.");
-            if (message.Topic != null && string.IsNullOrWhiteSpace(message.Topic)) throw new ArgumentException("Message topic can not be empty or whitespace only.");
+            if (idGenerator == null && message.Id == null)
+                throw new ArgumentException("Message id was null and no id generator was provided.");
+            if (message.Topic != null && string.IsNullOrWhiteSpace(message.Topic))
+                throw new ArgumentException("Message topic can not be empty or whitespace only.");
 
             Table = table;
             Message = message with { Topic = message.Topic ?? DefaultTopic };
@@ -25,10 +27,10 @@ namespace HybridDb.Queue
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
         {
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
+            var tableName = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
-            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ?? 
+            var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ??
                      command.Message.Id;
 
             command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
@@ -37,14 +39,15 @@ namespace HybridDb.Queue
             {
                 tx.SqlConnection.Execute(@$"
                     set nocount on; 
-                    insert into {tablename} (Topic, Version, Id, CommitId, Discriminator, Message, Metadata) 
-                    values (@Topic, @Version, @Id, @CommitId, @Discriminator, @Message, @Metadata); 
+                    insert into {tableName} (Topic, Version, Id, [Order], CommitId, Discriminator, Message, Metadata) 
+                    values (@Topic, @Version, @Id, @Order, @CommitId, @Discriminator, @Message, @Metadata); 
                     set nocount off;",
                     new
                     {
                         command.Message.Topic,
                         Version = options.Version.ToString(),
                         Id = id,
+                        command.Message.Order,
                         tx.CommitId,
                         Discriminator = discriminator,
                         Message = serializer(command.Message.Payload),
@@ -54,8 +57,8 @@ namespace HybridDb.Queue
             }
             catch (SqlException e)
             {
-                // Enqueuing is idempotent. It should ignore exceptions from primary key violations and just not insert the message.
-                if (e.Number == 2627) return id;
+                // Enqueuing is idempotent. It should ignore exceptions from primary key or unique index violations.
+                if (e.Number is 2627 or 2601) return id;
 
                 throw;
             }

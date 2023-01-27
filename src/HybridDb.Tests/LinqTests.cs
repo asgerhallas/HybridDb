@@ -633,10 +633,14 @@ namespace HybridDb.Tests
 
         Query<T> Query<T>() where T : class
         {
-            var documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c => c.UseConnectionString(connectionString)));
-            var session = new DocumentSession(documentStore, documentStore.Configuration.Resolve<DocumentMigrator>());
+            var documentStore = Using(DocumentStore.ForTesting(TableMode.GlobalTempTables, c =>
+            {
+                c.UseConnectionString(connectionString);
+            }));
 
-            return new Query<T>(new QueryProvider(session, null));
+            var session = documentStore.OpenSession();
+
+            return new Query<T>(new QueryProvider((DocumentSession)session, null));
         }
 
         public class Entity
