@@ -135,17 +135,8 @@ namespace HybridDb.Migrations.Documents
         public void Dispose()
         {
             cts.Cancel();
-
-            try
-            {
-                loop.Wait();
-            }
-            catch (TaskCanceledException) { }
-            catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, $"{nameof(HybridDbMessageQueue)} threw an exception during dispose.");
-            }
+            
+            loop.ContinueWith(x => x).Wait();
         }
 
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)

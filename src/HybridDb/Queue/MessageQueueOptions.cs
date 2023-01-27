@@ -27,7 +27,5 @@ namespace HybridDb.Queue
             Replay = new ReplaySubject<IHybridDbQueueEvent>(window);
             return this;
         }
-
-        //public Func<T, T> Compose<T>(Func<T, T> a, Func<T, T> b) => x => b(a(x));
     }
 }
