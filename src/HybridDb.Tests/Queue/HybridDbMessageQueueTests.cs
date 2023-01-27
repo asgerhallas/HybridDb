@@ -952,8 +952,6 @@ namespace HybridDb.Tests.Queue
             // This test is to asses parallel runs of many queues, as we often do this in application testing.
             // There's is no assertion, but it should run, handle and dispose all queues reasonably timely.
 
-            var semaphoreSlim = new SemaphoreSlim(50);
-
             void WriteLine(string s)
             {
                 Debug.WriteLine(s);
@@ -968,8 +966,6 @@ namespace HybridDb.Tests.Queue
                 WriteLine($"[INFORMATION] #{x} Start");
                 try
                 {
-                    await semaphoreSlim.WaitAsync();
-
                     var documentStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, cfg =>
                     {
                         cfg.DisableBackgroundMigrations();
@@ -1014,10 +1010,6 @@ namespace HybridDb.Tests.Queue
                 catch (Exception ex)
                 {
                     WriteLine($"[ERROR] #{x} {ex.Message}");
-                }
-                finally
-                {
-                    semaphoreSlim.Release();
                 }
             }
 

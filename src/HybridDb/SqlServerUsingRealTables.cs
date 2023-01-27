@@ -20,15 +20,14 @@ namespace HybridDb
 
         public override ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null)
         {
+            var timeout = connectionTimeout ?? TimeSpan.FromSeconds(15);
+
             Action dispose = () => { Interlocked.Decrement(ref numberOfManagedConnections); };
 
             try
             {
-                var finalConnectionString = connectionTimeout is { } timeout
-                    ? connectionString + $";Connection Timeout={timeout.TotalSeconds}"
-                    : connectionString;
+                var connection = new SqlConnection(connectionString + $";Connection Timeout={timeout.TotalSeconds}");
 
-                var connection = new SqlConnection(finalConnectionString);
                 dispose += connection.Dispose;
 
                 Interlocked.Increment(ref numberOfManagedConnections);
