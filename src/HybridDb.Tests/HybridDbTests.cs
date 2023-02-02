@@ -110,11 +110,7 @@ namespace HybridDb.Tests
             {
                 connection.Open();
 
-                connection.Execute(string.Format(@"
-                    IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{0}')
-                    BEGIN
-                        CREATE DATABASE {0}
-                    END", uniqueDbName));
+                connection.Execute($@"CREATE DATABASE {uniqueDbName}");
             }
 
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
@@ -130,16 +126,15 @@ namespace HybridDb.Tests
             
             disposables.Push(() =>
             {
-                using (var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master"))
-                {
-                    connection.Open();
+                using var connection = new SqlConnection(GetConnectionString() + ";Initial Catalog=Master");
 
-                    // Disposed connections are not actually closed, but returned to the connection pool. Thus there might
-                    // still be an open connection to the database when trying to remove it. We use the below command
-                    // to drop all connections before dropping the database. See the test HowAnEscalationToMSDTCCameToBe for details.
-                    connection.Execute($"ALTER DATABASE {uniqueDbName} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
-                    connection.Execute($"DROP DATABASE {uniqueDbName}");
-                }
+                connection.Open();
+
+                // Disposed connections are not actually closed, but returned to the connection pool. Thus there might
+                // still be an open connection to the database when trying to remove it. We use the below command
+                // to drop all connections before dropping the database. See the test HowAnEscalationToMSDTCCameToBe for details.
+                connection.Execute($"ALTER DATABASE {uniqueDbName} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;");
+                connection.Execute($"DROP DATABASE {uniqueDbName}");
             });
 
             activeStore = new Lazy<DocumentStore>(() => Using(new DocumentStore(TableMode.RealTables, configuration, autoInitialize)));
