@@ -19,4 +19,4 @@ if ($head_is_tagged)
 # output the description without the trailing commit hash
 $match = ($git_describe | Select-String -pattern '(?<version>.+?)-(?<commit_number>[^-]+)-(?<commit_hash>[^-]+)$').Matches[0].Groups
 
-Write-Output $($match['version'].Value + "-dev." + $match['commit_number'].Value + "." + $match['commit_hash'].Value + "." + $args[0])
+Write-Output $($match['version'].Value + "-dev." + $args[0] + "." + $match['commit_number'].Value + "." + $args[1])
