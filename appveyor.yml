@@ -3,7 +3,7 @@
   configuration: Release
   image: Visual Studio 2019
   skip_branch_with_pr: true
-# Environment variables are truncated to the first line in appveyor (see https://github.com/appveyor/ci/issues/1688) 
+  # Environment variables are truncated to the first line in appveyor (see https://github.com/appveyor/ci/issues/1688) 
   # so we join these together as html - and it finally works. We take the message from the tag and use as release message.
   # Also comments in powershell scripts does not work: https://help.appveyor.com/discussions/problems/32779-powershell-comments-changes-the-script
   init:
@@ -15,6 +15,10 @@
       ./versionize.ps1 $env:APPVEYOR_REPO_BRANCH $env:APPVEYOR_BUILD_NUMBER | %{ Update-AppveyorBuild -Version $_ };
 
       $env:REPO_TAG_DESCRIPTION = (git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME | Where-Object {$_}) -join "<br />";
+
+      Write-Host $env:APPVEYOR_REPO_BRANCH;
+
+      Write-Host $env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH;
 
       Write-Host $env:REPO_TAG_DESCRIPTION;
 
