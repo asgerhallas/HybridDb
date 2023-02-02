@@ -18,6 +18,10 @@
 
       $env:REPO_TAG_DESCRIPTION = (git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME | Where-Object {$_}) -join "<br />";
 
+      Write-Host "Branch name: $env:BRANCH_NAME";
+
+      Write-Host "Tag name: $env:APPVEYOR_REPO_TAG_NAME";
+
       Write-Host "Tag description (for release notes): $env:REPO_TAG_DESCRIPTION";
 
   build_script:
