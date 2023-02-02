@@ -18,7 +18,7 @@
 
       $env:REPO_TAG_DESCRIPTION = (git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME | Where-Object {$_}) -join "<br />";
 
-      Write-Host "${Tag description (for release notes):} $env:REPO_TAG_DESCRIPTION";
+      Write-Host "Tag description (for release notes): $env:REPO_TAG_DESCRIPTION";
 
   build_script:
   - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
