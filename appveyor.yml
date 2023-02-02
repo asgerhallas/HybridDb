@@ -12,13 +12,17 @@
   - ps: >-
       $ErrorActionPreference = "Stop";
 
-      ./versionize.ps1 $env:APPVEYOR_REPO_BRANCH $env:APPVEYOR_BUILD_NUMBER | %{ Update-AppveyorBuild -Version $_ };
+      $env:BRANCH_NAME = ($env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH, $env:APPVEYOR_REPO_BRANCH -ne $null)[0];
+
+      ./versionize.ps1 $env:BRANCH_NAME $env:APPVEYOR_BUILD_NUMBER | %{ Update-AppveyorBuild -Version $_ };
 
       $env:REPO_TAG_DESCRIPTION = (git tag -l --format='%(contents)' $env:APPVEYOR_REPO_TAG_NAME | Where-Object {$_}) -join "<br />";
 
       Write-Host $env:APPVEYOR_REPO_BRANCH;
 
       Write-Host $env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH;
+
+      Write-Host $env:BRANCH_NAME;
 
       Write-Host $env:REPO_TAG_DESCRIPTION;
 
