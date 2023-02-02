@@ -110,7 +110,7 @@ namespace HybridDb.Tests
             {
                 connection.Open();
 
-                connection.Execute($@"CREATE DATABASE {uniqueDbName}");
+                connection.Execute($@"CREATE DATABASE {uniqueDbName}", commandTimeout: 120);
             }
 
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
