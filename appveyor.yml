@@ -3,11 +3,11 @@
   configuration: Release
   image: Visual Studio 2019
   skip_branch_with_pr: true
+  init:
+  - net start MSSQL$SQL2019
   # Environment variables are truncated to the first line in appveyor (see https://github.com/appveyor/ci/issues/1688) 
   # so we join these together as html - and it finally works. We take the message from the tag and use as release message.
   # Also comments in powershell scripts does not work: https://help.appveyor.com/discussions/problems/32779-powershell-comments-changes-the-script
-  init:
-  - net start MSSQL$SQL2019
   install:
   - ps: >-
       $ErrorActionPreference = "Stop";
@@ -43,9 +43,9 @@
     api_key:
       secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
   - provider: NuGet
-    server: https://ci.appveyor.com/nuget/energysystems/api/v2/package
+    server: https://nuget.pkg.github.com/asgerhallas/index.json
     api_key:
-      secure: qlX4fMpl/wxqFmnhp3tsebgc9CWNU//wGkYXeU9bshE=
+      secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
   - provider: GitHub
     release: $(APPVEYOR_BUILD_VERSION)
     tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
