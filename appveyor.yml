@@ -47,7 +47,7 @@
       APPVEYOR_REPO_TAG: false
     server: https://nuget.pkg.github.com/asgerhallas/index.json
     api_key:
-      secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
+      secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
   - provider: GitHub
     release: $(APPVEYOR_BUILD_VERSION)
     tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
