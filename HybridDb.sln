@@ -5,8 +5,6 @@ VisualStudioVersion = 17.3.32922.545
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HybridDb", "src\HybridDb\HybridDb.csproj", "{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HybridDb.NewtonsoftJson", "src\HybridDb.NewtonsoftJson\HybridDb.NewtonsoftJson.csproj", "{F2ED2005-DD8A-4487-9AA9-22FB242DBAFB}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HybridDb.Tests", "src\HybridDb.Tests\HybridDb.Tests.csproj", "{BD3002BF-212A-4630-8195-5B7FE1CCF063}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FB0A3551-B1FE-4704-825C-AF093C57F7F0}"
@@ -26,10 +24,6 @@ Global
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F2ED2005-DD8A-4487-9AA9-22FB242DBAFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F2ED2005-DD8A-4487-9AA9-22FB242DBAFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F2ED2005-DD8A-4487-9AA9-22FB242DBAFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F2ED2005-DD8A-4487-9AA9-22FB242DBAFB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Release|Any CPU.ActiveCfg = Release|Any CPU
