@@ -6,8 +6,7 @@ param (
 
 $ErrorActionPreference = "Stop";
 
-dotnet restore --verbosity n
-dotnet build --verbosity n --no-restore -p:Version=$Version
+dotnet build --verbosity n -c Release -p:Version=$Version
 #dotnet test --no-build
 
 if (!$NugetApiKey) {
