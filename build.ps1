@@ -6,7 +6,7 @@ param (
 
 $ErrorActionPreference = "Stop";
 
-dotnet build --verbosity n -c Release -p:Version=$Version
+dotnet build -c Release -p:Version=$Version
 #dotnet test --no-build
 
 if (!$NugetApiKey) {
@@ -14,4 +14,4 @@ if (!$NugetApiKey) {
 	exit(0);
 }
 
-dotnet pack src/HybridDb/ -c Release --verbosity n --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
+dotnet pack src/HybridDb/ -c Release --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
