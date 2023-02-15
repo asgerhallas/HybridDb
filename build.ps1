@@ -1,12 +1,15 @@
 [CmdLetbinding()]
 param (
 	[Parameter(Mandatory)][string]$Version,
-	[Parameter(Mandatory)][string]$NugetApiKey,
+	[Parameter(Mandatory)][string]$NugetApiKey
 )
 
 $ErrorActionPreference = "Stop";
 
-dotnet build -p:Version=$Version
+Write-Host "Build"
+dotnet build --verbosity n -p:Version=$Version
+
+Write-Host "Test"
 #dotnet test --no-build
 
 if (!$NugetApiKey) {
@@ -14,4 +17,5 @@ if (!$NugetApiKey) {
 	exit(0);
 }
 
-dotnet pack src/HybridDb/ -c Release --no-build --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
+Write-Host "Pack Nuget"
+dotnet pack src/HybridDb/ -c Release --verbosity n --no-build --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
