@@ -14,4 +14,4 @@ if (!$NugetApiKey) {
 	exit(0);
 }
 
-dotnet pack src/HybridDb/ -c Release --verbosity n --no-build --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
+dotnet pack src/HybridDb/ -c Release --verbosity n --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
