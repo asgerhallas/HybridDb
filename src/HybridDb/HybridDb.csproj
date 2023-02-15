@@ -7,6 +7,7 @@
     <Copyright>Copyright 2013</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
+    <Owner>asgerhallas</Owner>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <LangVersion>9</LangVersion>
