@@ -1,7 +1,7 @@
 [CmdLetbinding()]
 param (
 	[Parameter(Mandatory)][string]$Version,
-	[switch]$IsForeignPullRequest = $false
+	[Parameter(Mandatory)][string]$NugetApiKey,
 )
 
 $ErrorActionPreference = "Stop";
@@ -9,10 +9,9 @@ $ErrorActionPreference = "Stop";
 dotnet build -p:Version=$Version
 #dotnet test --no-build
 
-if ($IsForeignPullRequest) {
-	Write-Host "Not safe";
+if (!$NugetApiKey) {
+	Write-Host "Not safe to pack nugets from external pull request.";
 	exit(0);
 }
 
 dotnet pack src/HybridDb/ -c Release --no-build --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=$Version
-
