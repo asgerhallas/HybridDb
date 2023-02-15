@@ -22,7 +22,7 @@ install:
 
 build_script:
 - ps: >-
-    ./build.ps1 %APPVEYOR_BUILD_VERSION% $env:NUGET_API_KEY
+    ./build.ps1 $env:APPVEYOR_BUILD_VERSION $env:NUGET_API_KEY
 artifacts:
 - path: '*/**/*.nupkg'
 deploy:
