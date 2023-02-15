@@ -33,21 +33,21 @@ deploy:
 #  api_key:
 #    secure: mxoXEn4ViOiSmiDLbqcyGpZsm93dWpqug3c+/H6Ra7w2WOCpsTLjAJSpapHheUkh
 - provider: NuGet
-name: Github Nuget
-server: https://nuget.pkg.github.com/asgerhallas/index.json
-username: asgerhallas
-api_key:
-    secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
-#- provider: GitHub
-#  name: Github Releases
-#  release: $(APPVEYOR_BUILD_VERSION)
-#  tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
-#  description: $(REPO_TAG_DESCRIPTION)
-#  auth_token:
-#    secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
-#  artifact: /.*\.nupkg/
-#  draft: false
-#  prerelease: false
-#  on:
-#    # branch: master    # right now we can't restrict the release to master only as tags are counted as branches too. We'll delete the prereleases manually.
-#    APPVEYOR_REPO_TAG: true
+  name: Github Nuget
+  server: https://nuget.pkg.github.com/asgerhallas/index.json
+  username: asgerhallas
+  api_key:
+      secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
+  #- provider: GitHub
+  #  name: Github Releases
+  #  release: $(APPVEYOR_BUILD_VERSION)
+  #  tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
+  #  description: $(REPO_TAG_DESCRIPTION)
+  #  auth_token:
+  #    secure: AkvDrkmH7Rioub/XKuzoRza1/F/VDkw59noaQPHw8UF2+NI0JIyR5QsU86O73n+L
+  #  artifact: /.*\.nupkg/
+  #  draft: false
+  #  prerelease: false
+  #  on:
+  #    # branch: master    # right now we can't restrict the release to master only as tags are counted as branches too. We'll delete the prereleases manually.
+  #    APPVEYOR_REPO_TAG: true
