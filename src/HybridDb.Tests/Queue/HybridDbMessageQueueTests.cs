@@ -15,6 +15,7 @@ using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Queue;
+using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Management.XEvent;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
@@ -23,6 +24,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static BoyBoy.BoyBoy;
 using static HybridDb.Helpers;
+using SqlException = System.Data.SqlClient.SqlException;
 
 namespace HybridDb.Tests.Queue
 {
@@ -408,8 +410,10 @@ namespace HybridDb.Tests.Queue
             ).ShouldBe(null);
         }
 
-        [Fact]
-        public async Task Poison_GoesToErrorTopic_NothingElseIsSaved_EvenForExceptionsDuringSaveChanges()
+        [Theory]
+        [InlineData(null, typeof(SqlException))]
+        [InlineData("5301a0b6-48bd-49ae-bd69-493e4fc802db", typeof(ConcurrencyException))]
+        public async Task Poison_GoesToErrorTopic_NothingElseIsSaved_EvenForExceptionsDuringSaveChanges(string etag, Type exceptionType)
         {
             var queue = StartQueue();
 
@@ -427,8 +431,16 @@ namespace HybridDb.Tests.Queue
                         session.Store("my-key2", new Entity());
                     }
 
-                    // This will fail with a primary key violation during SaveChanges
-                    session.Store("my-key1", new Entity());
+                    if (etag == null)
+                    {
+                        // This will fail with a primary key violation during SaveChanges
+                        session.Store("my-key1", new Entity());
+                    }
+                    else
+                    {
+                        // This will fail with ConcurrencyException during SaveChanges
+                        session.Store("my-key1", new Entity(), new Guid(etag));
+                    }
                 });
 
             using (var session = store.OpenSession())
@@ -441,10 +453,12 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<object>();
 
-            await queue.ReplayedEvents
+            var poisonMessage = await queue.ReplayedEvents
                 .Do(messages.Add)
                 .OfType<PoisonMessage>()
                 .FirstAsync();
+
+            poisonMessage.Exception.ShouldBeOfType(exceptionType);
 
             using var session2 = store.OpenSession();
 
