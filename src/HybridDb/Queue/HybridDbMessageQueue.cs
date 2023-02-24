@@ -245,6 +245,8 @@ namespace HybridDb.Queue
             {
                 events.OnNext(new MessageReceived(context, message));
 
+                tx.SqlTransaction.Save("MessageReceived");
+
                 using var session = options.CreateSession(store);
 
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
@@ -268,7 +270,6 @@ namespace HybridDb.Queue
                 
                 var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
-
                 events.OnNext(new MessageFailed(context, message, exception, failures));
 
                 if (failures < 5)
@@ -277,6 +278,8 @@ namespace HybridDb.Queue
 
                     return;
                 }
+
+                tx.SqlTransaction.Rollback("MessageReceived");
 
                 logger.LogError(exception,
                     "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.",

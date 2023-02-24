@@ -10,15 +10,18 @@ using System.Reactive.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Queue;
+using Microsoft.SqlServer.Management.XEvent;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using static BoyBoy.BoyBoy;
 using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Queue
@@ -343,11 +346,123 @@ namespace HybridDb.Tests.Queue
                 .OfType<PoisonMessage>()
                 .FirstAsync();
 
+            // PoisonMessage is found on the error topic
             var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
                 new List<string> { "errors/default" }));
 
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
+
+            // Original message is removed
+            store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "default" })
+            ).ShouldBe(null);
+        }
+
+        [Fact]
+        public async Task Poison_GoesToErrorTopic_NothingElseIsSaved()
+        {
+            var queue = StartQueue();
+
+            A.CallTo(handler).WithReturnType<Task>()
+                .Invokes(x =>
+                {
+                    var session = x.Arguments.Get<IDocumentSession>(0);
+
+                    session.Store("my-key", new Entity());
+
+                    throw new ArgumentException();
+                });
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Failing command"));
+
+                session.SaveChanges();
+            }
+
+            var messages = new List<object>();
+
+            await queue.ReplayedEvents
+                .Do(messages.Add)
+                .OfType<PoisonMessage>()
+                .FirstAsync();
+
+            using var session2 = store.OpenSession();
+
+            // Nothing is saved
+            session2.Load<Entity>("my-key").ShouldBe(null);
+
+            // PoisonMessage is found on the error topic
+            var message1 = store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "errors/default" }));
+
+            ((MyMessage)message1.Payload).Text.ShouldBe("Failing command");
+
+            // Original message is removed
+            store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "default" })
+            ).ShouldBe(null);
+        }
+
+        [Fact]
+        public async Task Poison_GoesToErrorTopic_NothingElseIsSaved_EvenForExceptionsDuringSaveChanges()
+        {
+            var queue = StartQueue();
+
+            var i = 0;
+
+            A.CallTo(handler).WithReturnType<Task>()
+                .Invokes(x =>
+                {
+                    var session = x.Arguments.Get<IDocumentSession>(0);
+
+                    i++;
+                    if (i == 5)
+                    {
+                        // This should not be saved when my-key1 is not saved
+                        session.Store("my-key2", new Entity());
+                    }
+
+                    // This will fail with a primary key violation during SaveChanges
+                    session.Store("my-key1", new Entity());
+                });
+
+            using (var session = store.OpenSession())
+            {
+                session.Store("my-key1", new Entity());
+                session.Enqueue(new MyMessage("Failing command"));
+
+                session.SaveChanges();
+            }
+
+            var messages = new List<object>();
+
+            await queue.ReplayedEvents
+                .Do(messages.Add)
+                .OfType<PoisonMessage>()
+                .FirstAsync();
+
+            using var session2 = store.OpenSession();
+
+            // Nothing is saved
+            session2.Load<Entity>("my-key2").ShouldBe(null);
+
+            // PoisonMessage is found on the error topic
+            var message1 = store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "errors/default" }));
+
+            ((MyMessage)message1.Payload).Text.ShouldBe("Failing command");
+
+            // Original message is removed
+            store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new List<string> { "default" })
+            ).ShouldBe(null);
         }
 
         [Fact]
