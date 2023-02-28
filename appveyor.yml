@@ -31,7 +31,7 @@ deploy:
   on:
     APPVEYOR_REPO_TAG: true
   api_key:
-  secure: mRE03twv4zjzuoSdRkStrQe57OayPljdIgSa7LVMzK20ZPJTi/+L8wdqb1dC7Cak
+    secure: mRE03twv4zjzuoSdRkStrQe57OayPljdIgSa7LVMzK20ZPJTi/+L8wdqb1dC7Cak
 - provider: GitHub
   release: $(APPVEYOR_BUILD_VERSION)
   tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively
