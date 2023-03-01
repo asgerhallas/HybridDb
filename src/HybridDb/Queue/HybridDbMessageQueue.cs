@@ -31,6 +31,7 @@ namespace HybridDb.Queue
         readonly MessageQueueOptions options;
         readonly Stack<IDisposable> disposables = new();
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
+        readonly SemaphoreSlim localEnqueues = new(0);
 
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
@@ -51,9 +52,6 @@ namespace HybridDb.Queue
 
             Events = events;
 
-            var mainLoopScheduler = Using(new DedicatedThreadScheduler(1));
-            var handlerScheduler = Using(new DedicatedThreadScheduler(options.MaxConcurrency));
-
             if (options.Replay != null)
             {
                 Using(events.Subscribe(options.Replay));
@@ -65,6 +63,20 @@ namespace HybridDb.Queue
 
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
+
+            if (options.UseLocalEnqueueTrigger)
+            {
+                store.Configuration.HandleEvents(x =>
+                {
+                    if (x is not SaveChanges_AfterExecuteCommands saved) return;
+
+                    var enqueueCommands = saved.ExecutedCommands.Keys.OfType<EnqueueCommand>().Count();
+
+                    if (enqueueCommands <= 0) return;
+
+                    localEnqueues.Release(enqueueCommands);
+                });
+            }
 
             cts = options.GetCancellationTokenSource();
 
@@ -107,7 +119,7 @@ namespace HybridDb.Queue
                                             release();
                                             DisposeTransaction(tx);
                                         }
-                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, handlerScheduler);
+                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
                                 }
                                 catch
                                 {
@@ -139,7 +151,7 @@ namespace HybridDb.Queue
                 },
                 cts.Token,
                 TaskCreationOptions.LongRunning,
-                mainLoopScheduler)
+                TaskScheduler.Default)
             .Unwrap()
             .ContinueWith(
                 t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
@@ -223,7 +235,7 @@ namespace HybridDb.Queue
 
                     events.OnNext(new QueueIdle());
 
-                    await Task.Delay(options.IdleDelay, cts.Token).ConfigureAwait(false);
+                    await localEnqueues.WaitAsync(options.IdleDelay, cts.Token);
 
                     tx = BeginTransaction();
                 }

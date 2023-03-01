@@ -14,7 +14,8 @@ namespace HybridDb.Queue
         public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(1);
         public int MaxConcurrency { get; set; } = 4;
         public string TableName { get; set; } = "messages";
-        
+        public bool UseLocalEnqueueTrigger { get; set; } = true;
+
         public List<string> InboxTopics { get; set; } = new() { EnqueueCommand.DefaultTopic };
 
         public Func<IDocumentStore, IDocumentSession> CreateSession { get; set; } = store => store.OpenSession();

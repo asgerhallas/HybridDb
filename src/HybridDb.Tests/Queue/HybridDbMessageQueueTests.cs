@@ -15,14 +15,11 @@ using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Queue;
-using Microsoft.Data.SqlClient;
-using Microsoft.SqlServer.Management.XEvent;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
-using static BoyBoy.BoyBoy;
 using static HybridDb.Helpers;
 using SqlException = System.Data.SqlClient.SqlException;
 
@@ -701,9 +698,9 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task MultipleReaders()
         {
-            var queue1 = StartQueue();
-            var (queue2, _) = StartOtherQueue();
-            var (queue3, _) = StartOtherQueue();
+            var queue1 = StartQueue(new MessageQueueOptions { UseLocalEnqueueTrigger = false });
+            var (queue2, _) = StartOtherQueue(new MessageQueueOptions { UseLocalEnqueueTrigger = false });
+            var (queue3, _) = StartOtherQueue(new MessageQueueOptions { UseLocalEnqueueTrigger = false });
 
             using (var session = store.OpenSession())
             {
@@ -1073,6 +1070,45 @@ namespace HybridDb.Tests.Queue
                     .GetPartitions(maxDoP)
                     .AsParallel()
                     .Select(AwaitPartition));
+        }
+
+        [Fact]
+        public async Task LocalTriggering()
+        {
+            configuration.UseMessageQueue(
+                new MessageQueueOptions
+                {
+                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
+                    MaxConcurrency = 1
+                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            var subject = new Subject<object>();
+
+            Using(new HybridDbMessageQueue(store, (_, message) =>
+            {
+                subject.OnNext(message.Payload);
+                return Task.CompletedTask;
+            }));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command 1"));
+                session.Enqueue("id2", new MyMessage("Some command 2"));
+                session.Enqueue("id3", new MyMessage("Some command 3"));
+                session.SaveChanges();
+            }
+
+            var result = await subject
+                .Take(3)
+                .Timeout(TimeSpan.FromSeconds(10))
+                .Cast<MyMessage>()
+                .Select(x => x.Text)
+                .ToList()
+                .FirstAsync();
+
+            result[0].ShouldBe("Some command 1");
+            result[1].ShouldBe("Some command 2");
+            result[2].ShouldBe("Some command 3");
         }
 
         [Fact]

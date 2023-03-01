@@ -27,6 +27,8 @@ namespace HybridDb.Config
         readonly ConcurrentDictionary<string, Table> tables;
         readonly List<DocumentDesign> documentDesigns;
 
+        Action<IHybridDbEvent> eventHandlers = _ => { };
+
         public Configuration()
         {
             ConnectionString = "data source=.;Integrated Security=True";
@@ -88,25 +90,8 @@ namespace HybridDb.Config
 
         static string GetTableNameByConventionFor(Type type) => Inflector.Inflector.Pluralize(type.Name);
 
-        public void HandleEvents(Action<IHybridDbEvent> handler)
-        {
-            if (!Register(_ => handler, overwriteExisting: false))
-            {
-                Decorate<Action<IHybridDbEvent>>((_, decoratee) => e =>
-                {
-                    decoratee(e);
-                    handler(e);
-                });
-            }
-        }
-
-        public void Notify(IHybridDbEvent @event)
-        {
-            if (TryResolve<Action<IHybridDbEvent>>(out var handler))
-            {
-                handler(@event);
-            }
-        }
+        public void HandleEvents(Action<IHybridDbEvent> handler) => eventHandlers += handler;
+        public void Notify(IHybridDbEvent @event) => eventHandlers(@event);
 
         internal void Initialize()
         {
