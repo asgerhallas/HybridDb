@@ -29,9 +29,9 @@ namespace HybridDb.Queue
         readonly ILogger logger;
         readonly QueueTable table;
         readonly MessageQueueOptions options;
-        readonly Stack<IDisposable> disposables = new();
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
         readonly SemaphoreSlim localEnqueues = new(0);
+        readonly IDisposable subscribeDisposable;
 
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
@@ -54,12 +54,17 @@ namespace HybridDb.Queue
 
             if (options.Replay != null)
             {
-                Using(events.Subscribe(options.Replay));
+                // unsubscribes when events are completed (in Dispose)
+                events.Subscribe(options.Replay);
 
                 ReplayedEvents = options.Replay;
             }
 
-            Using(options.Subscribe(events));
+            // if options are set up to return a disposable that is 
+            // not a subscription to events, then it won't automatically
+            // be disposed when events are completed. So we need to 
+            // keep the disposable and call on Dispose.
+            subscribeDisposable = options.Subscribe(events);
 
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
@@ -70,7 +75,9 @@ namespace HybridDb.Queue
                 {
                     if (x is not SaveChanges_AfterExecuteCommands saved) return;
 
-                    var enqueueCommands = saved.ExecutedCommands.Keys.OfType<EnqueueCommand>().Count();
+                    var enqueueCommands = saved.ExecutedCommands.Keys
+                        .OfType<EnqueueCommand>()
+                        .Count(command => options.InboxTopics.Contains(command.Message.Topic));
 
                     if (enqueueCommands <= 0) return;
 
@@ -98,7 +105,7 @@ namespace HybridDb.Queue
                         try
                         {
                             var release = await WaitAsync(semaphore);
-                                
+
                             try
                             {
                                 var (tx, message) = await NextMessage();
@@ -134,7 +141,10 @@ namespace HybridDb.Queue
                                 throw;
                             }
                         }
-                        catch (TaskCanceledException) { }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
                         catch (Exception exception)
                         {
                             events.OnNext(new QueueFailed(exception));
@@ -160,12 +170,6 @@ namespace HybridDb.Queue
 
         static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) => 
             throw new InvalidOperationException("You must set MessageQueueOptions.Replay if you want to subscribe to replayed events.");
-
-        T Using<T>(T disposable) where T:IDisposable
-        {
-            disposables.Push(disposable);
-            return disposable;
-        }
 
         DocumentTransaction BeginTransaction()
         {
@@ -225,17 +229,24 @@ namespace HybridDb.Queue
             {
                 while (!cts.IsCancellationRequested)
                 {
+                    events.OnNext(new QueuePolling());
+
                     // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
                     var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
 
-                    if (message != null) return (tx, message);
+                    if (message != null)
+                    {
+                        await localEnqueues.WaitAsync(0);
+
+                        return (tx, message);
+                    }
 
                     DisposeTransaction(tx);
 
                     events.OnNext(new QueueIdle());
 
-                    await localEnqueues.WaitAsync(options.IdleDelay, cts.Token);
+                    await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
                     tx = BeginTransaction();
                 }
@@ -312,12 +323,14 @@ namespace HybridDb.Queue
             cts.Cancel();
 
             using (Time("dispose, wait for shutdown"))
+            {
                 MainLoop.ContinueWith(x => x).Wait();
+            }
 
             DisposeAllTransactions();
 
-            foreach (var disposable in disposables) 
-                disposable.Dispose();
+            events.OnCompleted();
+            subscribeDisposable.Dispose();
         }
 
         public IDisposable Time(string text)

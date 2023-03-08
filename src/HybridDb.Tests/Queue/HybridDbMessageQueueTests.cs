@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Concurrency;
+using System.Reactive.Joins;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
@@ -37,7 +39,10 @@ namespace HybridDb.Tests.Queue
         HybridDbMessageQueue StartQueue(MessageQueueOptions options = null)
         {
             configuration.UseMessageQueue(
-                (options ?? new MessageQueueOptions())
+                (options ?? new MessageQueueOptions
+                {
+                    UseLocalEnqueueTrigger = false
+                })
                 .ReplayEvents(TimeSpan.FromSeconds(60)));
 
             return Using(new HybridDbMessageQueue(store, handler));
@@ -59,7 +64,10 @@ namespace HybridDb.Tests.Queue
             {
                 newConfiguration.UseConnectionString(connectionString);
                 newConfiguration.UseMessageQueue(
-                    (options ?? new MessageQueueOptions())
+                    (options ?? new MessageQueueOptions
+                    {
+                        UseLocalEnqueueTrigger = false
+                    })
                     .ReplayEvents(TimeSpan.FromSeconds(60)));
             });
 
@@ -1082,13 +1090,55 @@ namespace HybridDb.Tests.Queue
                     MaxConcurrency = 1
                 }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            var subject = new Subject<object>();
+            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            Using(new HybridDbMessageQueue(store, (_, message) =>
+            using (var session = store.OpenSession())
             {
-                subject.OnNext(message.Payload);
-                return Task.CompletedTask;
-            }));
+                session.Enqueue("id1", new MyMessage("Some command 1"));
+                session.SaveChanges();
+            }
+
+            // wait until we are idling
+            await queue.ReplayedEvents
+                .OfType<QueueIdle>()
+                .Take(2)
+                .ToList()
+                .FirstAsync();
+           
+            queue.Dispose();
+
+            var events = await queue.ReplayedEvents.ToList().FirstAsync();
+
+            output.WriteLine(string.Join(", ", events.Select(x => x.GetType().Name)));
+
+            events.Select(x => x.GetType().Name)
+                .ShouldBeLike(
+                    nameof(QueueStarting),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle),
+                    nameof(QueuePolling),
+                    nameof(MessageReceived),
+                    nameof(MessageHandling),
+                    nameof(MessageHandled),
+                    nameof(MessageCommitted),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle));
+        }
+
+        [Fact]
+        public async Task LocalTriggering_Many()
+        {
+            configuration.UseMessageQueue(
+                new MessageQueueOptions
+                {
+                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
+                    MaxConcurrency = 1
+                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+            
+            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+
+            // wait until we are idling
+            await queue.ReplayedEvents.OfType<QueueIdle>().Take(1).ToList().FirstAsync();
 
             using (var session = store.OpenSession())
             {
@@ -1098,17 +1148,123 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var result = await subject
-                .Take(3)
-                .Timeout(TimeSpan.FromSeconds(10))
-                .Cast<MyMessage>()
-                .Select(x => x.Text)
+            // wait until we are idling
+            await queue.ReplayedEvents
+                .OfType<QueueIdle>()
+                .Take(2)
+                .ToList()
+                .ObserveOn(TaskPoolScheduler.Default)
+                .FirstAsync();
+
+            queue.Dispose();
+
+            var events = await queue.ReplayedEvents.ToList().FirstAsync();
+
+            events.Select(x => x.GetType().Name)
+                .ShouldBeLike(
+                    nameof(QueueStarting),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle),
+                    nameof(QueuePolling),
+                    nameof(MessageReceived),
+                    nameof(MessageHandling),
+                    nameof(MessageHandled),
+                    nameof(MessageCommitted),
+                    nameof(QueuePolling),
+                    nameof(MessageReceived),
+                    nameof(MessageHandling),
+                    nameof(MessageHandled),
+                    nameof(MessageCommitted),
+                    nameof(QueuePolling),
+                    nameof(MessageReceived),
+                    nameof(MessageHandling),
+                    nameof(MessageHandled),
+                    nameof(MessageCommitted),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle));
+        }
+
+
+        [Fact]
+        public async Task LocalTriggering_Topics()
+        {
+            configuration.UseMessageQueue(
+                new MessageQueueOptions
+                {
+                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
+                    MaxConcurrency = 1,
+                    InboxTopics = { "topic1" }
+                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+
+            var untilIdle = await queue.ReplayedEvents.TakeUntil(x => x is QueueIdle).Count().FirstAsync();
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command 1"), "topic1");
+                session.SaveChanges();
+            }
+
+            await queue.ReplayedEvents.Skip(untilIdle).TakeUntil(x => x is QueueIdle).LastAsync();
+
+            queue.Dispose();
+
+            var events = await queue.ReplayedEvents.ToList().FirstAsync();
+
+            events.Select(x => x.GetType().Name)
+                .ShouldBeLike(
+                    nameof(QueueStarting),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle),
+                    nameof(QueuePolling),
+                    nameof(MessageReceived),
+                    nameof(MessageHandling),
+                    nameof(MessageHandled),
+                    nameof(MessageCommitted),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle));
+        }
+
+        [Fact]
+        public async Task LocalTriggering_NotOtherTopics()
+        {
+            configuration.UseMessageQueue(
+                new MessageQueueOptions
+                {
+                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
+                    MaxConcurrency = 1,
+                    InboxTopics = {"topic1"}
+                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+
+            // wait until we are idling
+            var untilIdle = await queue.ReplayedEvents
+                .TakeUntil(x => x is QueueIdle)
                 .ToList()
                 .FirstAsync();
 
-            result[0].ShouldBe("Some command 1");
-            result[1].ShouldBe("Some command 2");
-            result[2].ShouldBe("Some command 3");
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command 1"), "topics2");
+                session.SaveChanges();
+            }
+
+            Should.Throw<Exception>(async () =>
+                await queue.ReplayedEvents.Skip(untilIdle.Count)
+                    .Timeout(TimeSpan.FromSeconds(2))
+                    .FirstAsync());
+
+            queue.Dispose();
+
+            var events = await queue.ReplayedEvents.ToList().FirstAsync();
+
+            events.Select(x => x.GetType().Name)
+                .ShouldBeLike(
+                    nameof(QueueStarting),
+                    nameof(QueuePolling),
+                    nameof(QueueIdle));
         }
 
         [Fact]

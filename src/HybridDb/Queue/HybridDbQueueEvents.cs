@@ -11,6 +11,8 @@ namespace HybridDb.Queue
     public record MessageFailed(MessageContext Context, HybridDbMessage Message, Exception Exception, int NumberOfFailures) : IHybridDbQueueEvent;
     public record PoisonMessage(MessageContext Context, HybridDbMessage Message, Exception Exception) : IHybridDbQueueEvent;
     public record QueueStarting : IHybridDbQueueEvent;
+    public record QueueStopping : IHybridDbQueueEvent;
+    public record QueuePolling : IHybridDbQueueEvent;
     public record QueueIdle : IHybridDbQueueEvent;
     public record QueueFailed(Exception Exception) : IHybridDbQueueEvent;
 }
