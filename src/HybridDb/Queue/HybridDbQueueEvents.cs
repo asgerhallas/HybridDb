@@ -13,6 +13,6 @@ namespace HybridDb.Queue
     public record QueueStarting : IHybridDbQueueEvent;
     public record QueueStopping : IHybridDbQueueEvent;
     public record QueuePolling : IHybridDbQueueEvent;
-    public record QueueIdle : IHybridDbQueueEvent;
+    public record QueueEmpty : IHybridDbQueueEvent;
     public record QueueFailed(Exception Exception) : IHybridDbQueueEvent;
 }

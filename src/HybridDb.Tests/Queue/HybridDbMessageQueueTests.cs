@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Concurrency;
-using System.Reactive.Joins;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
@@ -24,6 +20,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static HybridDb.Helpers;
 using SqlException = System.Data.SqlClient.SqlException;
+using Task = System.Threading.Tasks.Task;
 
 namespace HybridDb.Tests.Queue
 {
@@ -292,7 +289,7 @@ namespace HybridDb.Tests.Queue
 
             var messages = new List<object>();
             queue.ReplayedEvents.OfType<MessageHandling>().Select(x => x.Message.Payload).Subscribe(messages.Add);
-            await queue.ReplayedEvents.OfType<QueueIdle>().FirstAsync();
+            await queue.ReplayedEvents.OfType<QueueEmpty>().FirstAsync();
 
             messages.Count.ShouldBe(1);
             ((MyMessage)messages.Single()).Text.ShouldBe("A");
@@ -655,7 +652,7 @@ namespace HybridDb.Tests.Queue
             var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
             var messages = await queue.ReplayedEvents
-                .OfType<QueueIdle>()
+                .OfType<QueueEmpty>()
                 .TakeUntil(Observable.Timer(TimeSpan.FromSeconds(7)))
                 .ToList()
                 .FirstAsync();
@@ -1058,39 +1055,22 @@ namespace HybridDb.Tests.Queue
                 new JArray("id1", "id3", "id4").ToString());
         }
 
-        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
-        {
-            async Task AwaitPartition(IEnumerator<T> partition)
-            {
-                using (partition)
-                {
-                    while (partition.MoveNext())
-                    {
-                        await Task.Yield(); // prevents a sync/hot thread hangup
-                        await funcBody(partition.Current);
-                    }
-                }
-            }
-
-            return Task.WhenAll(
-                Partitioner
-                    .Create(source)
-                    .GetPartitions(maxDoP)
-                    .AsParallel()
-                    .Select(AwaitPartition));
-        }
-
         [Fact]
         public async Task LocalTriggering()
         {
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
-                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
-                    MaxConcurrency = 1
-                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue),  // never retry without trigger,
+                    MaxConcurrency = 1,
+                    Subscribe = observer.Subscribe
+                });
 
-            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+
+            await observer.AdvanceUntil<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1098,47 +1078,28 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            // wait until we are idling
-            await queue.ReplayedEvents
-                .OfType<QueueIdle>()
-                .Take(2)
-                .ToList()
-                .FirstAsync();
-           
-            queue.Dispose();
+            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
+            await observer.AdvanceBy1ThenNextShouldBe<MessageReceived>();
 
-            var events = await queue.ReplayedEvents.ToList().FirstAsync();
-
-            output.WriteLine(string.Join(", ", events.Select(x => x.GetType().Name)));
-
-            events.Select(x => x.GetType().Name)
-                .ShouldBeLike(
-                    nameof(QueueStarting),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle),
-                    nameof(QueuePolling),
-                    nameof(MessageReceived),
-                    nameof(MessageHandling),
-                    nameof(MessageHandled),
-                    nameof(MessageCommitted),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle));
+            observer.AdvanceToEnd();
         }
 
         [Fact]
         public async Task LocalTriggering_Many()
         {
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
-                    MaxConcurrency = 1
-                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                    MaxConcurrency = 1,
+                    Subscribe = observer.Subscribe
+                });
             
-            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            // wait until we are idling
-            await queue.ReplayedEvents.OfType<QueueIdle>().Take(1).ToList().FirstAsync();
+            await observer.AdvanceUntil<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1148,57 +1109,94 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            // wait until we are idling
-            await queue.ReplayedEvents
-                .OfType<QueueIdle>()
-                .Take(2)
-                .ToList()
-                .ObserveOn(TaskPoolScheduler.Default)
-                .FirstAsync();
+            await observer.AdvanceBy1();
+            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceUntil<MessageCommitted>();
 
-            queue.Dispose();
+            await observer.AdvanceBy1();
+            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceUntil<MessageCommitted>();
+            
+            await observer.AdvanceBy1();
+            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceUntil<MessageCommitted>();
+            
+            await observer.AdvanceBy1();
+            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceBy1();
+            await observer.NextShouldBe<QueueEmpty>();
+            await observer.AdvanceBy1();
+            await observer.WaitForNothingToHappen();
 
-            var events = await queue.ReplayedEvents.ToList().FirstAsync();
-
-            events.Select(x => x.GetType().Name)
-                .ShouldBeLike(
-                    nameof(QueueStarting),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle),
-                    nameof(QueuePolling),
-                    nameof(MessageReceived),
-                    nameof(MessageHandling),
-                    nameof(MessageHandled),
-                    nameof(MessageCommitted),
-                    nameof(QueuePolling),
-                    nameof(MessageReceived),
-                    nameof(MessageHandling),
-                    nameof(MessageHandled),
-                    nameof(MessageCommitted),
-                    nameof(QueuePolling),
-                    nameof(MessageReceived),
-                    nameof(MessageHandling),
-                    nameof(MessageHandled),
-                    nameof(MessageCommitted),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle));
+            observer.AdvanceToEnd();
         }
 
-
         [Fact]
-        public async Task LocalTriggering_Topics()
+        public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
-                    InboxTopics = { "topic1" }
-                }.ReplayEvents(TimeSpan.FromSeconds(60)));
+                    Subscribe = observer.Subscribe,
+                });
 
-            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            var untilIdle = await queue.ReplayedEvents.TakeUntil(x => x is QueueIdle).Count().FirstAsync();
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command 1"));
+                session.SaveChanges();
+            }
+
+            await observer.NextShouldBeThenAdvanceBy1<QueueStarting>();
+            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
+            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBe<QueueEmpty>();
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id2", new MyMessage("Some command 2"));
+                session.SaveChanges();
+            }
+
+            await observer.AdvanceBy1();
+
+            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
+            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<QueueEmpty>();
+
+            await observer.WaitForNothingToHappen();
+        }
+
+        [Fact]
+        public async Task LocalTriggering_Topics()
+        {
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+
+            configuration.UseMessageQueue(
+                new MessageQueueOptions
+                {
+                    IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
+                    MaxConcurrency = 1,
+                    InboxTopics = { "topic1" },
+                    Subscribe = observer.Subscribe
+                });
+
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+
+            await observer.AdvanceUntil<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1206,44 +1204,35 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await queue.ReplayedEvents.Skip(untilIdle).TakeUntil(x => x is QueueIdle).LastAsync();
+            await observer.AdvanceBy1();
+            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
+            await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
+            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBe<QueueEmpty>();
 
-            queue.Dispose();
-
-            var events = await queue.ReplayedEvents.ToList().FirstAsync();
-
-            events.Select(x => x.GetType().Name)
-                .ShouldBeLike(
-                    nameof(QueueStarting),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle),
-                    nameof(QueuePolling),
-                    nameof(MessageReceived),
-                    nameof(MessageHandling),
-                    nameof(MessageHandled),
-                    nameof(MessageCommitted),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle));
+            observer.AdvanceToEnd();
         }
 
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
-                    InboxTopics = {"topic1"}
+                    InboxTopics = {"topic1"},
+                    Subscribe = observer.Subscribe
                 }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            var queue = Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            // wait until we are idling
-            var untilIdle = await queue.ReplayedEvents
-                .TakeUntil(x => x is QueueIdle)
-                .ToList()
-                .FirstAsync();
+            await observer.AdvanceUntil<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1251,20 +1240,8 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            Should.Throw<Exception>(async () =>
-                await queue.ReplayedEvents.Skip(untilIdle.Count)
-                    .Timeout(TimeSpan.FromSeconds(2))
-                    .FirstAsync());
-
-            queue.Dispose();
-
-            var events = await queue.ReplayedEvents.ToList().FirstAsync();
-
-            events.Select(x => x.GetType().Name)
-                .ShouldBeLike(
-                    nameof(QueueStarting),
-                    nameof(QueuePolling),
-                    nameof(QueueIdle));
+            await observer.AdvanceBy1();
+            await observer.WaitForNothingToHappen();
         }
 
         [Fact]
@@ -1343,7 +1320,7 @@ namespace HybridDb.Tests.Queue
         {
             var counter = new SemaphoreSlim(int.MaxValue);
 
-            return async (IDocumentSession _, HybridDbMessage _) =>
+            return async (_, _) =>
             {
                 await counter.WaitAsync();
 
@@ -1353,6 +1330,28 @@ namespace HybridDb.Tests.Queue
 
                 counter.Release();
             };
+        }
+
+        static Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        {
+            async Task AwaitPartition(IEnumerator<T> partition)
+            {
+                using (partition)
+                {
+                    while (partition.MoveNext())
+                    {
+                        await Task.Yield(); // prevents a sync/hot thread hangup
+                        await funcBody(partition.Current);
+                    }
+                }
+            }
+
+            return Task.WhenAll(
+                Partitioner
+                    .Create(source)
+                    .GetPartitions(maxDoP)
+                    .AsParallel()
+                    .Select(AwaitPartition));
         }
     }
 }

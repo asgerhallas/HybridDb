@@ -231,21 +231,33 @@ namespace HybridDb.Queue
                 {
                     events.OnNext(new QueuePolling());
 
-                    // querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
+                    var count = localEnqueues.CurrentCount;
+
+                    // Querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
                     var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
 
                     if (message != null)
                     {
-                        await localEnqueues.WaitAsync(0);
-
                         return (tx, message);
                     }
 
                     DisposeTransaction(tx);
 
-                    events.OnNext(new QueueIdle());
+                    events.OnNext(new QueueEmpty());
 
+                    //// We only get here if the queue is empty, and that means that we must have handled all local enqueues
+                    //// that was counted _before_ the dequeue. If any has been locally enqueued after the last empty dequeue,
+                    //// we keep those to go another round immediately.
+                    for (; count > 0; count--)
+                    {
+                        // ReSharper disable once MethodHasAsyncOverload
+                        // We know that we have `count` released locks, so I believe sync Wait is faster here
+                        // though it has to be measured.
+                        localEnqueues.Wait();
+                    }
+
+                    // Wait for any local enqueue or for the timeout (IdleDelay) to check for remote enqueues at an interval.
                     await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
                     tx = BeginTransaction();
