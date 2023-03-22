@@ -193,7 +193,7 @@ namespace HybridDb.Queue
             "Observed events until now: " +
             Environment.NewLine +
             Environment.NewLine +
-            string.Join(Environment.NewLine, history.Select((x, i) => $"  {i+1}. {x}")) +
+            string.Join(Environment.NewLine, history.ToList().Select((x, i) => $"  {i+1}. {x}")) +
             Environment.NewLine;
 
         async Task CatchAndCancel(Func<Task> func)
