@@ -51,7 +51,9 @@ namespace HybridDb.Queue
 
             waitingAtTheGate = true;
 
-            gate.Wait(cts.Token);
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(value.CancellationToken, cts.Token);
+
+            gate.Wait(linkedCts.Token);
         }
 
         void OpenGate()
