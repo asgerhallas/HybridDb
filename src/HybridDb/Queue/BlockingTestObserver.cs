@@ -51,16 +51,19 @@ namespace HybridDb.Queue
 
             waitingAtTheGate = true;
 
-            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(value.CancellationToken, cts.Token);
+            var linkedCts = CancellationTokenSource
+                .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
 
             gate.Wait(linkedCts.Token);
         }
 
-        void OpenGate()
+        public Task AdvanceBy1()
         {
             waitingAtTheGate = false;
 
             gate.Release();
+
+            return Task.CompletedTask;
         }
 
         public record GetNextResult
@@ -139,14 +142,6 @@ namespace HybridDb.Queue
                 }
             );
 
-        public Task AdvanceBy1() =>
-            CatchAndCancel(() =>
-            {
-                OpenGate();
-                    
-                return Task.CompletedTask;
-            });
-
         public async Task NextShouldBeThenAdvanceBy1<T>() where T : class
         {
             await NextShouldBe<T>();
@@ -159,23 +154,24 @@ namespace HybridDb.Queue
             return await NextShouldBe<T>();
         }
 
-        public async Task<T> AdvanceUntil<T>()
-        {
-            do
+        public Task<T> AdvanceUntil<T>() =>
+            CatchAndCancel(async () =>
             {
-                var next = await GetNextOrNullAdvanceIfNeccessary();
-
-                if (next == null)
+                do
                 {
-                    throw new TimeoutException($"Timeout waiting for {typeof(T)}." + GetHistoryString());
-                }
+                    var next = await GetNextOrNullAdvanceIfNeccessary();
 
-                if (next is T t)
-                {
-                    return t;
-                }
-            } while (true);
-        }
+                    if (next == null)
+                    {
+                        throw new TimeoutException($"Timeout waiting for {typeof(T)}." + GetHistoryString());
+                    }
+
+                    if (next is T t)
+                    {
+                        return t;
+                    }
+                } while (true);
+            });
 
         public Task WaitForNothingToHappen() =>
             CatchAndCancel(async () =>
