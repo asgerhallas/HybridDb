@@ -45,4 +45,4 @@ deploy:
     # branch: master    # right now we can't restrict the release to master only as tags are counted as branches too. We'll delete the prereleases manually.
     APPVEYOR_REPO_TAG: true
 on_finish:
-  - ps: Get-ChildItem .\*.dmp | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+  - ps: Get-ChildItem -path .\ -recurse -Include *.dmp | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
