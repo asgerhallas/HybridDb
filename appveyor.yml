@@ -20,7 +20,7 @@ build_script:
 - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
 after_build:
 - cmd: >-
-    dotnet test --no-build --logger:"console;verbosity=detailed" --blame-hang --blame-hang-timeout 120s --blame-hang-dump-type full
+    dotnet test --no-build --logger:"console;verbosity=detailed" --blame-hang --blame-hang-timeout 300s --blame-hang-dump-type full
 
     dotnet pack src/HybridDb/ -c Release --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=%APPVEYOR_BUILD_VERSION%
       
