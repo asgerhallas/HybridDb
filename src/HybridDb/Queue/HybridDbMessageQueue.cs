@@ -23,7 +23,7 @@ namespace HybridDb.Queue
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
-        readonly Subject<IHybridDbQueueEvent> events = new ();
+        readonly ISubject<IHybridDbQueueEvent> events = Subject.Synchronize(new Subject<IHybridDbQueueEvent>());
 
         readonly IDocumentStore store;
         readonly ILogger logger;
