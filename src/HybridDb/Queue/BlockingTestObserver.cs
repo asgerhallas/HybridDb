@@ -8,7 +8,7 @@ using Indentional;
 
 namespace HybridDb.Queue
 {
-    public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>
+    public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>, IDisposable
     {
         readonly object locker = new();
         readonly TimeSpan timeout;
@@ -177,7 +177,7 @@ namespace HybridDb.Queue
                 throw new Exception($"Expected nothing (timeout), got {next.GetType()}. {GetHistoryString()}");
             });
 
-        public void AdvanceToEnd() => cts.Cancel();
+        public void StopBlocking() => cts.Cancel();
 
         string GetHistoryString() =>
             Environment.NewLine + 
@@ -217,5 +217,7 @@ namespace HybridDb.Queue
                 throw;
             }
         }
+
+        public void Dispose() => StopBlocking();
     }
 }

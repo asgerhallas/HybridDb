@@ -1060,7 +1060,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering));
 
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1083,7 +1083,7 @@ namespace HybridDb.Tests.Queue
             await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
             await observer.AdvanceBy1ThenNextShouldBe<MessageReceived>();
 
-            observer.AdvanceToEnd();
+            observer.StopBlocking();
         }
 
         [Fact]
@@ -1091,7 +1091,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_Many));
 
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1132,7 +1132,7 @@ namespace HybridDb.Tests.Queue
             await observer.AdvanceBy1();
             await observer.WaitForNothingToHappen();
 
-            observer.AdvanceToEnd();
+            observer.StopBlocking();
         }
 
         [Fact]
@@ -1140,7 +1140,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_EnqueuedJustAfterQueueEmpty));
 
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1191,7 +1191,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_Topics));
 
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1221,7 +1221,7 @@ namespace HybridDb.Tests.Queue
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
             await observer.NextShouldBe<QueueEmpty>();
 
-            observer.AdvanceToEnd();
+            observer.StopBlocking();
         }
 
         [Fact]
@@ -1229,7 +1229,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_NotOtherTopics));
 
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions

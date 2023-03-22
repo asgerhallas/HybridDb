@@ -36,6 +36,7 @@ namespace HybridDb.Queue
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
         public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
+        public CancellationToken CancellationToken { get; }
 
         public HybridDbMessageQueue(
             IDocumentStore store,
