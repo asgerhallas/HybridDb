@@ -8,9 +8,8 @@ using Indentional;
 
 namespace HybridDb.Queue
 {
-    public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>, IDisposable
+    public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>
     {
-        readonly object locker = new();
         readonly TimeSpan timeout;
         readonly BlockingCollection<IHybridDbQueueEvent> queue = new();
         readonly List<IHybridDbQueueEvent> history = new();
@@ -40,6 +39,7 @@ namespace HybridDb.Queue
 
         public void OnNext(IHybridDbQueueEvent value)
         {
+            if (value.CancellationToken.IsCancellationRequested) StopBlocking();
             if (cts.IsCancellationRequested) return;
 
             queue.Add(value);
@@ -217,7 +217,5 @@ namespace HybridDb.Queue
                 throw;
             }
         }
-
-        public void Dispose() => StopBlocking();
     }
 }

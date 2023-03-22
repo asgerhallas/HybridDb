@@ -36,7 +36,6 @@ namespace HybridDb.Queue
         public Task MainLoop { get; }
         public IObservable<IHybridDbQueueEvent> Events { get; }
         public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
-        public CancellationToken CancellationToken { get; }
 
         public HybridDbMessageQueue(
             IDocumentStore store,
@@ -91,7 +90,7 @@ namespace HybridDb.Queue
             MainLoop = Task.Factory
                 .StartNew(async () =>
                 {
-                    events.OnNext(new QueueStarting());
+                    events.OnNext(new QueueStarting(cts.Token));
 
                     logger.LogInformation($@"
                         Queue started. 
@@ -148,7 +147,7 @@ namespace HybridDb.Queue
                         }
                         catch (Exception exception)
                         {
-                            events.OnNext(new QueueFailed(exception));
+                            events.OnNext(new QueueFailed(exception, cts.Token));
 
                             logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
@@ -230,7 +229,7 @@ namespace HybridDb.Queue
             {
                 while (!cts.IsCancellationRequested)
                 {
-                    events.OnNext(new QueuePolling());
+                    events.OnNext(new QueuePolling(cts.Token));
 
                     var count = localEnqueues.CurrentCount;
 
@@ -245,7 +244,7 @@ namespace HybridDb.Queue
 
                     DisposeTransaction(tx);
 
-                    events.OnNext(new QueueEmpty());
+                    events.OnNext(new QueueEmpty(cts.Token));
 
                     //// We only get here if the queue is empty, and that means that we must have handled all local enqueues
                     //// that was counted _before_ the dequeue. If any has been locally enqueued after the last empty dequeue,
@@ -255,7 +254,7 @@ namespace HybridDb.Queue
                         // ReSharper disable once MethodHasAsyncOverload
                         // We know that we have `count` released locks, so I believe sync Wait is faster here
                         // though it has to be measured.
-                        localEnqueues.Wait();
+                        localEnqueues.Wait(cts.Token);
                     }
 
                     // Wait for any local enqueue or for the timeout (IdleDelay) to check for remote enqueues at an interval.
@@ -279,7 +278,7 @@ namespace HybridDb.Queue
 
             try
             {
-                events.OnNext(new MessageReceived(context, message));
+                events.OnNext(new MessageReceived(context, message, cts.Token));
 
                 tx.SqlTransaction.Save("MessageReceived");
 
@@ -288,17 +287,17 @@ namespace HybridDb.Queue
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
                 session.Advanced.Enlist(tx);
 
-                events.OnNext(new MessageHandling(session, context, message));
+                events.OnNext(new MessageHandling(session, context, message, cts.Token));
 
                 await handler(session, message);
 
-                events.OnNext(new MessageHandled(session, context, message));
+                events.OnNext(new MessageHandled(session, context, message, cts.Token));
 
                 session.SaveChanges();
 
                 tx.Complete();
 
-                events.OnNext(new MessageCommitted(session, context, message));
+                events.OnNext(new MessageCommitted(session, context, message, cts.Token));
             }
             catch (Exception exception)
             {
@@ -306,7 +305,7 @@ namespace HybridDb.Queue
                 
                 var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
-                events.OnNext(new MessageFailed(context, message, exception, failures));
+                events.OnNext(new MessageFailed(context, message, exception, failures, cts.Token));
 
                 if (failures < 5)
                 {
@@ -325,7 +324,7 @@ namespace HybridDb.Queue
 
                 tx.Complete();
 
-                events.OnNext(new PoisonMessage(context, message, exception));
+                events.OnNext(new PoisonMessage(context, message, exception, cts.Token));
 
                 retries.TryRemove(message.Id, out _);
             }

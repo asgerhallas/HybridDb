@@ -1060,14 +1060,14 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering));
 
-            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue),  // never retry without trigger,
                     MaxConcurrency = 1,
-                    Subscribe = observer.Subscribe
+                    Subscribe = observer.Subscribe,
                 });
 
             Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
@@ -1091,7 +1091,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_Many));
 
-            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1140,7 +1140,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_EnqueuedJustAfterQueueEmpty));
 
-            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1191,7 +1191,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_Topics));
 
-            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1229,7 +1229,7 @@ namespace HybridDb.Tests.Queue
         {
             output.WriteLine(nameof(LocalTriggering_NotOtherTopics));
 
-            using var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
