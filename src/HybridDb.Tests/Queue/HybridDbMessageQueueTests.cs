@@ -1058,6 +1058,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering()
         {
+            output.WriteLine(nameof(LocalTriggering));
+
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
@@ -1087,6 +1089,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Many()
         {
+            output.WriteLine(nameof(LocalTriggering_Many));
+
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
@@ -1134,6 +1138,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
+            output.WriteLine(nameof(LocalTriggering_EnqueuedJustAfterQueueEmpty));
+
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
@@ -1183,6 +1189,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Topics()
         {
+            output.WriteLine(nameof(LocalTriggering_Topics));
+
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(
@@ -1219,6 +1227,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
+            output.WriteLine(nameof(LocalTriggering_NotOtherTopics));
+
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(5));
 
             configuration.UseMessageQueue(

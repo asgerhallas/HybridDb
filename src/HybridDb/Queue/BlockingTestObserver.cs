@@ -53,6 +53,7 @@ namespace HybridDb.Queue
         void OpenGate()
         {
             waitingAtTheGate = false;
+
             gate.Release();
         }
 
@@ -69,13 +70,12 @@ namespace HybridDb.Queue
         /// Wait for the next event for the given timeout and return it.
         /// </summary>
         /// <returns>An event if any is present within the timeout, or else null indicating a timeout.</returns>
-        /// <exception cref="InvalidOperationException"></exception>
         public Task<GetNextResult> GetNext() =>
             CatchAndCancel(async () =>
             {
                 if (waitingAtTheGate)
                 {
-                    return queue.TryTake(out var next, 0)
+                    return queue.TryTake(out var next)
                         ? (GetNextResult)new GetNextResult.Event(next)
                         : new GetNextResult.Locked();
                 }
