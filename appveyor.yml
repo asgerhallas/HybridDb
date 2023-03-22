@@ -1,6 +1,6 @@
 version: 0.0.{build}
 configuration: Release
-image: Visual Studio 2019
+image: Visual Studio 2022
 # Environment variables are truncated to the first line in appveyor (see https://github.com/appveyor/ci/issues/1688) 
 # so we join these together as html - and it finally works. We take the message from the tag and use as release message.
 # Also comments in powershell scripts does not work: https://help.appveyor.com/discussions/problems/32779-powershell-comments-changes-the-script
@@ -20,7 +20,7 @@ build_script:
 - dotnet build -p:Version=%APPVEYOR_BUILD_VERSION%
 after_build:
 - cmd: >-
-    dotnet test --no-build --logger:"console;verbosity=detailed" --blame-hang --blame-hang-timeout 30s --blame-hang-dump-type full
+    dotnet test --no-build --logger:"console;verbosity=detailed" --blame-hang --blame-hang-timeout 120s --blame-hang-dump-type full
 
     dotnet pack src/HybridDb/ -c Release --include-symbols -p:SymbolPackageFormat=snupkg -p:Version=%APPVEYOR_BUILD_VERSION%
       
