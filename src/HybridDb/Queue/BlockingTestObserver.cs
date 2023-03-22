@@ -34,12 +34,16 @@ namespace HybridDb.Queue
 
         public void OnError(Exception error)
         {
-                
+
         }
 
         public void OnNext(IHybridDbQueueEvent value)
         {
-            if (value.CancellationToken.IsCancellationRequested) StopBlocking();
+            if (value.CancellationToken.IsCancellationRequested)
+            {
+                StopBlocking();
+            }
+
             if (cts.IsCancellationRequested) return;
 
             queue.Add(value);
@@ -73,6 +77,8 @@ namespace HybridDb.Queue
         public Task<GetNextResult> GetNext() =>
             CatchAndCancel(async () =>
             {
+                cts.Token.ThrowIfCancellationRequested();
+
                 if (waitingAtTheGate)
                 {
                     return queue.TryTake(out var next)
