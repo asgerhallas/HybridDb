@@ -1087,7 +1087,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Many()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(30));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1132,7 +1132,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(20));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1181,7 +1181,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Topics()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(30));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1215,7 +1215,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(20));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions

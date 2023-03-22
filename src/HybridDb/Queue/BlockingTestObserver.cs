@@ -16,7 +16,7 @@ namespace HybridDb.Queue
         readonly SemaphoreSlim gate = new(0);
         readonly CancellationTokenSource cts = new();
 
-        volatile bool waitingAtTheGate = true;
+        volatile bool waitingAtTheGate = false;
 
         public BlockingTestObserver(TimeSpan timeout)
         {
@@ -44,10 +44,10 @@ namespace HybridDb.Queue
                 StopBlocking();
             }
 
-            if (cts.IsCancellationRequested) return;
-
             queue.Add(value);
             history.Add(value);
+
+            if (cts.IsCancellationRequested) return;
 
             waitingAtTheGate = true;
 
@@ -55,10 +55,20 @@ namespace HybridDb.Queue
                 .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
 
             gate.Wait(linkedCts.Token);
+
+            if (queue.Count > 0)
+            {
+                throw new InvalidOperationException("Queue must be empty before advancing further.");
+            }
         }
 
         public Task AdvanceBy1()
         {
+            if (queue.Count > 0)
+            {
+                throw new InvalidOperationException($"Queue must be empty before advancing further. Got {queue.Count}." + GetHistoryString());
+            }
+
             waitingAtTheGate = false;
 
             gate.Release();
@@ -170,6 +180,9 @@ namespace HybridDb.Queue
                     {
                         return t;
                     }
+
+                    await AdvanceBy1();
+
                 } while (true);
             });
 
