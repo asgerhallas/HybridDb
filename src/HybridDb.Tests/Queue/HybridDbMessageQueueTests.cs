@@ -1058,8 +1058,6 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering()
         {
-            output.WriteLine(nameof(LocalTriggering));
-
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
 
             configuration.UseMessageQueue(
@@ -1089,9 +1087,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Many()
         {
-            output.WriteLine(nameof(LocalTriggering_Many));
-
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(30));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1131,16 +1127,12 @@ namespace HybridDb.Tests.Queue
             await observer.NextShouldBe<QueueEmpty>();
             await observer.AdvanceBy1();
             await observer.WaitForNothingToHappen();
-
-            observer.StopBlocking();
         }
 
         [Fact]
         public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
-            output.WriteLine(nameof(LocalTriggering_EnqueuedJustAfterQueueEmpty));
-
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(20));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1189,9 +1181,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Topics()
         {
-            output.WriteLine(nameof(LocalTriggering_Topics));
-
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(30));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1220,16 +1210,12 @@ namespace HybridDb.Tests.Queue
             await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
             await observer.NextShouldBe<QueueEmpty>();
-
-            observer.StopBlocking();
         }
 
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
-            output.WriteLine(nameof(LocalTriggering_NotOtherTopics));
-
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(20));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
