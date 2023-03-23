@@ -12,7 +12,7 @@ namespace HybridDb.Queue
     {
         readonly TimeSpan timeout;
         readonly BlockingCollection<IHybridDbQueueEvent> queue = new();
-        readonly List<IHybridDbQueueEvent> history = new();
+        readonly List<(IHybridDbQueueEvent value, int ManagedThreadId)> history = new();
         readonly SemaphoreSlim gate = new(0);
         readonly CancellationTokenSource cts = new();
 
@@ -22,8 +22,6 @@ namespace HybridDb.Queue
         {
             this.timeout = timeout;
         }
-
-        public IReadOnlyList<IHybridDbQueueEvent> History => history;
 
         public IDisposable Subscribe(IObservable<IHybridDbQueueEvent> observable) => observable.Subscribe(this);
 
@@ -45,7 +43,7 @@ namespace HybridDb.Queue
             }
 
             queue.Add(value);
-            history.Add(value);
+            history.Add((value, Thread.CurrentThread.ManagedThreadId));
 
             if (cts.IsCancellationRequested) return;
 
