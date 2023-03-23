@@ -7,53 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Bugs\**" />
-    <Compile Remove="Config\**" />
-    <Compile Remove="Events\**" />
-    <Compile Remove="Linq\**" />
-    <Compile Remove="Migrations\**" />
-    <Compile Remove="Performance\**" />
-    <EmbeddedResource Remove="Bugs\**" />
-    <EmbeddedResource Remove="Config\**" />
-    <EmbeddedResource Remove="Events\**" />
-    <EmbeddedResource Remove="Linq\**" />
-    <EmbeddedResource Remove="Migrations\**" />
-    <EmbeddedResource Remove="Performance\**" />
-    <None Remove="Bugs\**" />
-    <None Remove="Config\**" />
-    <None Remove="Events\**" />
-    <None Remove="Linq\**" />
-    <None Remove="Migrations\**" />
-    <None Remove="Performance\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="ConfigurationTests.cs" />
-    <Compile Remove="DatabaseQuerySchemaTests.cs" />
-    <Compile Remove="DefaultSerializerTests.cs" />
-    <Compile Remove="DisableParallelizationCollection.cs" />
-    <Compile Remove="DocumentDesignerTests.cs" />
-    <Compile Remove="DocumentMigratorTests.cs" />
-    <Compile Remove="DocumentSessionTests.cs" />
-    <Compile Remove="DocumentSession_EventsTests.cs" />
-    <Compile Remove="DocumentSession_ExistsTests.cs" />
-    <Compile Remove="DocumentSession_IdCaseSensivityTests.cs" />
-    <Compile Remove="DocumentSession_LoadTests.cs" />
-    <Compile Remove="DocumentSession_ReadOnlyTests.cs" />
-    <Compile Remove="DocumentSession_TypesTests.cs" />
-    <Compile Remove="DocumentStoreTests.cs" />
-    <Compile Remove="DocumentStore_QueryChangesTests.cs" />
-    <Compile Remove="FakeBackupWriter.cs" />
-    <Compile Remove="FileBackupWriterTests.cs" />
-    <Compile Remove="LinqIntegrationTests.cs" />
-    <Compile Remove="LinqTests.cs" />
-    <Compile Remove="NullCheckInjectorTests.cs" />
-    <Compile Remove="QueryProviderTests.cs" />
-    <Compile Remove="ShortNameTypeMapperTests.cs" />
-    <Compile Remove="ZipBackupDecoratorTests.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="BoyBoy" Version="1.0.5" />
     <PackageReference Include="FakeItEasy" Version="5.5.0" />
     <PackageReference Include="Microsoft.SqlServer.SqlManagementObjects" Version="170.8.0" />
@@ -76,6 +29,30 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_2.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3_Result.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_After.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_Before_Position.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_Before_Version.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
