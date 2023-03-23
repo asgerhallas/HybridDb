@@ -10,6 +10,7 @@ namespace HybridDb.Queue
 {
     public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>
     {
+        readonly object locker = new();
         readonly TimeSpan timeout;
         readonly BlockingCollection<IHybridDbQueueEvent> queue = new();
         readonly List<(IHybridDbQueueEvent value, int ManagedThreadId)> history = new();
@@ -42,19 +43,21 @@ namespace HybridDb.Queue
                 StopBlocking();
             }
 
-            //if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
-            //{
-            //    throw new InvalidOperationException(@$"
-            //        Waiting at the gate was already true? Thread: {Thread.CurrentThread.ManagedThreadId}. Value: {value}.
-            //        QUEUE: {string.Join(", ", queue.ToList().Select((x, i) => $"  {i + 1}. {x}"))}.");
-            //}
+          
 
             if (cts.IsCancellationRequested) return;
 
-            waitingAtTheGate = 1;
+            //waitingAtTheGate = 1;
 
             queue.Add(value);
             history.Add((value, Thread.CurrentThread.ManagedThreadId));
+
+            if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
+            {
+                throw new InvalidOperationException(@$"
+                    Waiting at the gate was already true? Thread: {Thread.CurrentThread.ManagedThreadId}. Value: {value}.
+                    QUEUE: {string.Join(", ", queue.ToList().Select((x, i) => $"  {i + 1}. {x}"))}.");
+            }
 
             var linkedCts = CancellationTokenSource
                 .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
@@ -76,7 +79,7 @@ namespace HybridDb.Queue
 
             waitingAtTheGate = 0;
 
-            gate.Release();
+            Console.WriteLine("Count: " + gate.Release());
 
             return Task.CompletedTask;
         }
