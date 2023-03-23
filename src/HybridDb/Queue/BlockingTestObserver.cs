@@ -51,7 +51,7 @@ namespace HybridDb.Queue
 
             if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
             {
-                throw new InvalidOperationException("Waiting at the gate was already true?");
+                throw new InvalidOperationException($"Waiting at the gate was already true? Thread: {Thread.CurrentThread.ManagedThreadId}. Value: {value}.");
             }
 
             var linkedCts = CancellationTokenSource
@@ -62,6 +62,8 @@ namespace HybridDb.Queue
 
         public Task AdvanceBy1()
         {
+            if (cts.IsCancellationRequested) return Task.CompletedTask;
+
             if (queue.Count > 0)
             {
                 throw new InvalidOperationException(@"
@@ -210,7 +212,7 @@ namespace HybridDb.Queue
         {
             try
             {
-                await func().ConfigureAwait(false);
+                await func();
             }
             catch (Exception e)
             {
@@ -225,7 +227,7 @@ namespace HybridDb.Queue
         {
             try
             {
-                return await func().ConfigureAwait(false);
+                return await func();
             }
             catch (Exception e)
             {

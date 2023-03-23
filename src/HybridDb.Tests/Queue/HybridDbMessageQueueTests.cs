@@ -1080,8 +1080,6 @@ namespace HybridDb.Tests.Queue
 
             await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
             await observer.AdvanceBy1ThenNextShouldBe<MessageReceived>();
-
-            observer.StopBlocking();
         }
 
         [Fact]
