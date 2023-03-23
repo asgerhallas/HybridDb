@@ -42,15 +42,19 @@ namespace HybridDb.Queue
                 StopBlocking();
             }
 
+            //if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
+            //{
+            //    throw new InvalidOperationException(@$"
+            //        Waiting at the gate was already true? Thread: {Thread.CurrentThread.ManagedThreadId}. Value: {value}.
+            //        QUEUE: {string.Join(", ", queue.ToList().Select((x, i) => $"  {i + 1}. {x}"))}.");
+            //}
+
+            waitingAtTheGate = 1;
+
             queue.Add(value);
             history.Add((value, Thread.CurrentThread.ManagedThreadId));
 
             if (cts.IsCancellationRequested) return;
-
-            if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
-            {
-                throw new InvalidOperationException($"Waiting at the gate was already true? Thread: {Thread.CurrentThread.ManagedThreadId}. Value: {value}.");
-            }
 
             var linkedCts = CancellationTokenSource
                 .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
@@ -62,13 +66,13 @@ namespace HybridDb.Queue
         {
             if (cts.IsCancellationRequested) return Task.CompletedTask;
 
-            if (queue.Count > 0)
-            {
-                throw new InvalidOperationException(@"
-                    You must empty the queue before advancing further, use GetNext() and its siblings to 
-                    to pull events from the queue.
-                ".Indent() + GetHistoryString());
-            }
+            //if (waitingAtTheGate == 0)
+            //{
+            //    throw new InvalidOperationException(@"
+            //        You must empty the queue before advancing further, use GetNext() and its siblings to 
+            //        to pull events from the queue.
+            //    ".Indent() + GetHistoryString());
+            //}
 
             waitingAtTheGate = 0;
 
