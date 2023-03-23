@@ -16,7 +16,7 @@ namespace HybridDb.Queue
         readonly SemaphoreSlim gate = new(0);
         readonly CancellationTokenSource cts = new();
 
-        volatile bool waitingAtTheGate = false;
+        volatile int waitingAtTheGate;
 
         public BlockingTestObserver(TimeSpan timeout)
         {
@@ -49,27 +49,28 @@ namespace HybridDb.Queue
 
             if (cts.IsCancellationRequested) return;
 
-            waitingAtTheGate = true;
+            if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
+            {
+                throw new InvalidOperationException("Waiting at the gate was already true?");
+            }
 
             var linkedCts = CancellationTokenSource
                 .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
 
             gate.Wait(linkedCts.Token);
-
-            if (queue.Count > 0)
-            {
-                throw new InvalidOperationException("Queue must be empty before advancing further.");
-            }
         }
 
         public Task AdvanceBy1()
         {
             if (queue.Count > 0)
             {
-                throw new InvalidOperationException($"Queue must be empty before advancing further. Got {queue.Count}." + GetHistoryString());
+                throw new InvalidOperationException(@"
+                    You must empty the queue before advancing further, use GetNext() and its siblings to 
+                    to pull events from the queue.
+                ".Indent() + GetHistoryString());
             }
 
-            waitingAtTheGate = false;
+            waitingAtTheGate = 0;
 
             gate.Release();
 
@@ -94,7 +95,7 @@ namespace HybridDb.Queue
             {
                 cts.Token.ThrowIfCancellationRequested();
 
-                if (waitingAtTheGate)
+                if (waitingAtTheGate == 1)
                 {
                     return queue.TryTake(out var next)
                         ? (GetNextResult)new GetNextResult.Event(next)

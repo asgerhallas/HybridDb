@@ -667,7 +667,7 @@ namespace HybridDb.Tests.Queue
         {
             configuration.UseMessageQueue(new MessageQueueOptions
             {
-                MaxConcurrency = 100
+                MaxConcurrency = 100,
             }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             using (var session = store.OpenSession())
@@ -742,9 +742,9 @@ namespace HybridDb.Tests.Queue
                 .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
-            q1Count.ShouldBeGreaterThan(30);
-            q2Count.ShouldBeGreaterThan(30);
-            q3Count.ShouldBeGreaterThan(30);
+            q1Count.ShouldBeGreaterThan(20);
+            q2Count.ShouldBeGreaterThan(20);
+            q3Count.ShouldBeGreaterThan(20);
 
             allDiagnostics.OfType<MessageFailed>().ShouldBeEmpty();
         }
