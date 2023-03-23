@@ -10,7 +10,6 @@ namespace HybridDb.Queue
 {
     public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>
     {
-        readonly object locker = new();
         readonly TimeSpan timeout;
         readonly BlockingCollection<IHybridDbQueueEvent> queue = new();
         readonly List<IHybridDbQueueEvent> history = new();
@@ -83,68 +82,63 @@ namespace HybridDb.Queue
         /// Wait for the next event for the given timeout and return it.
         /// </summary>
         /// <returns>An event if any is present within the timeout, or else null indicating a timeout.</returns>
-        public Task<GetNextResult> GetNext() =>
-            CatchAndCancel(async () =>
+        public async Task<GetNextResult> GetNext()
+        {
+            cts.Token.ThrowIfCancellationRequested();
+
+            if (waitingAtTheGate == 1)
             {
-                cts.Token.ThrowIfCancellationRequested();
+                return queue.TryTake(out var next)
+                    ? new GetNextResult.Event(next)
+                    : new GetNextResult.Locked();
+            }
+            else
+            {
+                return queue.TryTake(out var next, timeout)
+                    ? new GetNextResult.Event(next)
+                    : new GetNextResult.Timeout();
+            }
+        }
 
-                if (waitingAtTheGate == 1)
-                {
-                    return queue.TryTake(out var next)
-                        ? (GetNextResult)new GetNextResult.Event(next)
-                        : new GetNextResult.Locked();
-                }
-                else
-                {
-                    return queue.TryTake(out var next, timeout)
-                        ? new GetNextResult.Event(next)
-                        : new GetNextResult.Timeout();
-                }
-            });
-
-        public Task<IHybridDbQueueEvent> GetNextOrNull() =>
-            CatchAndCancel(async () =>
-                await GetNext() switch
-                {
-                    GetNextResult.Event @event => @event.Value,
-                    GetNextResult.Timeout => null,
-                    GetNextResult.Locked => throw new InvalidOperationException(@"
+        public async Task<IHybridDbQueueEvent> GetNextOrNull() =>
+            await GetNext() switch
+            {
+                GetNextResult.Event @event => @event.Value,
+                GetNextResult.Timeout => null,
+                GetNextResult.Locked => throw new InvalidOperationException(@"
                         No values have been observed since last check, and the observable 
                         is not currently advancing. This will result in a hang. 
                         Have you forgot to call AdvanceBy1/AdvanceUntil/AdvanceToEnd?.
                     ".Indent() + GetHistoryString()),
-                    _ => throw new ArgumentOutOfRangeException()
-                });
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
-        public Task<IHybridDbQueueEvent> GetNextOrNullAdvanceIfNeccessary() =>
-            CatchAndCancel(async () =>
+        public async Task<IHybridDbQueueEvent> GetNextOrNullAdvanceIfNeccessary()
+        {
+            var next = await GetNext();
+
+            if (next is GetNextResult.Locked)
             {
-                var next = await GetNext();
+                await AdvanceBy1();
+                return await GetNextOrNull();
+            }
 
-                if (next is GetNextResult.Locked)
-                {
-                    await AdvanceBy1();
-                    return await GetNextOrNull();
-                }
-
-                return next switch
-                {
-                    GetNextResult.Event @event => @event.Value,
-                    GetNextResult.Timeout => null,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-            });
+            return next switch
+            {
+                GetNextResult.Event @event => @event.Value,
+                GetNextResult.Timeout => null,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
 
 
-        public Task<T> NextShouldBe<T>() where T : class =>
-            CatchAndCancel(async () =>
-                await GetNextOrNull() switch
-                {
-                    null => throw new TimeoutException($"Timeout waiting for {typeof(T)}." + GetHistoryString()),
-                    T t => t,
-                    var next => throw new Exception($"Expected {typeof(T)}, got {next.GetType()}. {GetHistoryString()}")
-                }
-            );
+        public async Task<T> NextShouldBe<T>() where T : class =>
+            await GetNextOrNull() switch
+            {
+                null => throw new TimeoutException($"Timeout waiting for {typeof(T)}." + GetHistoryString()),
+                T t => t,
+                var next => throw new Exception($"Expected {typeof(T)}, got {next.GetType()}. {GetHistoryString()}")
+            };
 
         public async Task NextShouldBeThenAdvanceBy1<T>() where T : class
         {
@@ -158,35 +152,33 @@ namespace HybridDb.Queue
             return await NextShouldBe<T>();
         }
 
-        public Task<T> AdvanceUntil<T>() =>
-            CatchAndCancel(async () =>
+        public async Task<T> AdvanceUntil<T>()
+        {
+            do
             {
-                do
+                var next = await GetNextOrNullAdvanceIfNeccessary();
+
+                if (next == null)
                 {
-                    var next = await GetNextOrNullAdvanceIfNeccessary();
+                    throw new TimeoutException($"Timeout waiting for {typeof(T)}." + GetHistoryString());
+                }
 
-                    if (next == null)
-                    {
-                        throw new TimeoutException($"Timeout waiting for {typeof(T)}." + GetHistoryString());
-                    }
+                if (next is T t)
+                {
+                    return t;
+                }
 
-                    if (next is T t)
-                    {
-                        return t;
-                    }
+                await AdvanceBy1();
 
-                    await AdvanceBy1();
+            } while (true) ;
+        }
 
-                } while (true);
-            });
-
-        public Task WaitForNothingToHappen() =>
-            CatchAndCancel(async () =>
-            {
-                if (await GetNextOrNull() is not { } next) return;
+        public async Task WaitForNothingToHappen()
+        {
+            if (await GetNextOrNull() is not { } next) return;
                 
-                throw new Exception($"Expected nothing (timeout), got {next.GetType()}. {GetHistoryString()}");
-            });
+            throw new Exception($"Expected nothing (timeout), got {next.GetType()}. {GetHistoryString()}");
+        }
 
         public void StopBlocking() => cts.Cancel();
 
@@ -198,35 +190,5 @@ namespace HybridDb.Queue
             Environment.NewLine +
             string.Join(Environment.NewLine, history.ToList().Select((x, i) => $"  {i+1}. {x}")) +
             Environment.NewLine;
-
-        async Task CatchAndCancel(Func<Task> func)
-        {
-            try
-            {
-                await func();
-            }
-            catch (Exception e)
-            {
-                // The blocking observer must be cancelled before throwing,
-                // or else the queue will hang in dispose.
-                cts.Cancel();
-                throw;
-            }
-        }
-
-        async Task<T> CatchAndCancel<T>(Func<Task<T>> func)
-        {
-            try
-            {
-                return await func();
-            }
-            catch (Exception e)
-            {
-                // The blocking observer must be cancelled before throwing,
-                // or else the queue will hang in dispose.
-                cts.Cancel();
-                throw;
-            }
-        }
     }
 }
