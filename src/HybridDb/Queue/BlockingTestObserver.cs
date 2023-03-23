@@ -13,7 +13,7 @@ namespace HybridDb.Queue
         readonly object locker = new();
         readonly TimeSpan timeout;
         readonly BlockingCollection<IHybridDbQueueEvent> queue = new();
-        readonly List<(IHybridDbQueueEvent value, int ManagedThreadId)> history = new();
+        readonly List<IHybridDbQueueEvent> history = new();
         readonly SemaphoreSlim gate = new(0);
         readonly CancellationTokenSource cts = new();
 
@@ -43,21 +43,15 @@ namespace HybridDb.Queue
                 StopBlocking();
             }
 
-          
-
             if (cts.IsCancellationRequested) return;
 
-            //waitingAtTheGate = 1;
+            waitingAtTheGate = 1;
 
-            queue.Add(value);
-            history.Add((value, Thread.CurrentThread.ManagedThreadId));
-
-            if (Interlocked.Exchange(ref waitingAtTheGate, 1) == 1)
-            {
-                throw new InvalidOperationException(@$"
-                    Waiting at the gate was already true? Thread: {Thread.CurrentThread.ManagedThreadId}. Value: {value}.
-                    QUEUE: {string.Join(", ", queue.ToList().Select((x, i) => $"  {i + 1}. {x}"))}.");
-            }
+            // Thread waiting on GetNext will immediately continue, when value is added
+            // This will in turn often result in AdvanceBy1 to be executed before
+            // the rest the OnNext call is completed. Be aware!
+            queue.Add(value); 
+            history.Add(value);
 
             var linkedCts = CancellationTokenSource
                 .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
@@ -69,17 +63,9 @@ namespace HybridDb.Queue
         {
             if (cts.IsCancellationRequested) return Task.CompletedTask;
 
-            //if (waitingAtTheGate == 0)
-            //{
-            //    throw new InvalidOperationException(@"
-            //        You must empty the queue before advancing further, use GetNext() and its siblings to 
-            //        to pull events from the queue.
-            //    ".Indent() + GetHistoryString());
-            //}
-
             waitingAtTheGate = 0;
 
-            Console.WriteLine("Count: " + gate.Release());
+            gate.Release();
 
             return Task.CompletedTask;
         }
