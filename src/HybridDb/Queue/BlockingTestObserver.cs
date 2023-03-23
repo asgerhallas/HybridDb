@@ -49,12 +49,12 @@ namespace HybridDb.Queue
             //        QUEUE: {string.Join(", ", queue.ToList().Select((x, i) => $"  {i + 1}. {x}"))}.");
             //}
 
-            queue.Add(value);
-            history.Add((value, Thread.CurrentThread.ManagedThreadId));
-
             if (cts.IsCancellationRequested) return;
 
             waitingAtTheGate = 1;
+
+            queue.Add(value);
+            history.Add((value, Thread.CurrentThread.ManagedThreadId));
 
             var linkedCts = CancellationTokenSource
                 .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
