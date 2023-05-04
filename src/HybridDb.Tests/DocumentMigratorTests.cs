@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using HybridDb.Config;
+using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
@@ -83,6 +85,44 @@ namespace HybridDb.Tests
             var document = configuration.Serializer.Serialize(new Entity());
 
             Should.NotThrow(() => new DocumentMigrator(configuration).DeserializeAndMigrate(null, design, Row(NewId(), document, 0, design.Discriminator)));
+        }
+
+        [Fact]
+        public void CachesMigrationCommands()
+        {
+            Document<Entity>();
+
+            var migration = new MyMigration(1);
+
+            UseMigrations(migration);
+
+            var id = NewId();
+            var design = configuration.GetDesignFor<Entity>();
+            var document = configuration.Serializer.Serialize(new Entity { Property = "Asger" });
+
+            var documentMigrator = new DocumentMigrator(configuration);
+
+            var entity1 = (Entity)documentMigrator.DeserializeAndMigrate(null, design, Row(id, document, 1, design.Discriminator));
+            var entity2 = (Entity)documentMigrator.DeserializeAndMigrate(null, design, Row(id, document, 1, design.Discriminator));
+
+            entity1.Property.ShouldBe("Asger");
+            entity2.Property.ShouldBe("Asger");
+
+            migration.NumberOfCallsToBackgroundMethod.ShouldBe(1);
+        }
+
+        class MyMigration : Migration
+        {
+            public int NumberOfCallsToBackgroundMethod = 0; 
+
+            public MyMigration(int version) : base(version) { }
+
+            public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
+            {
+                NumberOfCallsToBackgroundMethod++;
+
+                yield return new ChangeDocument<Entity>((x, y, z) => throw new InvalidOperationException());
+            }
         }
 
         static IDictionary<string, object> Row(string id, string document, int version, string discriminator) =>

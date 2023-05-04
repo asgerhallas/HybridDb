@@ -305,6 +305,8 @@ namespace HybridDb.Queue
                 
                 var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
+                // TODO: log here to ensure we get a log before a new exception is raised
+
                 events.OnNext(new MessageFailed(context, message, exception, failures, cts.Token));
 
                 if (failures < 5)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using HybridDb.Commands;
@@ -7,7 +8,6 @@ using HybridDb.Config;
 using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
 
 namespace HybridDb
@@ -171,10 +171,34 @@ namespace HybridDb
             managedEntity.Metadata = metadata;
         }
 
-        public T Store<T>(T entity) where T : class => Store(null, entity);
-        public T Store<T>(T entity, Guid? etag) where T : class => Store(null, entity, etag);
-        public T Store<T>(string key, T entity, Guid? etag) where T : class => Store(key, entity, etag, EntityState.Loaded);
+        /// <summary>
+        /// Store the entity in this <see cref="DocumentSession"/> as <see cref="EntityState.Transient"/>.
+        /// It will not be saved to the database until <see cref="SaveChanges()"/> is called.
+        /// The entity is stored with an id retrived with the configured <see cref="Configuration.DefaultKeyResolver"/>.
+        /// When <see cref="SaveChanges()"/> is called, the entity will be INSERTED as a new document in the database table that is configured for the entity type.
+        /// It is expected, at this time, that a document with the given id does not yet exist in the table, or else an <see cref="SqlException"/> will be thrown.
+        /// </summary>
+        /// <typeparam name="T">Type of the entity, used only for the return type.</typeparam>
+        /// <param name="entity">The entity to store.</param>
+        /// <returns>entity</returns>
+        public T Store<T>(T entity) where T : class => Store(null, entity, null, EntityState.Transient);
         public T Store<T>(string key, T entity) where T : class => Store(key, entity, null, EntityState.Transient);
+
+        /// <summary>
+        /// Store the entity in this <see cref="DocumentSession"/> as <see cref="EntityState.Loaded"/> with the given etag.
+        /// It will not be saved to the database until <see cref="SaveChanges()"/> is called.
+        /// The entity is stored with an id retrived with the configured DefaultKeyResolver.
+        /// When <see cref="SaveChanges()"/> is called, an existing document in the database table, that is configured for the entity type, will UPDATED with the changes from the entity.
+        /// It is expected, at this time, that a document with the given id exists in the table, or else an <see cref="SqlException"/> will be thrown.
+        /// If etag is a Guid it must match the etag of the existing document, or else a <see cref="ConcurrencyException"/> will be thrown.
+        /// If etag is null, the existing document will be overridden.
+        /// </summary>
+        /// <param name="entity">The entity to store.</param>
+        /// <param name="etag">Current etag or null.</param>
+        /// <typeparam name="T">Type of the entity, used only for the return type.</typeparam>
+        /// <returns>entity</returns>
+        public T Store<T>(T entity, Guid? etag) where T : class => Store(null, entity, etag, EntityState.Loaded);
+        public T Store<T>(string key, T entity, Guid? etag) where T : class => Store(key, entity, etag, EntityState.Loaded);
 
         T Store<T>(string key, T entity, Guid? etag, EntityState state) where T : class
         {

@@ -8,7 +8,7 @@ namespace HybridDb.Migrations.Documents
 {
     public class DocumentMigrator
     {
-        readonly ConcurrentDictionary<Table, IEnumerable<(Migration Migration, RowMigrationCommand Command)>> cache = new();
+        readonly ConcurrentDictionary<Table, IReadOnlyList<(Migration Migration, RowMigrationCommand Command)>> cache = new();
 
         readonly Configuration configuration;
 
@@ -18,7 +18,8 @@ namespace HybridDb.Migrations.Documents
         {
             var migrations = cache.GetOrAdd(design.Table, key => configuration.Migrations
                 .SelectMany(x => x.Background(configuration), (migration, command) => (Migration: migration, Command: command))
-                .Where(x => x.Command.Matches(configuration, design.Table)));
+                .Where(x => x.Command.Matches(configuration, design.Table))
+                .ToList());
 
             var migratedRow = migrations
                 .Aggregate(row, (currentRow, nextCommand) =>
