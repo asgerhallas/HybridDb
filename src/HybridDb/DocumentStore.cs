@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
+using Indentional;
 using Microsoft.Extensions.Logging;
 using IsolationLevel = System.Data.IsolationLevel;
 
@@ -121,7 +122,7 @@ namespace HybridDb
 
         public void Execute(DdlCommand command)
         {
-            if (IsInitialized) throw new InvalidOperationException("Changing database schema is not allowed after store initialization.");
+            //if (IsInitialized) throw new InvalidOperationException("Changing database schema is not allowed after store initialization.");
 
             Configuration.Resolve<DdlCommandExecutor>()(this, command);
         }
@@ -138,6 +139,16 @@ namespace HybridDb
             AssertInitialized();
 
             return (T) Configuration.Resolve<DmlCommandExecutor>()(tx, command);
+        }
+
+        public SpicyTable GetTableFor<T>() => Configuration.GetDesignFor<T>().Table.GetSpicy(this);
+
+        public SpicyTable GetTableFor(Table table) => table.GetSpicy(this);
+
+        public SpicyTable GetTableFor(string tableName)
+        {
+            var design = Configuration.TryGetDesignByTablename(tableName);
+            return design.Table.GetSpicy(this);
         }
 
         void AssertInitialized()

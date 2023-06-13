@@ -26,20 +26,19 @@ namespace HybridDb.Queue
 
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
         {
+            var table = command.Table.GetSpicy(tx.Store);
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
-            var tableName = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
             var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ??
                      command.Message.Id;
 
             command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
-
             try
             {
                 tx.SqlConnection.Execute(@$"
                     set nocount on; 
-                    insert into {tableName} (Topic, Version, Id, [Order], CommitId, Discriminator, Message, Metadata) 
+                    insert into {table} (Topic, Version, Id, [Order], CommitId, Discriminator, Message, Metadata) 
                     values (@Topic, @Version, @Id, @Order, @CommitId, @Discriminator, @Message, @Metadata); 
                     set nocount off;",
                     new

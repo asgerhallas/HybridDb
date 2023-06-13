@@ -40,14 +40,14 @@ namespace HybridDb.Events.Commands
             parameters.Add("@Metadata", JsonConvert.SerializeObject(command.Event.Metadata.Values));
             parameters.Add("@Data", command.Event.Data);
 
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
+            var table = tx.Store.GetTableFor(command.Table);
 
             var sequenceNumberSql = command.Event.SequenceNumber == SequenceNumber.Any
-                ? $"(SELECT COALESCE(MAX(SequenceNumber), -1) + 1 FROM {tablename} WHERE StreamId = @StreamId)"
+                ? $"(SELECT COALESCE(MAX(SequenceNumber), -1) + 1 FROM {table} WHERE StreamId = @StreamId)"
                 : "@SequenceNumber";
 
             var sql = $@"
-                INSERT INTO {tablename} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
+                INSERT INTO {table} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
                 OUTPUT Inserted.Position, Inserted.SequenceNumber
                 VALUES (@EventId, @CommitId, @StreamId, {sequenceNumberSql}, @Name, @Generation, @Metadata, @Data)";
 

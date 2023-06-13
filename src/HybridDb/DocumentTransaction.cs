@@ -76,6 +76,7 @@ namespace HybridDb
             DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
+            if (!table.IsCreated) Store.Execute(table.GetCreateCommand());
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
 

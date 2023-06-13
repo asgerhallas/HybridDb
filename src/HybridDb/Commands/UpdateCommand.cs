@@ -24,6 +24,7 @@ namespace HybridDb.Commands
 
         public static Guid Execute(DocumentTransaction tx, UpdateCommand command)
         {
+            var table = tx.Store.GetTableFor(command.Table);
             var projections = command.Projections.ToDictionary();
 
             projections[DocumentTable.EtagColumn] = tx.CommitId;
@@ -31,7 +32,7 @@ namespace HybridDb.Commands
             projections[DocumentTable.LastOperationColumn] = Operation.Updated;
 
             var sql = new SqlBuilder()
-                .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
+                .Append($"update {table}")
                 .Append($"set {string.Join(", ", from column in projections.Keys select $"[{column.Name}] = @{column.Name}")}")
                 .Append($"where {DocumentTable.IdColumn.Name}=@Id")
                 .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")

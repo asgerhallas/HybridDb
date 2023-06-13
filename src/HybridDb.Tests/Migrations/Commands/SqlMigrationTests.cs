@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Migrations.Commands
             store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
 
             store.Execute(new SqlCommand("add some index", (sql, db) => sql
-                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int")));
+                .Append($"alter table {store.Database.FormatTableNameAndEscape("Entities")} add {store.Database.Escape("Col3")} int")));
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace HybridDb.Tests.Migrations.Commands
 
             store.Execute(new SqlCommand("add some data", (sql, db) => sql
                 .Append(
-                    $"insert into {db.FormatTableNameAndEscape("Entities")} ({db.Escape("Col1")}) values (@value)", 
+                    $"insert into {store.Database.FormatTableNameAndEscape("Entities")} ({store.Database.Escape("Col1")}) values (@value)", 
                     new SqlParameter("@value", SqlDbType.Int) { Value = 1 })));
         }
 

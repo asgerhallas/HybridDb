@@ -115,6 +115,9 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             TouchStore();
 
+            var documentTable = new DocumentTable("BuildingParts");
+            documentTable.GetSpicy(store);
+
             var after = store.Query(new DocumentTable("BuildingParts"), out _).Single();
 
             var expectedDocument = File.ReadAllText("Migrations\\BuiltIn\\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3_Result.json");

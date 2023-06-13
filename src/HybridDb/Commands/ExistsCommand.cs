@@ -17,9 +17,10 @@ namespace HybridDb.Commands
 
         public static Guid? Execute(DocumentTransaction tx, ExistsCommand command)
         {
+            var table = tx.Store.GetTableFor(command.Table);
             tx.Store.Stats.NumberOfRequests++;
 
-            var sql = $"select Etag from {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} where {DocumentTable.IdColumn.Name} = @Id";
+            var sql = $"select Etag from {table} where {DocumentTable.IdColumn.Name} = @Id";
 
             // ReSharper disable once RedundantAnonymousTypePropertyName
             return (Guid?)tx.SqlConnection.ExecuteScalar(sql, new { Id = command.Id }, tx.SqlTransaction);

@@ -17,6 +17,9 @@ namespace HybridDb.Tests.Bugs
                 c.Document<Doc1>().Key(x => x.Id);
                 c.Document<Doc2>().Key(x => x.Id);
             }));
+
+            documentStore.GetTableFor<Doc1>();
+            documentStore.GetTableFor<Doc2>();
         }
 
         [Fact]

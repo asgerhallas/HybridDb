@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading;
 using System.Transactions;
 using Dapper;
+using HybridDb.Config;
+using Indentional;
 using Microsoft.Extensions.Logging;
 
 namespace HybridDb
@@ -48,11 +50,10 @@ namespace HybridDb
             }
         }
 
-        public override string FormatTableName(string tablename)
+        public override string FormatTableName(string tableName)
         {
             if (string.IsNullOrEmpty(prefix)) Initialize();
-
-            return $"{prefix}{tablename}";
+            return $"{prefix}{tableName}";
         }
 
         public override ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null)

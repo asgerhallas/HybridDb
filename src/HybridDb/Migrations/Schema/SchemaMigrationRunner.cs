@@ -52,7 +52,7 @@ namespace HybridDb.Migrations.Schema
             });
         }
 
-
+        
         void Migrate(bool isTempTables, Action action)
         {
             var sw = Stopwatch.StartNew();
@@ -118,15 +118,15 @@ namespace HybridDb.Migrations.Schema
 
         void TryCreateMetadataTable()
         {
-            var metadata = store.Configuration.GetMetadataTable();
+            var metadataTable = store.Configuration.GetMetadataTable();
 
-            store.Execute(new CreateTable(metadata));
+            store.Execute(new CreateTable(metadataTable));
 
-            var hybridDbTableName = store.Database.FormatTableNameAndEscape(metadata.Name);
+            var hybridDbTable = store.GetTableFor(metadataTable);
 
             store.Database.RawExecute($@"
-                if not exists (select * from {hybridDbTableName})
-                    insert into {hybridDbTableName} (SchemaVersion) values (-1);", 
+                if not exists (select * from {hybridDbTable})
+                    insert into {hybridDbTable} (SchemaVersion) values (-1);", 
                 schema: true);
         }
 
@@ -145,6 +145,11 @@ namespace HybridDb.Migrations.Schema
 
         IReadOnlyList<string> RunMigrations(int schemaVersion)
         {
+            if (store.Database is not SqlServerUsingRealTables && !store.Configuration.RunUpfrontMigrationsOnTempTables)
+            {
+                return new List<string>();
+            }
+
             var configuredMigrations = GetConfiguredMigrations(schemaVersion);
 
             if (!configuredMigrations.Any())

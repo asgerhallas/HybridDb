@@ -69,6 +69,8 @@ namespace HybridDb.Queue
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
 
+            if (!table.IsCreated) store.Execute(table.GetCreateCommand());
+
             if (options.UseLocalEnqueueTrigger)
             {
                 store.Configuration.HandleEvents(x =>

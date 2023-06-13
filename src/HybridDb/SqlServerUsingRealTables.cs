@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using Dapper;
+using HybridDb.Config;
 using Microsoft.Extensions.Logging;
 
 namespace HybridDb
@@ -16,7 +17,7 @@ namespace HybridDb
         {
         }
 
-        public override string FormatTableName(string tablename) => store.Configuration.TableNamePrefix + tablename;
+        public override string FormatTableName(string tableName) => store.Configuration.TableNamePrefix + tableName;
 
         public override ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null)
         {

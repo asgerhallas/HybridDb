@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using Dapper;
+using HybridDb.Config;
 using Microsoft.Extensions.Logging;
 
 namespace HybridDb
@@ -26,10 +27,10 @@ namespace HybridDb
         public abstract ManagedConnection Connect(bool schema = false, TimeSpan? connectionTimeout = null);
 
         public abstract Dictionary<string, List<string>> QuerySchema();
-        public abstract string FormatTableName(string tablename);
+        public abstract string FormatTableName(string tableName);
         public abstract void Dispose();
 
-        public string FormatTableNameAndEscape(string tablename) => Escape(FormatTableName(tablename));
+        public string FormatTableNameAndEscape(string tableName) => Escape(FormatTableName(tableName));
 
         public string Escape(string identifier) => $"[{identifier}]";
 

@@ -565,6 +565,8 @@ namespace HybridDb.Tests.Queue
                 Version = new Version("1.2.5")
             }));
 
+            store.GetTableFor<MyMessage>();
+
             using (var session = store.OpenSession())
             {
                 session.Enqueue(new MyMessage("1"));

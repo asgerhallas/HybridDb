@@ -21,5 +21,8 @@ namespace HybridDb
         void Execute(DdlCommand command);
         object Execute(DocumentTransaction tx, DmlCommand command);
         T Execute<T>(DocumentTransaction tx, Command<T> command);
+        SpicyTable GetTableFor<T>();
+        SpicyTable GetTableFor(Table table);
+        SpicyTable GetTableFor(string tableName);
     }
 }

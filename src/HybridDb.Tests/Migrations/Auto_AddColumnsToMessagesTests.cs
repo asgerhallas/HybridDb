@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using HybridDb.Migrations.Schema;
 using HybridDb.Queue;
 using Shouldly;
 using Xunit;
@@ -33,7 +32,6 @@ namespace HybridDb.Tests.Migrations
                         CONSTRAINT [PK_{tableNameFormatted}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
                 end", schema: true);
-
             store.Database.RawExecute(@$"
                 insert into {store.Database.FormatTableNameAndEscape(tablename)} 
                 (Topic, Id, CommitId, Discriminator, Message)
@@ -56,7 +54,7 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] {"default"}));
+            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] { "default" }));
 
             oldMessage.ShouldNotBe(null);
         }
@@ -65,7 +63,7 @@ namespace HybridDb.Tests.Migrations
         public void AddMetadata()
         {
             var tablename = "messages";
-            var tableNameFormatted = store.Database.FormatTableName(tablename);
+            var tableNameFormatted = store.Database.FormatTableNameAndEscape(tablename);
 
             store.Database.RawExecute($@"
                 if (object_id('{tableNameFormatted}', 'U') is null)
@@ -82,7 +80,7 @@ namespace HybridDb.Tests.Migrations
                 end", schema: true);
 
             store.Database.RawExecute(@$"
-                insert into {store.Database.FormatTableNameAndEscape(tablename)} 
+                insert into {tableNameFormatted} 
                 (Topic, Id, CommitId, Discriminator, Message)
                 values (@Topic, @Id, @CommitId, @Discriminator, @Message);",
                 new
@@ -103,15 +101,15 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] {"default"}));
+            var oldMessage = store.Execute(new DequeueCommand(new QueueTable("messages"), new[] {"default"}));
             oldMessage.Metadata.ShouldNotBe(null);
 
-            store.Execute(new EnqueueCommand(new QueueTable(tablename), new HybridDbMessage("a", "payload")
+            store.Execute(new EnqueueCommand(new QueueTable("messages"), new HybridDbMessage("a", "payload")
             {
                 Metadata = { ["meta"] = "facebook" }
             }));
 
-            var newMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] { "default" }));
+            var newMessage = store.Execute(new DequeueCommand(new QueueTable("messages"), new[] { "default" }));
             newMessage.Metadata.ShouldContainKeyAndValue("meta", "facebook");
         }
 

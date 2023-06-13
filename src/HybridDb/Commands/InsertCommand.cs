@@ -20,6 +20,8 @@ namespace HybridDb.Commands
 
         public static Guid Execute(DocumentTransaction tx, InsertCommand command)
         {
+            var table = tx.Store.GetTableFor(command.Table);
+
             var projections = command.Projections.ToDictionary();
 
             projections[DocumentTable.IdColumn] = command.Id;
@@ -29,7 +31,7 @@ namespace HybridDb.Commands
             projections[DocumentTable.LastOperationColumn] = Operation.Inserted;
 
             var sql = $@"
-                insert into {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} 
+                insert into {table} 
                 ({string.Join(", ", from column in projections.Keys select tx.Store.Database.Escape(column.Name))}) 
                 values ({string.Join(", ", from column in projections.Keys select "@" + column.Name)});";
 
