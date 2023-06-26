@@ -190,7 +190,30 @@ namespace HybridDb
             return (stats, result);
         }
 
-        static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
+        public (QueryStats stats, IEnumerable<TProjection> rows) RawQuery<TProjection>(string sql, object parameters)
+        {
+	        storeStats.NumberOfRequests++;
+	        storeStats.NumberOfQueries++;
+
+	        var timer = Stopwatch.StartNew();
+	        var sqlBuilder = new SqlBuilder();
+
+	        sqlBuilder.Append(sql);
+
+	        var result = InternalQuery(sqlBuilder, parameters, ReadRowRaw<TProjection>)
+		        .ToList();
+
+	        var stats = new QueryStats
+	        {
+		        TotalResults = result.Count,
+		        FirstRowNumberOfWindow = 0,
+		        QueryDurationInMilliseconds = timer.ElapsedMilliseconds
+	        };
+
+	        return (stats, result);
+        }
+
+		static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
             if (simpleTypes.Contains(typeof(TProjection)))
                 return select;
@@ -238,9 +261,19 @@ namespace HybridDb
             return reader.Read<T, RowExtras, Row<T>>(CreateRow, "RowNumber", buffered: true);
         }
 
-        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new Row<T>(data, extras);
+		public IEnumerable<T> ReadRowRaw<T>(SqlMapper.GridReader reader)
+        {
+	        return reader.Read<T>(true);
+        }
 
-        public class RowExtras
+		public static Row<T> CreateRow<T>(T data, RowExtras extras) => new Row<T>(data, extras);
+
+		public static Row<T> CreateRowRaw<T>(T data, RowExtras extras)
+		{
+			return new Row<T>(data, extras);
+		}
+
+		public class RowExtras
         {
             public int RowNumber { get; set; }
             public string __Discriminator { get; set; }

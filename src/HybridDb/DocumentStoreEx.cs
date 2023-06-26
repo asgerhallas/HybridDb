@@ -32,7 +32,24 @@ namespace HybridDb
 
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
-        public static IEnumerable<QueryResult<T>> Query<T>(
+        public static IEnumerable<IDictionary<string, object>> RawQuery(this IDocumentStore store, string sql, out QueryStats stats, object parameters = null) =>
+	        store.RawQuery<object>(sql, out stats, parameters)
+		        .Select(x => (IDictionary<string, object>)x);
+
+        public static IEnumerable<T> RawQuery<T>(this IDocumentStore store, string sql, out QueryStats stats, object parameters = null)
+        {
+	        using var tx = store.BeginTransaction();
+
+	        var (queryStats, rows) = tx.RawQuery<T>(sql, parameters);
+
+	        tx.Complete();
+
+	        stats = queryStats;
+
+	        return rows;
+        }
+
+		public static IEnumerable<QueryResult<T>> Query<T>(
             this IDocumentStore store, DocumentTable table, string @join, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
