@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
@@ -197,9 +199,7 @@ namespace HybridDb
 
             var timer = Stopwatch.StartNew();
 
-            using var reader = SqlConnection.QueryMultiple(sql.ToString(), sql.Parameters, SqlTransaction);
-
-            var result = ReadRowWithoutExtras<TProjection>(reader).ToList();
+            var result = SqlConnection.Query<TProjection>(sql.ToString(), sql.Parameters, SqlTransaction).ToList();
 
             var stats = new QueryStats
             {
@@ -257,11 +257,6 @@ namespace HybridDb
             }
 
             return reader.Read<T, RowExtras, Row<T>>(CreateRow, "RowNumber", buffered: true);
-        }
-
-        public IEnumerable<T> ReadRowWithoutExtras<T>(SqlMapper.GridReader reader)
-        {
-            return reader.Read<T>(true);
         }
 
         public static Row<T> CreateRow<T>(T data, RowExtras extras) => new(data, extras);
