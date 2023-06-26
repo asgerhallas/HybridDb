@@ -15,9 +15,7 @@ namespace HybridDb.Tests
 {
     public class DocumentStoreTests : HybridDbTests
     {
-        //readonly byte[] documentAsByteArray = { (byte)'a', (byte)'s', (byte)'g', (byte)'e', (byte)'r' };
         readonly string documentAsByteArray = "asger";
-
         public DocumentStoreTests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
@@ -140,6 +138,25 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryProjectToNestedPropertyUsingSql()
+        {
+            Document<Entity>().With(x => x.TheChild.NestedDouble);
+
+            var id1 = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
+            var sql = new SqlBuilder();
+
+            sql.Append($"select * from {tableName}");
+
+            var rows = store.Query<ProjectionWithNestedProperty>(sql, out _).ToList();
+
+            rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
+        }
+
+        [Fact]
         public void CanQueryAndReturnFullDocuments()
         {
             Document<Entity>().With(x => x.Field);
@@ -154,6 +171,40 @@ namespace HybridDb.Tests
 
             QueryStats stats;
             var rows = store.Query(table.Table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
+
+            rows.Count().ShouldBe(2);
+            var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
+            first[DocumentTable.EtagColumn].ShouldBe(etag1);
+            first[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
+            first[table.Table["Field"]].ShouldBe("Asger");
+
+            var second = rows.Single(x => (string)x[DocumentTable.IdColumn] == id2);
+            second[DocumentTable.IdColumn].ShouldBe(id2);
+            second[DocumentTable.EtagColumn].ShouldBe(etag2);
+            second[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
+            second[table.Table["Field"]].ShouldBe("Hans");
+        }
+
+        [Fact]
+        public void CanQueryAndReturnFullDocumentsUsingSql()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var id1 = NewId();
+            var id2 = NewId();
+            var id3 = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
+            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
+            store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
+            var sql = new SqlBuilder();
+
+            sql.Append($"select * from {tableName} where Field != @name");
+            sql.Parameters.Add("name", "Bjarne", table.Table.Columns.Single(x => x.Name == "Field"));
+
+            var rows = store.Query(sql, out _).ToList();
 
             rows.Count().ShouldBe(2);
             var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
@@ -190,6 +241,32 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryAndReturnAnonymousProjectionsUsingSql()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+
+            var t = new { Field = "" };
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
+            var sql = new SqlBuilder();
+
+            sql.Append($"select Field from {tableName} where Field = @name");
+            sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
+
+            IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql, out _).Cast<dynamic>();
+
+            var rows = Query(t).ToList();
+
+            rows.Count.ShouldBe(1);
+            Assert.Equal("Asger", rows.Single().Field);
+        }
+
+        [Fact]
         public void CanQueryAndReturnValueProjections()
         {
             Document<Entity>().With(x => x.Field);
@@ -201,6 +278,26 @@ namespace HybridDb.Tests
 
             QueryStats stats;
             var rows = store.Query<string>(table.Table, out stats, select: "Field").Select(x => x.Data).ToList();
+
+            Assert.Equal("Asger", rows.Single());
+        }
+
+        [Fact]
+        public void CanQueryAndReturnValueProjectionsUsingSql()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+
+            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
+            var sql = new SqlBuilder();
+
+            sql.Append($"select Field from {tableName}");
+
+            var rows = store.Query<string>(sql, out _).ToList();
 
             Assert.Equal("Asger", rows.Single());
         }
@@ -220,6 +317,31 @@ namespace HybridDb.Tests
             var rows = store.Query(new DocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
 
             rows.Count().ShouldBe(1);
+            var row = rows.Single();
+            row[table.Table["Field"]].ShouldBe("Asger");
+            row[table.Table["Property"]].ShouldBe("A");
+        }
+
+        [Fact]
+        public void CanQueryDynamicTableUsingSql()
+        {
+            Document<Entity>().With(x => x.Field).With(x => x.Property);
+
+            var id1 = NewId();
+            var id2 = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = documentAsByteArray });
+            store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
+            var sql = new SqlBuilder();
+
+            sql.Append($"select * from {tableName} where Field = @name");
+            sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
+
+            var rows = store.Query(sql, out _).ToList();
+
+            rows.Count.ShouldBe(1);
             var row = rows.Single();
             row[table.Table["Field"]].ShouldBe("Asger");
             row[table.Table["Property"]].ShouldBe("A");
@@ -851,7 +973,6 @@ namespace HybridDb.Tests
                 {
                     Id = "c",
                     Number = 2,
-
                 });
 
                 s1.SaveChanges();
@@ -893,7 +1014,6 @@ namespace HybridDb.Tests
                         Id = i.ToString(),
                         Number = i,
                     });
-                    
                 }
                 s1.SaveChanges();
             }
@@ -961,7 +1081,7 @@ namespace HybridDb.Tests
                 Complex = new Entity.ComplexType { A = "It's me, string", B = 54 },
                 TheChild = new Entity.Child { NestedDouble = 59.3, NestedProperty = "Child" },
             };
-            
+
             using var session = store.OpenSession();
             session.Store(NewId(), entity);
             session.SaveChanges();
@@ -980,8 +1100,8 @@ namespace HybridDb.Tests
 
             using var session = store.OpenSession();
 
-            var firstList = new List<OtherEntityWithSomeSimilarities>{ new() {Id = Guid.Empty, StringProp = "Is real life" },new (){Id = Guid.Empty,StringProp = "Is it just fantasy"}};
-            var secondList = new List<Case> { new (){ By = "By1" }, new() { By = "By2" } };
+            var firstList = new List<OtherEntityWithSomeSimilarities> { new() { Id = Guid.Empty, StringProp = "Is real life" }, new() { Id = Guid.Empty, StringProp = "Is it just fantasy" } };
+            var secondList = new List<Case> { new() { By = "By1" }, new() { By = "By2" } };
             var entity = new EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case> { Things = firstList, OtherThings = secondList };
 
             session.Store(NewId(), entity);
@@ -989,10 +1109,9 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>();
             var row = store.Query<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>(table.Table, out _, select: "Things, OtherThings").Single();
-            
+
             row.Data.ShouldBeLike(entity);
         }
-
 
         public class EntityWithListOfObjects<TThings, TOtherThings>
         {

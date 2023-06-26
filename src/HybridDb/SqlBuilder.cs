@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using System.Data.SqlClient;
 using System.Text;
 
 namespace HybridDb
@@ -9,21 +6,20 @@ namespace HybridDb
     public class SqlBuilder
     {
         readonly StringBuilder fragments;
-        public readonly HybridDbParameters parameters;
 
         public SqlBuilder()
         {
             fragments = new StringBuilder();
-            parameters = new HybridDbParameters();
+            Parameters = new HybridDbParameters();
         }
 
-        public HybridDbParameters Parameters => parameters;
+        public HybridDbParameters Parameters { get; }
 
         public SqlBuilder Append(string sql, params SqlParameter[] args)
         {
             foreach (var arg in args)
             {
-                parameters.Add(arg);
+                Parameters.Add(arg);
             }
 
             if (fragments.Length != 0) fragments.Append(" ");
@@ -45,7 +41,7 @@ namespace HybridDb
         public SqlBuilder Append(SqlBuilder builder)
         {
             fragments.Append(builder.fragments);
-            parameters.Add(builder.parameters);
+            Parameters.Add(builder.Parameters);
             return this;
         }
 

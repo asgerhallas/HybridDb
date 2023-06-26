@@ -54,9 +54,19 @@ namespace HybridDb
 
         public void Add(string name, object value, Column column)
         {
+            if (column == null) throw new ArgumentNullException(nameof(column));
+
             var sqlColumn = SqlTypeMap.Convert(column);
 
-            Add(CreateSqlParameter(name, value, sqlColumn.DbType));
+            Add(name, value, sqlColumn.DbType);
+
+        }
+
+        public void Add(string name, object value, SqlDbType dbType)
+        {
+            if (name == null) throw new ArgumentNullException(nameof(name));
+
+            Add(CreateSqlParameter(name, value, dbType));
         }
 
         public static SqlParameter CreateSqlParameter(string name, object value, SqlDbType? dbType)
@@ -99,7 +109,7 @@ namespace HybridDb
         static string Clean(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
-            
+
             return name[0] switch
             {
                 '@' => name.Substring(1),

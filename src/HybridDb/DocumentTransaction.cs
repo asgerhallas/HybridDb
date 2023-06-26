@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
@@ -18,9 +20,9 @@ namespace HybridDb
         readonly ManagedConnection managedConnection;
 
         public DocumentTransaction(
-            DocumentStore store, 
-            Guid commitId, 
-            IsolationLevel level, 
+            DocumentStore store,
+            Guid commitId,
+            IsolationLevel level,
             StoreStats storeStats,
             TimeSpan? connectionTimeout = null)
         {
@@ -69,11 +71,11 @@ namespace HybridDb
             return result.Values.Single();
         }
 
-        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) => 
+        public IDictionary<string, IDictionary<string, object>> Get(DocumentTable table, IReadOnlyList<string> keys) =>
             Execute(new GetCommand(table, keys));
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
-            DocumentTable table, string join, bool top1 = false, string select = null, string where = "", 
+            DocumentTable table, string join, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             storeStats.NumberOfRequests++;
@@ -132,15 +134,15 @@ namespace HybridDb
                 switch (window)
                 {
                     case SkipTake skipTake:
-                    {
-                        var skip = skipTake.Skip;
-                        var take = skipTake.Take;
+                        {
+                            var skip = skipTake.Skip;
+                            var take = skipTake.Take;
 
-                        sqlx.Append("where RowNumber >= @skip", new SqlParameter("skip", skip))
-                            .Append(take > 0, "and RowNumber < @take", new SqlParameter("take", skip + take))
-                            .Append("order by RowNumber");
-                        break;
-                    }
+                            sqlx.Append("where RowNumber >= @skip", new SqlParameter("skip", skip))
+                                .Append(take > 0, "and RowNumber < @take", new SqlParameter("take", skip + take))
+                                .Append("order by RowNumber");
+                            break;
+                        }
                     case SkipToId skipToId:
                         sqlx.Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
                             .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
@@ -175,7 +177,7 @@ namespace HybridDb
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
-                
+
                 result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)
                     .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion))
                     .ToList();
@@ -190,6 +192,25 @@ namespace HybridDb
             return (stats, result);
         }
 
+        public (QueryStats stats, IEnumerable<TProjection> rows) Query<TProjection>(SqlBuilder sql)
+        {
+            storeStats.NumberOfRequests++;
+            storeStats.NumberOfQueries++;
+
+            var timer = Stopwatch.StartNew();
+
+            var result = SqlConnection.Query<TProjection>(sql.ToString(), sql.Parameters, SqlTransaction).ToList();
+
+            var stats = new QueryStats
+            {
+                TotalResults = result.Count,
+                FirstRowNumberOfWindow = 0,
+                QueryDurationInMilliseconds = timer.ElapsedMilliseconds
+            };
+
+            return (stats, result);
+        }
+
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
             if (simpleTypes.Contains(typeof(TProjection)))
@@ -197,17 +218,17 @@ namespace HybridDb
 
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
             var selectedColumns =
-                from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
+                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                 let column = split[0]
                 let alias = split.Length > 1 ? split[1] : null
                 where neededColumns.Contains(alias)
-                select new {column, alias = alias ?? column};
+                select new { column, alias = alias ?? column };
 
             var missingColumns =
                 from column in neededColumns
                 where !selectedColumns.Select(x => x.alias).Contains(column)
-                select new {column, alias = column};
+                select new { column, alias = column };
 
             select = string.Join(", ", selectedColumns.Union(missingColumns).Select(x => x.column + " AS " + x.alias));
             return select;
@@ -218,9 +239,9 @@ namespace HybridDb
             var hybridDbParameters = parameters.ToHybridDbParameters();
 
             hybridDbParameters.Add(sql.Parameters);
-            
+
             using var reader = SqlConnection.QueryMultiple(sql.ToString(), hybridDbParameters, SqlTransaction);
-            
+
             return read(reader);
         }
 
@@ -230,15 +251,15 @@ namespace HybridDb
             {
                 return (IEnumerable<Row<T>>)reader
                     .Read<object, RowExtras, Row<IDictionary<string, object>>>(
-                        (a, b) => CreateRow((IDictionary<string, object>)a, b), 
-                        "RowNumber", 
+                        (a, b) => CreateRow((IDictionary<string, object>)a, b),
+                        "RowNumber",
                         buffered: true);
             }
 
             return reader.Read<T, RowExtras, Row<T>>(CreateRow, "RowNumber", buffered: true);
         }
 
-        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new Row<T>(data, extras);
+        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new(data, extras);
 
         public class RowExtras
         {

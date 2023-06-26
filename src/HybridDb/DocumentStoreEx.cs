@@ -32,12 +32,29 @@ namespace HybridDb
 
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
+        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, SqlBuilder sql, out QueryStats stats) =>
+            store.Query<object>(sql, out stats)
+                .Select(x => (IDictionary<string, object>)x);
+
+        public static IEnumerable<T> Query<T>(this IDocumentStore store, SqlBuilder sql, out QueryStats stats)
+        {
+            using var tx = store.BeginTransaction();
+
+            var (queryStats, rows) = tx.Query<T>(sql);
+
+            tx.Complete();
+
+            stats = queryStats;
+
+            return rows;
+        }
+
         public static IEnumerable<QueryResult<T>> Query<T>(
             this IDocumentStore store, DocumentTable table, string @join, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
         {
             using var tx = store.BeginTransaction();
-            
+
             var (queryStats, rows) = tx.Query<T>(table, join, top1, select, where, window, orderby, includeDeleted, parameters);
 
             tx.Complete();
@@ -56,7 +73,7 @@ namespace HybridDb
             this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
             store.Query<object>(table, out stats, top1, @select, @where, window, @orderby, includeDeleted, parameters)
-                .Select(x => (IDictionary<string, object>) x.Data);
+                .Select(x => (IDictionary<string, object>)x.Data);
 
         public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
             this IDocumentStore store, DocumentTable table, byte[] since, string select = null) =>
@@ -68,7 +85,7 @@ namespace HybridDb
                 @where: $"{DocumentTable.TimestampColumn.Name} > @Since and {DocumentTable.TimestampColumn.Name} < min_active_rowversion()",
                 @orderby: $"{DocumentTable.TimestampColumn.Name} ASC",
                 includeDeleted: true,
-                parameters: new {Since = since}
+                parameters: new { Since = since }
             ).rows;
 
         public static void Transactionally(this IDocumentStore store, Action<DocumentTransaction> func) =>
@@ -81,13 +98,13 @@ namespace HybridDb
                 return (object)null;
             });
 
-        public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func) => 
+        public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func) =>
             Transactionally(store, IsolationLevel.ReadCommitted, func);
 
         public static T Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, T> func)
         {
             using var tx = store.BeginTransaction(isolationLevel);
-            
+
             var result = func(tx);
 
             tx.Complete();
@@ -95,13 +112,13 @@ namespace HybridDb
             return result;
         }
 
-        public static Task<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, Task<T>> func) => 
+        public static Task<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, Task<T>> func) =>
             Transactionally(store, IsolationLevel.ReadCommitted, func);
 
         public static async Task<T> Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, Task<T>> func)
         {
             using var tx = store.BeginTransaction(isolationLevel);
-            
+
             var result = await func(tx);
 
             tx.Complete();
@@ -109,13 +126,13 @@ namespace HybridDb
             return result;
         }
 
-        public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, IEnumerable<T>> func) => 
+        public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, IEnumerable<T>> func) =>
             Transactionally(store, IsolationLevel.ReadCommitted, func);
 
         public static IEnumerable<T> Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, IEnumerable<T>> func)
         {
             using var tx = store.BeginTransaction(isolationLevel);
-            
+
             foreach (var x in func(tx))
             {
                 yield return x;
