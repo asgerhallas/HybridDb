@@ -122,6 +122,7 @@ namespace HybridDb.Migrations.Schema
 
             store.Execute(new CreateTable(metadataTable));
 
+            //TODO evt try.. eller ensure table på store 
             var hybridDbTable = store.GetTableFor(metadataTable);
 
             store.Database.RawExecute($@"
@@ -145,6 +146,7 @@ namespace HybridDb.Migrations.Schema
 
         IReadOnlyList<string> RunMigrations(int schemaVersion)
         {
+            //TODO lazy på config i stedet for 
             if (store.Database is not SqlServerUsingRealTables && !store.Configuration.RunUpfrontMigrationsOnTempTables)
             {
                 return new List<string>();

@@ -13,7 +13,7 @@ namespace HybridDb
         Dictionary<string, List<string>> QuerySchema();
 
         string Escape(string identifier);
-        string FormatTableName(string tableNames);
+        string FormatTableName(string tableName);
         string FormatTableNameAndEscape(string tableName);
 
         int RawExecute(string sql, object parameters = null, bool schema = false, int? commandTimeout = null);

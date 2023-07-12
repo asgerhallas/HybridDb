@@ -10,14 +10,14 @@ namespace HybridDb.Migrations.Schema.Commands
         {
             Safe = true;
 
-            Builder2 = builder;
+            Builder = builder;
             CommandTimeout = commandTimeout;
 
             Description = description;
             RequiresReprojectionOf = requiresReprojectionOf;
         }
 
-        public Action<SqlBuilder, IDocumentStore> Builder2 { get; }
+        public Action<SqlBuilder, IDocumentStore> Builder { get; }
         public int? CommandTimeout { get; }
         public string Description { get; }
 
@@ -26,7 +26,7 @@ namespace HybridDb.Migrations.Schema.Commands
         public override void Execute(DocumentStore store)
         {
             var sql = new SqlBuilder();
-            Builder2(sql, store);
+            Builder(sql, store);
             store.Database.RawExecute(sql.ToString(), sql.Parameters, commandTimeout: CommandTimeout);
         }
     }
