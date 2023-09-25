@@ -254,6 +254,21 @@ namespace HybridDb
             }
         }
 
+        public IDocumentSession Copy()
+        {
+            var sessionCopy = new DocumentSession(store, migrator, enlistedTx);
+            
+            foreach (var entity in entities)
+            {
+                sessionCopy.entities.Add(entity.Value);
+            }
+
+            sessionCopy.events.AddRange(events);
+            sessionCopy.deferredCommands.AddRange(deferredCommands);
+            
+            return sessionCopy;
+        }
+
         public Guid SaveChanges() => SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: false);
 
         public Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument)

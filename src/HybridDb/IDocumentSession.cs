@@ -51,5 +51,6 @@ namespace HybridDb
         bool TryGetManagedEntity<T>(string key, out T entity);
 
         Dictionary<object, object> SessionData { get; }
+        IDocumentSession Copy();
     }
 }
