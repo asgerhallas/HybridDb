@@ -257,10 +257,15 @@ namespace HybridDb
         public IDocumentSession Copy()
         {
             var sessionCopy = new DocumentSession(store, migrator, enlistedTx);
-            
+
             foreach (var entity in entities)
             {
                 sessionCopy.entities.Add(entity.Value);
+            }
+
+            foreach (var data in SessionData)
+            {
+                sessionCopy.SessionData.Add(data.Key, data.Value);
             }
 
             sessionCopy.events.AddRange(events);

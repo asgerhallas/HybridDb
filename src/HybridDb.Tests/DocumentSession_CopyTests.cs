@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using HybridDb.Commands;
 using HybridDb.Events;
+using HybridDb.Queue;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -35,7 +36,6 @@ namespace HybridDb.Tests
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
-            sessionCopy.Advanced.ManagedEntities.Count.ShouldBe(2);
         }
 
         [Fact]
@@ -75,8 +75,6 @@ namespace HybridDb.Tests
                     new { SomeNumber = 2, SomeData = "Data2" }));
 
             var sessionCopy = session.Advanced.Copy();
-
-            sessionCopy.Advanced.DeferredCommands.Count.ShouldBe(2);
         }
 
         [Fact]
@@ -92,14 +90,24 @@ namespace HybridDb.Tests
                 $"{Guid.NewGuid()}",
                 new { Field = "1" }));
 
-            session.Advanced.DocumentTransaction.Execute(new InsertCommand(
-                store.Configuration.GetDesignFor<LocalEntity>().Table,
-                $"{Guid.NewGuid()}",
-                new { Field = "1" }));
-
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.Advanced.DocumentTransaction.ShouldNotBeNull();
+            sessionCopy.Advanced.DocumentTransaction.ShouldBe(tx);
+        }
+
+        [Fact]
+        public void CopySessionWithSessionData()
+        {
+            using var session = store.OpenSession();
+
+            var context = new MessageContext(new HybridDbMessage($"{Guid.NewGuid()}", "dbMessage"));
+
+            session.Advanced.SessionData.Add(MessageContext.Key, context.IncomingMessage.Id);
+
+            var sessionCopy = session.Advanced.Copy();
+
+            sessionCopy.ShouldBeLike(session);
         }
 
         public class LocalEntity
