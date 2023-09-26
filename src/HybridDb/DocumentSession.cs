@@ -44,6 +44,8 @@ namespace HybridDb
         public IAdvancedDocumentSession Advanced => this;
         public ManagedEntities ManagedEntities => entities;
 
+        public List<(int Generation, EventData<byte[]> Data)> Events => events;
+
         public Dictionary<object, object> SessionData { get; } = new();
 
         public T Load<T>(string key, bool readOnly = false) where T : class => (T)Load(typeof(T), key, readOnly);

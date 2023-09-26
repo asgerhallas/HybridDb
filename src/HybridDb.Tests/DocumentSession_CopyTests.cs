@@ -44,17 +44,10 @@ namespace HybridDb.Tests
             using var session = store.OpenSession();
 
             session.Append(1, new EventData<byte[]>("1", Guid.NewGuid(), "Name1", 1, new Metadata(), new[] { (byte)1 }));
-            session.Append(2, new EventData<byte[]>("2", Guid.NewGuid(), "Name2", 2, new Metadata(), new[] { (byte)2 }));
 
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
-
-            var copiedEvents = (List<(int Generation, EventData<byte[]> Data)>)sessionCopy
-                .GetType()
-                .GetField("events", BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(sessionCopy);
-            copiedEvents.Count.ShouldBe(2);
         }
 
         [Fact]
@@ -75,6 +68,8 @@ namespace HybridDb.Tests
                     new { SomeNumber = 2, SomeData = "Data2" }));
 
             var sessionCopy = session.Advanced.Copy();
+
+            sessionCopy.ShouldBeLike(session);
         }
 
         [Fact]
@@ -85,14 +80,8 @@ namespace HybridDb.Tests
 
             session.Advanced.Enlist(tx);
 
-            session.Advanced.DocumentTransaction.Execute(new InsertCommand(
-                store.Configuration.GetDesignFor<LocalEntity>().Table,
-                $"{Guid.NewGuid()}",
-                new { Field = "1" }));
-
             var sessionCopy = session.Advanced.Copy();
 
-            sessionCopy.Advanced.DocumentTransaction.ShouldNotBeNull();
             sessionCopy.Advanced.DocumentTransaction.ShouldBe(tx);
         }
 
