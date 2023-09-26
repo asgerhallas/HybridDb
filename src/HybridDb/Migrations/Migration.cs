@@ -63,7 +63,9 @@ namespace HybridDb.Migrations
         /// </list>
         /// </summary>
         public virtual IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration) => 
+#pragma warning disable CS0618 // Type or member is obsolete
             Upfront(configuration);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         /// <summary>
         /// Commands returned by this method will be run on individual rows in the background and also when a document is loaded/queried into a session.

@@ -1,10 +1,9 @@
 using System;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
-using Xunit;
 using Xunit;
 using Xunit.Abstractions;
 using SqlCommand = HybridDb.Migrations.Schema.Commands.SqlCommand;
