@@ -44,6 +44,8 @@ namespace HybridDb
         public IAdvancedDocumentSession Advanced => this;
         public ManagedEntities ManagedEntities => entities;
 
+        public IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events => events;
+
         public Dictionary<object, object> SessionData { get; } = new();
 
         public T Load<T>(string key, bool readOnly = false) where T : class => (T)Load(typeof(T), key, readOnly);
@@ -252,6 +254,26 @@ namespace HybridDb
             {
                 managedEntity.State = EntityState.Deleted;
             }
+        }
+
+        public IDocumentSession Copy()
+        {
+            var sessionCopy = new DocumentSession(store, migrator, enlistedTx);
+
+            foreach (var entity in entities)
+            {
+                sessionCopy.entities.Add(entity.Value);
+            }
+
+            foreach (var data in SessionData)
+            {
+                sessionCopy.SessionData.Add(data.Key, data.Value);
+            }
+
+            sessionCopy.events.AddRange(events);
+            sessionCopy.deferredCommands.AddRange(deferredCommands);
+            
+            return sessionCopy;
         }
 
         public Guid SaveChanges() => SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: false);
