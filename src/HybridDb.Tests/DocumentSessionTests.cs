@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -8,7 +7,6 @@ using System.Text;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
-using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
 using HybridDb.Queue;
