@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,25 +9,55 @@ namespace HybridDb.Config
 {
     public class ShortNameTypeMapper : ITypeMapper
     {
-        readonly IReadOnlyList<Assembly> assemblies;
-        readonly Lazy<IReadOnlyList<Type>> typesInAssemblies;
+        readonly HashSet<Assembly> assemblies = new();
+        readonly Dictionary<string, List<Type>> typesByShortName = new();
 
-        public ShortNameTypeMapper(IReadOnlyList<Assembly> assemblies = null)
+        public ShortNameTypeMapper(params Assembly[] assemblies)
         {
-            this.assemblies = assemblies;
+            // Add the the system types from CoreLib
+            Add(typeof(int).Assembly);
 
-            // Loading types from dynamic assemblies while new types are being emitted will throw.
-            // This happens a lot in test when fake libraries emit fake types. We filter away
-            // dynamic types here, and if they are needed you will need to pass them in yourself.
-            // Also this is lazy because some types seems to not be loadable if we get them too early.
-            typesInAssemblies = new Lazy<IReadOnlyList<Type>>(() =>
-                (assemblies ?? AppDomain.CurrentDomain.GetAssemblies().Where(x => !x.IsDynamic))
-                .SelectMany(x => x.GetTypes())
-                .ToList(), isThreadSafe: true);
+            foreach (var assembly in assemblies)
+            {
+                Add(assembly);
+            }
+        }
+
+        public void Add(Assembly assembly)
+        {
+            if (!assemblies.Add(assembly)) return;
+
+            foreach (var type in assembly.GetTypes())
+            {
+                var shortname = ShortNameByType(type);
+
+                if (!typesByShortName.TryGetValue(shortname, out var list))
+                {
+                    list = typesByShortName[shortname] = new List<Type>();
+                }
+
+                list.Add(type);
+
+                //if (!types.TryAdd(shortname, type))
+                //{
+                //    throw new InvalidOperationException($"Two types maps to the same discriminator '{shortname}': {type.FullName} and {types[shortname]}");
+                //}
+            }
         }
 
         public string ToDiscriminator(Type type)
         {
+            if (!assemblies.Contains(type.Assembly))
+            {
+                throw new InvalidOperationException(
+                    $"""
+                     Type '{type.FullName}' cannot get a shortname discriminator as the assembly is not known to HybridDb.
+                     Only assemblies of types that are configured with configuration.Document<T>(), CoreLib and 
+                     the assemblies in which the DocumentStore are instantiated are known by default.
+                     Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper("{type.Assembly}"));` to your HybridDb configuration.
+                     """);
+            }
+
             var shortname = ShortNameByType(type);
 
             if (!type.IsGenericType) return shortname;
@@ -61,20 +91,25 @@ namespace HybridDb.Config
 
         Type TypeByShortName(Type basetype, string shortname)
         {
-            var matchingTypes = typesInAssemblies.Value
-                .Where(x => ShortNameByType(x) == shortname && basetype.IsAssignableFrom(x))
-                .ToList();
-
-            var type = matchingTypes.Count switch
+            if (!typesByShortName.TryGetValue(shortname, out var matchesByShortName))
             {
-                > 1 => throw new InvalidOperationException(Indent($@"
-                        Too many types found for '{shortname}'. Found: 
+                matchesByShortName = new List<Type>();
+            }
 
-                            {string.Join(Environment.NewLine, matchingTypes.Select(x => x.FullName))}")),
+            var matchesByBaseType = matchesByShortName.Where(basetype.IsAssignableFrom).ToList();
+
+            var type = matchesByBaseType.Count switch
+            {
+                > 1 => throw new InvalidOperationException(
+                    Indent(
+                        $"""
+                         Too many types found for '{shortname}'. Found:
+                        
+                         {string.Join(Environment.NewLine, matchesByBaseType.Select(x => x.FullName))}
+                         """)),
                 < 1 => throw new InvalidOperationException($@"No type found for '{shortname}'."),
-                _ => matchingTypes[0]
+                _ => matchesByBaseType[0]
             };
-
             return type;
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -25,6 +25,18 @@ namespace HybridDb.Linq.Old.Parsers
             if (expression.NodeType == ExpressionType.Quote)
                 Visit(expression.Operand);
 
+            return expression;
+        }
+
+        protected override Expression VisitNew(NewExpression node)
+        {
+            foreach (var argument in node.Arguments)
+            {
+                Visit(argument);
+            }
+
+            var type = node.Type;
+            ast.Push(new SqlConstantExpression(type, node..Value));
             return expression;
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -109,13 +109,15 @@ namespace HybridDb.Config
             }
         }
 
-        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null) => 
-            new DocumentDesigner<TEntity>(GetOrCreateDesignFor(typeof(TEntity), tablename, discriminator), this);
+        public DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null) =>
+            new(GetOrCreateDesignFor(typeof(TEntity), tablename, discriminator), this);
 
         public DocumentDesign GetOrCreateDesignFor(Type type, string tablename = null, string discriminator = null)
         {
             lock (gate)
             {
+                TypeMapper.Add(type.Assembly);
+
                 discriminator ??= TypeMapper.ToDiscriminator(type);
 
                 // for interfaces we find the first design for a class that is assignable to the interface or fallback to the design for typeof(object)

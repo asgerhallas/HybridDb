@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using HybridDb.Config;
 using Shouldly;
 using Xunit;
@@ -7,10 +7,7 @@ namespace HybridDb.Tests
 {
     public class ShortNameTypeMapperTests
     {
-        readonly ShortNameTypeMapper typeMapper;
-
-        public ShortNameTypeMapperTests() =>
-            typeMapper = new ShortNameTypeMapper();
+        readonly ShortNameTypeMapper typeMapper = new(typeof(ShortNameTypeMapperTests).Assembly);
 
         [Fact]
         public void SimpleType()

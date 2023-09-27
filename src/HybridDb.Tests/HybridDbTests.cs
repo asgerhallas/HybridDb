@@ -246,6 +246,11 @@ namespace HybridDb.Tests
         {
         }
 
+        public class EntityWith<T>
+        {
+            public T Prop { get; set; }
+        }
+
         public class Entity : ISomeInterface
         {
             public Entity()
