@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Commands;
@@ -9,7 +8,6 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
-using HybridDb.Migrations.Schema;
 using HybridDb.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
