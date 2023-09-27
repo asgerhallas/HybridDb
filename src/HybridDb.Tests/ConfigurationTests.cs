@@ -298,8 +298,8 @@ namespace HybridDb.Tests
         {
             string result = null;
 
-            configuration.HandleEvents(x => { result = "okay"; });
-            configuration.HandleEvents(x => { result += " hosay"; });
+            configuration.RegisterEventHandler(x => { result = "okay"; });
+            configuration.RegisterEventHandler(x => { result += " hosay"; });
 
             configuration.Notify(new TestEvent());
 

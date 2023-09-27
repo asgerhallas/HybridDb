@@ -71,7 +71,7 @@ namespace HybridDb.Queue
 
             if (options.UseLocalEnqueueTrigger)
             {
-                store.Configuration.HandleEvents(x =>
+                store.Configuration.RegisterEventHandler(x =>
                 {
                     if (x is not SaveChanges_AfterExecuteCommands saved) return;
 
