@@ -28,17 +28,19 @@ namespace HybridDb.Linq.Old.Parsers
             return expression;
         }
 
-        protected override Expression VisitNew(NewExpression node)
-        {
-            foreach (var argument in node.Arguments)
-            {
-                Visit(argument);
-            }
+        //protected override Expression VisitNew(NewExpression node)
+        //{
+        //    foreach (var argument in node.Arguments)
+        //    {
+        //        Visit(argument);
+        //    }
 
-            var type = node.Type;
-            ast.Push(new SqlConstantExpression(type, node..Value));
-            return expression;
-        }
+
+
+        //    var type = node.Type;
+        //    ast.Push(new SqlConstantExpression(type, node..Value));
+        //    return expression;
+        //}
 
         protected override Expression VisitConstant(ConstantExpression expression)
         {
