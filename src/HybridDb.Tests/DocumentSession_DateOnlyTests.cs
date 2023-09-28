@@ -124,10 +124,9 @@ namespace HybridDb.Tests
 
             using (var session = store.OpenSession())
             {
-                var dateOnly = new DateOnly(1899, 1, 1);
                 var loaded = session
                     .Query<EntityWith<DateOnly>>()
-                    .Single(x => x.Prop > dateOnly);
+                    .Single(x => x.Prop > new DateOnly(1899, 1, 1));
 
                 loaded.Prop.ShouldBe(new DateOnly(2022, 1, 2));
             }

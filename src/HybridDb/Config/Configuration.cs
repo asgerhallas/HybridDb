@@ -31,7 +31,7 @@ namespace HybridDb.Config
 
         public Configuration()
         {
-            ConnectionString = "data source=.;Integrated Security=True";
+            ConnectionString = "data source=.;Integrated Security=True;Encrypt=False";
 
             tables = new ConcurrentDictionary<string, Table>();
             documentDesigns = new List<DocumentDesign>();
