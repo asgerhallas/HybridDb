@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Events;
 using HybridDb.Queue;
+using Microsoft.Extensions.Options;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -21,6 +24,22 @@ namespace HybridDb.Tests
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
+        }
+
+        [Fact]
+        public void CopySessionNoAddedToSessionEvent()
+        {
+            using var session = store.OpenSession();
+
+            session.Store(new OtherEntity { Id = "Test string 1", Number = 1 });
+
+            var list = new List<IHybridDbEvent>();
+
+            configuration.HandleEvents(@event => list.Add(@event));
+
+            session.Advanced.Copy();
+
+            list.Count.ShouldBe(0);
         }
 
         [Fact]

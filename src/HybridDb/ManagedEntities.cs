@@ -49,6 +49,19 @@ namespace HybridDb
             return false;
         }
 
+        internal void CopyTo(ManagedEntities entities)
+        {
+            foreach (var entityByKey in entitiesByKey)
+            {
+                entities.entitiesByKey.Add(entityByKey.Key, entityByKey.Value);
+            }
+
+            foreach (var entityByInstance in entitiesByInstance)
+            {
+                entities.entitiesByInstance.Add(entityByInstance.Key, entityByInstance.Value);
+            }
+        }
+
         public bool ContainsKey(EntityKey key) => entitiesByKey.ContainsKey(key);
         public bool TryGetValue(EntityKey key, out ManagedEntity managedEntity) => entitiesByKey.TryGetValue(key, out managedEntity);
         public bool TryGetValue(object entity, out ManagedEntity managedEntity) => entitiesByInstance.TryGetValue(entity, out managedEntity);
