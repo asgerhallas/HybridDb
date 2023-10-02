@@ -1474,7 +1474,7 @@ namespace HybridDb.Tests
             Document<Case>();
             Document<PatchCase>();
 
-            store.Configuration.HandleEvents(
+            store.Configuration.AddEventHandler(
                 x => Switch.On(x)
                     .Match<EntityLoaded>(
                         loaded =>

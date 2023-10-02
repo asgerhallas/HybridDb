@@ -299,8 +299,8 @@ namespace HybridDb.Tests
         {
             string result = null;
 
-            configuration.HandleEvents(x => { result = "okay"; });
-            configuration.HandleEvents(x => { result += " hosay"; });
+            configuration.AddEventHandler(x => { result = "okay"; });
+            configuration.AddEventHandler(x => { result += " hosay"; });
 
             configuration.Notify(new TestEvent());
 
