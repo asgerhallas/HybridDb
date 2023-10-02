@@ -90,7 +90,7 @@ namespace HybridDb.Config
 
         static string GetTableNameByConventionFor(Type type) => Inflector.Inflector.Pluralize(type.Name);
 
-        public void RegisterEventHandler(Action<IHybridDbEvent> handler) => eventHandlers += handler;
+        public void AddEventHandler(Action<IHybridDbEvent> handler) => eventHandlers += handler;
         public void Notify(IHybridDbEvent @event) => eventHandlers(@event);
 
         internal void Initialize()

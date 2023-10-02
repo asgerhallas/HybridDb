@@ -20,7 +20,7 @@ namespace HybridDb.Tests
             Document<Case>();
             Document<Profile>();
 
-            configuration.RegisterEventHandler(@event =>
+            configuration.AddEventHandler(@event =>
             {
                 if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
 
@@ -83,7 +83,7 @@ namespace HybridDb.Tests
             configuration.UseMessageQueue();
 
             SaveChanges_AfterExecuteCommands result = null;
-            configuration.RegisterEventHandler(@event =>
+            configuration.AddEventHandler(@event =>
             {
                 if (@event is not SaveChanges_AfterExecuteCommands savingChanges) return;
 

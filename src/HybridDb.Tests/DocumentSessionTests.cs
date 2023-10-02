@@ -1460,7 +1460,7 @@ namespace HybridDb.Tests
             Document<Case>();
             Document<PatchCase>();
 
-            store.Configuration.RegisterEventHandler(x => Switch.On(x)
+            store.Configuration.AddEventHandler(x => Switch.On(x)
                 .Match<EntityLoaded>(loaded =>
                 {
                     if (loaded.ManagedEntity.Entity is PatchCase patch)
