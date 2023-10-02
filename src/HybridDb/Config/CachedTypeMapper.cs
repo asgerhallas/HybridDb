@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace HybridDb.Config
 {
@@ -10,6 +11,8 @@ namespace HybridDb.Config
         readonly ConcurrentDictionary<Type, string> typeToName = new();
 
         public CachedTypeMapper(ITypeMapper typeMapper) => this.typeMapper = typeMapper;
+
+        public void Add(Assembly assembly) => typeMapper.Add(assembly);
 
         public string ToDiscriminator(Type type) => 
             typeToName.GetOrAdd(type, key => typeMapper.ToDiscriminator(key));

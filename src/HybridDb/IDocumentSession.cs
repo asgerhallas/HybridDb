@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Events;
@@ -33,12 +33,13 @@ namespace HybridDb
     {
         IDocumentStore DocumentStore { get; }
         DocumentTransaction DocumentTransaction { get; }
-        IReadOnlyList<DmlCommand> DeferredCommands { get; }
 
         void Defer(DmlCommand command);
         void Enlist(DocumentTransaction tx);
         void Evict(object entity);
         void Clear();
+
+        IDocumentSession Copy();
 
         Guid? GetEtagFor(object entity);
         bool Exists<T>(string key, out Guid? etag) where T : class;
@@ -51,6 +52,7 @@ namespace HybridDb
         bool TryGetManagedEntity<T>(string key, out T entity);
 
         Dictionary<object, object> SessionData { get; }
-        IDocumentSession Copy();
+        IReadOnlyList<DmlCommand> DeferredCommands { get; }
+        IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events { get; }
     }
 }

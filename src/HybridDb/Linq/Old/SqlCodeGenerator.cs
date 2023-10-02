@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,12 +40,14 @@ namespace HybridDb.Linq.Old
                     Visit(expression.Left);
                     sql.Append(GetOperator(expression));
                     Visit(expression.Right);
+
                     break;
                 case SqlNodeType.LikeStartsWith:
                     Visit(expression.Left);
                     sql.Append(" LIKE ");
                     Visit(expression.Right);
                     sql.Append(" + '%'");
+
                     break;
                 case SqlNodeType.LikeContains:
                     Visit(expression.Left);
@@ -53,6 +55,7 @@ namespace HybridDb.Linq.Old
                     sql.Append("'%' + ");
                     Visit(expression.Right);
                     sql.Append(" + '%'");
+
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -103,7 +106,7 @@ namespace HybridDb.Linq.Old
             if (string.IsNullOrEmpty(expression.ColumnName)) return expression;
 
             sql.Append($"[{expression.ColumnName}]");
-            
+
             return expression;
         }
 
@@ -111,55 +114,62 @@ namespace HybridDb.Linq.Old
         {
             sql.Append(" NOT ");
             Visit(expression.Operand);
+
             return expression;
         }
 
         protected override SqlExpression Visit(SqlOrderByExpression expression)
         {
             sql.Append(string.Join(", ", expression.Columns.Select(FormatOrdering)));
+
             return expression;
         }
 
-        string FormatOrdering(SqlOrderingExpression expression)
-        {
-            return $"[{expression.Column.ColumnName}]{(expression.Direction == SqlOrderingExpression.Directions.Descending ? " DESC" : "")}";
-        }
+        string FormatOrdering(SqlOrderingExpression expression) =>
+            $"[{expression.Column.ColumnName}]{(expression.Direction == SqlOrderingExpression.Directions.Descending ? " DESC" : "")}";
 
         protected override SqlExpression Visit(SqlSelectExpression expression)
         {
             sql.Append(string.Join(", ", expression.Projections.Select(FormatProjection)));
+
             return expression;
         }
 
-        string FormatProjection(SqlProjectionExpression expression)
-        {
-            return $"[{expression.From.ColumnName}] AS {expression.To}";
-        }
+        string FormatProjection(SqlProjectionExpression expression) => $"[{expression.From.ColumnName}] AS {expression.To}";
 
         protected override SqlExpression Visit(SqlConstantExpression expression)
         {
             sql.Append(FormatConstant(expression.Value));
+
             return expression;
         }
 
         string FormatConstant(object value)
         {
             if (value == null)
+            {
                 return "NULL";
+            }
 
             var enumerable = value as IEnumerable;
+
             if (enumerable != null && !(value is string))
             {
                 var listOfValues = enumerable.Cast<object>().ToList();
+
                 return $"({(listOfValues.Count == 0 ? "NULL" : string.Join(", ", listOfValues.Select(FormatConstant)))})";
             }
 
             string key;
+
             if (parameters.TryGetValue(value, out key))
+            {
                 return key;
+            }
 
             key = "@Value" + parameters.Count;
             parameters.Add(value, key);
+
             return key;
         }
     }

@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Events;
@@ -54,6 +53,8 @@ namespace HybridDb.Tests
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
+            sessionCopy.Advanced.ManagedEntities.ShouldBeLike(session.Advanced.ManagedEntities);
+            sessionCopy.Advanced.ManagedEntities.ShouldNotBeSameAs(session.Advanced.ManagedEntities);
         }
 
         [Fact]
@@ -66,6 +67,8 @@ namespace HybridDb.Tests
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
+            sessionCopy.Advanced.Events.ShouldBeLike(session.Advanced.Events);
+            sessionCopy.Advanced.Events.ShouldNotBeSameAs(session.Advanced.Events);
         }
 
         [Fact]
@@ -88,19 +91,8 @@ namespace HybridDb.Tests
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
-        }
-
-        [Fact]
-        public void CopySessionWithEnlistedTx()
-        {
-            using var session = store.OpenSession();
-            using var tx = store.BeginTransaction();
-
-            session.Advanced.Enlist(tx);
-
-            var sessionCopy = session.Advanced.Copy();
-
-            sessionCopy.Advanced.DocumentTransaction.ShouldBe(tx);
+            sessionCopy.Advanced.DeferredCommands.ShouldBeLike(session.Advanced.DeferredCommands);
+            sessionCopy.Advanced.DeferredCommands.ShouldNotBeSameAs(session.Advanced.DeferredCommands);
         }
 
         [Fact]
@@ -115,6 +107,21 @@ namespace HybridDb.Tests
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.ShouldBeLike(session);
+            sessionCopy.Advanced.SessionData.ShouldBeLike(session.Advanced.SessionData);
+            sessionCopy.Advanced.SessionData.ShouldNotBeSameAs(session.Advanced.SessionData);
+        }
+
+        [Fact]
+        public void CopySessionWithEnlistedTx()
+        {
+            using var session = store.OpenSession();
+            using var tx = store.BeginTransaction();
+
+            session.Advanced.Enlist(tx);
+
+            var sessionCopy = session.Advanced.Copy();
+
+            sessionCopy.Advanced.DocumentTransaction.ShouldBe(tx);
         }
 
         public class LocalEntity

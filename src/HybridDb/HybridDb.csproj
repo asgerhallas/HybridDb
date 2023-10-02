@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
     <Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
     <Copyright>Copyright 2013</Copyright>
@@ -9,21 +9,21 @@
     <!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <LangVersion>9</LangVersion>
+    <LangVersion>11</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.123" />
+    <PackageReference Include="Dapper" Version="2.0.151" />
     <PackageReference Include="Indentional" Version="1.0.61" PrivateAssets="All" GeneratePathProperty="true" />
     <PackageReference Include="Inflector" Version="1.0.0" PrivateAssets="All" GeneratePathProperty="true">
       <NoWarn>NU1701</NoWarn>
     </PackageReference>
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.2" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
     <PackageReference Include="ShinySwitch" Version="1.0.76" />
     <PackageReference Include="Sprache" Version="2.3.1" PrivateAssets="All" GeneratePathProperty="true" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />
     <PackageReference Include="System.Reactive" Version="4.4.1" />
   </ItemGroup>
