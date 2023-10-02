@@ -107,6 +107,11 @@ namespace HybridDb.Tests
             type.ShouldBe(typeof(MyGenericType<MyGenericType<string>, (MyType, bool)>));
         }
 
+        [Fact]
+        public void UnknownAssembly() =>
+            Should.Throw<InvalidOperationException>(() => typeMapper.ToDiscriminator(typeof(FactAttribute)))
+                .Message.ShouldBe("Type 'Xunit.FactAttribute' cannot get a shortname discriminator as the assembly is not known to HybridDb. Only assemblies of types that are configured with configuration.Document<T>(), CoreLib and the assemblies in which the DocumentStore are instantiated are known by default. Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper(typeof(FactAttribute).Assembly));` or 'configuration.TypeMapper.Add(typeof(FactAttribute).Assembly);' to your HybridDb configuration.");
+
         public class MyNestedType { }
     }
 

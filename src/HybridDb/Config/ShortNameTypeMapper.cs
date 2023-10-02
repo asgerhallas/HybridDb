@@ -37,11 +37,6 @@ namespace HybridDb.Config
                 }
 
                 list.Add(type);
-
-                //if (!types.TryAdd(shortname, type))
-                //{
-                //    throw new InvalidOperationException($"Two types maps to the same discriminator '{shortname}': {type.FullName} and {types[shortname]}");
-                //}
             }
         }
 
@@ -50,12 +45,13 @@ namespace HybridDb.Config
             if (!assemblies.Contains(type.Assembly))
             {
                 throw new InvalidOperationException(
-                    $"""
+                    Indent($"""
                      Type '{type.FullName}' cannot get a shortname discriminator as the assembly is not known to HybridDb.
                      Only assemblies of types that are configured with configuration.Document<T>(), CoreLib and 
                      the assemblies in which the DocumentStore are instantiated are known by default.
-                     Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper("{type.Assembly}"));` to your HybridDb configuration.
-                     """);
+                     Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper(typeof({type.Name}).Assembly));`
+                     or 'configuration.TypeMapper.Add(typeof({type.Name}).Assembly);' to your HybridDb configuration.
+                     """));
             }
 
             var shortname = ShortNameByType(type);

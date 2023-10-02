@@ -20,10 +20,6 @@ namespace HybridDb.Tests.Migrations.BuiltIn
     {
         // To export data for use in these tests, use "Tasks > Generate Scripts" in SQL Management Studio.
         // Under "Advanced" select "Schema and data" for "Types of data to script"
-
-        // TODO: Test at et dokument, der loades uden configureret design via migration ikke forsøges gemt i 
-        // databasen i en forkert tabel (Documents) og derved lader migrations gå i uendelig løkke. 
-        // Måske skal ManagedEntity have Design på sig?
         public HybridDb_1_x_x_to_2_x_x_Part1_Tests(ITestOutputHelper output) : base(output) { }
 
         [Fact]

@@ -12,6 +12,13 @@ namespace HybridDb.Linq.Old.Parsers
 
         public LambdaParser(Stack<SqlExpression> ast) => this.ast = ast;
 
+        protected SqlExpression VisitPop(Expression expression)
+        {
+            Visit(expression);
+
+            return ast.Pop();
+        }
+
         protected override Expression VisitLambda<T>(Expression<T> expression) => Visit(expression.Body);
 
         protected override Expression VisitUnary(UnaryExpression expression)
@@ -22,13 +29,6 @@ namespace HybridDb.Linq.Old.Parsers
             }
 
             return expression;
-        }
-
-        protected SqlExpression VisitPop(Expression expression)
-        {
-            Visit(expression);
-
-            return ast.Pop();
         }
 
         protected override Expression VisitNew(NewExpression node)
@@ -158,7 +158,7 @@ namespace HybridDb.Linq.Old.Parsers
 
         protected override Expression VisitNewArray(NewArrayExpression expression)
         {
-            var items = new object[0];
+            var items = Array.Empty<object>();
 
             if (expression.NodeType == ExpressionType.NewArrayInit)
             {

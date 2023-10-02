@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,10 +11,7 @@ namespace HybridDb.Linq.Old.Parsers
     {
         public WhereParser(Stack<SqlExpression> ast) : base(ast) { }
 
-        public SqlExpression Result
-        {
-            get { return ast.Peek(); }
-        }
+        public SqlExpression Result => ast.Peek();
 
         public static SqlExpression Translate(Expression expression)
         {
@@ -33,12 +30,9 @@ namespace HybridDb.Linq.Old.Parsers
 
         protected override Expression VisitBinary(BinaryExpression expression)
         {
-            Visit(expression.Left);
-            Visit(expression.Right);
+            var left = VisitPop(expression.Left);
+            var right = VisitPop(expression.Right);
             
-            var right = ast.Pop();
-            var left = ast.Pop();
-
             SqlNodeType nodeType;
             switch (expression.NodeType)
             {
@@ -73,7 +67,7 @@ namespace HybridDb.Linq.Old.Parsers
                     nodeType = SqlNodeType.NotEqual;
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", expression.NodeType));
+                    throw new NotSupportedException($"The binary operator '{expression.NodeType}' is not supported");
             }
 
             ast.Push(new SqlBinaryExpression(nodeType, left, right));
@@ -86,8 +80,7 @@ namespace HybridDb.Linq.Old.Parsers
             switch (expression.NodeType)
             {
                 case ExpressionType.Not:
-                    Visit(expression.Operand);
-                    ast.Push(new SqlNotExpression(ast.Pop()));
+                    ast.Push(new SqlNotExpression(VisitPop(expression.Operand)));
                     break;
                 case ExpressionType.Quote:
                 case ExpressionType.Convert:
@@ -95,7 +88,7 @@ namespace HybridDb.Linq.Old.Parsers
                     Visit(expression.Operand);
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The unary operator '{0}' is not supported", expression.NodeType));
+                    throw new NotSupportedException($"The unary operator '{expression.NodeType}' is not supported");
             }
 
             return expression;
