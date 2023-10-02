@@ -35,7 +35,7 @@ namespace HybridDb.Tests
 
             var list = new List<IHybridDbEvent>();
 
-            configuration.HandleEvents(@event => list.Add(@event));
+            configuration.AddEventHandler(@event => list.Add(@event));
 
             session.Advanced.Copy();
 
