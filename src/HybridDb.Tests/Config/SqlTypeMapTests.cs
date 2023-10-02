@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using HybridDb.Config;
 using Shouldly;
@@ -23,30 +23,32 @@ namespace HybridDb.Tests.Config
         [InlineData(typeof(DateTime), null)]
         [InlineData(typeof(DateTimeOffset), null)]
         [InlineData(typeof(float), null)]
-        public void ConvertGivesCorrectDefaultLength(Type columnType, string expectedLenght)
+        [InlineData(typeof(DateOnly), null)]
+        public void ConvertGivesCorrectDefaultLength(Type columnType, string expectedLength)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, null));
-            sqlColumn.Length.ShouldBe(expectedLenght);
+            sqlColumn.Length.ShouldBe(expectedLength);
         }
 
         [Theory]
-        [InlineData(typeof (string))]
-        [InlineData(typeof (SomeEnum))]
-        [InlineData(typeof (byte[]))]
-        [InlineData(typeof (double))]
-        [InlineData(typeof (decimal))]
-        [InlineData(typeof (long))]
-        [InlineData(typeof (int))]
+        [InlineData(typeof(string))]
+        [InlineData(typeof(SomeEnum))]
+        [InlineData(typeof(byte[]))]
+        [InlineData(typeof(double))]
+        [InlineData(typeof(decimal))]
+        [InlineData(typeof(long))]
+        [InlineData(typeof(int))]
         [InlineData(typeof(bool))]
         [InlineData(typeof(byte))]
         [InlineData(typeof(short))]
-        [InlineData(typeof (Guid))]
-        [InlineData(typeof (DateTime))]
-        [InlineData(typeof (DateTimeOffset))]
-        [InlineData(typeof (float))]
+        [InlineData(typeof(Guid))]
+        [InlineData(typeof(DateTime))]
+        [InlineData(typeof(DateTimeOffset))]
+        [InlineData(typeof(float))]
+        [InlineData(typeof(DateOnly))]
         public void ConvertGivesCorrectLength(Type columnType)
         {
-            var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, length: 42));
+            var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, 42));
             sqlColumn.Length.ShouldBe("42");
         }
 
@@ -65,6 +67,7 @@ namespace HybridDb.Tests.Config
         [InlineData(typeof(DateTime), SqlDbType.DateTime2)]
         [InlineData(typeof(DateTimeOffset), SqlDbType.DateTimeOffset)]
         [InlineData(typeof(float), SqlDbType.Real)]
+        [InlineData(typeof(DateOnly), SqlDbType.Date)]
         public void ConvertGivesCorrectType(Type columnType, SqlDbType expectedType)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, 42));
@@ -74,12 +77,10 @@ namespace HybridDb.Tests.Config
         [Theory]
         [InlineData(typeof(object))]
         [InlineData(typeof(SomeClass))]
-        public void ThrowsIfUnknownType(Type columnType)
-        {
+        public void ThrowsIfUnknownType(Type columnType) =>
             Should.Throw<ArgumentException>(() => SqlTypeMap.Convert(new Column("SomeColumn", columnType)));
-        }
 
-        class SomeClass {}
+        class SomeClass { }
         enum SomeEnum { }
     }
 }

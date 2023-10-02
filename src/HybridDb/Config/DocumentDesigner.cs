@@ -16,6 +16,8 @@ namespace HybridDb.Config
         {
             this.design = design;
             this.configuration = configuration;
+
+            SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
         }
 
         public DocumentDesigner<TEntity> Key(Func<TEntity, string> projector)
@@ -38,6 +40,7 @@ namespace HybridDb.Config
             if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TReturn)) ?? typeof(TReturn)) == null)
             {
                 SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration.Serializer));
+
                 return With(projector, (x) => configuration.Serializer.Serialize(x), options.Concat(new MaxLength()).ToArray());
             }
 
@@ -96,8 +99,7 @@ namespace HybridDb.Config
                     $"with a projection that returns {newProjection.ReturnType} (on {typeof (TEntity)}).");
             }
 
-            Projection existingProjection;
-            if (!design.Projections.TryGetValue(name, out existingProjection))
+            if (!design.Projections.TryGetValue(name, out _))
             {
                 if (design.Parent != null && !column.IsPrimaryKey)
                 {

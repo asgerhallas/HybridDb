@@ -19,7 +19,7 @@ using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 using static HybridDb.Helpers;
-using SqlException = System.Data.SqlClient.SqlException;
+using SqlException = Microsoft.Data.SqlClient.SqlException;
 using Task = System.Threading.Tasks.Task;
 
 namespace HybridDb.Tests.Queue

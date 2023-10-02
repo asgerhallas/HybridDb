@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using HybridDb.Config;
 using Shouldly;
 using Xunit;
@@ -7,10 +7,7 @@ namespace HybridDb.Tests
 {
     public class ShortNameTypeMapperTests
     {
-        readonly ShortNameTypeMapper typeMapper;
-
-        public ShortNameTypeMapperTests() =>
-            typeMapper = new ShortNameTypeMapper();
+        readonly ShortNameTypeMapper typeMapper = new(typeof(ShortNameTypeMapperTests).Assembly);
 
         [Fact]
         public void SimpleType()
@@ -109,6 +106,11 @@ namespace HybridDb.Tests
             discriminator.ShouldBe("MyGenericType`2(MyGenericType`1(String)|ValueTuple`2(MyType|Boolean))");
             type.ShouldBe(typeof(MyGenericType<MyGenericType<string>, (MyType, bool)>));
         }
+
+        [Fact]
+        public void UnknownAssembly() =>
+            Should.Throw<InvalidOperationException>(() => typeMapper.ToDiscriminator(typeof(FactAttribute)))
+                .Message.ShouldBe("Type 'Xunit.FactAttribute' cannot get a shortname discriminator as the assembly is not known to HybridDb. Only assemblies of types that are configured with configuration.Document<T>(), CoreLib and the assemblies in which the DocumentStore are instantiated are known by default. Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper(typeof(FactAttribute).Assembly));` or 'configuration.TypeMapper.Add(typeof(FactAttribute).Assembly);' to your HybridDb configuration.");
 
         public class MyNestedType { }
     }

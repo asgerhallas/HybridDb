@@ -239,6 +239,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanLoadSubTypeWhenRegisteringNoTypes()
         {
+            configuration.TypeMapper.Add(typeof(DerivedEntity).Assembly);
+
             using (var session = store.OpenSession())
             {
                 session.Store("key", new DerivedEntity());
@@ -247,6 +249,8 @@ namespace HybridDb.Tests
 
             ResetConfiguration();
 
+            configuration.TypeMapper.Add(typeof(DerivedEntity).Assembly);
+
             using (var session = store.OpenSession())
             {
                 var load = session.Load<AbstractEntity>("key");
@@ -254,6 +258,8 @@ namespace HybridDb.Tests
             }
 
             ResetConfiguration();
+
+            configuration.TypeMapper.Add(typeof(DerivedEntity).Assembly);
 
             using (var session = store.OpenSession())
             {
@@ -347,7 +353,7 @@ namespace HybridDb.Tests
             }
 
             ResetConfiguration();
-            UseTypeMapper(new ShortNameTypeMapper(ListOf(GetType().Assembly, typeof(string).Assembly)));
+            UseTypeMapper(new ShortNameTypeMapper(GetType().Assembly, typeof(string).Assembly));
 
             using (var session = store.OpenSession())
             {
@@ -553,15 +559,9 @@ namespace HybridDb.Tests
 
         public class FailingTypeMapper : ITypeMapper
         {
-            public string ToDiscriminator(Type type)
-            {
-                return "NoShow";
-            }
+            public string ToDiscriminator(Type type) => "NoShow";
 
-            public Type ToType(Type basetype, string discriminator)
-            {
-                return null;
-            }
+            public Type ToType(Type basetype, string discriminator) => null;
         }
     }
 

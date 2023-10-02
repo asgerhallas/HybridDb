@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using HybridDb.Commands;
@@ -37,13 +37,12 @@ namespace HybridDb
             Enlist(tx);
         }
 
+        public IAdvancedDocumentSession Advanced => this;
+
         public IDocumentStore DocumentStore => store;
         public DocumentTransaction DocumentTransaction => enlistedTx;
         public IReadOnlyList<DmlCommand> DeferredCommands => deferredCommands;
-
-        public IAdvancedDocumentSession Advanced => this;
         public ManagedEntities ManagedEntities => entities;
-
         public IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events => events;
 
         public Dictionary<object, object> SessionData { get; } = new();

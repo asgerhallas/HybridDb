@@ -4,7 +4,6 @@ using HybridDb.Linq.Bonsai;
 using HybridDb.Linq.Compilers;
 using Shouldly;
 using Xunit;
-using Xunit;
 
 namespace HybridDb.Tests.Linq.Compilers
 {

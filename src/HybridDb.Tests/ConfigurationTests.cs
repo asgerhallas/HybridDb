@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
@@ -307,11 +308,9 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void Table_ColumnNamesAreCaseInsensitive()
-        {
+        public void Table_ColumnNamesAreCaseInsensitive() =>
             Should.Throw<ArgumentException>(() => new Table("test", new Column<int>("ASGER"), new Column<int>("asger")))
                 .Message.ShouldBe("An item with the same key has already been added. Key: asger");
-        }
 
         public class TestEvent : IHybridDbEvent
         {
@@ -321,20 +320,11 @@ namespace HybridDb.Tests
         {
             readonly string discriminator;
 
-            public OtherTypeMapper(string discriminator)
-            {
-                this.discriminator = discriminator;
-            }
+            public OtherTypeMapper(string discriminator) => this.discriminator = discriminator;
 
-            public string ToDiscriminator(Type type)
-            {
-                return discriminator;
-            }
+            public string ToDiscriminator(Type type) => discriminator;
 
-            public Type ToType(Type basetype, string discriminator)
-            {
-                throw new NotImplementedException();
-            }
+            public Type ToType(Type basetype, string discriminator) => throw new NotImplementedException();
         }
 
         class Entity

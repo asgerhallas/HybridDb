@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Transactions;
@@ -244,6 +244,11 @@ namespace HybridDb.Tests
 
         public interface IUnusedInterface
         {
+        }
+
+        public class EntityWith<T>
+        {
+            public T Prop { get; set; }
         }
 
         public class Entity : ISomeInterface

@@ -2,7 +2,6 @@
 using HybridDb.Config;
 using Shouldly;
 using Xunit;
-using Xunit;
 
 namespace HybridDb.Tests.Config
 {

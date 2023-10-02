@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -10,34 +10,51 @@ namespace HybridDb.Linq.Old.Parsers
     {
         protected readonly Stack<SqlExpression> ast;
 
-        public LambdaParser(Stack<SqlExpression> ast)
+        public LambdaParser(Stack<SqlExpression> ast) => this.ast = ast;
+
+        protected SqlExpression VisitPop(Expression expression)
         {
-            this.ast = ast;
+            Visit(expression);
+
+            return ast.Pop();
         }
 
-        protected override Expression VisitLambda<T>(Expression<T> expression)
-        {
-            return Visit(expression.Body);
-        }
+        protected override Expression VisitLambda<T>(Expression<T> expression) => Visit(expression.Body);
 
         protected override Expression VisitUnary(UnaryExpression expression)
         {
             if (expression.NodeType == ExpressionType.Quote)
+            {
                 Visit(expression.Operand);
+            }
 
             return expression;
+        }
+
+        protected override Expression VisitNew(NewExpression node)
+        {
+            var obj = node.Constructor.Invoke(
+                node.Arguments
+                    .Select(x => ((ConstantExpression)x).Value)
+                    .ToArray());
+
+            ast.Push(new SqlConstantExpression(node.Type, obj));
+
+            return node;
         }
 
         protected override Expression VisitConstant(ConstantExpression expression)
         {
             var type = expression.Value?.GetType() ?? typeof(object);
             ast.Push(new SqlConstantExpression(type, expression.Value));
+
             return expression;
         }
 
         protected override Expression VisitParameter(ParameterExpression expression)
         {
             ast.Push(new SqlColumnExpression(expression.Type, ""));
+
             return expression;
         }
 
@@ -58,9 +75,11 @@ namespace HybridDb.Linq.Old.Parsers
             {
                 case SqlNodeType.Constant:
                     VisitConstantMethodCall(expression);
+
                     break;
                 case SqlNodeType.Column:
                     VisitColumnMethodCall(expression);
+
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -74,17 +93,19 @@ namespace HybridDb.Linq.Old.Parsers
             if (expression.Object == null)
             {
                 var arguments = ast.Pop(expression.Arguments.Count)
-                                   .Cast<SqlConstantExpression>()
-                                   .Select(x => x.Value);
+                    .Cast<SqlConstantExpression>()
+                    .Select(x => x.Value);
 
-                ast.Push(new SqlConstantExpression(expression.Method.ReturnType, expression.Method.Invoke(null, arguments.ToArray())));
+                ast.Push(new SqlConstantExpression(
+                    expression.Method.ReturnType,
+                    expression.Method.Invoke(null, arguments.ToArray())));
             }
             else
             {
                 var receiver = ((SqlConstantExpression)ast.Pop()).Value;
                 var arguments = ast.Pop(expression.Arguments.Count)
-                                   .Cast<SqlConstantExpression>()
-                                   .Select(x => x.Value);
+                    .Cast<SqlConstantExpression>()
+                    .Select(x => x.Value);
 
                 ast.Push(new SqlConstantExpression(expression.Method.ReturnType, expression.Method.Invoke(receiver, arguments.ToArray())));
             }
@@ -97,21 +118,24 @@ namespace HybridDb.Linq.Old.Parsers
                 case "Column":
                 {
                     var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+
                     if (column == null || column.ColumnName != "")
                     {
                         throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
                     }
 
-                    var constant = (SqlConstantExpression) ast.Pop();
+                    var constant = (SqlConstantExpression)ast.Pop();
                     var columnType = expression.Method.GetGenericArguments()[0];
-                    var columnName = (string) constant.Value;
+                    var columnName = (string)constant.Value;
 
                     ast.Push(new SqlColumnExpression(columnType, columnName));
+
                     break;
                 }
                 case "Index":
                 {
                     var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
+
                     if (column == null || column.ColumnName != "")
                     {
                         throw new NotSupportedException($"{expression} method must be called on the lambda parameter.");
@@ -120,19 +144,21 @@ namespace HybridDb.Linq.Old.Parsers
                     var type = expression.Method.GetGenericArguments()[0];
 
                     ast.Push(new SqlColumnPrefixExpression(type.Name));
+
                     break;
                 }
                 default:
                     ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
+
                     break;
             }
         }
 
         protected override Expression VisitNewArray(NewArrayExpression expression)
         {
-            var items = new object[0];
+            var items = Array.Empty<object>();
 
             if (expression.NodeType == ExpressionType.NewArrayInit)
             {
@@ -141,7 +167,7 @@ namespace HybridDb.Linq.Old.Parsers
                 for (var i = 0; i < expression.Expressions.Count; i++)
                 {
                     Visit(expression.Expressions[i]);
-                    items[i] = ((SqlConstantExpression) ast.Pop()).Value;
+                    items[i] = ((SqlConstantExpression)ast.Pop()).Value;
                 }
             }
 
@@ -155,6 +181,7 @@ namespace HybridDb.Linq.Old.Parsers
             if (expression.Expression == null)
             {
                 ast.Push(new SqlConstantExpression(expression.Member.GetMemberType(), expression.Member.GetValue(null)));
+
                 return expression;
             }
 
@@ -163,21 +190,27 @@ namespace HybridDb.Linq.Old.Parsers
             switch (ast.Peek().NodeType)
             {
                 case SqlNodeType.Constant:
-                    var constant = (SqlConstantExpression) ast.Pop();
+                    var constant = (SqlConstantExpression)ast.Pop();
+
                     if (constant.Value == null)
+                    {
                         throw new NullReferenceException();
+                    }
 
                     ast.Push(new SqlConstantExpression(expression.Member.GetMemberType(), expression.Member.GetValue(constant.Value)));
+
                     break;
                 case SqlNodeType.ColumnPrefix:
                     //TODO: clean up this mess. 
                     var prefix = (SqlColumnPrefixExpression)ast.Pop();
                     ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), expression.Member.Name));
+
                     break;
                 case SqlNodeType.Column:
                     ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Member.GetMemberType(), name));
+
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

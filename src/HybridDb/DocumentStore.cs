@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
@@ -29,6 +30,8 @@ namespace HybridDb
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
 
+            Configuration.TypeMapper.Add(Assembly.GetCallingAssembly());
+
             if (initialize) Initialize();
         }
 
@@ -39,6 +42,8 @@ namespace HybridDb
             TableMode = store.TableMode;
             DocumentMigrationRunner = new DocumentMigrationRunner(this);
             Database = store.Database;
+
+            Configuration.TypeMapper.Add(Assembly.GetCallingAssembly());
 
             if (initialize) Initialize();
         }

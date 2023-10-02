@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -8,6 +8,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
+using Microsoft.Data.SqlClient;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
