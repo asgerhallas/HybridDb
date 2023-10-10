@@ -100,10 +100,12 @@ namespace HybridDb.Migrations.Schema
                 parameters.Add("@DbPrincipal", "public");
                 parameters.Add("@LockMode", "Exclusive");
                 parameters.Add("@LockOwner", "Transaction");
+
+                // Time allowed to obtain the lock, before sp_getapplock return with -1 return code
                 parameters.Add("@LockTimeout", TimeSpan.FromSeconds(300).TotalMilliseconds);
                 parameters.Add("@Result", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
 
-                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure);
+                connection.Connection.Execute(@"sp_getapplock", parameters, commandType: CommandType.StoredProcedure, commandTimeout: 300);
 
                 var result = parameters.Get<int>("@Result");
 

@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
-using ShinySwitch;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -327,7 +326,7 @@ namespace HybridDb.Tests.Migrations
             UseMigrations(new InlineMigration(1, after: ListOf<DdlCommand>(
                 new AddColumn("Other", new Column("Asger", typeof(int))),
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
-                new SlowCommand(),
+                new SlowCommand(TimeSpan.FromSeconds(60)),
                 command)));
 
             store.Execute(new CreateTable(new DocumentTable("Other")));
@@ -338,6 +337,68 @@ namespace HybridDb.Tests.Migrations
                 if (string.IsNullOrEmpty(Thread.CurrentThread.Name)) Thread.CurrentThread.Name = $"Test thread {x}";
                 runnerFactory().Run(); 
             });
+
+            command.NumberOfTimesCalled.ShouldBe(1);
+        }
+
+        [Fact]
+        public void HandlesConcurrentRuns_MultipleServers_CounterPart()
+        {
+            var documentStore = DocumentStore.ForTesting(
+                TableMode.RealTables,
+                x =>
+                {
+                    x.UseConnectionString(Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString"));
+                },
+                initialize: false);
+
+            var command = new CountingCommand();
+
+            documentStore.Configuration.UseMigrations(ListOf(new InlineMigration(1, after: ListOf<DdlCommand>(command))));
+
+            new SchemaMigrationRunner(documentStore, new SchemaDiffer()).Run();
+
+            command.NumberOfTimesCalled.ShouldBe(0);
+        }
+
+        [Fact]
+        public async Task HandlesConcurrentRuns_MultipleServers()
+        {
+            TouchStore();
+
+            var currentProcess = Process.GetCurrentProcess();
+
+            var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
+            {
+                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
+                RedirectStandardOutput = true
+            };
+
+            Environment.SetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString", connectionString);
+
+            var command = new CountingCommand();
+
+            UseMigrations(
+                new InlineMigration(
+                    1,
+                    after: ListOf<DdlCommand>(
+                        new SlowCommand(TimeSpan.FromSeconds(60)),
+                        command)));
+
+            var task = Task.Run(() => new SchemaMigrationRunner(store, new SchemaDiffer()).Run());
+
+            using (var process = Process.Start(processStartInfo))
+            {
+                await task;
+
+                await process.WaitForExitAsync();
+
+                var readToEnd = await process.StandardOutput.ReadToEndAsync();
+
+                output.WriteLine(readToEnd);
+
+                readToEnd.ShouldContain("Passed:     1");
+            }
 
             command.NumberOfTimesCalled.ShouldBe(1);
         }
@@ -382,9 +443,14 @@ namespace HybridDb.Tests.Migrations
 
         public class SlowCommand : DdlCommand
         {
-            public SlowCommand() => Safe = true;
+            public SlowCommand(TimeSpan? howSlow = null)
+            {
+                HowSlow = howSlow ?? TimeSpan.FromMilliseconds(5000);
+                Safe = true;
+            }
+            public TimeSpan HowSlow { get; }
 
-            public override void Execute(DocumentStore store) => Thread.Sleep(5000);
+            public override void Execute(DocumentStore store) => Thread.Sleep(HowSlow);
 
             public override string ToString() => "";
         }

@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Linq;
+using HybridDb.Migrations.Schema;
 
 namespace HybridDb.Config
 {
@@ -22,6 +23,8 @@ namespace HybridDb.Config
         }
 
         public DocumentTable(string name) : base(name, Enumerable.Empty<Column>()) {}
+
+        public override DdlCommand GetCreateCommand() => base.GetCreateCommand();
 
         public static Column<string> IdColumn { get; }
         public static Column<Guid> EtagColumn { get; }
