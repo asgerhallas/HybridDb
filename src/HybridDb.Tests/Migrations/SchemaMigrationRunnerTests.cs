@@ -392,9 +392,9 @@ namespace HybridDb.Tests.Migrations
             {
                 await task;
 
-                await process.WaitForExitAsync();
-
                 var readToEnd = await process.StandardOutput.ReadToEndAsync();
+
+                await process.WaitForExitAsync();
 
                 output.WriteLine(readToEnd);
 
