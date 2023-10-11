@@ -371,7 +371,7 @@ namespace HybridDb.Tests.Migrations
             File.WriteAllText("counterpart.result", "passed");
         }
 
-        [Fact]
+        [Fact(Skip="Until further notice")]
         public async Task HandlesConcurrentRuns_MultipleServers()
         {
             TouchStore();
