@@ -382,6 +382,7 @@ namespace HybridDb.Tests.Migrations
             {
                 Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
                 EnvironmentVariables = { [connectionStringKey] = connectionString },
+                WorkingDirectory = Directory.GetCurrentDirectory()
             };
 
             var command = new CountingCommand();
