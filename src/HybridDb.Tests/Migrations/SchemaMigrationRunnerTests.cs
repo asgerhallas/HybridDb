@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
@@ -373,7 +374,7 @@ namespace HybridDb.Tests.Migrations
             var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
             {
                 Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
-                RedirectStandardOutput = true,
+                RedirectStandardOutput = false,
                 EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString }
             };
 
@@ -388,11 +389,17 @@ namespace HybridDb.Tests.Migrations
 
             var task = Task.Run(() => new SchemaMigrationRunner(store, new SchemaDiffer()).Run());
 
-            using (var process = Process.Start(processStartInfo))
+            using (var process = new Process{StartInfo = processStartInfo, EnableRaisingEvents = true})
             {
+                process.Start();
+
+                var sb = new StringBuilder();
+
+                process.OutputDataReceived += (x, e) => sb.Append(e.Data);
+
                 await task;
 
-                var readToEnd = await process.StandardOutput.ReadToEndAsync();
+                var readToEnd = sb.ToString();
 
                 await process.WaitForExitAsync();
 
