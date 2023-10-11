@@ -375,7 +375,8 @@ namespace HybridDb.Tests.Migrations
             {
                 Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
                 RedirectStandardOutput = true,
-                EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString }
+                EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString },
+                CreateNoWindow = true
             };
 
             var command = new CountingCommand();
