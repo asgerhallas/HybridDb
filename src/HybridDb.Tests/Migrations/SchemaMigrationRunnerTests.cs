@@ -343,16 +343,20 @@ namespace HybridDb.Tests.Migrations
             command.NumberOfTimesCalled.ShouldBe(1);
         }
 
+        const string connectionStringKey = $"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString";
+
         [Fact]
         public void HandlesConcurrentRuns_MultipleServers_CounterPart()
         {
-            if (Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString") == null) return;
+            var parentConnectionString = Environment.GetEnvironmentVariable(connectionStringKey);
+
+            if (parentConnectionString == null) return;
 
             var documentStore = DocumentStore.ForTesting(
                 TableMode.RealTables,
                 x =>
                 {
-                    x.UseConnectionString(Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString"));
+                    x.UseConnectionString(parentConnectionString);
                 },
                 initialize: false);
 
@@ -377,9 +381,7 @@ namespace HybridDb.Tests.Migrations
             var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
             {
                 Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
-                RedirectStandardOutput = true,
-                EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString },
-                CreateNoWindow = true
+                EnvironmentVariables = { [connectionStringKey] = connectionString },
             };
 
             var command = new CountingCommand();
@@ -393,10 +395,8 @@ namespace HybridDb.Tests.Migrations
 
             var task = Task.Run(() => new SchemaMigrationRunner(store, new SchemaDiffer()).Run());
 
-            using (var process = new Process{StartInfo = processStartInfo, EnableRaisingEvents = true})
+            using (var process = Process.Start(processStartInfo))
             {
-                process.Start();
-
                 await task;
                 await process.WaitForExitAsync();
 
