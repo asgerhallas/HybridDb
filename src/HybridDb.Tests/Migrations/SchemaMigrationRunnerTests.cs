@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -362,6 +363,8 @@ namespace HybridDb.Tests.Migrations
             new SchemaMigrationRunner(documentStore, new SchemaDiffer()).Run();
 
             command.NumberOfTimesCalled.ShouldBe(0);
+
+            File.WriteAllText("counterpart.result", "passed");
         }
 
         [Fact]
@@ -373,7 +376,7 @@ namespace HybridDb.Tests.Migrations
 
             var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
             {
-                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart --logger:\"console;verbosity=normal\"",
+                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
                 RedirectStandardOutput = true,
                 EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString },
                 CreateNoWindow = true
@@ -392,20 +395,16 @@ namespace HybridDb.Tests.Migrations
 
             using (var process = new Process{StartInfo = processStartInfo, EnableRaisingEvents = true})
             {
-                var sb = new StringBuilder();
-
-                process.OutputDataReceived += (x, e) => sb.Append(e.Data);
                 process.Start();
-                process.BeginOutputReadLine();
 
                 await task;
                 await process.WaitForExitAsync();
 
-                var readToEnd = sb.ToString();
+                var readToEnd = await File.ReadAllTextAsync("counterpart.result");
 
                 output.WriteLine(readToEnd);
 
-                readToEnd.ShouldContain("Passed: 1");
+                readToEnd.ShouldBe("passed");
             }
 
             command.NumberOfTimesCalled.ShouldBe(1);
