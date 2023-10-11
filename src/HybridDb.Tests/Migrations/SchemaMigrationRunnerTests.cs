@@ -344,6 +344,8 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns_MultipleServers_CounterPart()
         {
+            if (Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString") == null) return;
+
             var documentStore = DocumentStore.ForTesting(
                 TableMode.RealTables,
                 x =>
@@ -371,7 +373,7 @@ namespace HybridDb.Tests.Migrations
             var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
             {
                 Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
-                RedirectStandardOutput = true
+                RedirectStandardOutput = true,
             };
 
             Environment.SetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString", connectionString);
