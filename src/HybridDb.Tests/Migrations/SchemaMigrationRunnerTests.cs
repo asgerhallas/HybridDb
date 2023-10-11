@@ -373,7 +373,7 @@ namespace HybridDb.Tests.Migrations
 
             var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
             {
-                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
+                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart --logger:\"console;verbosity=normal\"",
                 RedirectStandardOutput = true,
                 EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString },
                 CreateNoWindow = true
@@ -405,7 +405,7 @@ namespace HybridDb.Tests.Migrations
 
                 output.WriteLine(readToEnd);
 
-                readToEnd.ShouldContain("Passed:     1");
+                readToEnd.ShouldContain("Passed: 1");
             }
 
             command.NumberOfTimesCalled.ShouldBe(1);
