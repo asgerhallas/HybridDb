@@ -374,7 +374,7 @@ namespace HybridDb.Tests.Migrations
             var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
             {
                 Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
-                RedirectStandardOutput = false,
+                RedirectStandardOutput = true,
                 EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString }
             };
 
@@ -391,17 +391,16 @@ namespace HybridDb.Tests.Migrations
 
             using (var process = new Process{StartInfo = processStartInfo, EnableRaisingEvents = true})
             {
-                process.Start();
-
                 var sb = new StringBuilder();
 
                 process.OutputDataReceived += (x, e) => sb.Append(e.Data);
+                process.Start();
+                process.BeginOutputReadLine();
 
                 await task;
+                await process.WaitForExitAsync();
 
                 var readToEnd = sb.ToString();
-
-                await process.WaitForExitAsync();
 
                 output.WriteLine(readToEnd);
 
