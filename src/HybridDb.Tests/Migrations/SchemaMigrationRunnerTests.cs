@@ -343,12 +343,10 @@ namespace HybridDb.Tests.Migrations
             command.NumberOfTimesCalled.ShouldBe(1);
         }
 
-        const string connectionStringKey = $"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString";
-
         [Fact]
         public void HandlesConcurrentRuns_MultipleServers_CounterPart()
         {
-            var parentConnectionString = Environment.GetEnvironmentVariable(connectionStringKey);
+            var parentConnectionString = Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString");
 
             if (parentConnectionString == null) return;
 
@@ -367,22 +365,19 @@ namespace HybridDb.Tests.Migrations
             new SchemaMigrationRunner(documentStore, new SchemaDiffer()).Run();
 
             command.NumberOfTimesCalled.ShouldBe(0);
-
-            File.WriteAllText("counterpart.result", "passed");
         }
 
-        [Fact(Skip="Until further notice")]
+        [Fact]
         public async Task HandlesConcurrentRuns_MultipleServers()
         {
             TouchStore();
 
-            var currentProcess = Process.GetCurrentProcess();
-
-            var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
+            var processStartInfo = new ProcessStartInfo("dotnet")
             {
-                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
-                EnvironmentVariables = { [connectionStringKey] = connectionString },
-                WorkingDirectory = Directory.GetCurrentDirectory()
+                Arguments = $"test HybridDb.Tests.dll --filter {nameof(HandlesConcurrentRuns_MultipleServers_CounterPart)}",
+                EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString"] = connectionString },
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
             };
 
             var command = new CountingCommand();
@@ -399,13 +394,14 @@ namespace HybridDb.Tests.Migrations
             using (var process = Process.Start(processStartInfo))
             {
                 await task;
-                await process.WaitForExitAsync();
 
-                var readToEnd = await File.ReadAllTextAsync("counterpart.result");
+                var readToEnd = await process.StandardOutput.ReadToEndAsync();
+                
+                await process.WaitForExitAsync();
 
                 output.WriteLine(readToEnd);
 
-                readToEnd.ShouldBe("passed");
+                readToEnd.ShouldContain("Passed:     1");
             }
 
             command.NumberOfTimesCalled.ShouldBe(1);
