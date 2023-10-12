@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
+using HybridDb.Queue;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace HybridDb.Tests.Migrations.Commands
         [Theory]
         [InlineData(TableMode.GlobalTempTables)]
         [InlineData(TableMode.RealTables)]
-        public void AddsColumn(TableMode mode)
+        public void AddsIndices(TableMode mode)
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
@@ -38,6 +39,31 @@ namespace HybridDb.Tests.Migrations.Commands
 
             indices.ShouldContain(("idx_Version", "Version"));
             indices.ShouldContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
+        }
+
+        [Theory]
+        [InlineData(TableMode.GlobalTempTables)]
+        [InlineData(TableMode.RealTables)]
+        public void IgnoresQueueTables(TableMode mode)
+        {
+            Use(mode);
+            UseTableNamePrefix(Guid.NewGuid().ToString());
+
+            store.Execute(new CreateTable(new QueueTable("QueueTable")));
+            store.Execute(new AddMigrationIndices());
+
+            var queueTable = new QueueTable("QueueTable");
+
+            var queueTableIndexQuery = store.Database
+                .RawQuery<object>($"sp_helpindex '{store.Database.FormatTableName(queueTable.Name)}'")
+                .Cast<IDictionary<string, object>>();
+
+            var queueTableIndices = queueTableIndexQuery
+                .Select(x => (x["index_name"], x["index_keys"]))
+                .ToList();
+
+            queueTableIndices.ShouldNotContain(("idx_Version", "Version"));
+            queueTableIndices.ShouldNotContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
         }
     }
 }

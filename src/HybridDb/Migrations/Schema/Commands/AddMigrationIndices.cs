@@ -1,4 +1,6 @@
 using HybridDb.Config;
+using HybridDb.Events;
+using HybridDb.Queue;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
@@ -8,6 +10,8 @@ namespace HybridDb.Migrations.Schema.Commands
         {
             foreach (var (name, table) in store.Configuration.Tables)
             {
+                if (table is not DocumentTable) return;
+
                 var formattedTableName = store.Database.FormatTableName(name);
 
                 store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_Version] ON [{formattedTableName}] ( [{DocumentTable.VersionColumn.Name}] ASC)");
