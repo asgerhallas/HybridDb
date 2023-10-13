@@ -45,16 +45,19 @@ namespace HybridDb.Tests.Migrations.Commands
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
 
+            // We name tables so they processed in the right order in AddMigrationIndices,
+            // to test for a bug, where we opted out of the rest of the indices as soon
+            // as a non-document table was met.
             Document<OtherEntity>("a");
             configuration.UseMessageQueue(new MessageQueueOptions()
             {
-                TableName = "aa"
+                TableName = "b"
             });
-            Document<Entity>("aaa");
+            Document<Entity>("c");
 
             var otherEntitiesTable = configuration.Tables["a"];
-            var queueTable = configuration.Tables["aa"];
-            var entitiesTable = configuration.Tables["aaa"];
+            var queueTable = configuration.Tables["b"];
+            var entitiesTable = configuration.Tables["c"];
 
             store.Execute(new CreateTable(queueTable));
             store.Execute(new CreateTable(entitiesTable));

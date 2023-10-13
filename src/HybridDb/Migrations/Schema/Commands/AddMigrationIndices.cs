@@ -1,3 +1,4 @@
+using System.Linq;
 using HybridDb.Config;
 using HybridDb.Events;
 using HybridDb.Queue;
@@ -8,7 +9,7 @@ namespace HybridDb.Migrations.Schema.Commands
     {
         public override void Execute(DocumentStore store)
         {
-            foreach (var (name, table) in store.Configuration.Tables)
+            foreach (var (name, table) in store.Configuration.Tables.OrderBy(x => x.Key))
             {
                 if (table is not DocumentTable) continue;
 
