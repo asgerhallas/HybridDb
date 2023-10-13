@@ -15,8 +15,8 @@ namespace HybridDb.Migrations.Schema.Commands
 
                 var formattedTableName = store.Database.FormatTableName(name);
 
-                store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_Version] ON [{formattedTableName}] ( [{DocumentTable.VersionColumn.Name}] ASC)");
-                store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_AwaitsReprojection] ON [{formattedTableName}] ( [{DocumentTable.AwaitsReprojectionColumn.Name}] ASC)");
+                store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_Version] ON [{formattedTableName}] ( [{DocumentTable.VersionColumn.Name}] ASC)", schema: true, commandTimeout: 300);
+                store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_AwaitsReprojection] ON [{formattedTableName}] ( [{DocumentTable.AwaitsReprojectionColumn.Name}] ASC)", schema: true, commandTimeout: 300 );
             }
         }
 
