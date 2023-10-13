@@ -346,13 +346,15 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void HandlesConcurrentRuns_MultipleServers_CounterPart()
         {
-            if (Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString") == null) return;
+            var parentConnectionString = Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString");
+
+            if (parentConnectionString == null) return;
 
             var documentStore = DocumentStore.ForTesting(
                 TableMode.RealTables,
                 x =>
                 {
-                    x.UseConnectionString(Environment.GetEnvironmentVariable($"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString"));
+                    x.UseConnectionString(parentConnectionString);
                 },
                 initialize: false);
 
@@ -363,8 +365,6 @@ namespace HybridDb.Tests.Migrations
             new SchemaMigrationRunner(documentStore, new SchemaDiffer()).Run();
 
             command.NumberOfTimesCalled.ShouldBe(0);
-
-            File.WriteAllText("counterpart.result", "passed");
         }
 
         [Fact]
@@ -372,13 +372,11 @@ namespace HybridDb.Tests.Migrations
         {
             TouchStore();
 
-            var currentProcess = Process.GetCurrentProcess();
-
-            var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName!)
+            var processStartInfo = new ProcessStartInfo("dotnet")
             {
-                Arguments = "test HybridDb.Tests.dll --filter HandlesConcurrentRuns_MultipleServers_CounterPart",
+                Arguments = $"test HybridDb.Tests.dll --filter {nameof(HandlesConcurrentRuns_MultipleServers_CounterPart)}",
+                EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers)}:ConnectionString"] = connectionString },
                 RedirectStandardOutput = true,
-                EnvironmentVariables = { [$"{nameof(HandlesConcurrentRuns_MultipleServers) }:ConnectionString"] = connectionString },
                 CreateNoWindow = true
             };
 
@@ -393,18 +391,17 @@ namespace HybridDb.Tests.Migrations
 
             var task = Task.Run(() => new SchemaMigrationRunner(store, new SchemaDiffer()).Run());
 
-            using (var process = new Process{StartInfo = processStartInfo, EnableRaisingEvents = true})
+            using (var process = Process.Start(processStartInfo))
             {
-                process.Start();
-
                 await task;
-                await process.WaitForExitAsync();
 
-                var readToEnd = await File.ReadAllTextAsync("counterpart.result");
+                var readToEnd = await process.StandardOutput.ReadToEndAsync();
+                
+                await process.WaitForExitAsync();
 
                 output.WriteLine(readToEnd);
 
-                readToEnd.ShouldBe("passed");
+                readToEnd.ShouldContain("Passed:     1");
             }
 
             command.NumberOfTimesCalled.ShouldBe(1);
