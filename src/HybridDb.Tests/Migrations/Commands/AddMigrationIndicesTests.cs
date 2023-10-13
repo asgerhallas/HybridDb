@@ -8,6 +8,7 @@ using Microsoft.SqlServer.Management.Smo;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using Table = HybridDb.Config.Table;
 
 namespace HybridDb.Tests.Migrations.Commands
 {
@@ -30,13 +31,7 @@ namespace HybridDb.Tests.Migrations.Commands
 
             var table = new DocumentTable("Entities");
 
-            var rawQuery = store.Database
-                .RawQuery<object>($"sp_helpindex '{store.Database.FormatTableName(table.Name)}'")
-                .Cast<IDictionary<string, object>>();
-
-            var indices = rawQuery
-                .Select(x => (x["index_name"], x["index_keys"]))
-                .ToList();
+            var indices = GetIndexesFor(table);
 
             indices.ShouldContain(("idx_Version", "Version"));
             indices.ShouldContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
@@ -49,38 +44,49 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            configuration.UseMessageQueue();
-            Document<Entity>();
 
-            store.Execute(new CreateTable(new QueueTable("QueueTable")));
-            store.Execute(new CreateTable(new DocumentTable("Entities")));
+            Document<OtherEntity>("a");
+            configuration.UseMessageQueue(new MessageQueueOptions()
+            {
+                TableName = "aa"
+            });
+            Document<Entity>("aaa");
+
+            var otherEntitiesTable = configuration.Tables["a"];
+            var queueTable = configuration.Tables["aa"];
+            var entitiesTable = configuration.Tables["aaa"];
+
+            store.Execute(new CreateTable(queueTable));
+            store.Execute(new CreateTable(entitiesTable));
+            store.Execute(new CreateTable(otherEntitiesTable));
 
             store.Execute(new AddMigrationIndices());
 
-            var queueTable = new QueueTable("QueueTable");
-            var documentTable = new DocumentTable("Entities");
-
-            var queueTableIndexQuery = store.Database
-                .RawQuery<object>($"sp_helpindex '{store.Database.FormatTableName(queueTable.Name)}'")
-                .Cast<IDictionary<string, object>>();
-
-            var queueTableIndices = queueTableIndexQuery
-                .Select(x => (x["index_name"], x["index_keys"]))
-                .ToList();
-
-            var documentTableIndexQuery = store.Database
-                .RawQuery<object>($"sp_helpindex '{store.Database.FormatTableName(documentTable.Name)}'")
-                .Cast<IDictionary<string, object>>();
-
-            var documentTableIndices = documentTableIndexQuery 
-                .Select(x => (x["index_name"], x["index_keys"]))
-                .ToList();
-
-            documentTableIndices .ShouldContain(("idx_Version", "Version"));
-            documentTableIndices .ShouldContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
+            var queueTableIndices = GetIndexesFor(queueTable);
+            var entitiesTableIndices = GetIndexesFor(entitiesTable);
+            var otherEntitiesTableIndices = GetIndexesFor(otherEntitiesTable);
 
             queueTableIndices.ShouldNotContain(("idx_Version", "Version"));
             queueTableIndices.ShouldNotContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
+
+            entitiesTableIndices.ShouldContain(("idx_Version", "Version"));
+            entitiesTableIndices.ShouldContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
+
+            otherEntitiesTableIndices.ShouldContain(("idx_Version", "Version"));
+            otherEntitiesTableIndices.ShouldContain(("idx_AwaitsReprojection", "AwaitsReprojection"));
+        }
+
+        List<(object Name, object Keys)> GetIndexesFor(Table table)
+        {
+            var rawQuery = store.Database
+                .RawQuery<object>($"sp_helpindex '{store.Database.FormatTableName(table.Name)}'")
+                .Cast<IDictionary<string, object>>();
+
+            var indices = rawQuery
+                .Select(x => (x["index_name"], x["index_keys"]))
+                .ToList();
+
+            return indices;
         }
     }
 }

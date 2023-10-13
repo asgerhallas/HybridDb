@@ -10,7 +10,7 @@ namespace HybridDb.Migrations.Schema.Commands
         {
             foreach (var (name, table) in store.Configuration.Tables)
             {
-                if (table is not DocumentTable) return;
+                if (table is not DocumentTable) continue;
 
                 var formattedTableName = store.Database.FormatTableName(name);
 
