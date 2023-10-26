@@ -1533,6 +1533,28 @@ namespace HybridDb.Tests
             originalCase.Name.ShouldBe("Asger");
         }
 
+        [Fact]
+        public void CanQueryAndReturnProjectionUsingSqlBuilder()
+        {
+            var sql = new SqlBuilder();
+
+            sql.Append(@"
+                select '1.1' ProjectedProperty, '1.2' TheChildNestedProperty
+                union
+                select '2.1' ProjectedProperty, '2.2' TheChildNestedProperty
+            ");
+
+            using var session = store.OpenSession();
+
+            var entities = session.Query<EntityProjection>(sql).ToList();
+
+            entities.Count.ShouldBe(2);
+            entities[0].ProjectedProperty.ShouldBe("1.1");
+            entities[0].TheChildNestedProperty.ShouldBe("1.2");
+            entities[1].ProjectedProperty.ShouldBe("2.1");
+            entities[1].TheChildNestedProperty.ShouldBe("2.2");
+        }
+
         public class BaseCase { }
 
         public class Case : BaseCase
