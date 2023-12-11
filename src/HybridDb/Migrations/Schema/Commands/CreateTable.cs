@@ -16,6 +16,8 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
+            Table.IsCreated = true;
+            
             if (!Table.Columns.Any())
             {
                 throw new InvalidOperationException("Cannot create a table with no columns.");

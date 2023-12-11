@@ -18,10 +18,12 @@ namespace HybridDb.Commands
 
         public static IDictionary<string, IDictionary<string, object>> Execute(DocumentTransaction tx, GetCommand command)
         {
+            var table = tx.Store.GetTableFor(command.Table);
+
             tx.Store.Stats.NumberOfRequests++;
             tx.Store.Stats.NumberOfGets++;
 
-            var sql = $"select * from {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} where {DocumentTable.IdColumn.Name} in @Ids";
+            var sql = $"select * from {table} where {DocumentTable.IdColumn.Name} in @Ids";
 
             return tx.SqlConnection.Query(sql, new { Ids = command.Ids.ToArray() }, tx.SqlTransaction)
                 .Cast<IDictionary<string, object>>()

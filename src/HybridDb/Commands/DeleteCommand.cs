@@ -20,6 +20,8 @@ namespace HybridDb.Commands
 
         public static Guid Execute(DocumentTransaction tx, DeleteCommand command)
         {
+            var table = tx.Store.GetTableFor(command.Table);
+
             // Note that last write wins can actually still produce a ConcurrencyException if the 
             // row was already deleted, which would result in 0 resulting rows changed
 
@@ -29,7 +31,7 @@ namespace HybridDb.Commands
             if (tx.Store.Configuration.SoftDelete)
             {
                 sql
-                    .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
+                    .Append($"update {table}")
                     .Append($"set {DocumentTable.IdColumn.Name} = @NewId")
                     .Append($", {DocumentTable.LastOperationColumn.Name} = {(byte) Operation.Deleted}")
                     .Append($"where {DocumentTable.IdColumn.Name} = @Id")

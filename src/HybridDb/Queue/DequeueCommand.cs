@@ -23,14 +23,12 @@ namespace HybridDb.Queue
         public static HybridDbMessage Execute(Func<string, Type, object> deserializer, DocumentTransaction tx,
             DequeueCommand command)
         {
-            var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
-
-            var msg = tx.SqlConnection
+            var table = command.Table.GetSpicy(tx.Store);
+            var options = tx.Store.Configuration.Resolve<MessageQueueOptions>(); var msg = tx.SqlConnection
                 .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata)>($@"
                     set nocount on;
                     with x as (
-                        select top(1) * from {tablename} with (rowlock, readpast) 
+                        select top(1) * from {table} with (rowlock, readpast) 
                         where Topic in @Topics
                         and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid)
                         order by [Order] asc, Position asc

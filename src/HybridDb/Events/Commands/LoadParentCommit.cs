@@ -19,7 +19,8 @@ namespace HybridDb.Events.Commands
         {
             if (command.CommitId == Guid.Empty) return null;
 
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
+            var table = command.Table.GetSpicy(tx.Store);
+
             var sql =
                 $@"SELECT
                     EventId,
@@ -31,16 +32,16 @@ namespace HybridDb.Events.Commands
                     Generation,
                     Data, 
                     Metadata
-                  FROM {tablename}
+                  FROM {table}
                   WHERE CommitId = (
                     SELECT TOP 1 CommitId
-                    FROM {tablename}
+                    FROM {table}
                     WHERE Position < ISNULL(
                         (SELECT MIN(Position)
-                        FROM {tablename} 
+                        FROM {table} 
                         WHERE CommitId = @id),
                         (SELECT MAX(Position) + 1
-                        FROM {tablename})
+                        FROM {table})
                     )
                     ORDER BY Position DESC
                   )

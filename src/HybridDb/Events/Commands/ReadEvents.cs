@@ -25,9 +25,11 @@ namespace HybridDb.Events.Commands
                 throw new InvalidOperationException("Reads from event store is best done in snapshot isolation so they don't block writes.");
             }
 
+            var table = command.Table.GetSpicy(tx.Store);
+
             var sql = $@"
                 SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
-                FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
+                FROM {table}
                 WHERE Position >= @fromPosition {(!command.ReadPastActiveTransactions ? "AND RowVersion < min_active_rowversion()" : "")}
                 ORDER BY Position ASC";
 

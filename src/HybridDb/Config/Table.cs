@@ -44,6 +44,10 @@ namespace HybridDb.Config
             return column;
         }
 
+        public bool IsCreated { get; set; } 
+
+        public SpicyTable GetSpicy(IDocumentStore store) => new(store, this);
+
         public virtual DdlCommand GetCreateCommand() => new CreateTable(this);
 
         public override string ToString() => Name;

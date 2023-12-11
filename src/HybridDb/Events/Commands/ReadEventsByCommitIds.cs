@@ -26,9 +26,11 @@ namespace HybridDb.Events.Commands
             foreach (var param in command.Ids.Select((value, i) => (name: $"@p{i}", value: value)))
                 parameters.Add(param.name, param.value);
 
+            var table = command.Table.GetSpicy(tx.Store);
+
             var sql = $@"
                 SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
-                FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
+                FROM {table}
                 WHERE CommitId IN ({string.Join(", ", parameters.ParameterNames.Select(x => $"@{x}"))})
                 ORDER BY Position";
 

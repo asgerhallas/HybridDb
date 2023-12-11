@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Text;
+using HybridDb.Config;
 
 namespace HybridDb
 {

@@ -17,6 +17,8 @@ namespace HybridDb.Queue
 
         public override void Execute(DocumentStore store)
         {
+            QueueTable.IsCreated = true;
+            var table = store.GetTableFor(QueueTable);
             var tableName = store.Database.FormatTableName(QueueTable.Name);
 
             store.Database.RawExecute($@"
