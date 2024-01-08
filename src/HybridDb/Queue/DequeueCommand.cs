@@ -17,31 +17,57 @@ namespace HybridDb.Queue
             Topics = topics;
         }
 
+        public DequeueCommand(QueueTable table, string messageId)
+        {
+            Table = table ?? throw new ArgumentNullException(nameof(table));
+
+            if (messageId == null) throw new ArgumentNullException(nameof(messageId));
+
+            MessageId = messageId;
+        }
+
         public QueueTable Table { get; }
         public IReadOnlyList<string> Topics { get; }
+        public string MessageId { get; }
 
-        public static HybridDbMessage Execute(Func<string, Type, object> deserializer, DocumentTransaction tx,
-            DequeueCommand command)
+        public static HybridDbMessage Execute(Func<string, Type, object> deserializer, DocumentTransaction tx, DequeueCommand command)
         {
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
+
+            string where;
+            object param;
+            if (command.Topics != null)
+            {
+                where = "where Topic in @Topics";
+                param = new
+                {
+                    command.Topics,
+                    Version = options.Version.ToString()
+                };
+            }
+            else
+            {
+                where = "where Id = @MessageId";
+                param = new
+                {
+                    command.MessageId,
+                    Version = options.Version.ToString()
+                };
+            }
 
             var msg = tx.SqlConnection
                 .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata)>($@"
                     set nocount on;
                     with x as (
                         select top(1) * from {tablename} with (rowlock, readpast) 
-                        where Topic in @Topics
+                        {where}
                         and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid)
                         order by [Order] asc, Position asc
                     )
                     delete from x output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic, deleted.[Order], deleted.Metadata;
                     set nocount off;",
-                    new
-                    {
-                        command.Topics,
-                        Version = options.Version.ToString()
-                    },
+                    param,
                     tx.SqlTransaction
                 ).SingleOrDefault();
 

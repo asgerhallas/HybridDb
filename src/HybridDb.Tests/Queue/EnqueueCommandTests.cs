@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
 using HybridDb.Queue;
 using Shouldly;
@@ -42,6 +41,38 @@ namespace HybridDb.Tests.Queue
                 new List<string> { "TopicA" }));
 
             message.Topic.ShouldBe("TopicA");
+        }
+
+        [Fact]
+        public void MessageId_SetByMessage()
+        {
+            store.Execute(new EnqueueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new HybridDbMessage("id_a", new MyMessage(), "DontCare")));
+
+            store.Execute(new EnqueueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new HybridDbMessage("id_b", new MyMessage(), "DontCare")));
+
+            var message = store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                messageId: "id_a"));
+
+            message.Id.ShouldBe("id_a");
+        }
+
+        [Fact]
+        public void MessageId_NoneMatching()
+        {
+            store.Execute(new EnqueueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                new HybridDbMessage("id_a", new MyMessage(), "DontCare")));
+
+            var message = store.Execute(new DequeueCommand(
+                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
+                messageId: "id_b"));
+
+            message.ShouldBe(null);
         }
 
         [Fact]
