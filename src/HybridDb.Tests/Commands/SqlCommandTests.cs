@@ -1,4 +1,5 @@
 using System.Data;
+using HybridDb.Commands;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,7 +32,7 @@ namespace HybridDb.Tests.Commands
             sql.Parameters.Add("@Document", "{\"Field\":\"Updated Value\"}", SqlDbType.NVarChar);
             sql.Parameters.Add("@Id", entityId, SqlDbType.NVarChar);
 
-            updateSession.Advanced.DocumentStore.SqlCommand(sql, expectedRowCount: 1);
+            updateSession.Advanced.DocumentStore.Execute(new SqlCommand(sql, expectedRowCount: 1));
 
             using var readSession = store.OpenSession();
 
@@ -57,7 +58,7 @@ namespace HybridDb.Tests.Commands
             sql.Append($"update {tableName} set Document = @Document");
             sql.Parameters.Add("@Document", null, SqlDbType.NVarChar);
 
-            Should.Throw<ConcurrencyException>(() => updateSession.Advanced.DocumentStore.SqlCommand(sql, expectedRowCount: 1))
+            Should.Throw<ConcurrencyException>(() => updateSession.Advanced.DocumentStore.Execute(new SqlCommand(sql, expectedRowCount: 1)))
                 .Message
                 .ShouldBe(
                     "Someone beat you to it. Expected 1 changes, but got 2. The transaction is rolled back now, so no changes were actually made.");

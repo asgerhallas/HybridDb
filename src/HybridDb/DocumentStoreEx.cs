@@ -19,9 +19,6 @@ namespace HybridDb
         public static Guid Delete(this IDocumentStore store, DocumentTable table, string key, Guid? etag) =>
             store.Transactionally(tx => tx.Execute(new DeleteCommand(table, key, etag)));
 
-        public static Guid SqlCommand(this IDocumentStore store, SqlBuilder sql, int expectedRowCount) =>
-            store.Transactionally(tx => tx.Execute(new SqlCommand(sql, expectedRowCount)));
-
         public static T Execute<T>(this IDocumentStore store, Command<T> command) => store.Transactionally(tx => store.Execute(tx, command));
 
         public static void Execute(this IDocumentStore store, IEnumerable<DmlCommand> commands) => store.Execute(commands.ToArray());
