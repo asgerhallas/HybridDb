@@ -60,6 +60,7 @@ namespace HybridDb.Config
                     .Match<DeleteCommand>(deleteCommand => DeleteCommand.Execute(tx, deleteCommand))
                     .Match<GetCommand>(getCommand => GetCommand.Execute(tx, getCommand))
                     .Match<ExistsCommand>(existsCommand => ExistsCommand.Execute(tx, existsCommand))
+                    .Match<SqlCommand>(sqlCommand => SqlCommand.Execute(tx, sqlCommand))
                     .OrThrow(new ArgumentOutOfRangeException($"No executor registered for {command.GetType()}.")));
 
             Register(_ => new DocumentMigrator(this));
