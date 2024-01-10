@@ -1,5 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
 using System.Text;
+using Microsoft.Data.SqlClient;
 
 namespace HybridDb
 {
@@ -7,24 +7,31 @@ namespace HybridDb
     {
         readonly StringBuilder fragments;
 
-        public SqlBuilder()
+        public SqlBuilder(string sql = null, params SqlParameter[] parameters)
         {
             fragments = new StringBuilder();
             Parameters = new HybridDbParameters();
+            Append(sql, parameters);
         }
 
         public HybridDbParameters Parameters { get; }
 
         public SqlBuilder Append(string sql, params SqlParameter[] args)
         {
-            foreach (var arg in args)
+            if (args != null)
             {
-                Parameters.Add(arg);
+                foreach (var arg in args)
+                {
+                    Parameters.Add(arg);
+                }
             }
 
-            if (fragments.Length != 0) fragments.Append(" ");
+            if (sql != null)
+            {
+                if (fragments.Length != 0) fragments.Append(" ");
 
-            fragments.Append(sql);
+                fragments.Append(sql);
+            }
 
             return this;
         }
@@ -32,16 +39,18 @@ namespace HybridDb
         public SqlBuilder Append(bool predicate, string sql, params SqlParameter[] args)
         {
             if (predicate) Append(sql, args);
+
             return this;
         }
 
-        public SqlBuilder Append(bool predicate, string sql, string orSql, params SqlParameter[] args) => 
+        public SqlBuilder Append(bool predicate, string sql, string orSql, params SqlParameter[] args) =>
             predicate ? Append(sql, args) : Append(orSql, args);
 
         public SqlBuilder Append(SqlBuilder builder)
         {
             fragments.Append(builder.fragments);
             Parameters.Add(builder.Parameters);
+
             return this;
         }
 
