@@ -100,11 +100,12 @@ namespace HybridDb.Tests
             result.CommitId.ShouldBe(commitId);
             var executedCommands = result.ExecutedCommands.ToList();
 
-            executedCommands[0].Key.ShouldBeOfType<InsertCommand>();
-            executedCommands[0].Value.ShouldBe(commitId);
+            // Enqueue is a deferrred command which is excuted before any internal save changes commands.
+            executedCommands[0].Key.ShouldBeOfType<EnqueueCommand>();
+            executedCommands[0].Value.ShouldBe("a");
 
-            executedCommands[1].Key.ShouldBeOfType<EnqueueCommand>();
-            executedCommands[1].Value.ShouldBe("a");
+            executedCommands[1].Key.ShouldBeOfType<InsertCommand>();
+            executedCommands[1].Value.ShouldBe(commitId);
         }
 
         public record Case(string Id, string ProfileId, string Text)

@@ -15,6 +15,7 @@ using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using SqlCommand = HybridDb.Commands.SqlCommand;
 
 namespace HybridDb.Tests
 {
@@ -1553,6 +1554,26 @@ namespace HybridDb.Tests
             entities[0].TheChildNestedProperty.ShouldBe("1.2");
             entities[1].ProjectedProperty.ShouldBe("2.1");
             entities[1].TheChildNestedProperty.ShouldBe("2.2");
+        }
+
+        [Fact]
+        public void DeferredCommandsFirst()
+        {
+            Document<Entity>();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Name);
+
+            using var session = store.OpenSession();
+
+            session.Advanced.Defer(new SqlCommand(new SqlBuilder($"truncate table {tableName}"), -1));
+
+            session.Store(new Entity());
+
+            session.SaveChanges();
+
+            session.Query<Entity>().ToList().Count.ShouldBe(1);
         }
 
         public class BaseCase { }
