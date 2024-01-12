@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Queue;
@@ -91,7 +91,7 @@ namespace HybridDb.Tests
             });
 
             using var session = store.OpenSession();
-            
+
             session.Store(new Profile("asger", true));
             session.Enqueue((m, e) => "a", new object());
 

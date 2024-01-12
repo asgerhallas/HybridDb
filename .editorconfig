@@ -6,5 +6,9 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = false
 
+# ReSharper properties
+resharper_wrap_after_invocation_lpar = false
+resharper_wrap_arguments_style = wrap_if_long
+
 [*.cs]
-dotnet_diagnostic.xUnit1031.severity = none
+dotnet_diagnostic.xunit1031.severity = none

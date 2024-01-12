@@ -12,6 +12,9 @@ using HybridDb.Migrations.Documents;
 
 namespace HybridDb
 {
+    /// <summary>
+    /// Represents a unit of work and works as a first level cache of loaded documents.
+    /// </summary>
     public class DocumentSession : IDocumentSession, IAdvancedDocumentSession
     {
         readonly IDocumentStore store;
