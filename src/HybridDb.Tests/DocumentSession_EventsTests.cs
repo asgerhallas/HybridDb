@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using HybridDb.Commands;
 using HybridDb.Queue;
@@ -10,9 +10,7 @@ namespace HybridDb.Tests
 {
     public class DocumentSession_EventsTests : HybridDbTests
     {
-        public DocumentSession_EventsTests(ITestOutputHelper output) : base(output)
-        {
-        }
+        public DocumentSession_EventsTests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
         public void Events_SaveChanges_BeforeExecuteCommands()
@@ -20,22 +18,23 @@ namespace HybridDb.Tests
             Document<Case>();
             Document<Profile>();
 
-            configuration.AddEventHandler(@event =>
-            {
-                if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
-
-                foreach (var (managedEntity, dmlCommand) in savingChanges.DocumentCommands)
+            configuration.AddEventHandler(
+                @event =>
                 {
-                    if (managedEntity.Design.DocumentType != typeof(Case)) continue;
-                    if (dmlCommand is not UpdateCommand && dmlCommand is not DeleteCommand) continue;
+                    if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
 
-                    var profile = savingChanges.Session.Load<Profile>(((Case)managedEntity.Entity).ProfileId);
+                    foreach (var (managedEntity, dmlCommand) in savingChanges.DocumentCommands)
+                    {
+                        if (managedEntity.Design.DocumentType != typeof(Case)) continue;
+                        if (dmlCommand is not UpdateCommand && dmlCommand is not DeleteCommand) continue;
 
-                    if (!profile.CanWrite) throw new Exception($"Can not execute {dmlCommand.GetType().Name}!");
+                        var profile = savingChanges.Session.Load<Profile>(((Case)managedEntity.Entity).ProfileId);
 
-                    ((Case) managedEntity.Entity).Text = "hullabulla"; 
-                }
-            });
+                        if (!profile.CanWrite) throw new Exception($"Can not execute {dmlCommand.GetType().Name}!");
+
+                        ((Case)managedEntity.Entity).Text = "hullabulla";
+                    }
+                });
 
             using (var session = store.OpenSession())
             {
@@ -83,15 +82,16 @@ namespace HybridDb.Tests
             configuration.UseMessageQueue();
 
             SaveChanges_AfterExecuteCommands result = null;
-            configuration.AddEventHandler(@event =>
-            {
-                if (@event is not SaveChanges_AfterExecuteCommands savingChanges) return;
+            configuration.AddEventHandler(
+                @event =>
+                {
+                    if (@event is not SaveChanges_AfterExecuteCommands savingChanges) return;
 
-                result = savingChanges;
-            });
+                    result = savingChanges;
+                });
 
             using var session = store.OpenSession();
-            
+
             session.Store(new Profile("asger", true));
             session.Enqueue((m, e) => "a", new object());
 
@@ -100,11 +100,12 @@ namespace HybridDb.Tests
             result.CommitId.ShouldBe(commitId);
             var executedCommands = result.ExecutedCommands.ToList();
 
-            executedCommands[0].Key.ShouldBeOfType<InsertCommand>();
-            executedCommands[0].Value.ShouldBe(commitId);
+            // Enqueue is a deferrred command which is excuted before any internal save changes commands.
+            executedCommands[0].Key.ShouldBeOfType<EnqueueCommand>();
+            executedCommands[0].Value.ShouldBe("a");
 
-            executedCommands[1].Key.ShouldBeOfType<EnqueueCommand>();
-            executedCommands[1].Value.ShouldBe("a");
+            executedCommands[1].Key.ShouldBeOfType<InsertCommand>();
+            executedCommands[1].Value.ShouldBe(commitId);
         }
 
         public record Case(string Id, string ProfileId, string Text)

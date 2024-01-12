@@ -363,7 +363,7 @@ namespace HybridDb
 
             var commitId = Transactionally(resultingTx =>
             {
-                foreach (var command in commands.Select(x => x.Value).Concat(deferredCommands))
+                foreach (var command in deferredCommands.Concat(commands.Select(x => x.Value)))
                 {
                     executedCommands.Add(command, store.Execute(resultingTx, command));
                 }

@@ -15,6 +15,7 @@ using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using SqlCommand = HybridDb.Commands.SqlCommand;
 
 namespace HybridDb.Tests
 {
@@ -356,8 +357,6 @@ namespace HybridDb.Tests
         {
             Document<Entity>();
 
-            var id = NewId();
-
             using var session = store.OpenSession();
 
             using var tx = store.BeginTransaction();
@@ -370,8 +369,6 @@ namespace HybridDb.Tests
         public void CanClearSession_SessionData()
         {
             Document<Entity>();
-
-            var id = NewId();
 
             using var session = store.OpenSession();
 
@@ -716,8 +713,18 @@ namespace HybridDb.Tests
 
             using var session = store.OpenSession();
 
-            session.Store(new Entity { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
-            session.Store(new Entity { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+            session.Store(
+                new Entity
+                {
+                    Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" }
+                });
+
+            session.Store(
+                new Entity
+                {
+                    Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" }
+                });
+
             session.SaveChanges();
             session.Advanced.Clear();
 
@@ -761,7 +768,7 @@ namespace HybridDb.Tests
 
             session.Load<object>("key").ShouldNotBe(null);
 
-            session.Advanced.ManagedEntities.Count().ShouldBe(1);
+            session.Advanced.ManagedEntities.Count.ShouldBe(1);
         }
 
         [Fact]
@@ -1396,7 +1403,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSetDefaultKeyResolver()
         {
-            UseKeyResolver(x => "asger");
+            UseKeyResolver(_ => "asger");
 
             using var session = store.OpenSession();
 
@@ -1538,7 +1545,8 @@ namespace HybridDb.Tests
         {
             var sql = new SqlBuilder();
 
-            sql.Append(@"
+            sql.Append(
+                @"
                 select '1.1' ProjectedProperty, '1.2' TheChildNestedProperty
                 union
                 select '2.1' ProjectedProperty, '2.2' TheChildNestedProperty
@@ -1553,6 +1561,26 @@ namespace HybridDb.Tests
             entities[0].TheChildNestedProperty.ShouldBe("1.2");
             entities[1].ProjectedProperty.ShouldBe("2.1");
             entities[1].TheChildNestedProperty.ShouldBe("2.2");
+        }
+
+        [Fact]
+        public void DeferredCommandsFirst()
+        {
+            Document<Entity>();
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+
+            var tableName = store.Database.FormatTableNameAndEscape(table.Name);
+
+            using var session = store.OpenSession();
+
+            session.Advanced.Defer(new SqlCommand(new SqlBuilder($"truncate table {tableName}"), -1));
+
+            session.Store(new Entity());
+
+            session.SaveChanges();
+
+            session.Query<Entity>().ToList().Count.ShouldBe(1);
         }
 
         public class BaseCase { }
