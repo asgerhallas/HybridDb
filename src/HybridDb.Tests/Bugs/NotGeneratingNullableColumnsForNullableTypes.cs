@@ -12,7 +12,7 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void NullableGuidGetsNullableColumnType()
         {
-            Document<Entity>().With(x => x.SomeNullableGuid);
+            Document<Entity>().Column(x => x.SomeNullableGuid);
 
             store.Configuration.GetDesignFor<Entity>().Table["SomeNullableGuid"]
                 .Nullable.ShouldBe(true);

@@ -9,8 +9,8 @@ namespace HybridDb.Config
     {
         static readonly List<SqlTypeMapping> sqlTypeMappings;
 
-        static SqlTypeMap() => sqlTypeMappings = new List<SqlTypeMapping>
-        {
+        static SqlTypeMap() => sqlTypeMappings =
+        [
             new(typeof(long), SqlDbType.BigInt, "bigint"),
             new(typeof(byte[]), SqlDbType.VarBinary, "varbinary"),
             new(typeof(bool), SqlDbType.Bit, "bit"),
@@ -26,7 +26,7 @@ namespace HybridDb.Config
             new(typeof(short), SqlDbType.SmallInt, "smallint"),
             new(typeof(byte), SqlDbType.TinyInt, "tinyint"),
             new(typeof(Guid), SqlDbType.UniqueIdentifier, "uniqueidentifier")
-        };
+        ];
 
         public static SqlTypeMapping ForNetType(Type type)
         {

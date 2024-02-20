@@ -16,9 +16,9 @@ namespace HybridDb.Tests
         public LinqIntegrationTests(ITestOutputHelper output) : base(output)
         {
             Document<Entity>()
-                .With(x => x.Property)
-                .With(x => x.StringProp)
-                .With(x => x.TheChild.NestedProperty);
+                .Column(x => x.Property)
+                .Column(x => x.StringProp)
+                .Column(x => x.TheChild.NestedProperty);
             
             UseSerializer(new DefaultSerializer());
 

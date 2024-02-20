@@ -122,7 +122,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AccessToNestedPropertyCanBeNullSafe()
         {
-            Document<Entity>().With(x => x.TheChild.NestedProperty);
+            Document<Entity>().Column(x => x.TheChild.NestedProperty);
 
             using (var session = store.OpenSession())
             {
@@ -572,7 +572,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryDocument()
         {
-            Document<Entity>().With(x => x.ProjectedProperty);
+            Document<Entity>().Column(x => x.ProjectedProperty);
 
             using var session = store.OpenSession();
 
@@ -591,7 +591,7 @@ namespace HybridDb.Tests
         [Fact]
         public void Bug_Query_MissingEscape()
         {
-            Document<EntityWithDateTimeOffset>().With(x => x.From);
+            Document<EntityWithDateTimeOffset>().Column(x => x.From);
 
             using var session = store.OpenSession();
 
@@ -624,7 +624,7 @@ namespace HybridDb.Tests
         [Fact]
         public void Bug_Update_MissingEscape()
         {
-            Document<EntityWithDateTimeOffset>().With(x => x.From);
+            Document<EntityWithDateTimeOffset>().Column(x => x.From);
 
             using var session = store.OpenSession();
 
@@ -650,7 +650,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanSaveChangesOnAQueriedDocument()
         {
-            Document<Entity>().With(x => x.ProjectedProperty);
+            Document<Entity>().Column(x => x.ProjectedProperty);
 
             var id = NewId();
             using var session = store.OpenSession();
@@ -671,7 +671,7 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryingALoadedDocumentReturnsSameInstance()
         {
-            Document<Entity>().With(x => x.ProjectedProperty);
+            Document<Entity>().Column(x => x.ProjectedProperty);
 
             var id = NewId();
             using var session = store.OpenSession();
@@ -689,7 +689,7 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryingALoadedDocumentMarkedForDeletionReturnsNothing()
         {
-            Document<Entity>().With(x => x.ProjectedProperty);
+            Document<Entity>().Column(x => x.ProjectedProperty);
 
             var id = NewId();
             using var session = store.OpenSession();
@@ -710,8 +710,8 @@ namespace HybridDb.Tests
         public void CanQueryAndReturnProjection()
         {
             Document<Entity>()
-                .With(x => x.ProjectedProperty)
-                .With(x => x.TheChild.NestedProperty);
+                .Column(x => x.ProjectedProperty)
+                .Column(x => x.TheChild.NestedProperty);
 
             using var session = store.OpenSession();
 
@@ -731,8 +731,8 @@ namespace HybridDb.Tests
         public void WillNotSaveChangesToProjectedValues()
         {
             Document<Entity>()
-                .With(x => x.ProjectedProperty)
-                .With(x => x.TheChild.NestedProperty);
+                .Column(x => x.ProjectedProperty)
+                .Column(x => x.TheChild.NestedProperty);
 
             var id = NewId();
 
@@ -779,7 +779,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryUserDefinedProjection()
         {
-            Document<OtherEntity>().With("Unknown", x => 2);
+            Document<OtherEntity>().Column(x => 2, x => x.Name("Unknown"));
 
             var id = NewId();
 
@@ -796,8 +796,8 @@ namespace HybridDb.Tests
         public void Bug10_UsesProjectedTypeToSelectColumns()
         {
             Document<Entity>()
-                .With(x => x.Property)
-                .With(x => x.Number);
+                .Column(x => x.Property)
+                .Column(x => x.Number);
 
             var id = NewId();
 
@@ -813,8 +813,8 @@ namespace HybridDb.Tests
         public void CanQueryIndex()
         {
             Document<AbstractEntity>()
-                .Extend<EntityIndex>(e => e.With(x => x.YksiKaksiKolme, x => x.Number))
-                .With(x => x.Property);
+                .Column(x => x.Number, x => x.Name(nameof(EntityIndex.YksiKaksiKolme)))
+                .Column(x => x.Property);
 
             Document<MoreDerivedEntity1>();
 
@@ -869,7 +869,7 @@ namespace HybridDb.Tests
         [InlineData(false)]
         public void AppliesMigrationsOnQuery(bool disableDocumentMigrationsOnStartup)
         {
-            Document<AbstractEntity>().With(x => x.Number);
+            Document<AbstractEntity>().Column(x => x.Number);
             Document<DerivedEntity>();
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
@@ -884,7 +884,7 @@ namespace HybridDb.Tests
 
             ResetConfiguration();
 
-            Document<AbstractEntity>().With(x => x.Number);
+            Document<AbstractEntity>().Column(x => x.Number);
             Document<DerivedEntity>();
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
@@ -1410,7 +1410,7 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsIfStringProjectionIsTruncated()
         {
-            Document<Entity>().Column(x => x.Children);
+            Document<Entity>().JsonColumn(x => x.Children);
 
             using var session = store.OpenSession();
 
@@ -1426,7 +1426,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanProjectCollection()
         {
-            Document<Entity>().With(x => x.Children);
+            Document<Entity>().JsonColumn(x => x.Children);
 
             var id = NewId();
 

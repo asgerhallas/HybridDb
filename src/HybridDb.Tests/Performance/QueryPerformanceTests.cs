@@ -73,8 +73,8 @@ namespace HybridDb.Tests.Performance
     //                    TableMode.GlobalTempTables,
     //                    connectionString,
     //                    c => c.Document<LocalEntity>()
-    //                        .With(x => x.SomeData)
-    //                        .With(x => x.SomeNumber)));
+    //                        .Column(x => x.SomeData)
+    //                        .Column(x => x.SomeNumber)));
 
 
     //            var commands = new List<DatabaseCommand>();

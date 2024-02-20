@@ -267,7 +267,7 @@ namespace HybridDb.Tests
         [Fact]
         public void FailWhenTryingtoOverrideIdProjection()
         {
-            Should.Throw<ArgumentException>(() => configuration.Document<Entity>().With("Id", x => x.String));
+            Should.Throw<ArgumentException>(() => configuration.Document<Entity>().Column(x => x.String, x => x.Name("Id")));
         }
 
         [Fact]

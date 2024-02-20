@@ -26,37 +26,37 @@ namespace HybridDb.Tests.Bugs
                     c.UseTableNamePrefix(Guid.NewGuid().ToString());
 
                     c.Document<Entity>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                     c.Document<EntityB>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                     c.Document<EntityC>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                     c.Document<EntityD>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                 });
             });
         }
@@ -73,37 +73,37 @@ namespace HybridDb.Tests.Bugs
                     c.UseConnectionString(connectionString);
 
                     c.Document<Entity>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                     c.Document<EntityB>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                     c.Document<EntityC>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                     c.Document<EntityD>()
-                        .With(x => x.DateTimeProp)
-                        .With(x => x.EnumProp)
-                        .With(x => x.Field)
-                        .With(x => x.Number)
-                        .With(x => x.ProjectedProperty)
-                        .With(x => x.Property)
-                        .With(x => x.Complex.A);
+                        .Column(x => x.DateTimeProp)
+                        .Column(x => x.EnumProp)
+                        .Column(x => x.Field)
+                        .Column(x => x.Number)
+                        .Column(x => x.ProjectedProperty)
+                        .Column(x => x.Property)
+                        .Column(x => x.Complex.A);
                 });
 
                 realstore.DocumentMigration.Wait();

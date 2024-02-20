@@ -77,8 +77,25 @@ namespace HybridDb.Config
         // TODO: Generate ColumnName classes/extension-methods to use in queries?
 
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, string>> projector, OptionsBuilder<string> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, bool>> projector, OptionsBuilder<bool> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, bool?>> projector, OptionsBuilder<bool?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, int>> projector, OptionsBuilder<int> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, int?>> projector, OptionsBuilder<int?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, long>> projector, OptionsBuilder<long> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, long?>> projector, OptionsBuilder<long?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, double>> projector, OptionsBuilder<double> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, double?>> projector, OptionsBuilder<double?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, decimal>> projector, OptionsBuilder<decimal> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, decimal?>> projector, OptionsBuilder<decimal?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateTimeOffset>> projector, OptionsBuilder<DateTimeOffset> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateTimeOffset?>> projector, OptionsBuilder<DateTimeOffset?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateOnly>> projector, OptionsBuilder<DateOnly> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateOnly?>> projector, OptionsBuilder<DateOnly?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, Guid>> projector, OptionsBuilder<Guid> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, Guid?>> projector, OptionsBuilder<Guid?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, Enum>> projector, OptionsBuilder<Enum> options = null) => AddColumn(projector, options);
 
-        public DocumentDesigner<TEntity> WithJson<TMember>(
+        public DocumentDesigner<TEntity> JsonColumn<TMember>(
             Expression<Func<TEntity, TMember>> projector,
             params Option<string>[] options
         ) => null; //WithJson(configuration.ColumnNameConvention(projector), projector, options);
@@ -176,11 +193,6 @@ namespace HybridDb.Config
             return Compile(name, nullCheckedProjector);
         }
 
-        public DocumentDesigner<TEntity> Extend<TIndex>(Action<IndexDesigner<TIndex, TEntity>> extender)
-        {
-            extender(new IndexDesigner<TIndex, TEntity>(design, configuration));
-            return this;
-        }
 
         protected static Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> projector)
         {
@@ -231,12 +243,15 @@ namespace HybridDb.Config
 
         #region Deprecated With-methods
 
+        [Obsolete("", true)]
+        public DocumentDesigner<TEntity> Extend(Action<object> extender) => throw new NotSupportedException();
+
         [Obsolete($"""
             The method '.With(projector, converter, params options[])' is deprecated, use '.Column()' instead.
 
             A sample rewrite could be from:
                 
-                .With(x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+                .Column(x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
 
             To:
                 
@@ -244,7 +259,7 @@ namespace HybridDb.Config
                 
             IMPORTANT: Default naming for columns has changed to only include properties (not methods, extension methods or operators and so on).
             
-            That means that '.With(x => x.Property.ToUpper())' was previously named 'PropertyToUpper' as default, 
+            That means that '.Column(x => x.Property.ToUpper())' was previously named 'PropertyToUpper' as default, 
             but is now named 'Property' and should thus be rewritten to '.Column(x => x.Property.ToUpper(), x => x.Name("PropertyToUpper"))'
             to maintain old behavior.
             """, true)]
@@ -259,7 +274,7 @@ namespace HybridDb.Config
 
             A sample rewrite could be from:
                 
-                .With(x => x.Property, new MaxLength(), new DisableNullCheckInjection());
+                .Column(x => x.Property, new MaxLength(), new DisableNullCheckInjection());
 
             To:
                 
@@ -267,7 +282,7 @@ namespace HybridDb.Config
                 
             IMPORTANT: Default naming for columns has changed to only include properties (not methods, extension methods or operators and so on).
 
-            That means that '.With(x => x.Property.ToUpper())' was previously named 'PropertyToUpper' as default,
+            That means that '.Column(x => x.Property.ToUpper())' was previously named 'PropertyToUpper' as default,
             but is now named 'Property' and should thus be rewritten to '.Column(x => x.Property.ToUpper(), x => x.Name("PropertyToUpper"))'
             to maintain old behavior.
             """, true)]

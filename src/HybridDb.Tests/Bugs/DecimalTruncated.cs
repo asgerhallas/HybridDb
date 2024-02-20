@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Bugs
         [Fact]
         public void ShouldHaveRightPrecisionAndScale()
         {
-            configuration.Document<ClassWithDecimal>().With(x => x.MyDecimal);
+            configuration.Document<ClassWithDecimal>().Column(x => x.MyDecimal);
 
             using (var documentSession = store.OpenSession())
             {

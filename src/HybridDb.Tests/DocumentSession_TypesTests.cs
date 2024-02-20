@@ -151,7 +151,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryByInterface()
         {
-            Document<AbstractEntity>().With(x => x.Property);
+            Document<AbstractEntity>().Column(x => x.Property);
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
 
@@ -176,7 +176,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryByBasetype()
         {
-            Document<AbstractEntity>().With(x => x.Property);
+            Document<AbstractEntity>().Column(x => x.Property);
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
 
@@ -197,7 +197,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryBySubtype()
         {
-            Document<AbstractEntity>().With(x => x.Property);
+            Document<AbstractEntity>().Column(x => x.Property);
             Document<MoreDerivedEntity1>();
             Document<MoreDerivedEntity2>();
 
@@ -385,7 +385,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AutoRegistersSubTypesOnStore()
         {
-            Document<AbstractEntity>().With(x => x.Property);
+            Document<AbstractEntity>().Column(x => x.Property);
 
             using (var session = store.OpenSession())
             {
@@ -402,7 +402,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AutoRegistersSubTypesOnLoad()
         {
-            Document<AbstractEntity>().With(x => x.Property);
+            Document<AbstractEntity>().Column(x => x.Property);
 
             using (var session = store.OpenSession())
             {
@@ -412,7 +412,7 @@ namespace HybridDb.Tests
 
             ResetConfiguration();
 
-            Document<AbstractEntity>().With(x => x.Property);
+            Document<AbstractEntity>().Column(x => x.Property);
 
             using (var session = store.OpenSession())
             {
@@ -425,8 +425,8 @@ namespace HybridDb.Tests
         [Fact]
         public void AutoRegistersSubTypesOnLoad_SameDiscriminator_DifferentBaseTypes()
         {
-            Document<Namespace1.NamespacedAbstractEntity>().With(x => x.Property);
-            Document<Namespace2.NamespacedAbstractEntity>(tablename: "other").With(x => x.Property);
+            Document<Namespace1.NamespacedAbstractEntity>().Column(x => x.Property);
+            Document<Namespace2.NamespacedAbstractEntity>(tablename: "other").Column(x => x.Property);
 
             using (var session = store.OpenSession())
             {
@@ -437,8 +437,8 @@ namespace HybridDb.Tests
 
             ResetConfiguration();
 
-            Document<Namespace1.NamespacedAbstractEntity>().With(x => x.Property);
-            Document<Namespace2.NamespacedAbstractEntity>(tablename: "other").With(x => x.Property);
+            Document<Namespace1.NamespacedAbstractEntity>().Column(x => x.Property);
+            Document<Namespace2.NamespacedAbstractEntity>(tablename: "other").Column(x => x.Property);
 
             using (var session = store.OpenSession())
             {

@@ -96,7 +96,7 @@ namespace HybridDb.Tests.Migrations
             UseTableNamePrefix(Guid.NewGuid().ToString());
             CreateMetadataTable();
             Document<Entity>("Testing")
-                .With(x => x.Property);
+                .Column(x => x.Property);
 
             UseMigrations(new InlineMigration(1, before: ListOf<DdlCommand>(
                 new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),

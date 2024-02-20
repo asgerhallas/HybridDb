@@ -116,8 +116,8 @@ namespace HybridDb.Tests.Performance
                 {
                     c.UseConnectionString(connectionString);
                     c.Document<LocalEntity>()
-                        .With(x => x.SomeData)
-                        .With(x => x.SomeNumber);
+                        .Column(x => x.SomeData)
+                        .Column(x => x.SomeNumber);
                 }))
                 {
                     var commands = new List<DmlCommand>();

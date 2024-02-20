@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Bugs
         {
             var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, x => x.UseConnectionString(connectionString));
 
-            store.Configuration.Document<Entity>().With(x => x.SomeEnumerable.Count());
+            store.Configuration.Document<Entity>().Column(x => x.SomeEnumerable.Count());
 
             var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerableCount"];
             column.Nullable.ShouldBe(true);

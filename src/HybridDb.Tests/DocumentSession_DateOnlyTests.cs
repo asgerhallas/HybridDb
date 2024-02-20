@@ -98,7 +98,7 @@ namespace HybridDb.Tests
         public void Store_Query_Select()
         {
             Document<EntityWith<DateOnly>>()
-                .With(x => x.Prop);
+                .Column(x => x.Prop);
 
             using (var session = store.OpenSession())
             {
@@ -133,7 +133,7 @@ namespace HybridDb.Tests
         public void Store_Query_Select_Nullable()
         {
             Document<EntityWith<DateOnly?>>()
-                .With(x => x.Prop);
+                .Column(x => x.Prop);
 
             using (var session = store.OpenSession())
             {
@@ -168,7 +168,7 @@ namespace HybridDb.Tests
         public void Store_Query_Where()
         {
             Document<EntityWith<DateOnly>>()
-                .With(x => x.Prop);
+                .Column(x => x.Prop);
 
             using (var session = store.OpenSession())
             {
@@ -201,7 +201,7 @@ namespace HybridDb.Tests
         public void Store_Query_OrderBy()
         {
             Document<EntityWith<DateOnly>>()
-                .With(x => x.Prop);
+                .Column(x => x.Prop);
 
             using (var session = store.OpenSession())
             {

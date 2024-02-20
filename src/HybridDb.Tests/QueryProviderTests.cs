@@ -14,7 +14,7 @@ namespace HybridDb.Tests
         [Fact(Skip="Not yet implemented")]
         public void CanExecuteUntypedExpression()
         {
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             var queryProvider = new QueryProvider(
                 (DocumentSession) store.OpenSession(),

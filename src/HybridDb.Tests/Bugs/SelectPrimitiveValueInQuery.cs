@@ -16,10 +16,10 @@ namespace HybridDb.Tests.Bugs
         public void ShouldBeAble()
         {
             Document<WeirdEntity>()
-                .With(x => x.A)
-                .With(x => x.B)
-                .With(x => x.C)
-                .With(x => x.D);
+                .Column(x => x.A)
+                .Column(x => x.B)
+                .Column(x => x.C)
+                .Column(x => x.D);
 
             using (var session = store.OpenSession())
             {

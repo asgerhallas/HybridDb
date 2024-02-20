@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Migrations
         public void ReprojectsWhenAwaitingReprojection(bool awaitsReprojection, int result)
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var id = NewId();
             var table = new DocumentTable("Entities");
@@ -53,8 +53,8 @@ namespace HybridDb.Tests.Migrations
         public async Task DoesNotRetrieveDocumentIfNoReprojectionOrMigrationIsNeededButUpdatesVersion()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
-            Document<OtherEntity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
+            Document<OtherEntity>().Column(x => x.Number);
 
             var id = NewId();
             var table = configuration.GetDesignFor<Entity>().Table;
@@ -70,8 +70,8 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
-            Document<OtherEntity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
+            Document<OtherEntity>().Column(x => x.Number);
 
             // add migration for same version and one for other document
             UseMigrations(
@@ -95,7 +95,7 @@ namespace HybridDb.Tests.Migrations
         [Fact(Skip = "Only for getting a ballpark estimate of migration performance")]
         public void ConcurrentMigrationPerformance()
         {
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             using (var session = store.OpenSession())
             {
@@ -130,7 +130,7 @@ namespace HybridDb.Tests.Migrations
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
             UseRealTables();
 
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var id = NewId();
             var table = new DocumentTable("Entities");
@@ -174,7 +174,7 @@ namespace HybridDb.Tests.Migrations
         public void DoesNotStartBackgroundProcessWhenTurnedOff()
         {
             DisableBackgroundMigrations();
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             new DocumentMigrationRunner(store).Run().Wait();
 
@@ -184,7 +184,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void StopsIfMigrationFails()
         {
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var id = NewId();
             using (var session = store.OpenSession())
@@ -194,7 +194,7 @@ namespace HybridDb.Tests.Migrations
             }
 
             ResetConfiguration();
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             TouchStore();
 
@@ -215,7 +215,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void StopsIfMigrationFails_BeforeLoadingDocument()
         {
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var id = NewId();
             using (var session = store.OpenSession())
@@ -225,7 +225,7 @@ namespace HybridDb.Tests.Migrations
             }
 
             ResetConfiguration();
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             TouchStore();
 
@@ -269,7 +269,7 @@ namespace HybridDb.Tests.Migrations
         public async Task MigratesSelectedIds()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var table = configuration.GetDesignFor<Entity>().Table;
 
@@ -294,7 +294,7 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var migratedIds = new List<string>();
 
@@ -321,7 +321,7 @@ namespace HybridDb.Tests.Migrations
         public async Task MigratesByPrefix()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var table = configuration.GetDesignFor<Entity>().Table;
 
@@ -346,7 +346,7 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var migratedIds = new List<string>();
 
@@ -373,7 +373,7 @@ namespace HybridDb.Tests.Migrations
         public async Task MigratesSelectedIdsAndIdPrefixCombined()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var table = configuration.GetDesignFor<Entity>().Table;
 
@@ -406,7 +406,7 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var migratedIds = new List<string>();
 
@@ -435,7 +435,7 @@ namespace HybridDb.Tests.Migrations
         public async Task DeleteDocument()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             var table = configuration.GetDesignFor<Entity>().Table;
 
@@ -456,7 +456,7 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
 
             UseMigrations(
                 new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
@@ -476,8 +476,8 @@ namespace HybridDb.Tests.Migrations
         public async Task DeleteDocumentsFromTypedTable()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
-            Document<OtherEntity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
+            Document<OtherEntity>().Column(x => x.Number);
 
             void Insert<T>(string id, int number) =>
                 store.Insert(configuration.GetDesignFor<T>().Table, id, new
@@ -499,8 +499,8 @@ namespace HybridDb.Tests.Migrations
             ResetConfiguration();
 
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            Document<Entity>().With(x => x.Number);
-            Document<OtherEntity>().With(x => x.Number);
+            Document<Entity>().Column(x => x.Number);
+            Document<OtherEntity>().Column(x => x.Number);
 
             UseMigrations(
                 new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));

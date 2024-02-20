@@ -16,7 +16,7 @@ namespace HybridDb.Tests
             UseRealTables();
             UseSoftDelete();
 
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             TouchStore();
 
@@ -39,7 +39,7 @@ namespace HybridDb.Tests
             UseRealTables();
             UseSoftDelete();
 
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             TouchStore();
 
@@ -64,7 +64,7 @@ namespace HybridDb.Tests
             UseRealTables();
             UseSoftDelete();
 
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             TouchStore();
 
@@ -90,7 +90,7 @@ namespace HybridDb.Tests
             UseRealTables();
             UseSoftDelete();
 
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             TouchStore();
 
@@ -117,7 +117,7 @@ namespace HybridDb.Tests
             UseRealTables();
             UseSoftDelete();
 
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             TouchStore();
 
@@ -164,7 +164,7 @@ namespace HybridDb.Tests
             UseTableNamePrefix(nameof(Bug_RaceConditionWithSnapshotAndRowVersion));
             UseSoftDelete();
 
-            Document<Entity>().With(x => x.Property);
+            Document<Entity>().Column(x => x.Property);
 
             TouchStore();
 
