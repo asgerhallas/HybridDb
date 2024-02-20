@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -1057,7 +1057,7 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryWithPropertyOfComplexType()
         {
-            Document<Entity>().With(x => x.Complex).With(x => x.Number);
+            Document<Entity>().WithJson(x => x.Complex).With(x => x.Number);
 
             using var session = store.OpenSession();
 
@@ -1072,8 +1072,9 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryWithPropertyOfComplexTypes()
         {
-            Document<Entity>().With(x => x.Complex)
-                .With(x => x.TheChild)
+            Document<Entity>()
+                .WithJson(x => x.Complex)
+                .WithJson(x => x.TheChild)
                 .With(x => x.Property);
 
             var entity = new Entity
@@ -1095,20 +1096,36 @@ namespace HybridDb.Tests
         public void QueryWithListsOfComplexType()
         {
             Document<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>()
-                .With(x => x.Things)
-                .With(x => x.OtherThings);
+                .WithJson(x => x.Things)
+                .WithJson(x => x.OtherThings);
 
             using var session = store.OpenSession();
 
-            var firstList = new List<OtherEntityWithSomeSimilarities> { new() { Id = Guid.Empty, StringProp = "Is real life" }, new() { Id = Guid.Empty, StringProp = "Is it just fantasy" } };
-            var secondList = new List<Case> { new() { By = "By1" }, new() { By = "By2" } };
-            var entity = new EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case> { Things = firstList, OtherThings = secondList };
+            var firstList = new List<OtherEntityWithSomeSimilarities>
+            {
+                new() { Id = Guid.Empty, StringProp = "Is real life" },
+                new() { Id = Guid.Empty, StringProp = "Is it just fantasy" }
+            };
+
+            var secondList = new List<Case>
+            {
+                new() { By = "By1" },
+                new() { By = "By2" }
+            };
+
+            var entity = new EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>
+            {
+                Things = firstList,
+                OtherThings = secondList
+            };
 
             session.Store(NewId(), entity);
             session.SaveChanges();
 
             var table = store.Configuration.GetDesignFor<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>();
-            var row = store.Query<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>(table.Table, out _, select: "Things, OtherThings").Single();
+            var row = store
+                .Query<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>(table.Table, out _, select: "Things, OtherThings")
+                .Single();
 
             row.Data.ShouldBeLike(entity);
         }

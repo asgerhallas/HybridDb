@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using HybridDb.Config;
 using Shouldly;
@@ -73,11 +74,37 @@ namespace HybridDb.Tests
         [Fact]
         public void CanOverrideProjectionsForSubtype()
         {
-            configuration.Document<AbstractEntity>()
-                .With("Number", x => 1);
+            DocumentDesigner<AbstractEntity> tempQualifier = configuration.Document<AbstractEntity>();
+            Expression<Func<AbstractEntity, int>> projector = x => 1;
+            DocumentDesigner<AbstractEntity> temp = tempQualifier.Column(projector, x1 => x1.Name("Number"), new Option[0])
 
-            configuration.Document<DerivedEntity>()
-                .With("Number", x => 2);
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
+
+            DocumentDesigner<DerivedEntity> tempQualifier1 = configuration.Document<DerivedEntity>();
+            Expression<Func<DerivedEntity, int>> projector1 = x => 2;
+            DocumentDesigner<DerivedEntity> temp1 = tempQualifier1.Column(projector1, x1 => x1.Name("Number"), new Option[0])
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
 
             ProjectionsFor<DerivedEntity>()["Number"].Projector(new DerivedEntity(), null).ShouldBe(2);
         }
@@ -140,7 +167,26 @@ namespace HybridDb.Tests
         {
             configuration.Document<AbstractEntity>().With(x => x.Number);
 
-            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity1>().With("Number", x => "OtherTypeThanBase"))
+            Should.Throw<InvalidOperationException>(() =>
+                {
+                    DocumentDesigner<MoreDerivedEntity1> tempQualifier = configuration.Document<MoreDerivedEntity1>();
+
+                    Expression<Func<MoreDerivedEntity1, string>> projector = x => "OtherTypeThanBase";
+
+                    return (DocumentDesigner<MoreDerivedEntity1>)tempQualifier.Column(projector, x1 => x1.Name("Number"), new Option[0])
+
+                    [Obsolete($"""
+                        The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                        A sample rewrite could be from:
+                            
+                            .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                        To:
+                            
+                            .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                        """, true)];
+                })
                 .Message.ShouldBe("Can not override projection for Number of type System.Int32 with a projection that returns System.String (on HybridDb.Tests.DocumentDesignerTests+MoreDerivedEntity1).");
         }
 
@@ -148,9 +194,42 @@ namespace HybridDb.Tests
         public void FailsWhenOverridingProjectionOnSiblingWithNonCompatibleType()
         {
             configuration.Document<AbstractEntity>();
-            configuration.Document<MoreDerivedEntity1>().With("Number", x => 1);
+            DocumentDesigner<MoreDerivedEntity1> tempQualifier = configuration.Document<MoreDerivedEntity1>();
+            Expression<Func<MoreDerivedEntity1, int>> projector = x => 1;
+            DocumentDesigner<MoreDerivedEntity1> temp = tempQualifier.Column(projector, x1 => x1.Name("Number"), new Option[0])
 
-            Should.Throw<InvalidOperationException>(() => configuration.Document<MoreDerivedEntity2>().With("Number", x => "OtherTypeThanBase"))
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
+
+            Should.Throw<InvalidOperationException>(() =>
+                {
+                    DocumentDesigner<MoreDerivedEntity2> tempQualifier1 = configuration.Document<MoreDerivedEntity2>();
+
+                    Expression<Func<MoreDerivedEntity2, string>> projector1 = x => "OtherTypeThanBase";
+
+                    return (DocumentDesigner<MoreDerivedEntity2>)tempQualifier1.Column(projector1, x1 => x1.Name("Number"), new Option[0])
+
+                    [Obsolete($"""
+                        The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                        A sample rewrite could be from:
+                            
+                            .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                        To:
+                            
+                            .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                        """, true)];
+                })
                 .Message.ShouldBe("Can not override projection for Number of type System.Int32 with a projection that returns System.String (on HybridDb.Tests.DocumentDesignerTests+MoreDerivedEntity2).");
         }
 
@@ -158,16 +237,62 @@ namespace HybridDb.Tests
         public void FailsWhenOverridingProjectionOnSelfWithNonCompatibleType()
         {
             Should.Throw<InvalidOperationException>(() =>
-                configuration.Document<OtherEntity>()
-                    .With("String", x => 1)
-                    .With("String", x => "string"));
+            {
+                DocumentDesigner<OtherEntity> tempQualifier = configuration.Document<OtherEntity>();
+
+                Expression<Func<OtherEntity, int>> projector = x => 1;
+
+                DocumentDesigner<OtherEntity> tempQualifier1 = tempQualifier.Column(projector, x1 => x1.Name("String"), new Option[0])
+
+                [Obsolete($"""
+                    The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                    A sample rewrite could be from:
+                        
+                        .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                    To:
+                        
+                        .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                    """, true)];
+
+                Expression<Func<OtherEntity, string>> projector1 = x => "string";
+
+                return (DocumentDesigner<OtherEntity>)tempQualifier1.Column(projector1, x2 => x2.Name("String"), new Option[0])
+
+                [Obsolete($"""
+                    The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                    A sample rewrite could be from:
+                        
+                        .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                    To:
+                        
+                        .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                    """, true)];
+            });
         }
 
         [Fact]
         public void CanOverrideProjectionWithCompatibleType()
         {
             configuration.Document<AbstractEntity>().With(x => x.LongNumber);
-            configuration.Document<MoreDerivedEntity1>().With("LongNumber", x => x.Number);
+            DocumentDesigner<MoreDerivedEntity1> tempQualifier = configuration.Document<MoreDerivedEntity1>();
+            Expression<Func<MoreDerivedEntity1, int>> projector = x => x.Number;
+            DocumentDesigner<MoreDerivedEntity1> temp = tempQualifier.Column(projector, x1 => x1.Name("LongNumber"), new Option[0])
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
 
             var sqlColumn = TableFor<AbstractEntity>()["LongNumber"];
             sqlColumn.Type.ShouldBe(typeof(long));
@@ -181,7 +306,21 @@ namespace HybridDb.Tests
         public void CanOverrideProjectionWithNullability()
         {
             configuration.Document<AbstractEntity>().With(x => x.Number);
-            configuration.Document<MoreDerivedEntity1>().With("Number", x => (int?)null);
+            DocumentDesigner<MoreDerivedEntity1> tempQualifier = configuration.Document<MoreDerivedEntity1>();
+            Expression<Func<MoreDerivedEntity1, int?>> projector = x => (int?)null;
+            DocumentDesigner<MoreDerivedEntity1> temp = tempQualifier.Column(projector, x1 => x1.Name("Number"), new Option[0])
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
 
             var sqlColumn = TableFor<AbstractEntity>()["Number"];
             sqlColumn.Type.ShouldBe(typeof(int));
@@ -202,10 +341,53 @@ namespace HybridDb.Tests
         [Fact]
         public void MustSetLengthOnStringProjections()
         {
-            configuration.Document<Entity>()
-                .With("first", x => x.String, new MaxLength(255))
-                .With("second", x => x.String, new MaxLength())
-                .With("third", x => x.String);
+            DocumentDesigner<Entity> tempQualifier = configuration.Document<Entity>();
+            Expression<Func<Entity, string>> projector = x => x.String;
+            Option[] options = new[] { new MaxLength(255) };
+            DocumentDesigner<Entity> tempQualifier1 = tempQualifier.Column(projector, x1 => x1.Name("first"), options)
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
+
+            Expression<Func<Entity, string>> projector1 = x => x.String;
+            Option[] options1 = new[] { new MaxLength() };
+            DocumentDesigner<Entity> tempQualifier2 = tempQualifier1.Column(projector1, x2 => x2.Name("second"), options1)
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
+
+            Expression<Func<Entity, string>> projector2 = x => x.String;
+            DocumentDesigner<Entity> temp = tempQualifier2.Column(projector2, x1 => x1.Name("third"), new Option[0])
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
 
             TableFor<Entity>()["first"].Length.ShouldBe(255);
             TableFor<Entity>()["second"].Length.ShouldBe(-1);
@@ -215,7 +397,7 @@ namespace HybridDb.Tests
         [Fact]
         public void ConvertProjection()
         {
-            configuration.Document<Entity>().With(x => x.String, x => x.Length);
+            configuration.Document<Entity>().With(x => x.String.Length);
 
             ProjectionsFor<Entity>()["String"].Projector(new Entity{ String = "Asger" }, null).ShouldBe(5);
         }
@@ -223,7 +405,7 @@ namespace HybridDb.Tests
         [Fact]
         public void ConvertProjection_HandleNull()
         {
-            configuration.Document<Entity>().With(x => x.String, x => x.Length);
+            configuration.Document<Entity>().With(x => x.String.Length);
 
             ProjectionsFor<Entity>()["String"].Projector(new Entity(), null).ShouldBe(null);
         }
@@ -231,7 +413,21 @@ namespace HybridDb.Tests
         [Fact]
         public void NullCheckWithNonNullableValueTypeProjections()
         {
-            configuration.Document<Entity>().With("Test", x => x.String.Length);
+            DocumentDesigner<Entity> tempQualifier = configuration.Document<Entity>();
+            Expression<Func<Entity, int>> projector = x => x.String.Length;
+            DocumentDesigner<Entity> temp = tempQualifier.Column(projector, x1 => x1.Name("Test"), new Option[0])
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
 
             ProjectionsFor<Entity>()["Test"].Projector(new Entity(), null).ShouldBe(null);
         }
@@ -263,7 +459,7 @@ namespace HybridDb.Tests
         [Fact]
         public void JsonProjection()
         {
-            configuration.Document<Entity>().With(x => x.Strings);
+            configuration.Document<Entity>().WithJson(x => x.Strings);
 
             ProjectionsFor<Entity>()["Strings"].Projector(new Entity { Strings = new List<string>{"hej","okay"} }, null).ShouldBe("[\"hej\",\"okay\"]");
         }
@@ -271,7 +467,7 @@ namespace HybridDb.Tests
         [Fact]
         public void JsonProjection_Object()
         {
-            configuration.Document<Entity<object>>().With(x => x.Value);
+            configuration.Document<Entity<object>>().WithJson(x => x.Value);
 
             ProjectionsFor<Entity<object>>()["Value"].Projector(new Entity<object> { Value = new object()}, null).ShouldBe("{}");
         }
@@ -279,7 +475,7 @@ namespace HybridDb.Tests
         [Fact]
         public void JsonProjection_ComplexType()
         {
-            configuration.Document<Entity<OtherEntity>>().With(x => x.Value);
+            configuration.Document<Entity<OtherEntity>>().WithJson(x => x.Value);
 
             ProjectionsFor<Entity<OtherEntity>>()["Value"].Projector(new Entity<OtherEntity>{Value =  new OtherEntity{String = "ThisIsAString"}}, null)
                 .ShouldBe("{\"String\":\"ThisIsAString\"}");
@@ -296,14 +492,14 @@ namespace HybridDb.Tests
         [Fact]
         public void CorrectLengthOnJsonProperty()
         {
-            configuration.Document<Entity<object>>().With(x => x.Value);
+            configuration.Document<Entity<object>>().WithJson(x => x.Value);
             TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(-1);
         }
 
         [Fact]
         public void CorrectLengthOnJsonPropertyWhenOverwritingLength()
         {
-            configuration.Document<Entity<object>>().With(x => x.Value, new MaxLength(50));
+            configuration.Document<Entity<object>>().WithJson(x => x.Value, new MaxLength(50));
 
             TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(50);
         }

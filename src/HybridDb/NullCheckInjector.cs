@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -8,12 +8,25 @@ namespace HybridDb
     {
         public bool CanBeTrustedToNeverReturnNull { get; private set; }
 
+        int numberOfVisits = 0;
+
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
             CanBeTrustedToNeverReturnNull = true;
 
+            if (numberOfVisits > 0)
+            {
+                var visitLambda = base.VisitLambda(node);
+
+                return visitLambda;
+            }
+
+            numberOfVisits++; 
+
+            var expression = Visit(node.Body);
+
             return Expression.Lambda(
-                Expression.Convert(Visit(node.Body), typeof(object)),
+                Expression.Convert(expression, typeof(object)),
                 node.Parameters);
         }
 

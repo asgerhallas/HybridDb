@@ -49,7 +49,7 @@ namespace HybridDb.Config
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
             EventStore = false;
-            ColumnNameConvention = ColumnNameBuilder.GetColumnNameByConventionFor;
+            ColumnNameConvention = ColumnNameBuilder2.GetColumnNameByConventionFor;
 
             Register<DdlCommandExecutor>(container => (store, command) => command.Execute(store));
 

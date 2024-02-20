@@ -1,15 +1,15 @@
-﻿using System.Linq;
+using System;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace HybridDb
 {
+    [Obsolete]
     public class ColumnNameBuilder : ExpressionVisitor
     {
-        public ColumnNameBuilder() => ColumnName = "";
-
-        string ColumnName { get; set; }
+        string ColumnName { get; set; } = "";
 
         public static string GetColumnNameByConventionFor(Expression projector)
         {
@@ -78,6 +78,34 @@ namespace HybridDb
         protected override Expression VisitConstant(ConstantExpression node)
         {
             ColumnName += Regex.Replace(node.Value.ToString(), "[^a-zA-Z0-9]", "");
+            return node;
+        }
+    }
+
+    public class ColumnNameBuilder2 : ExpressionVisitor
+    {
+        string ColumnName { get; set; } = "";
+
+        public static string GetColumnNameByConventionFor(Expression projector)
+        {
+            var columnNameBuilder = new ColumnNameBuilder2();
+            columnNameBuilder.Visit(projector);
+            return columnNameBuilder.ColumnName;
+        }
+
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            if (node.Expression != null)
+            {
+                Visit(node.Expression);
+            }
+            else
+            {
+                ColumnName += node.Member.DeclaringType.Name;
+            }
+
+            ColumnName += node.Member.Name;
+            
             return node;
         }
     }

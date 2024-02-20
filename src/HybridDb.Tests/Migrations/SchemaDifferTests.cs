@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using HybridDb.Config;
 using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
@@ -111,7 +113,21 @@ namespace HybridDb.Tests.Migrations
 
             schema.Add(table.Name, table.Columns.Select(x => x.Name).ToList());
 
-            configuration.Document<Entity>().With("Number", x => x.String);
+            DocumentDesigner<Entity> tempQualifier = configuration.Document<Entity>();
+            Expression<Func<Entity, string>> projector = x => x.String;
+            DocumentDesigner<Entity> temp = tempQualifier.Column(projector, x1 => x1.Name("Number"), new Option[0])
+
+            [Obsolete($"""
+                The method '.With(name, projector, converter, params options[])' is deprecated, use '.Column()' instead.
+
+                A sample rewrite could be from:
+                    
+                    .With("MyColumnName", x => x.Property, x => x.ToUpper(), new MaxLength(), new DisableNullCheckInjection());
+
+                To:
+                    
+                    .Column(x => x.Property.ToUpper(), x => x.UseName("MyColumnName").UseMaxLength().DisableNullCheckInjection());
+                """, true)];
 
             var commands = migrator.CalculateSchemaChanges(schema, configuration).ToList();
 

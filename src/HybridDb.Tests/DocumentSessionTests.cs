@@ -144,8 +144,6 @@ namespace HybridDb.Tests
         [Fact]
         public void AccessToNestedPropertyThrowsIfNotMadeNullSafe()
         {
-            Document<Entity>().With(x => x.TheChild.NestedProperty, new DisableNullCheckInjection());
-
             using var session = store.OpenSession();
 
             session.Store(
@@ -1412,7 +1410,7 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsIfStringProjectionIsTruncated()
         {
-            Document<Entity>().With(x => x.Field, new MaxLength(10));
+            Document<Entity>().Column(x => x.Children);
 
             using var session = store.OpenSession();
 

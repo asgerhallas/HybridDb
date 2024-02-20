@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -9,7 +9,7 @@
     <!-- <PackageIcon>https://github.com/asgerhallas/HybridDb/assets/HybridDb.ico</PackageIcon> -->
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <LangVersion>11</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
