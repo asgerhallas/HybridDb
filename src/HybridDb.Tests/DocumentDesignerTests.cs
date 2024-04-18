@@ -18,20 +18,15 @@ namespace HybridDb.Tests
             configuration = new Configuration();
         }
 
-        public Dictionary<string, Projection> ProjectionsFor<T>()
-        {
-            return configuration.GetDesignFor<T>().Projections;
-        }
+        public Dictionary<string, Projection> ProjectionsFor<T>() => configuration.GetDesignFor<T>().Projections;
 
-        public DocumentTable TableFor<T>()
-        {
-            return configuration.GetDesignFor<T>().Table;
-        }
+        public DocumentTable TableFor<T>() => configuration.GetDesignFor<T>().Table;
 
         [Fact]
         public void CanGetColumnNameFromSimpleProjection()
         {
             configuration.Document<Entity>().Column(x => x.String);
+
             ProjectionsFor<Entity>().ShouldContainKey("String");
         }
 
@@ -39,17 +34,35 @@ namespace HybridDb.Tests
         public void CanGetColumnNameFromProjectionWithMethod()
         {
             configuration.Document<Entity>().Column(x => x.String.ToUpper());
-            ProjectionsFor<Entity>().ShouldContainKey("StringToUpper");
+
+            ProjectionsFor<Entity>().ShouldContainKey("String");
+        }
+
+        [Fact]
+        public void CanGetColumnNameFromProjectionWithProperty()
+        {
+            configuration.Document<Entity>().Column(x => x.String.Length);
+
+            ProjectionsFor<Entity>().ShouldContainKey("StringLength");
         }
 
         [Fact]
         public void CanGetColumnNameFromProjectionWithMethodAndArgument()
         {
             configuration.Document<Entity>().Column(x => x.String.ToUpper(CultureInfo.InvariantCulture));
-            ProjectionsFor<Entity>().ShouldContainKey("StringToUpperCultureInfoInvariantCulture");
+
+            ProjectionsFor<Entity>().ShouldContainKey("String");
         }
 
-        //TODO:
+        [Fact]
+        public void CanGetColumnNameFromProjectionWithPropertyAndMethodAndArgument()
+        {
+            configuration.Document<Entity>().Column(x => x.String.Length.ToString(CultureInfo.InvariantCulture));
+
+            ProjectionsFor<Entity>().ShouldContainKey("StringLength");
+        }
+
+        //TODO: 
         //[Fact(Skip = "until we support multikey indices")]
         //public void CanGetColumnNameFromProjectionWithLambda()
         //{
@@ -68,7 +81,7 @@ namespace HybridDb.Tests
         public void CanGetColumnNameFromProjectionWithEnumFlags()
         {
             configuration.Document<Entity>().Column(x => x.String.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any());
-            ProjectionsFor<Entity>().ShouldContainKey("StringGetTypeGetPropertiesInstanceStaticAny");
+            ProjectionsFor<Entity>().ShouldContainKey("String");
         }
 
         [Fact]
@@ -207,7 +220,7 @@ namespace HybridDb.Tests
         {
             configuration.Document<Entity>().Column(x => x.String.Length);
 
-            ProjectionsFor<Entity>()["String"].Projector(new Entity{ String = "Asger" }, null).ShouldBe(5);
+            ProjectionsFor<Entity>()["StringLength"].Projector(new Entity{ String = "Asger" }, null).ShouldBe(5);
         }
 
         [Fact]
@@ -215,7 +228,7 @@ namespace HybridDb.Tests
         {
             configuration.Document<Entity>().Column(x => x.String.Length);
 
-            ProjectionsFor<Entity>()["String"].Projector(new Entity(), null).ShouldBe(null);
+            ProjectionsFor<Entity>()["StringLength"].Projector(new Entity(), null).ShouldBe(null);
         }
 
         [Fact]
@@ -293,7 +306,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CorrectLengthOnJsonPropertyWhenOverwritingLength()
         {
-            configuration.Document<Entity<object>>().JsonColumn(x => x.Value, new MaxLength(50));
+            configuration.Document<Entity<object>>().JsonColumn(x => x.Value, x => x.UseLength(50));
 
             TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(50);
         }

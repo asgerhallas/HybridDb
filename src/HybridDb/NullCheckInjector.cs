@@ -1,3 +1,4 @@
+using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -8,38 +9,24 @@ namespace HybridDb
     {
         public bool CanBeTrustedToNeverReturnNull { get; private set; }
 
-        int numberOfVisits = 0;
-
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
             CanBeTrustedToNeverReturnNull = true;
 
-            if (numberOfVisits > 0)
-            {
-                var visitLambda = base.VisitLambda(node);
-
-                return visitLambda;
-            }
-
-            numberOfVisits++; 
-
-            var expression = Visit(node.Body);
-
             return Expression.Lambda(
-                Expression.Convert(expression, typeof(object)),
+                Expression.Convert(Visit(node.Body), typeof(object)),
                 node.Parameters);
         }
 
         protected override Expression VisitUnary(UnaryExpression node)
         {
-            if (node.NodeType == ExpressionType.TypeAs)
+            switch (node.NodeType)
             {
-                CanBeTrustedToNeverReturnNull = false;
-            }
-
-            if (node.NodeType == ExpressionType.Convert)
-            {
-                return Visit(node.Operand);
+                case ExpressionType.TypeAs:
+                    CanBeTrustedToNeverReturnNull = false;
+                    break;
+                case ExpressionType.Convert:
+                    return Visit(node.Operand);
             }
 
             return base.VisitUnary(node);
@@ -111,11 +98,9 @@ namespace HybridDb
             return Expression.MakeBinary(node.NodeType, left, right);
         }
 
-        bool CanBeNull(Expression expression)
-        {
+        bool CanBeNull(Expression expression) =>
             // We do not allow parameters to be null
-            return expression.NodeType != ExpressionType.Parameter &&
-                   expression.Type.CanBeNull();
-        }
+            expression.NodeType != ExpressionType.Parameter &&
+            expression.Type.CanBeNull();
     }
 }

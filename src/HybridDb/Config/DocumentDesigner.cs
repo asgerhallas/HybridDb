@@ -1,10 +1,7 @@
 using System;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Dapper;
-using HybridDb.Linq.Bonsai;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Config
 {
@@ -67,12 +64,7 @@ namespace HybridDb.Config
             return this;
         }
 
-        // TODO: Make obsolete With work and run tests
-        // TODO: Make overloads for each sql type
-        // TODO: Make these tests work
         // TODO: Make overloads for JSON (with combining
-        // TODO: Remove all usage in tests of with (except above tests)
-        // TODO: Write obsolete description
         // TODO: Use the right columnname in linq provider
         // TODO: Generate ColumnName classes/extension-methods to use in queries?
 
@@ -89,6 +81,8 @@ namespace HybridDb.Config
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, decimal?>> projector, OptionsBuilder<decimal?> options = null) => AddColumn(projector, options);
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateTimeOffset>> projector, OptionsBuilder<DateTimeOffset> options = null) => AddColumn(projector, options);
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateTimeOffset?>> projector, OptionsBuilder<DateTimeOffset?> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateTime>> projector, OptionsBuilder<DateTime> options = null) => AddColumn(projector, options);
+        public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateTime?>> projector, OptionsBuilder<DateTime?> options = null) => AddColumn(projector, options);
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateOnly>> projector, OptionsBuilder<DateOnly> options = null) => AddColumn(projector, options);
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, DateOnly?>> projector, OptionsBuilder<DateOnly?> options = null) => AddColumn(projector, options);
         public DocumentDesigner<TEntity> Column(Expression<Func<TEntity, Guid>> projector, OptionsBuilder<Guid> options = null) => AddColumn(projector, options);
@@ -97,66 +91,45 @@ namespace HybridDb.Config
 
         public DocumentDesigner<TEntity> JsonColumn<TMember>(
             Expression<Func<TEntity, TMember>> projector,
-            params Option<string>[] options
-        ) => null; //WithJson(configuration.ColumnNameConvention(projector), projector, options);
-
-        //public DocumentDesigner<TEntity> WithJson<TMember>(
-        //    string name,
-        //    Expression<Func<TEntity, TMember>> projector,
-        //    params Option<string>[] options
-        //) => WithJson(name, projector, x => x, options);
-
-        //public DocumentDesigner<TEntity> WithJson<TMember, TReturn>(
-        //    string name,
-        //    Expression<Func<TEntity, TMember>> projector,
-        //    Func<TMember, TReturn> converter,
-        //    params Option<string>[] options
-        //)
-        //{
-        //    SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration.Serializer));
-
-        //    Expression.Lambda(x => configuration.Serializer.Serialize(projector));
-
-        //    return With(x => configuration.Serializer.Serialize(projector(x)), [..options, new AsJson(), new MaxLength()]);
-        //}
-
-        DocumentDesigner<TEntity> AddColumn<TValue>(Expression<Func<TEntity, TValue>> projector, OptionsBuilder<TValue> optionsBuilder = null)
+            OptionsBuilder<string> optionsBuilder = null
+        )
         {
             optionsBuilder ??= x => x;
 
-            var options = optionsBuilder(new DocumentDesignerOptions<TValue>());
+            SqlMapper.AddTypeHandler(new JsonTypeHandler<TMember>(configuration.Serializer));
 
-            if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue)) == null)
-            {
-                throw new ArgumentException($"""
-                    There's no built in converter from {typeof(TValue)} to an SqlType.
-                    Use WithJson if you want to project is a JSON.
-                    """);
-            }
+            return AddColumn(projector, x => configuration.Serializer.Serialize(x), x => optionsBuilder(x).UseMaxLength());
+        }
 
-            var name = options.Name ?? configuration.ColumnNameConvention(projector);
+        DocumentDesigner<TEntity> AddColumn<TValue>(
+            Expression<Func<TEntity, TValue>> projector,
+            OptionsBuilder<TValue> optionsBuilder = null
+        ) => AddColumn(projector, x => x, optionsBuilder);
 
-            var column = design.Table[name];
+        DocumentDesigner<TEntity> AddColumn<TProjector, TValue>(
+            Expression<Func<TEntity, TProjector>> projector,
+            Func<TProjector, TValue> converter,
+            OptionsBuilder<TValue> optionsBuilder = null)
+        {
+            var options = GetOptions(optionsBuilder);
+            var name = GetName(projector, options);
+            var checkedProjector = !options.DisableNullCheckInjection
+                ? MaybeInjectNullCheck(name, projector, options)
+                : projector;
 
-            if (DocumentTable.IdColumn.Equals(column))
-            {
-                throw new ArgumentException("You can not make a projection for IdColumn. Use Document.Key() method instead.");
-            }
+            var column = AddColumn(name, options);
+            var compiledProjector = Compile(name, checkedProjector, converter);
 
-            column ??= design.Table.Add(new Column<TValue>(name, options.Length));
-
-            var compiledProjector = CompileProjector(name, projector, options, column);
-
-            var newProjection = Projection.From<TValue>(document => compiledProjector(document));
+            var newProjection = Projection.From<TValue>(compiledProjector);
 
             if (!newProjection.ReturnType.IsCastableTo(column.Type))
             {
                 throw new InvalidOperationException(
-                    $"Can not override projection for {name} of type {column.Type} " +
+                    $"Can not override projection for {column.Name} of type {column.Type} " +
                     $"with a projection that returns {newProjection.ReturnType} (on {typeof (TEntity)}).");
             }
 
-            if (!design.Projections.TryGetValue(name, out _))
+            if (!design.Projections.TryGetValue(column.Name, out _))
             {
                 if (design.Parent != null && !column.IsPrimaryKey)
                 {
@@ -167,34 +140,79 @@ namespace HybridDb.Config
             }
             else
             {
-                design.Projections[name] = newProjection;
+                design.Projections[column.Name] = newProjection;
             }
 
             return this;
         }
 
-        static Func<object, object> CompileProjector<TMember, TReturn>(
-            string name,
-            Expression<Func<TEntity, TMember>> projector,
-            DocumentDesignerOptions<TReturn> options,
-            Column column
-        )
+        string GetName<TValue, TOptions>(Expression<Func<TEntity, TValue>> projector, DocumentDesignerOptions<TOptions> options) => options.Name ?? configuration.ColumnNameConvention(projector);
+
+        static DocumentDesignerOptions<TValue> GetOptions<TValue>(OptionsBuilder<TValue> optionsBuilder)
         {
-            if (options.DisableNullCheckInjection) return Compile(name, projector);
+            optionsBuilder ??= x => x;
 
-            var nullCheckInjector = new NullCheckInjector();
-            var nullCheckedProjector = (Expression<Func<TEntity, object>>)nullCheckInjector.Visit(projector);
+            var options = optionsBuilder(new DocumentDesignerOptions<TValue>());
 
-            if (!nullCheckInjector.CanBeTrustedToNeverReturnNull && !column.IsPrimaryKey)
+            return options;
+        }
+
+        Column AddColumn<TValue>(string name, DocumentDesignerOptions<TValue> options)
+        {
+            if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue)) == null)
             {
-                column.Nullable = true;
+                throw new ArgumentException($"""
+                    There's no built in converter from {typeof(TValue)} to an SqlType.
+                    Use WithJson if you want to project is a JSON.
+                    """);
             }
 
-            return Compile(name, nullCheckedProjector);
+            //TODO
+            //if (canBeNull && !column.IsPrimaryKey)
+            //{
+            //    column.Nullable = true;
+            //}
+
+            var column = design.Table[name];
+
+            if (DocumentTable.IdColumn.Equals(column))
+            {
+                throw new ArgumentException("You can not make a projection for IdColumn. Use Document.Key() method instead.");
+            }
+
+            return column ?? design.Table.Add(new Column<TValue>(name, options.Length));
+        }
+
+        Expression<Func<TEntity, TMember>> MaybeInjectNullCheck<TMember, TReturn>(
+            string name,
+            Expression<Func<TEntity, TMember>> projector,
+            DocumentDesignerOptions<TReturn> options
+        ) where TMember:class
+        {
+
         }
 
 
-        protected static Func<object, object> Compile<TMember>(string name, Expression<Func<TEntity, TMember>> projector)
+        Expression<Func<TEntity, TMember?>> MaybeInjectNullCheck<TMember, TReturn>(
+            string name,
+            Expression<Func<TEntity, TMember>> projector,
+            DocumentDesignerOptions<TReturn> options
+        ) where TMember:struct
+        {
+            if (options.DisableNullCheckInjection) return projector;
+
+            var nullCheckInjector = new NullCheckInjector();
+            var nullCheckedProjector = (Expression<Func<TEntity, TMember>>)nullCheckInjector.Visit(projector);
+
+            if (nullCheckInjector.CanBeTrustedToNeverReturnNull) return projector;
+
+            return nullCheckedProjector;
+        }
+
+        protected static Func<object, object> Compile<TMember, TValue>(
+            string name,
+            Expression<Func<TEntity, TMember>> projector,
+            Func<TMember, TValue> converter)
         {
             var compiled = projector.Compile();
 
@@ -202,7 +220,7 @@ namespace HybridDb.Config
             {
                 try
                 {
-                    return compiled((TEntity)entity);
+                    return converter(compiled((TEntity)entity));
                 }
                 catch (Exception ex)
                 {

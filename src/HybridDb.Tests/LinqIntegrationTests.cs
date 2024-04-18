@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Linq;
+using HybridDb.Config;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
 using HybridDb.Serialization;
@@ -19,7 +20,7 @@ namespace HybridDb.Tests
                 .Column(x => x.Property)
                 .Column(x => x.StringProp)
                 .Column(x => x.TheChild.NestedProperty);
-            
+
             UseSerializer(new DefaultSerializer());
 
             session = Using(store.OpenSession());

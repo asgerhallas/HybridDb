@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Shouldly;
 using Xunit;
@@ -17,7 +17,7 @@ namespace HybridDb.Tests.Bugs
 
             store.Configuration.Document<Entity>().Column(x => x.SomeEnumerable.Count());
 
-            var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerableCount"];
+            var column = store.Configuration.GetDesignFor<Entity>().Table["SomeEnumerable"];
             column.Nullable.ShouldBe(true);
         }
 
