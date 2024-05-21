@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Config;
+using HybridDb.Serialization;
 using Shouldly;
 using Xunit;
 
@@ -60,7 +61,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AnonType()
         {
-            var x = new {MyString = "Asger"};
+            var x = new { MyString = "Asger" };
             var discriminator = typeMapper.ToDiscriminator(x.GetType());
             var type = typeMapper.ToType(typeof(object), discriminator);
 
@@ -110,7 +111,8 @@ namespace HybridDb.Tests
         [Fact]
         public void UnknownAssembly() =>
             Should.Throw<InvalidOperationException>(() => typeMapper.ToDiscriminator(typeof(FactAttribute)))
-                .Message.ShouldBe("Type 'Xunit.FactAttribute' cannot get a shortname discriminator as the assembly is not known to HybridDb. Only assemblies of types that are configured with configuration.Document<T>(), CoreLib and the assemblies in which the DocumentStore are instantiated are known by default. Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper(typeof(FactAttribute).Assembly));` or 'configuration.TypeMapper.Add(typeof(FactAttribute).Assembly);' to your HybridDb configuration.");
+                .Message.ShouldBe(
+                    "Type 'Xunit.FactAttribute' cannot get a shortname discriminator as the assembly is not known to HybridDb. Only assemblies of types that are configured with configuration.Document<T>(), CoreLib and the assemblies in which the DocumentStore are instantiated are known by default. Please add a call to `configuration.UseTypeMapper(new ShortNameTypeMapper(typeof(FactAttribute).Assembly));` or 'configuration.TypeMapper.Add(typeof(FactAttribute).Assembly);' to your HybridDb configuration.");
 
         public class MyNestedType { }
     }
@@ -129,4 +131,37 @@ namespace HybridDb.Tests
     {
         public class TwinType : ABaseType { }
     }
+
+    /// <summary>
+    /// ToType fails when the discriminator does not match the short type name.
+    /// </summary>
+    public class ShortNameTypeMapperTests2
+    {
+        readonly ShortNameTypeMapper typeMapper = new(typeof(ShortNameTypeMapperTests).Assembly);
+
+        [Fact]
+        public void Success()
+        {
+            var type = typeMapper.ToType(typeof(SuccessClass), "SuccessClass");
+
+            type.ShouldBe(typeof(SuccessClass));
+        }
+
+        [Fact]
+        public void Fail()
+        {
+            var type = typeMapper.ToType(typeof(FailClass), "_FailClass_");
+
+            type.ShouldBe(typeof(FailClass));
+        }
+    }
+
+    /// <summary>
+    /// Will also fail if nested inside ShortNameTypeMapperTests2.
+    /// </summary>
+    [Discriminator("SuccessClass")]
+    public class SuccessClass { }
+
+    [Discriminator("_FailClass_")]
+    public class FailClass { }
 }
