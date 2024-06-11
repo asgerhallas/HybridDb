@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema;
@@ -16,7 +16,8 @@ namespace HybridDb.Queue
             new Column<int>("Order", SqlDbType.Int, nullable: false),
             new Column<Guid>("CommitId"),
             new Column<string>("Message", length: -1),
-            new Column<string>("Metadata", length: -1, nullable: false, defaultValue: "{}")) { }
+            new Column<string>("Metadata", length: -1, nullable: false, defaultValue: "{}"),
+            new Column<string>("ProcessInfo", length: -1, nullable: true)) { }
 
         public override DdlCommand GetCreateCommand() => new CreateQueueTable(this);
     }

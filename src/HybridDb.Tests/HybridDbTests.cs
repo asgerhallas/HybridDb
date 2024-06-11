@@ -102,7 +102,7 @@ namespace HybridDb.Tests
 
         protected void UseRealTables()
         {
-            var uniqueDbName = $"HybridDbTests_{Guid.NewGuid().ToString().Replace("-", "_")}";
+            var uniqueDbName = $"HybridDbTests_{DateTime.Now.ToString("s").Replace(":", "")}_{Guid.NewGuid()}".Replace("-", "_");
 
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
             {

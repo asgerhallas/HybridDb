@@ -1,4 +1,4 @@
-﻿using HybridDb.Migrations.Schema;
+using HybridDb.Migrations.Schema;
 
 namespace HybridDb.Queue
 {
@@ -32,6 +32,7 @@ namespace HybridDb.Queue
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Message] [nvarchar](max) NULL,
 	                    [Metadata] [nvarchar](max) NULL default '{{}}',
+                        [ProcessInfo] [nvarchar](max) NULL,
 
                         CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Order] ASC, [Position] ASC)
                     )

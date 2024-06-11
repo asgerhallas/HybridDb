@@ -45,7 +45,13 @@
     <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3_Result.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Migrations\BuiltIn\AddProcessInfo_Tests_After.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_After.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\AddProcessInfo_Tests_Before_ProcessInfo.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_Before_Position.sql">
