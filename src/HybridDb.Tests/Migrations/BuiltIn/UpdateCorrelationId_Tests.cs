@@ -7,13 +7,13 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
-    public class AddProcessInfo_Tests : HybridDbTests
+    public class UpdateCorrelationId_Tests : HybridDbTests
     {
-        public AddProcessInfo_Tests(ITestOutputHelper output) : base(output) { }
+        public UpdateCorrelationId_Tests(ITestOutputHelper output) : base(output) { }
 
         [Theory]
-        [InlineData("AddProcessInfo_Tests_Before_ProcessInfo.sql")]
-        public void SchemaChanges_1(string beforeFilename)
+        [InlineData("UpdateCorrelationId_Tests_Before.sql")]
+        public void Test(string beforeFilename)
         {
             UseRealTables();
 
@@ -23,13 +23,13 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             configuration.UseMessageQueue();
 
-            UseMigrations(new AddProcessInfo(1));
+            UseMigrations(new UpdateCorrelationId(1));
 
             TouchStore();
 
-            store.Database.RawQuery<string>("select ProcessInfo from messages")
+            store.Database.RawQuery<string>("select CorrelationId from messages")
                 .ToList()
-                .ShouldBeLike("Process/1/1", "Process/1/2");
+                .ShouldBeLike("id1", "id3");
         }
     }
 }

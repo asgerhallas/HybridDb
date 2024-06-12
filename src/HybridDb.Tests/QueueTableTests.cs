@@ -1,7 +1,6 @@
 using System;
 using System.Data.Common;
 using System.IO;
-using HybridDb.Migrations.BuiltIn;
 using HybridDb.Queue;
 using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Management.Common;
@@ -9,28 +8,19 @@ using Microsoft.SqlServer.Management.Smo;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
-using static HybridDb.Helpers;
 
-namespace HybridDb.Tests.Migrations.BuiltIn
+namespace HybridDb.Tests
 {
-    public class HybridDb_3_11_0_Tests : HybridDbTests
+    public class QueueTableTests : HybridDbTests
     {
-        public HybridDb_3_11_0_Tests(ITestOutputHelper output) : base(output) { }
+        public QueueTableTests(ITestOutputHelper output) : base(output) { }
 
-        [Theory]
-        [InlineData("HybridDb_3_11_0_Tests_Before_Position.sql")]
-        [InlineData("HybridDb_3_11_0_Tests_Before_Version.sql")]
-        public void SchemaChanges_1(string beforeFilename)
+        [Fact]
+        public void Create()
         {
             UseRealTables();
 
-            Setup(SiblingFile(beforeFilename));
-
-            ResetConfiguration();
-
             configuration.UseMessageQueue();
-
-            UseMigrations(new InlineMigration(1, ListOf(new HybridDb_3_11_0())));
 
             TouchStore();
 
@@ -59,7 +49,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
                         NoCollation = true
                     }));
 
-            join.ShouldBe(File.ReadAllText(SiblingFile("HybridDb_3_11_0_Tests_After.sql")));
+            join.ShouldBe(File.ReadAllText(SiblingFile("QueueTableTests_After.sql")));
 
             database.Tables["messages_old"].ShouldBe(null);
         }

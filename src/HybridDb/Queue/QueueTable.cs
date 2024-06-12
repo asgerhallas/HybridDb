@@ -17,7 +17,7 @@ namespace HybridDb.Queue
             new Column<Guid>("CommitId"),
             new Column<string>("Message", length: -1),
             new Column<string>("Metadata", length: -1, nullable: false, defaultValue: "{}"),
-            new Column<string>("ProcessInfo", length: -1, nullable: true)) { }
+            new Column<string>("CorrelationId", length: 850, nullable: false, defaultValue: "UNKNOWN")) { }
 
         public override DdlCommand GetCreateCommand() => new CreateQueueTable(this);
     }

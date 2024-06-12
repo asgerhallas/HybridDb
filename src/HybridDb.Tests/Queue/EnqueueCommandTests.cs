@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Queue;
+using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -10,10 +11,7 @@ namespace HybridDb.Tests.Queue
 {
     public class EnqueueCommandTests : HybridDbTests
     {
-        public EnqueueCommandTests(ITestOutputHelper output) : base(output)
-        {
-            configuration.UseMessageQueue(new MessageQueueOptions());
-        }
+        public EnqueueCommandTests(ITestOutputHelper output) : base(output) => configuration.UseMessageQueue(new MessageQueueOptions());
 
         [Fact]
         public void Topic_NotSet()

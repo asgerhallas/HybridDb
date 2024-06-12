@@ -7,27 +7,26 @@ using HybridDb.Queue;
 
 namespace HybridDb.Migrations.BuiltIn
 {
-    public class AddProcessInfo : Migration
+    public class UpdateCorrelationId : Migration
     {
-        public AddProcessInfo(int version) : base(version) { }
+        public UpdateCorrelationId(int version) : base(version) { }
 
         public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
         {
             foreach (var table in configuration.Tables.Values.OfType<QueueTable>())
             {
                 yield return new SqlCommand(
-                    "Add ProcessInfo",
+                    "Update correlation ID",
                     (sql, db) =>
                     {
                         var tableNameEscaped = db.FormatTableNameAndEscape(table.Name);
 
                         sql.Append(@$"
                             update {tableNameEscaped}
-                            set ProcessInfo = (select
+                            set CorrelationId = (select top 1
         		                CorrelationId.value
-	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""correlation-ids""') X
-	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId
-        	                where CorrelationId.value like 'Process/%')");
+	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""{HybridDbMessage.CorrelationIdsKey}""') X
+	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId)");
                     });
             }
         }

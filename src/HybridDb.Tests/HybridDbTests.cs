@@ -181,11 +181,12 @@ namespace HybridDb.Tests
             var type = GetType();
 
             var assemblyName = type.Assembly.GetName().Name;
-
-            var relativePath = Path.Combine(
-                type.Namespace!
-                    .Replace($"{assemblyName}.", "")
-                    .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries));
+            var relativePath = assemblyName == type.Namespace
+                ? "" // If file is located in root of project/assembly
+                : Path.Combine(
+                    type.Namespace
+                        .Replace($"{assemblyName}.", "")
+                        .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries));
 
             var basePath = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory!;
 

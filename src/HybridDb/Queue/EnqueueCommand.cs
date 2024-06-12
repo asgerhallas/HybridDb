@@ -1,6 +1,8 @@
 using System;
-using Microsoft.Data.SqlClient;
+using System.Linq;
 using Dapper;
+using Microsoft.Data.SqlClient;
+using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Queue
 {
@@ -11,9 +13,14 @@ namespace HybridDb.Queue
         public EnqueueCommand(QueueTable table, HybridDbMessage message, Func<object, Guid, string> idGenerator = null)
         {
             if (idGenerator == null && message.Id == null)
+            {
                 throw new ArgumentException("Message id was null and no id generator was provided.");
+            }
+
             if (message.Topic != null && string.IsNullOrWhiteSpace(message.Topic))
+            {
                 throw new ArgumentException("Message topic can not be empty or whitespace only.");
+            }
 
             Table = table;
             Message = message with { Topic = message.Topic ?? DefaultTopic };
@@ -39,8 +46,8 @@ namespace HybridDb.Queue
             {
                 tx.SqlConnection.Execute(@$"
                     set nocount on; 
-                    insert into {tableName} (Topic, Version, Id, [Order], CommitId, Discriminator, Message, Metadata) 
-                    values (@Topic, @Version, @Id, @Order, @CommitId, @Discriminator, @Message, @Metadata); 
+                    insert into {tableName} (Topic, Version, Id, [Order], CommitId, Discriminator, Message, Metadata, CorrelationId) 
+                    values (@Topic, @Version, @Id, @Order, @CommitId, @Discriminator, @Message, @Metadata, @CorrelationId); 
                     set nocount off;",
                     new
                     {
@@ -51,7 +58,8 @@ namespace HybridDb.Queue
                         tx.CommitId,
                         Discriminator = discriminator,
                         Message = serializer(command.Message.Payload),
-                        Metadata = serializer(command.Message.Metadata)
+                        Metadata = serializer(command.Message.Metadata),
+                        command.Message.CorrelationId
                     },
                     tx.SqlTransaction);
             }

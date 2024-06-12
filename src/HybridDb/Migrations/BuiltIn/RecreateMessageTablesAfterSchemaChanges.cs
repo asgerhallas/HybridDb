@@ -1,15 +1,11 @@
-﻿using System.Linq;
+using System.Linq;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Queue;
 
 namespace HybridDb.Migrations.BuiltIn
 {
-    /// <summary>
-    /// Migrate messages table from HybridDb versions <= 3.11.0.
-    /// Must be used before auto migrations.
-    /// </summary>
-    public class HybridDb_3_11_0 : DdlCommand
+    public class RecreateMessageTablesAfterSchemaChanges : DdlCommand
     {
         public override void Execute(DocumentStore store)
         {
@@ -32,14 +28,15 @@ namespace HybridDb.Migrations.BuiltIn
                 var columns = string.Join(", ", columnNames);
 
                 // Move the data from the old to the new table
+                // For now we must handle the not nullable field CorrelationId manually.
                 store.Database.RawExecute(@$"
-                    insert into {tableNameEscaped} ({columns})
-                    select {columns} from {oldTableNameEscaped};");
+                    insert into {tableNameEscaped} ({columns}, CorrelationId)
+                    select {columns}, 'N/A' from {oldTableNameEscaped};");
 
                 store.Database.RawExecute($"drop table {oldTableNameEscaped};");
             }
         }
 
-        public override string ToString() => "Add new primary index to messages table.";
+        public override string ToString() => "Recreate message tables after schema changes";
     }
 }
