@@ -1,8 +1,6 @@
 using System;
-using System.Linq;
 using Dapper;
 using Microsoft.Data.SqlClient;
-using Newtonsoft.Json.Linq;
 
 namespace HybridDb.Queue
 {
@@ -31,6 +29,8 @@ namespace HybridDb.Queue
         public Func<object, Guid, string> IdGenerator { get; }
         public HybridDbMessage Message { get; }
 
+        public string CorrelationId { get; internal set; }
+
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
         {
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
@@ -41,6 +41,8 @@ namespace HybridDb.Queue
                      command.Message.Id;
 
             command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
+
+            command.CorrelationId = command.Message.CorrelationId ?? id;
 
             try
             {
@@ -59,7 +61,7 @@ namespace HybridDb.Queue
                         Discriminator = discriminator,
                         Message = serializer(command.Message.Payload),
                         Metadata = serializer(command.Message.Metadata),
-                        CorrelationId = command.Message.CorrelationId ?? id
+                        command.CorrelationId
                     },
                     tx.SqlTransaction);
             }
