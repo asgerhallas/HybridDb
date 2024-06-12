@@ -229,10 +229,7 @@ namespace HybridDb.Queue
 
             return () =>
             {
-                if (Interlocked.Exchange(ref released, 1) == 1)
-                {
-                    return;
-                }
+                if (Interlocked.Exchange(ref released, 1) == 1) return;
 
                 // Release could be called after the main loop has ended, and the semaprhore has 
                 // been disposed, if a handler thread is still working during shutdown. We don't 
@@ -305,7 +302,6 @@ namespace HybridDb.Queue
                 using var session = options.CreateSession(store);
 
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
-
                 session.Advanced.Enlist(tx);
 
                 events.OnNext(new MessageHandling(session, context, message, cts.Token));
@@ -315,7 +311,7 @@ namespace HybridDb.Queue
                 events.OnNext(new MessageHandled(session, context, message, cts.Token));
 
                 session.SaveChanges();
-
+                
                 tx.Complete();
 
                 events.OnNext(new MessageCommitted(session, context, message, cts.Token));
