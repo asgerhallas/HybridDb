@@ -21,9 +21,7 @@ namespace HybridDb.Queue
         {
             Table = table ?? throw new ArgumentNullException(nameof(table));
 
-            if (messageId == null) throw new ArgumentNullException(nameof(messageId));
-
-            MessageId = messageId;
+            MessageId = messageId ?? throw new ArgumentNullException(nameof(messageId));
         }
 
         public QueueTable Table { get; }
@@ -77,14 +75,10 @@ namespace HybridDb.Queue
 
             var metadata = (Dictionary<string, string>)deserializer(msg.Metadata, typeof(Dictionary<string, string>));
 
-            var result= new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic, msg.Order)
+            return new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic, msg.Order, msg.CorrelationId)
             {
                 Metadata = metadata
             };
-
-            result.OverrideCorrelationId(msg.CorrelationId);
-
-            return result;
         }
     }
 }

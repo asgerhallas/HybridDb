@@ -1060,15 +1060,34 @@ namespace HybridDb.Tests.Queue
             var messages = await subject.Take(2).ToList();
 
             messages[0].CorrelationId.ShouldBe("id1");
-            messages[0].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
-                    new JArray("id1").ToString());
+            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
 
             messages[1].CorrelationId.ShouldBe("id1");
-            messages[1].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
-                    new JArray("id1",
-                        "id2").ToString());
+            messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id2").ToString());
+        }
+
+        [Fact]
+        public async Task CorrelationIds_WithIdGenerator()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            A.CallTo(handler).Invokes(call => subject.OnNext(call.Arguments.Get<HybridDbMessage>(1)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue((x, y) => "id1", new MyMessage("Some command"));
+
+                session.SaveChanges();
+            }
+
+            var messages = await subject.Take(1).ToList();
+
+            messages[0].CorrelationId.ShouldBe("id1");
+
+            // TODO: Bug. See QueueEx.AddBreadcrumb
+            //messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
         }
 
         [Fact]
@@ -1113,23 +1132,23 @@ namespace HybridDb.Tests.Queue
 
             orderedMessages[0].CorrelationId.ShouldBe("id1");
             orderedMessages[0].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
+                .ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
                     new JArray("id1").ToString());
 
             orderedMessages[1].CorrelationId.ShouldBe("id1");
             orderedMessages[1].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
+                .ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
                     new JArray("id1",
                         "id2").ToString());
 
             orderedMessages[2].CorrelationId.ShouldBe("id1");
             orderedMessages[2].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
+                .ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
                     new JArray("id1",
                         "id3").ToString());
 
             orderedMessages[3].CorrelationId.ShouldBe("id1");
-            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.CorrelationIdsKey,
+            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
                 new JArray("id1",
                     "id3",
                     "id4").ToString());

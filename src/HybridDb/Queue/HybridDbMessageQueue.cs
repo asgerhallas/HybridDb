@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -15,11 +14,6 @@ namespace HybridDb.Queue
 {
     public class HybridDbMessageQueue : IDisposable
     {
-        // This implementation misses a few pieces:
-        // [ ] Handling of messages could be idempotent too, by soft deleting them when done, but still keeping it around to guard against
-        //     subsequent redelivery with the same id.
-        // [ ] Allow faster handling of messages by handling multiple messages (a given max batch size) in one transaction
-
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
@@ -43,8 +37,7 @@ namespace HybridDb.Queue
 
             if (!store.Configuration.TryResolve(out options))
             {
-                throw new HybridDbException(
-                    "MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
+                throw new HybridDbException("MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
             }
 
             Events = events;
@@ -89,12 +82,12 @@ namespace HybridDb.Queue
                     {
                         events.OnNext(new QueueStarting(cts.Token));
 
-                        logger.LogInformation($@"
-                        Queue started. 
-                        Reading messages with version {options.Version} or older, 
-                        from topics '{string.Join("', '", options.InboxTopics)}'.
-                    ".Indent());
-
+                        logger.LogInformation($"""
+                            Queue started. 
+                            Reading messages with version {options.Version} or older, 
+                            from topics '{string.Join("', '", options.InboxTopics)}'.
+                            """.Indent());
+    
                         using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
 
                         while (!cts.Token.IsCancellationRequested)
@@ -110,23 +103,23 @@ namespace HybridDb.Queue
                                     try
                                     {
                                         await Task.Factory.StartNew(async () =>
+                                        {
+                                            try
                                             {
-                                                try
-                                                {
-                                                    using var _ = Time("HandleMessage");
+                                                using var _ = Time("HandleMessage");
 
-                                                    await HandleMessage(tx,
-                                                        message);
-                                                }
-                                                finally
-                                                {
-                                                    // open the gate for the next message, when this message is handled.
-                                                    release();
-                                                    DisposeTransaction(tx);
-                                                }
-                                            }, cts.Token,
-                                            TaskCreationOptions.DenyChildAttach,
-                                            TaskScheduler.Default);
+                                                await HandleMessage(tx, message);
+                                            }
+                                            finally
+                                            {
+                                                // open the gate for the next message, when this message is handled.
+                                                release();
+                                                DisposeTransaction(tx);
+                                            }
+                                        },
+                                        cts.Token,
+                                        TaskCreationOptions.DenyChildAttach,
+                                        TaskScheduler.Default);
                                     }
                                     catch
                                     {
@@ -149,14 +142,11 @@ namespace HybridDb.Queue
                             }
                             catch (Exception exception)
                             {
-                                events.OnNext(new QueueFailed(exception,
-                                    cts.Token));
+                                events.OnNext(new QueueFailed(exception, cts.Token));
 
-                                logger.LogError(exception,
-                                    $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
-                                await Task.Delay(options.ExceptionBackoff,
-                                    cts.Token);
+                                await Task.Delay(options.ExceptionBackoff, cts.Token);
                             }
                         }
 
@@ -169,8 +159,7 @@ namespace HybridDb.Queue
                     TaskScheduler.Default)
                 .Unwrap()
                 .ContinueWith(
-                    t => logger.LogError(t.Exception,
-                        $"{nameof(HybridDbMessageQueue)} failed and stopped."),
+                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."),
                     TaskContinuationOptions.OnlyOnFaulted);
         }
 
@@ -202,8 +191,7 @@ namespace HybridDb.Queue
 
             var tx = store.BeginTransaction(connectionTimeout: options.ConnectionTimeout);
 
-            if (!txs.TryAdd(tx,
-                    0))
+            if (!txs.TryAdd(tx, 0))
             {
                 throw new InvalidOperationException("Transaction could not be tracked.");
             }
@@ -213,11 +201,7 @@ namespace HybridDb.Queue
 
         void DisposeTransaction(DocumentTransaction tx)
         {
-            if (!txs.TryRemove(tx,
-                    out _))
-            {
-                return;
-            }
+            if (!txs.TryRemove(tx, out _)) return;
 
             try
             {
@@ -225,8 +209,7 @@ namespace HybridDb.Queue
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex,
-                    "Dispose transaction failed.");
+                logger.LogWarning(ex, "Dispose transaction failed.");
             }
         }
 
@@ -246,8 +229,7 @@ namespace HybridDb.Queue
 
             return () =>
             {
-                if (Interlocked.Exchange(ref released,
-                        1) == 1)
+                if (Interlocked.Exchange(ref released, 1) == 1)
                 {
                     return;
                 }
@@ -275,13 +257,9 @@ namespace HybridDb.Queue
 
                     // Querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
-                    var message = tx.Execute(new DequeueCommand(table,
-                        options.InboxTopics));
+                    var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
 
-                    if (message != null)
-                    {
-                        return (tx, message);
-                    }
+                    if (message != null) return (tx, message);
 
                     DisposeTransaction(tx);
 
@@ -299,8 +277,7 @@ namespace HybridDb.Queue
                     }
 
                     // Wait for any local enqueue or for the timeout (IdleDelay) to check for remote enqueues at an interval.
-                    await localEnqueues.WaitAsync(options.IdleDelay,
-                        cts.Token).ConfigureAwait(false);
+                    await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
                     tx = BeginTransaction();
                 }
@@ -321,84 +298,56 @@ namespace HybridDb.Queue
 
             try
             {
-                events.OnNext(new MessageReceived(context,
-                    message,
-                    cts.Token));
-
+                events.OnNext(new MessageReceived(context, message, cts.Token));
+                
                 tx.SqlTransaction.Save("MessageReceived");
 
                 using var session = options.CreateSession(store);
 
-                session.Advanced.SessionData.Add(MessageContext.Key,
-                    context);
+                session.Advanced.SessionData.Add(MessageContext.Key, context);
 
                 session.Advanced.Enlist(tx);
 
-                events.OnNext(new MessageHandling(session,
-                    context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageHandling(session, context, message, cts.Token));
 
-                await handler(session,
-                    message);
+                await handler(session, message);
 
-                events.OnNext(new MessageHandled(session,
-                    context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageHandled(session, context, message, cts.Token));
 
                 session.SaveChanges();
 
                 tx.Complete();
 
-                events.OnNext(new MessageCommitted(session,
-                    context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageCommitted(session, context, message, cts.Token));
             }
             catch (Exception exception)
             {
                 if (cts.IsCancellationRequested) return;
 
-                var failures = retries.AddOrUpdate(message.Id,
-                    _ => 1,
-                    (_, current) => current + 1);
+                var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
                 // TODO: log here to ensure we get a log before a new exception is raised
 
-                events.OnNext(new MessageFailed(context,
-                    message,
-                    exception,
-                    failures,
-                    cts.Token));
+                events.OnNext(new MessageFailed(context, message, exception, failures, cts.Token));
 
                 if (failures < 5)
                 {
-                    logger.LogWarning(exception,
-                        "Dispatch of command {commandId} failed. Will retry.",
-                        message.Id);
+                    logger.LogWarning(exception, "Dispatch of command {commandId} failed. Will retry.", message.Id);
 
                     return;
                 }
 
                 tx.SqlTransaction.Rollback("MessageReceived");
 
-                logger.LogError(exception,
-                    "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.",
-                    message.Id);
+                logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
 
-                tx.Execute(new EnqueueCommand(table,
-                    message with { Topic = $"errors/{message.Topic}" }));
+                tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
                 tx.Complete();
 
-                events.OnNext(new PoisonMessage(context,
-                    message,
-                    exception,
-                    cts.Token));
+                events.OnNext(new PoisonMessage(context, message, exception, cts.Token));
 
-                retries.TryRemove(message.Id,
-                    out _);
+                retries.TryRemove(message.Id, out _);
             }
         }
 
@@ -406,37 +355,8 @@ namespace HybridDb.Queue
         {
             var startNew = Stopwatch.StartNew();
 
-            return Disposable.Create(() => store.Configuration.Logger
-                .LogDebug($"HybridDbMessageQueue: Timed {text}: {startNew.ElapsedMilliseconds}ms."));
+            return Disposable.Create(() => store.Configuration
+                .Logger.LogDebug($"HybridDbMessageQueue: Timed {text}: {startNew.ElapsedMilliseconds}ms."));
         }
-    }
-
-    public sealed record HybridDbMessage(
-        string Id,
-        object Payload,
-        string Topic = null,
-        int Order = 0,
-        Dictionary<string, string> Metadata = null
-    )
-    {
-        public const string EnqueuedAtKey = "enqueued-at";
-        public const string CorrelationIdsKey = "correlation-ids";
-
-        public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
-
-        // CorrelationId is omitted from the ctor as HybridDb controls it.
-        public string CorrelationId { get; private set; } = Id;
-
-        // Internal as HybridDb controls CorrelationId.
-        internal void OverrideCorrelationId(string correlationId) => CorrelationId = correlationId ?? Id;
-    }
-
-    public class MessageContext : Dictionary<string, object>
-    {
-        public const string Key = nameof(MessageContext);
-
-        public MessageContext(HybridDbMessage incomingMessage) => IncomingMessage = incomingMessage;
-
-        public HybridDbMessage IncomingMessage { get; }
     }
 }

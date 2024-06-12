@@ -41,12 +41,20 @@ namespace HybridDb.Queue
 
             var resultingOrder = GetMessageOrder(session, order);
 
-            return Enqueue(session,
-                new HybridDbMessage(Guid.NewGuid().ToString(),
+            var id = Guid.NewGuid().ToString();
+
+            var correlationId = GetIncomingMessageCorrelationIdOrNull(session);
+
+            return Enqueue(
+                session,
+                new HybridDbMessage(
+                    id,
                     message,
                     topic,
                     resultingOrder,
-                    metadata), null);
+                    correlationId,
+                    metadata),
+                null);
         }
 
         public static HybridDbMessage Enqueue(
@@ -62,12 +70,18 @@ namespace HybridDb.Queue
 
             var resultingOrder = GetMessageOrder(session, order);
 
-            return Enqueue(session,
-                new HybridDbMessage(id,
+            var correlationId = GetIncomingMessageCorrelationIdOrNull(session);
+
+            return Enqueue(
+                session,
+                new HybridDbMessage(
+                    id,
                     message,
                     topic,
                     resultingOrder,
-                    metadata), null);
+                    correlationId,
+                    metadata),
+                null);
         }
 
         public static HybridDbMessage Enqueue<T>(
@@ -86,10 +100,14 @@ namespace HybridDb.Queue
 
             var resultingOrder = GetMessageOrder(session, order);
 
-            var envelope = new HybridDbMessage(Guid.NewGuid().ToString(),
+            var correlationId = GetIncomingMessageCorrelationIdOrNull(session);
+
+            var envelope = new HybridDbMessage(
+                Guid.NewGuid().ToString(),
                 message,
                 topic,
                 resultingOrder,
+                correlationId,
                 metadata);
 
             return Enqueue(session, envelope, IdGenerator);
@@ -108,7 +126,7 @@ namespace HybridDb.Queue
                 throw new ArgumentException("Enqueued message must not be of type HybridDbMessage.");
             }
 
-            SetCorrelationIds(session, message);
+            AddBreadcrumb(session, message);
 
             var queueTable = session.GetQueueTable();
 
@@ -132,26 +150,35 @@ namespace HybridDb.Queue
         static int GetMessageOrder(IDocumentSession session, int? order) =>
             order ?? TryGetDefaultMessageOrder(session) ?? 0;
 
-        static void SetCorrelationIds(IDocumentSession session, HybridDbMessage newMessage)
+        static string GetIncomingMessageCorrelationIdOrNull(IDocumentSession session)
+        {
+            if (session.Advanced.SessionData.TryGetValue(MessageContext.Key, out var value) &&
+                value is MessageContext messageContext)
+            {
+                return messageContext.IncomingMessage.CorrelationId;
+            }
+
+            return null;
+        }
+
+        static void AddBreadcrumb(IDocumentSession session, HybridDbMessage newMessage)
         {
             if (session.Advanced.SessionData.TryGetValue(MessageContext.Key, out var value) &&
                 value is MessageContext messageContext &&
-                messageContext.IncomingMessage.Metadata
-                    .TryGetValue(HybridDbMessage.CorrelationIdsKey, out var correlationIds))
+                messageContext.IncomingMessage.Metadata.TryGetValue(HybridDbMessage.Breadcrumbs, out var breadcrumbs))
             {
-                // Override correlation ID for derived messages.
-                newMessage.OverrideCorrelationId(messageContext.IncomingMessage.CorrelationId);
+                var newBreadcrumbs = JArray.Parse(breadcrumbs);
 
-                var newCorrelationIds = JArray.Parse(correlationIds);
+                // TODO: Bug. This is the provided id, but this can be changed by the IdGenerator later,
+                // so it might not actually be correct. See test CorrelationIds_WithIdGenerator
+                newBreadcrumbs.Add(newMessage.Id);
 
-                newCorrelationIds.Add(newMessage.Id);
-
-                newMessage.Metadata.Add(HybridDbMessage.CorrelationIdsKey, newCorrelationIds.ToString());
+                newMessage.Metadata.Add(HybridDbMessage.Breadcrumbs, newBreadcrumbs.ToString());
 
                 return;
             }
 
-            newMessage.Metadata.Add(HybridDbMessage.CorrelationIdsKey, new JArray(newMessage.Id).ToString());
+            newMessage.Metadata.Add(HybridDbMessage.Breadcrumbs, new JArray(newMessage.Id).ToString());
         }
 
         static QueueTable GetQueueTable(this IDocumentSession session) =>

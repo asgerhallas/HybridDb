@@ -25,7 +25,7 @@ namespace HybridDb.Migrations.BuiltIn
                             update {tableNameEscaped}
                             set CorrelationId = (select top 1
         		                CorrelationId.value
-	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""{HybridDbMessage.CorrelationIdsKey}""') X
+	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""{HybridDbMessage.Breadcrumbs}""') X
 	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId)");
                     });
             }

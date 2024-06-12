@@ -59,7 +59,7 @@ namespace HybridDb.Queue
                         Discriminator = discriminator,
                         Message = serializer(command.Message.Payload),
                         Metadata = serializer(command.Message.Metadata),
-                        command.Message.CorrelationId
+                        CorrelationId = command.Message.CorrelationId ?? id
                     },
                     tx.SqlTransaction);
             }
