@@ -43,8 +43,7 @@ namespace HybridDb.Queue
 
             if (!store.Configuration.TryResolve(out options))
             {
-                throw new HybridDbException(
-                    "MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
+                throw new HybridDbException("MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
             }
 
             Events = events;
@@ -115,8 +114,7 @@ namespace HybridDb.Queue
                                                 {
                                                     using var _ = Time("HandleMessage");
 
-                                                    await HandleMessage(tx,
-                                                        message);
+                                                    await HandleMessage(tx, message);
                                                 }
                                                 finally
                                                 {
@@ -149,14 +147,11 @@ namespace HybridDb.Queue
                             }
                             catch (Exception exception)
                             {
-                                events.OnNext(new QueueFailed(exception,
-                                    cts.Token));
+                                events.OnNext(new QueueFailed(exception, cts.Token));
 
-                                logger.LogError(exception,
-                                    $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
-                                await Task.Delay(options.ExceptionBackoff,
-                                    cts.Token);
+                                await Task.Delay(options.ExceptionBackoff, cts.Token);
                             }
                         }
 
@@ -168,10 +163,8 @@ namespace HybridDb.Queue
                     TaskCreationOptions.LongRunning,
                     TaskScheduler.Default)
                 .Unwrap()
-                .ContinueWith(
-                    t => logger.LogError(t.Exception,
-                        $"{nameof(HybridDbMessageQueue)} failed and stopped."),
-                    TaskContinuationOptions.OnlyOnFaulted);
+                .ContinueWith(t =>
+                    logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), TaskContinuationOptions.OnlyOnFaulted);
         }
 
         public Task MainLoop { get; }
@@ -202,8 +195,7 @@ namespace HybridDb.Queue
 
             var tx = store.BeginTransaction(connectionTimeout: options.ConnectionTimeout);
 
-            if (!txs.TryAdd(tx,
-                    0))
+            if (!txs.TryAdd(tx, 0))
             {
                 throw new InvalidOperationException("Transaction could not be tracked.");
             }
@@ -213,8 +205,7 @@ namespace HybridDb.Queue
 
         void DisposeTransaction(DocumentTransaction tx)
         {
-            if (!txs.TryRemove(tx,
-                    out _))
+            if (!txs.TryRemove(tx, out _))
             {
                 return;
             }
@@ -225,8 +216,7 @@ namespace HybridDb.Queue
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex,
-                    "Dispose transaction failed.");
+                logger.LogWarning(ex, "Dispose transaction failed.");
             }
         }
 
@@ -246,8 +236,7 @@ namespace HybridDb.Queue
 
             return () =>
             {
-                if (Interlocked.Exchange(ref released,
-                        1) == 1)
+                if (Interlocked.Exchange(ref released, 1) == 1)
                 {
                     return;
                 }
@@ -321,84 +310,56 @@ namespace HybridDb.Queue
 
             try
             {
-                events.OnNext(new MessageReceived(context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageReceived(context, message, cts.Token));
 
                 tx.SqlTransaction.Save("MessageReceived");
 
                 using var session = options.CreateSession(store);
 
-                session.Advanced.SessionData.Add(MessageContext.Key,
-                    context);
+                session.Advanced.SessionData.Add(MessageContext.Key, context);
 
                 session.Advanced.Enlist(tx);
 
-                events.OnNext(new MessageHandling(session,
-                    context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageHandling(session, context, message, cts.Token));
 
-                await handler(session,
-                    message);
+                await handler(session, message);
 
-                events.OnNext(new MessageHandled(session,
-                    context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageHandled(session, context, message, cts.Token));
 
                 session.SaveChanges();
 
                 tx.Complete();
 
-                events.OnNext(new MessageCommitted(session,
-                    context,
-                    message,
-                    cts.Token));
+                events.OnNext(new MessageCommitted(session, context, message, cts.Token));
             }
             catch (Exception exception)
             {
                 if (cts.IsCancellationRequested) return;
 
-                var failures = retries.AddOrUpdate(message.Id,
-                    _ => 1,
-                    (_, current) => current + 1);
+                var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
                 // TODO: log here to ensure we get a log before a new exception is raised
 
-                events.OnNext(new MessageFailed(context,
-                    message,
-                    exception,
-                    failures,
-                    cts.Token));
+                events.OnNext(new MessageFailed(context, message, exception, failures, cts.Token));
 
                 if (failures < 5)
                 {
-                    logger.LogWarning(exception,
-                        "Dispatch of command {commandId} failed. Will retry.",
-                        message.Id);
+                    logger.LogWarning(exception, "Dispatch of command {commandId} failed. Will retry.", message.Id);
 
                     return;
                 }
 
                 tx.SqlTransaction.Rollback("MessageReceived");
 
-                logger.LogError(exception,
-                    "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.",
-                    message.Id);
+                logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
 
-                tx.Execute(new EnqueueCommand(table,
-                    message with { Topic = $"errors/{message.Topic}" }));
+                tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
                 tx.Complete();
 
-                events.OnNext(new PoisonMessage(context,
-                    message,
-                    exception,
-                    cts.Token));
+                events.OnNext(new PoisonMessage(context, message, exception, cts.Token));
 
-                retries.TryRemove(message.Id,
-                    out _);
+                retries.TryRemove(message.Id, out _);
             }
         }
 
@@ -423,6 +384,15 @@ namespace HybridDb.Queue
         public const string CorrelationIdsKey = "correlation-ids";
 
         public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
+
+        /// <summary>
+        /// Is automatically set to the value of the <see cref="Id" /> property when the message is created.
+        /// If the message is enqueued together with an ID generator that later updates the message ID, then the correlation ID
+        /// will
+        /// not reflect the change update.
+        /// If the message is a derived message, i.e., created in a message handler, then the initial value will be overridden with
+        /// the value from the parent message.
+        /// </summary>
 
         // CorrelationId is omitted from the ctor as HybridDb controls it.
         public string CorrelationId { get; private set; } = Id;
