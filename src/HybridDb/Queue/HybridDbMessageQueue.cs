@@ -424,9 +424,11 @@ namespace HybridDb.Queue
 
         public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
 
+        // CorrelationId is omitted from the ctor as HybridDb controls it.
         public string CorrelationId { get; private set; } = Id;
 
-        public void SetCorrelationId(string value) => CorrelationId = value ?? Id;
+        // Internal as HybridDb controls CorrelationId.
+        internal void OverrideCorrelationId(string correlationId) => CorrelationId = correlationId ?? Id;
     }
 
     public class MessageContext : Dictionary<string, object>

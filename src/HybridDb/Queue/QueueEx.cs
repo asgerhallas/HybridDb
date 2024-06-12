@@ -148,29 +148,28 @@ namespace HybridDb.Queue
         static int GetMessageOrder(IDocumentSession session, int? order) =>
             order ?? TryGetDefaultMessageOrder(session) ?? 0;
 
-        static void SetCorrelationIds(IDocumentSession session, HybridDbMessage message)
+        static void SetCorrelationIds(IDocumentSession session, HybridDbMessage newMessage)
         {
-            if (session.Advanced.SessionData.TryGetValue(MessageContext.Key,
-                    out var value) &&
+            if (session.Advanced.SessionData.TryGetValue(MessageContext.Key, out var value) &&
                 value is MessageContext messageContext &&
-                messageContext.IncomingMessage.Metadata.TryGetValue(HybridDbMessage.CorrelationIdsKey,
-                    out var correlationIds))
+                messageContext.IncomingMessage.Metadata
+                    .TryGetValue(HybridDbMessage.CorrelationIdsKey, out var correlationIds))
             {
                 // Override correlation ID for derived messages.
-                message.SetCorrelationId(messageContext.IncomingMessage.Id);
+                newMessage.OverrideCorrelationId(messageContext.IncomingMessage.CorrelationId);
 
                 var newCorrelationIds = JArray.Parse(correlationIds);
 
-                newCorrelationIds.Add(message.Id);
+                newCorrelationIds.Add(newMessage.Id);
 
-                message.Metadata.Add(HybridDbMessage.CorrelationIdsKey,
+                newMessage.Metadata.Add(HybridDbMessage.CorrelationIdsKey,
                     newCorrelationIds.ToString());
 
                 return;
             }
 
-            message.Metadata.Add(HybridDbMessage.CorrelationIdsKey,
-                new JArray(message.Id).ToString());
+            newMessage.Metadata.Add(HybridDbMessage.CorrelationIdsKey,
+                new JArray(newMessage.Id).ToString());
         }
 
         static QueueTable GetQueueTable(this IDocumentSession session) =>

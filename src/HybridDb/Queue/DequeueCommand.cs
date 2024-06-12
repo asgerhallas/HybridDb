@@ -57,7 +57,7 @@ namespace HybridDb.Queue
             }
 
             var msg = tx.SqlConnection
-                .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata)>($@"
+                .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata, string CorrelationId)>($@"
                     set nocount on;
                     with x as (
                         select top(1) * from {tablename} with (rowlock, readpast) 
@@ -65,7 +65,7 @@ namespace HybridDb.Queue
                         and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid)
                         order by [Order] asc, Position asc
                     )
-                    delete from x output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic, deleted.[Order], deleted.Metadata;
+                    delete from x output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic, deleted.[Order], deleted.Metadata, deleted.CorrelationId;
                     set nocount off;",
                     param,
                     tx.SqlTransaction
@@ -77,10 +77,14 @@ namespace HybridDb.Queue
 
             var metadata = (Dictionary<string, string>)deserializer(msg.Metadata, typeof(Dictionary<string, string>));
 
-            return new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic, msg.Order)
+            var result= new HybridDbMessage(msg.Id, deserializer(msg.Payload, type), msg.Topic, msg.Order)
             {
                 Metadata = metadata
             };
+
+            result.OverrideCorrelationId(msg.CorrelationId);
+
+            return result;
         }
     }
 }
