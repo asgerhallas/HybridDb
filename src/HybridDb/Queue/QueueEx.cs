@@ -34,7 +34,8 @@ namespace HybridDb.Queue
             object message,
             string topic = null,
             int? order = null,
-            Dictionary<string, string> metadata = null
+            Dictionary<string, string> metadata = null,
+            bool resetCorrelationIds = false
         )
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
@@ -43,7 +44,7 @@ namespace HybridDb.Queue
 
             var id = Guid.NewGuid().ToString();
 
-            var correlationId = GetIncomingMessageCorrelationIdOrNull(session);
+            var correlationId = !resetCorrelationIds ? GetIncomingMessageCorrelationIdOrNull(session) : null;
 
             return Enqueue(
                 session,
@@ -63,14 +64,15 @@ namespace HybridDb.Queue
             object message,
             string topic = null,
             int? order = null,
-            Dictionary<string, string> metadata = null
+            Dictionary<string, string> metadata = null,
+            bool resetCorrelationIds = false
         )
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             var resultingOrder = GetMessageOrder(session, order);
 
-            var correlationId = GetIncomingMessageCorrelationIdOrNull(session);
+            var correlationId = !resetCorrelationIds ? GetIncomingMessageCorrelationIdOrNull(session) : null;
 
             return Enqueue(
                 session,
@@ -90,7 +92,8 @@ namespace HybridDb.Queue
             T message,
             string topic = null,
             int? order = null,
-            Dictionary<string, string> metadata = null
+            Dictionary<string, string> metadata = null,
+            bool resetCorrelationIds = false
         )
         {
             if (idGenerator == null) throw new ArgumentNullException(nameof(idGenerator));
@@ -100,7 +103,7 @@ namespace HybridDb.Queue
 
             var resultingOrder = GetMessageOrder(session, order);
 
-            var correlationId = GetIncomingMessageCorrelationIdOrNull(session);
+            var correlationId = !resetCorrelationIds ? GetIncomingMessageCorrelationIdOrNull(session) : null;
 
             var envelope = new HybridDbMessage(
                 Guid.NewGuid().ToString(),

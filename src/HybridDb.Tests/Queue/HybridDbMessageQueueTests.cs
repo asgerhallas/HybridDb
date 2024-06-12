@@ -1043,8 +1043,8 @@ namespace HybridDb.Tests.Queue
 
             A.CallTo(handler).Invokes(call =>
             {
-                call.Arguments.Get<IDocumentSession>(0).Enqueue("id2",
-                    new MyMessage("Next command"));
+                call.Arguments.Get<IDocumentSession>(0)
+                    .Enqueue("id2", new MyMessage("Next command"));
 
                 subject.OnNext(call.Arguments.Get<HybridDbMessage>(1));
             });
@@ -1063,6 +1063,36 @@ namespace HybridDb.Tests.Queue
             messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
 
             messages[1].CorrelationId.ShouldBe("id1");
+            messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id2").ToString());
+        }
+
+        [Fact]
+        public async Task CorrelationIds_Reset()
+        {
+            StartQueue();
+
+            var subject = new ReplaySubject<HybridDbMessage>();
+
+            A.CallTo(handler).Invokes(call =>
+            {
+                call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"), resetCorrelationIds: true);
+
+                subject.OnNext(call.Arguments.Get<HybridDbMessage>(1));
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("id1", new MyMessage("Some command"));
+
+                session.SaveChanges();
+            }
+
+            var messages = await subject.Take(2).ToList();
+
+            messages[0].CorrelationId.ShouldBe("id1");
+            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
+
+            messages[1].CorrelationId.ShouldBe("id2");
             messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id2").ToString());
         }
 
