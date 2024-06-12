@@ -28,10 +28,9 @@ namespace HybridDb.Migrations.BuiltIn
                 var columns = string.Join(", ", columnNames);
 
                 // Move the data from the old to the new table
-                // For now we must handle the not nullable field CorrelationId manually.
                 store.Database.RawExecute(@$"
-                    insert into {tableNameEscaped} ({columns}, CorrelationId)
-                    select {columns}, 'N/A' from {oldTableNameEscaped};");
+                    insert into {tableNameEscaped} ({columns})
+                    select {columns} from {oldTableNameEscaped};");
 
                 store.Database.RawExecute($"drop table {oldTableNameEscaped};");
             }

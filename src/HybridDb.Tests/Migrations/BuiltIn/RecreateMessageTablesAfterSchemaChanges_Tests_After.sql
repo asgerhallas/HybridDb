@@ -45,3 +45,5 @@ GO
 ALTER TABLE [dbo].[messages] ADD  DEFAULT ((1)) FOR [Order]
 GO
 ALTER TABLE [dbo].[messages] ADD  DEFAULT ('{}') FOR [Metadata]
+GO
+ALTER TABLE [dbo].[messages] ADD  DEFAULT ('N/A') FOR [CorrelationId]
