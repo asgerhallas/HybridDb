@@ -40,8 +40,7 @@ namespace HybridDb.Tests.Queue
                 })
                 .ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            return Using(new HybridDbMessageQueue(store,
-                handler));
+            return Using(new HybridDbMessageQueue(store, handler));
         }
 
         IDocumentStore CreateOtherStore(Action<Configuration> configurator)
@@ -52,9 +51,7 @@ namespace HybridDb.Tests.Queue
 
             configurator(newConfiguration);
 
-            return Using(new DocumentStore(store,
-                newConfiguration,
-                true));
+            return Using(new DocumentStore(store, newConfiguration, true));
         }
 
         (HybridDbMessageQueue, IDocumentStore) StartOtherQueue(MessageQueueOptions options = null)
@@ -70,8 +67,7 @@ namespace HybridDb.Tests.Queue
                     .ReplayEvents(TimeSpan.FromSeconds(60)));
             });
 
-            return (Using(new HybridDbMessageQueue(newStore,
-                handler)), newStore);
+            return (Using(new HybridDbMessageQueue(newStore, handler)), newStore);
         }
 
         [Fact]
@@ -106,20 +102,13 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(
-                    new MyMessage("Some command"),
-                    metadata: new Dictionary<string, string>
-                    {
-                        ["asger"] = "true"
-                    });
-
+                session.Enqueue(new MyMessage("Some command"), metadata: new Dictionary<string, string> { ["asger"] = "true" });
                 session.SaveChanges();
             }
 
             var message = await subject.FirstAsync();
 
-            message.Metadata.ShouldContainKeyAndValue("asger",
-                "true");
+            message.Metadata.ShouldContainKeyAndValue("asger", "true");
         }
 
         [Fact]
@@ -135,8 +124,7 @@ namespace HybridDb.Tests.Queue
 
             string IdGenerator(MyMessage m, Guid e) => $"{m.Text}/{e}";
 
-            session.Enqueue(IdGenerator,
-                new MyMessage("Some command"));
+            session.Enqueue(IdGenerator, new MyMessage("Some command"));
 
             var etag = session.SaveChanges();
 
@@ -210,8 +198,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                foreach (var i in Enumerable.Range(1,
-                             100))
+                foreach (var i in Enumerable.Range(1, 100))
                 {
                     session.Enqueue(new MyMessage(i.ToString()));
                 }
@@ -229,8 +216,7 @@ namespace HybridDb.Tests.Queue
                 .Select(x => x.Message.Payload)
                 .Cast<MyMessage>()
                 .Select(x => x.Text)
-                .ShouldBe(Enumerable.Range(1,
-                    100).Select(x => x.ToString()));
+                .ShouldBe(Enumerable.Range(1, 100).Select(x => x.ToString()));
         }
 
         [Fact]
@@ -242,17 +228,10 @@ namespace HybridDb.Tests.Queue
 
             session.Enqueue(new MyMessage("order-default-1"));
             session.Enqueue(new MyMessage("order-default-2"));
-            session.Enqueue(new MyMessage("order-2.1"),
-                order: 2);
-
-            session.Enqueue(new MyMessage("order-2.2"),
-                order: 2);
-
-            session.Enqueue(new MyMessage("order-1.1"),
-                order: 1);
-
-            session.Enqueue(new MyMessage("order-1.2"),
-                order: 1);
+            session.Enqueue(new MyMessage("order-2.1"), order: 2);
+            session.Enqueue(new MyMessage("order-2.2"), order: 2);
+            session.Enqueue(new MyMessage("order-1.1"), order: 1);
+            session.Enqueue(new MyMessage("order-1.2"), order: 1);
 
             session.SaveChanges();
 
@@ -287,22 +266,19 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(id,
-                    new MyMessage("A"));
+                session.Enqueue(id, new MyMessage("A"));
 
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(id,
-                    new MyMessage("B"));
+                session.Enqueue(id, new MyMessage("B"));
 
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store,
-                handler));
+            var queue = Using(new HybridDbMessageQueue(store, handler));
 
             var messages = new List<object>();
             queue.ReplayedEvents.OfType<MessageHandling>().Select(x => x.Message.Payload).Subscribe(messages.Add);
@@ -368,17 +344,12 @@ namespace HybridDb.Tests.Queue
                 .FirstAsync();
 
             // PoisonMessage is found on the error topic
-            var message = store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "errors/default" }));
+            var message = store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "errors/default" }));
 
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
 
             // Original message is removed
-            store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "default" })
-            ).ShouldBe(null);
+            store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "default" })).ShouldBe(null);
         }
 
         [Fact]
@@ -391,8 +362,7 @@ namespace HybridDb.Tests.Queue
                 {
                     var session = x.Arguments.Get<IDocumentSession>(0);
 
-                    session.Store("my-key",
-                        new Entity());
+                    session.Store("my-key", new Entity());
 
                     throw new ArgumentException();
                 });
@@ -417,24 +387,17 @@ namespace HybridDb.Tests.Queue
             session2.Load<Entity>("my-key").ShouldBe(null);
 
             // PoisonMessage is found on the error topic
-            var message1 = store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "errors/default" }));
+            var message1 = store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "errors/default" }));
 
             ((MyMessage)message1.Payload).Text.ShouldBe("Failing command");
 
             // Original message is removed
-            store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "default" })
-            ).ShouldBe(null);
+            store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "default" })).ShouldBe(null);
         }
 
         [Theory]
-        [InlineData(null,
-            typeof(SqlException))]
-        [InlineData("5301a0b6-48bd-49ae-bd69-493e4fc802db",
-            typeof(ConcurrencyException))]
+        [InlineData(null, typeof(SqlException))]
+        [InlineData("5301a0b6-48bd-49ae-bd69-493e4fc802db", typeof(ConcurrencyException))]
         public async Task Poison_GoesToErrorTopic_NothingElseIsSaved_EvenForExceptionsDuringSaveChanges(string etag, Type exceptionType)
         {
             var queue = StartQueue();
@@ -451,29 +414,24 @@ namespace HybridDb.Tests.Queue
                     if (i == 5)
                     {
                         // This should not be saved when my-key1 is not saved
-                        session.Store("my-key2",
-                            new Entity());
+                        session.Store("my-key2", new Entity());
                     }
 
                     if (etag == null)
                     {
                         // This will fail with a primary key violation during SaveChanges
-                        session.Store("my-key1",
-                            new Entity());
+                        session.Store("my-key1", new Entity());
                     }
                     else
                     {
                         // This will fail with ConcurrencyException during SaveChanges
-                        session.Store("my-key1",
-                            new Entity(),
-                            new Guid(etag));
+                        session.Store("my-key1", new Entity(), new Guid(etag));
                     }
                 });
 
             using (var session = store.OpenSession())
             {
-                session.Store("my-key1",
-                    new Entity());
+                session.Store("my-key1", new Entity());
 
                 session.Enqueue(new MyMessage("Failing command"));
 
@@ -495,17 +453,12 @@ namespace HybridDb.Tests.Queue
             session2.Load<Entity>("my-key2").ShouldBe(null);
 
             // PoisonMessage is found on the error topic
-            var message1 = store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "errors/default" }));
+            var message1 = store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "errors/default" }));
 
             ((MyMessage)message1.Payload).Text.ShouldBe("Failing command");
 
             // Original message is removed
-            store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "default" })
-            ).ShouldBe(null);
+            store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "default" })).ShouldBe(null);
         }
 
         [Fact]
@@ -516,17 +469,14 @@ namespace HybridDb.Tests.Queue
 
             configuration.UseMessageQueue(new MessageQueueOptions
             {
-                InboxTopics = ListOf("mytopic",
-                    "myothertopic")
+                InboxTopics = ListOf("mytopic", "myothertopic")
             }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             var id = Guid.NewGuid().ToString();
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(id,
-                    new MyMessage("Failing command"),
-                    "mytopic");
+                session.Enqueue(id, new MyMessage("Failing command"), "mytopic");
 
                 session.SaveChanges();
             }
@@ -539,17 +489,14 @@ namespace HybridDb.Tests.Queue
             var messages = new List<object>();
 
             // start the queue late, after above manipulation
-            var queue = Using(new HybridDbMessageQueue(store,
-                handler));
+            var queue = Using(new HybridDbMessageQueue(store, handler));
 
             await queue.ReplayedEvents
                 .Do(messages.Add)
                 .OfType<PoisonMessage>()
                 .FirstAsync();
 
-            var message = store.Execute(new DequeueCommand(
-                store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
-                new List<string> { "errors/myothertopic" }));
+            var message = store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "errors/myothertopic" }));
 
             message.Topic.ShouldBe("errors/myothertopic");
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
@@ -562,8 +509,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue(new MyMessage("poison message"),
-                    "errors");
+                session.Enqueue(new MyMessage("poison message"), "errors");
 
                 session.Enqueue(new MyMessage("edible message"));
 
@@ -629,8 +575,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store2,
-                handler));
+            var queue = Using(new HybridDbMessageQueue(store2, handler));
 
             var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
@@ -642,11 +587,7 @@ namespace HybridDb.Tests.Queue
             messages.Select(x => x.Payload)
                 .OfType<MyMessage>()
                 .Select(x => x.Text)
-                .ShouldBeLikeUnordered("1",
-                    "2",
-                    "3",
-                    "4",
-                    "the last one");
+                .ShouldBeLikeUnordered("1", "2", "3", "4", "the last one");
         }
 
         [Fact]
@@ -670,8 +611,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store,
-                handler));
+            var queue = Using(new HybridDbMessageQueue(store, handler));
 
             await Should.ThrowAsync<TimeoutException>(async () => await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
@@ -688,8 +628,7 @@ namespace HybridDb.Tests.Queue
                     IdleDelay = TimeSpan.Zero
                 }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            var queue = Using(new HybridDbMessageQueue(store,
-                (_, _) => Task.CompletedTask));
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
             var messages = await queue.ReplayedEvents
                 .OfType<QueueEmpty>()
@@ -712,8 +651,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                foreach (var j in Enumerable.Range(1,
-                             100000))
+                foreach (var j in Enumerable.Range(1, 100000))
                 {
                     session.Enqueue(new MyMessage(j.ToString()));
                 }
@@ -721,8 +659,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            var queue = Using(new HybridDbMessageQueue(store,
-                (_, _) => Task.CompletedTask));
+            var queue = Using(new HybridDbMessageQueue(store, (_, _) => Task.CompletedTask));
 
             var messages = await queue.ReplayedEvents
                 .OfType<MessageCommitted>()
@@ -753,8 +690,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                foreach (var i in Enumerable.Range(1,
-                             200))
+                foreach (var i in Enumerable.Range(1, 200))
                 {
                     session.Enqueue(new MyMessage(i.ToString()));
                 }
@@ -772,11 +708,7 @@ namespace HybridDb.Tests.Queue
 
             var allDiagnostics = new List<IHybridDbQueueEvent>();
 
-            var diagnostics = Observable
-                .Merge(queue1.ReplayedEvents,
-                    queue2.ReplayedEvents,
-                    queue3.ReplayedEvents)
-                .Do(allDiagnostics.Add);
+            var diagnostics = Observable.Merge(queue1.ReplayedEvents, queue2.ReplayedEvents, queue3.ReplayedEvents).Do(allDiagnostics.Add);
 
             var handled = await diagnostics
                 .OfType<MessageCommitted>()
@@ -786,8 +718,7 @@ namespace HybridDb.Tests.Queue
 
             // Each message is handled only once
             handled.Select(x => int.Parse(((MyMessage)x.Message.Payload).Text))
-                .OrderBy(x => x).ShouldBe(Enumerable.Range(1,
-                    200));
+                .OrderBy(x => x).ShouldBe(Enumerable.Range(1, 200));
 
             // reasonably evenly load
             q1Count.ShouldBeGreaterThan(20);
@@ -805,13 +736,11 @@ namespace HybridDb.Tests.Queue
             configuration.UseMessageQueue(new MessageQueueOptions()
                 .ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            var queue = Using(new HybridDbMessageQueue(store,
-                MaxConcurrencyCounter(max)));
+            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max)));
 
             using (var session = store.OpenSession())
             {
-                foreach (var i in Enumerable.Range(1,
-                             200))
+                foreach (var i in Enumerable.Range(1, 200))
                 {
                     session.Enqueue(new MyMessage(i.ToString()));
                 }
@@ -837,14 +766,11 @@ namespace HybridDb.Tests.Queue
                 MaxConcurrency = 1
             }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            var queue = Using(new HybridDbMessageQueue(
-                store,
-                MaxConcurrencyCounter(max)));
+            var queue = Using(new HybridDbMessageQueue(store, MaxConcurrencyCounter(max)));
 
             using (var session = store.OpenSession())
             {
-                foreach (var i in Enumerable.Range(1,
-                             200))
+                foreach (var i in Enumerable.Range(1, 200))
                 {
                     session.Enqueue(new MyMessage(i.ToString()));
                 }
@@ -871,14 +797,9 @@ namespace HybridDb.Tests.Queue
             using (var session = store.OpenSession())
             {
                 session.Enqueue(new MyMessage("1"));
-                session.Enqueue(new MyMessage("2"),
-                    "a");
-
-                session.Enqueue(new MyMessage("3"),
-                    "b");
-
-                session.Enqueue(new MyMessage("4"),
-                    "a");
+                session.Enqueue(new MyMessage("2"), "a");
+                session.Enqueue(new MyMessage("3"), "b");
+                session.Enqueue(new MyMessage("4"), "a");
 
                 session.SaveChanges();
             }
@@ -893,8 +814,7 @@ namespace HybridDb.Tests.Queue
             messages.Select(x => x.Payload)
                 .OfType<MyMessage>()
                 .Select(x => x.Text)
-                .ShouldBeLikeUnordered("2",
-                    "4");
+                .ShouldBeLikeUnordered("2", "4");
         }
 
         [Fact]
@@ -902,21 +822,15 @@ namespace HybridDb.Tests.Queue
         {
             var queue = StartQueue(new MessageQueueOptions
             {
-                InboxTopics = ListOf("a",
-                    "b")
+                InboxTopics = ListOf("a", "b")
             });
 
             using (var session = store.OpenSession())
             {
                 session.Enqueue(new MyMessage("1"));
-                session.Enqueue(new MyMessage("2"),
-                    "a");
-
-                session.Enqueue(new MyMessage("3"),
-                    "b");
-
-                session.Enqueue(new MyMessage("4"),
-                    "c");
+                session.Enqueue(new MyMessage("2"), "a");
+                session.Enqueue(new MyMessage("3"), "b");
+                session.Enqueue(new MyMessage("4"), "c");
 
                 session.SaveChanges();
             }
@@ -931,8 +845,7 @@ namespace HybridDb.Tests.Queue
             messages.Select(x => x.Payload)
                 .OfType<MyMessage>()
                 .Select(x => x.Text)
-                .ShouldBeLikeUnordered("2",
-                    "3");
+                .ShouldBeLikeUnordered("2", "3");
         }
 
         [Fact]
@@ -940,30 +853,21 @@ namespace HybridDb.Tests.Queue
         {
             var queue1 = StartQueue(new MessageQueueOptions
             {
-                InboxTopics = ListOf("a",
-                    "c")
+                InboxTopics = ListOf("a", "c")
             });
 
             var (queue2, _) = StartOtherQueue(new MessageQueueOptions
             {
-                InboxTopics = ListOf("b",
-                    "default")
+                InboxTopics = ListOf("b", "default")
             });
 
             using (var session = store.OpenSession())
             {
                 session.Enqueue(new MyMessage("1"));
-                session.Enqueue(new MyMessage("2"),
-                    "a");
-
-                session.Enqueue(new MyMessage("3"),
-                    "b");
-
-                session.Enqueue(new MyMessage("4"),
-                    "a");
-
-                session.Enqueue(new MyMessage("5"),
-                    "c");
+                session.Enqueue(new MyMessage("2"), "a");
+                session.Enqueue(new MyMessage("3"), "b");
+                session.Enqueue(new MyMessage("4"), "a");
+                session.Enqueue(new MyMessage("5"), "c");
 
                 session.SaveChanges();
             }
@@ -985,15 +889,12 @@ namespace HybridDb.Tests.Queue
             messagesA.Select(x => x.Payload)
                 .OfType<MyMessage>()
                 .Select(x => x.Text)
-                .ShouldBeLikeUnordered("2",
-                    "4",
-                    "5");
+                .ShouldBeLikeUnordered("2", "4", "5");
 
             messagesB.Select(x => x.Payload)
                 .OfType<MyMessage>()
                 .Select(x => x.Text)
-                .ShouldBeLikeUnordered("1",
-                    "3");
+                .ShouldBeLikeUnordered("1", "3");
         }
 
         [Fact]
@@ -1004,8 +905,7 @@ namespace HybridDb.Tests.Queue
                 GetCancellationTokenSource = () => new CancellationTokenSource(0)
             });
 
-            Should.NotThrow(() => new HybridDbMessageQueue(store,
-                handler).Dispose());
+            Should.NotThrow(() => new HybridDbMessageQueue(store, handler).Dispose());
         }
 
         [Fact]
@@ -1027,11 +927,9 @@ namespace HybridDb.Tests.Queue
 
             var message = await subject.FirstAsync();
 
-            DateTimeOffset.TryParse(message.Metadata[HybridDbMessage.EnqueuedAtKey],
-                out var date).ShouldBe(true);
+            DateTimeOffset.TryParse(message.Metadata[HybridDbMessage.EnqueuedAtKey], out var date).ShouldBe(true);
 
-            date.ShouldBeInRange(before,
-                DateTimeOffset.Now);
+            date.ShouldBeInRange(before, DateTimeOffset.Now);
         }
 
         [Fact]
@@ -1043,16 +941,14 @@ namespace HybridDb.Tests.Queue
 
             A.CallTo(handler).Invokes(call =>
             {
-                call.Arguments.Get<IDocumentSession>(0)
-                    .Enqueue("id2", new MyMessage("Next command"));
+                call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"));
 
                 subject.OnNext(call.Arguments.Get<HybridDbMessage>(1));
             });
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command"));
+                session.Enqueue("id1", new MyMessage("Some command"));
 
                 session.SaveChanges();
             }
@@ -1133,17 +1029,14 @@ namespace HybridDb.Tests.Queue
 
                 if (incomingMessage.Id == "id1")
                 {
-                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id2",
-                        new MyMessage("Next command"));
+                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id2", new MyMessage("Next command"));
 
-                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id3",
-                        new MyMessage("Next command"));
+                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id3", new MyMessage("Next command"));
                 }
 
                 if (incomingMessage.Id == "id3")
                 {
-                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id4",
-                        new MyMessage("Next command"));
+                    call.Arguments.Get<IDocumentSession>(0).Enqueue("id4", new MyMessage("Next command"));
                 }
 
                 subject.OnNext(incomingMessage);
@@ -1151,8 +1044,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command"));
+                session.Enqueue("id1", new MyMessage("Some command"));
 
                 session.SaveChanges();
             }
@@ -1161,27 +1053,16 @@ namespace HybridDb.Tests.Queue
             var orderedMessages = messages.OrderBy(x => x.Id).ToList();
 
             orderedMessages[0].CorrelationId.ShouldBe("id1");
-            orderedMessages[0].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
-                    new JArray("id1").ToString());
+            orderedMessages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
 
             orderedMessages[1].CorrelationId.ShouldBe("id1");
-            orderedMessages[1].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
-                    new JArray("id1",
-                        "id2").ToString());
+            orderedMessages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id2").ToString());
 
             orderedMessages[2].CorrelationId.ShouldBe("id1");
-            orderedMessages[2].Metadata
-                .ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
-                    new JArray("id1",
-                        "id3").ToString());
+            orderedMessages[2].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id3").ToString());
 
             orderedMessages[3].CorrelationId.ShouldBe("id1");
-            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs,
-                new JArray("id1",
-                    "id3",
-                    "id4").ToString());
+            orderedMessages[3].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id3", "id4").ToString());
         }
 
         [Fact]
@@ -1204,8 +1085,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command 1"));
+                session.Enqueue("id1", new MyMessage("Some command 1"));
 
                 session.SaveChanges();
             }
@@ -1234,14 +1114,9 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command 1"));
-
-                session.Enqueue("id2",
-                    new MyMessage("Some command 2"));
-
-                session.Enqueue("id3",
-                    new MyMessage("Some command 3"));
+                session.Enqueue("id1", new MyMessage("Some command 1"));
+                session.Enqueue("id2", new MyMessage("Some command 2"));
+                session.Enqueue("id3", new MyMessage("Some command 3"));
 
                 session.SaveChanges();
             }
@@ -1279,13 +1154,11 @@ namespace HybridDb.Tests.Queue
                     Subscribe = observer.Subscribe
                 });
 
-            Using(new HybridDbMessageQueue(store,
-                (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command 1"));
+                session.Enqueue("id1", new MyMessage("Some command 1"));
 
                 session.SaveChanges();
             }
@@ -1301,8 +1174,7 @@ namespace HybridDb.Tests.Queue
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id2",
-                    new MyMessage("Some command 2"));
+                session.Enqueue("id2", new MyMessage("Some command 2"));
 
                 session.SaveChanges();
             }
@@ -1334,16 +1206,13 @@ namespace HybridDb.Tests.Queue
                     Subscribe = observer.Subscribe
                 });
 
-            Using(new HybridDbMessageQueue(store,
-                (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
             await observer.AdvanceUntil<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command 1"),
-                    "topic1");
+                session.Enqueue("id1", new MyMessage("Some command 1"), "topic1");
 
                 session.SaveChanges();
             }
@@ -1372,16 +1241,13 @@ namespace HybridDb.Tests.Queue
                     Subscribe = observer.Subscribe
                 }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
-            Using(new HybridDbMessageQueue(store,
-                (_, message) => Task.CompletedTask));
+            Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
             await observer.AdvanceUntil<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
-                session.Enqueue("id1",
-                    new MyMessage("Some command 1"),
-                    "topics2");
+                session.Enqueue("id1", new MyMessage("Some command 1"), "topics2");
 
                 session.SaveChanges();
             }
@@ -1445,8 +1311,7 @@ namespace HybridDb.Tests.Queue
 
                         WriteLine($"[INFORMATION] #{x} message sent");
 
-                        await Task.WhenAny(subject.ObserveOn(eventLoopScheduler).FirstAsync().ToTask(),
-                            queue.MainLoop);
+                        await Task.WhenAny(subject.ObserveOn(eventLoopScheduler).FirstAsync().ToTask(), queue.MainLoop);
 
                         WriteLine($"[INFORMATION] #{x} Completed");
                     }
@@ -1463,9 +1328,7 @@ namespace HybridDb.Tests.Queue
                 }
             }
 
-            await ParallelForEachAsync(Enumerable.Range(0,
-                    100), Selector,
-                200);
+            await ParallelForEachAsync(Enumerable.Range(0, 100), Selector, 200);
 
             WriteLine("All tasks completed");
         }
@@ -1480,8 +1343,7 @@ namespace HybridDb.Tests.Queue
 
                 await Task.Delay(100);
 
-                max.Value = Math.Max(int.MaxValue - counter.CurrentCount,
-                    max.Value);
+                max.Value = Math.Max(int.MaxValue - counter.CurrentCount, max.Value);
 
                 counter.Release();
             };
