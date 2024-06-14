@@ -9,7 +9,6 @@ using Microsoft.SqlServer.Management.Smo;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
-using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
@@ -20,7 +19,8 @@ namespace HybridDb.Tests.Migrations.BuiltIn
         [Theory]
         [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_Position.sql")]
         [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_Version.sql")]
-        public void SchemaChanges_1(string beforeFilename)
+        [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_CorrelationId.sql")]
+        public void Test(string beforeFilename)
         {
             UseRealTables();
 
@@ -30,7 +30,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             configuration.UseMessageQueue();
 
-            UseMigrations(new InlineMigration(1, ListOf(new RecreateMessageTablesAfterSchemaChanges())));
+            UseMigrations(new RecreateMessageTablesAfterSchemaChanges(1));
 
             TouchStore();
 
