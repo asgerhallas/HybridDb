@@ -131,7 +131,7 @@ namespace HybridDb
             return query;
         }
 
-        public IEnumerable<T> Query<T>(SqlBuilder sql) where T : class => Transactionally(x => x.Query<T>(sql).rows);
+        public IEnumerable<T> Query<T>(SqlBuilder sql) => Transactionally(x => x.Query<T>(sql).rows);
 
         public void Defer(DmlCommand command)
         {
