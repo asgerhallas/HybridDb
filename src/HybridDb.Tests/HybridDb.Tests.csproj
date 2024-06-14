@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -12,7 +12,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageReference Include="Microsoft.SqlServer.SqlManagementObjects" Version="170.8.0" />
     <PackageReference Include="Serilog" Version="3.0.1" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="6.2.1" />
     <PackageReference Include="Serilog.Sinks.XUnit" Version="3.0.5" />
     <PackageReference Include="ShouldBeLike" Version="1.0.24" />
     <PackageReference Include="Shouldly" Version="4.2.1" />
@@ -33,6 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Migrations\BuiltIn\RecreateMessageTablesAfterSchemaChanges_Tests_Before_CorrelationId.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="QueueTableTests_After.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_1.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -45,13 +51,19 @@
     <None Update="Migrations\BuiltIn\HybridDb_1_x_x_to_2_x_x_Part1_Tests_3_Result.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_After.sql">
+    <None Update="Migrations\BuiltIn\AddProcessInfo_Tests_After.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_Before_Position.sql">
+    <None Update="Migrations\BuiltIn\RecreateMessageTablesAfterSchemaChanges_Tests_After.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Migrations\BuiltIn\HybridDb_3_11_0_Tests_Before_Version.sql">
+    <None Update="Migrations\BuiltIn\UpdateCorrelationId_Tests_Before.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\RecreateMessageTablesAfterSchemaChanges_Tests_Before_Position.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Migrations\BuiltIn\RecreateMessageTablesAfterSchemaChanges_Tests_Before_Version.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

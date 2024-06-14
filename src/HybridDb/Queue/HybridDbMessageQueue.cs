@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -15,11 +14,6 @@ namespace HybridDb.Queue
 {
     public class HybridDbMessageQueue : IDisposable
     {
-        // This implementation misses a few pieces:
-        // [ ] Handling of messages could be idempotent too, by soft deleting them when done, but still keeping it around to guard against
-        //     subsequent redelivery with the same id.
-        // [ ] Allow faster handling of messages by handling multiple messages (a given max batch size) in one transaction
-
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
         readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
@@ -33,21 +27,17 @@ namespace HybridDb.Queue
         readonly SemaphoreSlim localEnqueues = new(0);
         readonly IDisposable subscribeDisposable;
 
-        public Task MainLoop { get; }
-        public IObservable<IHybridDbQueueEvent> Events { get; }
-        public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
-
         public HybridDbMessageQueue(
             IDocumentStore store,
-            Func<IDocumentSession, HybridDbMessage, Task> handler)
+            Func<IDocumentSession, HybridDbMessage, Task> handler
+        )
         {
             this.store = store;
             this.handler = handler;
 
             if (!store.Configuration.TryResolve(out options))
             {
-                throw new HybridDbException(
-                    "MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
+                throw new HybridDbException("MessageQueue is not enabled. Please run UseMessageQueue in the configuration.");
             }
 
             Events = events;
@@ -89,86 +79,110 @@ namespace HybridDb.Queue
 
             MainLoop = Task.Factory
                 .StartNew(async () =>
-                {
-                    events.OnNext(new QueueStarting(cts.Token));
-
-                    logger.LogInformation($@"
-                        Queue started. 
-                        Reading messages with version {options.Version} or older, 
-                        from topics '{string.Join("', '", options.InboxTopics)}'.
-                    ".Indent());
-
-                    using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
-
-                    while (!cts.Token.IsCancellationRequested)
                     {
-                        try
-                        {
-                            var release = await WaitAsync(semaphore);
+                        events.OnNext(new QueueStarting(cts.Token));
 
+                        logger.LogInformation($"""
+                            Queue started. 
+                            Reading messages with version {options.Version} or older, 
+                            from topics '{string.Join("', '", options.InboxTopics)}'.
+                            """.Indent());
+    
+                        using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
+
+                        while (!cts.Token.IsCancellationRequested)
+                        {
                             try
                             {
-                                var (tx, message) = await NextMessage();
+                                var release = await WaitAsync(semaphore);
 
                                 try
                                 {
-                                    await Task.Factory.StartNew(async () =>
-                                    {
-                                        try
-                                        {
-                                            using var _ = Time("HandleMessage");
+                                    var (tx, message) = await NextMessage();
 
-                                            await HandleMessage(tx, message);
-                                        }
-                                        finally
+                                    try
+                                    {
+                                        await Task.Factory.StartNew(async () =>
                                         {
-                                            // open the gate for the next message, when this message is handled.
-                                            release();
-                                            DisposeTransaction(tx);
-                                        }
-                                    }, cts.Token, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
+                                            try
+                                            {
+                                                using var _ = Time("HandleMessage");
+
+                                                await HandleMessage(tx, message);
+                                            }
+                                            finally
+                                            {
+                                                // open the gate for the next message, when this message is handled.
+                                                release();
+                                                DisposeTransaction(tx);
+                                            }
+                                        },
+                                        cts.Token,
+                                        TaskCreationOptions.DenyChildAttach,
+                                        TaskScheduler.Default);
+                                    }
+                                    catch
+                                    {
+                                        release();
+                                        DisposeTransaction(tx);
+
+                                        throw;
+                                    }
                                 }
                                 catch
                                 {
                                     release();
-                                    DisposeTransaction(tx);
+
                                     throw;
                                 }
                             }
-                            catch
+                            catch (OperationCanceledException)
                             {
-                                release();
-                                throw;
+                                break;
+                            }
+                            catch (Exception exception)
+                            {
+                                events.OnNext(new QueueFailed(exception, cts.Token));
+
+                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+
+                                await Task.Delay(options.ExceptionBackoff, cts.Token);
                             }
                         }
-                        catch (OperationCanceledException)
-                        {
-                            break;
-                        }
-                        catch (Exception exception)
-                        {
-                            events.OnNext(new QueueFailed(exception, cts.Token));
 
-                            logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                        DisposeAllTransactions();
 
-                            await Task.Delay(options.ExceptionBackoff, cts.Token);
-                        }
-                    }
-                    
-                    DisposeAllTransactions();
-
-                    logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
-                },
-                cts.Token,
-                TaskCreationOptions.LongRunning,
-                TaskScheduler.Default)
-            .Unwrap()
-            .ContinueWith(
-                t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."), 
-                TaskContinuationOptions.OnlyOnFaulted);
+                        logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
+                    },
+                    cts.Token,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default)
+                .Unwrap()
+                .ContinueWith(
+                    t => logger.LogError(t.Exception, $"{nameof(HybridDbMessageQueue)} failed and stopped."),
+                    TaskContinuationOptions.OnlyOnFaulted);
         }
 
-        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) => 
+        public Task MainLoop { get; }
+        public IObservable<IHybridDbQueueEvent> Events { get; }
+        public IObservable<IHybridDbQueueEvent> ReplayedEvents { get; } = Observable.Create<IHybridDbQueueEvent>(ThrowOnSubscribe);
+
+        public void Dispose()
+        {
+            cts.Cancel();
+
+            using (Time("dispose, wait for shutdown"))
+            {
+                MainLoop.ContinueWith(x => x).Wait();
+            }
+
+            DisposeAllTransactions();
+
+            events.OnCompleted();
+            subscribeDisposable.Dispose();
+        }
+
+        static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) =>
             throw new InvalidOperationException("You must set MessageQueueOptions.Replay if you want to subscribe to replayed events.");
 
         DocumentTransaction BeginTransaction()
@@ -178,7 +192,9 @@ namespace HybridDb.Queue
             var tx = store.BeginTransaction(connectionTimeout: options.ConnectionTimeout);
 
             if (!txs.TryAdd(tx, 0))
+            {
                 throw new InvalidOperationException("Transaction could not be tracked.");
+            }
 
             return tx;
         }
@@ -199,7 +215,10 @@ namespace HybridDb.Queue
 
         void DisposeAllTransactions()
         {
-            foreach (var tx in txs) DisposeTransaction(tx.Key);
+            foreach (var tx in txs)
+            {
+                DisposeTransaction(tx.Key);
+            }
         }
 
         async Task<Action> WaitAsync(SemaphoreSlim semaphore)
@@ -211,7 +230,7 @@ namespace HybridDb.Queue
             return () =>
             {
                 if (Interlocked.Exchange(ref released, 1) == 1) return;
-                
+
                 // Release could be called after the main loop has ended, and the semaprhore has 
                 // been disposed, if a handler thread is still working during shutdown. We don't 
                 // wait for handlers to run to completion as it would risk the queue to hang during shutdown.
@@ -237,10 +256,7 @@ namespace HybridDb.Queue
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
                     var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
 
-                    if (message != null)
-                    {
-                        return (tx, message);
-                    }
+                    if (message != null) return (tx, message);
 
                     DisposeTransaction(tx);
 
@@ -268,6 +284,7 @@ namespace HybridDb.Queue
             catch
             {
                 DisposeTransaction(tx);
+
                 throw;
             }
         }
@@ -279,7 +296,7 @@ namespace HybridDb.Queue
             try
             {
                 events.OnNext(new MessageReceived(context, message, cts.Token));
-
+                
                 tx.SqlTransaction.Save("MessageReceived");
 
                 using var session = options.CreateSession(store);
@@ -294,7 +311,7 @@ namespace HybridDb.Queue
                 events.OnNext(new MessageHandled(session, context, message, cts.Token));
 
                 session.SaveChanges();
-
+                
                 tx.Complete();
 
                 events.OnNext(new MessageCommitted(session, context, message, cts.Token));
@@ -302,7 +319,7 @@ namespace HybridDb.Queue
             catch (Exception exception)
             {
                 if (cts.IsCancellationRequested) return;
-                
+
                 var failures = retries.AddOrUpdate(message.Id, _ => 1, (_, current) => current + 1);
 
                 // TODO: log here to ensure we get a log before a new exception is raised
@@ -318,9 +335,7 @@ namespace HybridDb.Queue
 
                 tx.SqlTransaction.Rollback("MessageReceived");
 
-                logger.LogError(exception,
-                    "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.",
-                    message.Id);
+                logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
 
                 tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
@@ -332,52 +347,12 @@ namespace HybridDb.Queue
             }
         }
 
-        public void Dispose()
-        {
-            cts.Cancel();
-
-            using (Time("dispose, wait for shutdown"))
-            {
-                MainLoop.ContinueWith(x => x).Wait();
-            }
-
-            DisposeAllTransactions();
-
-            events.OnCompleted();
-            subscribeDisposable.Dispose();
-        }
-
         public IDisposable Time(string text)
         {
             var startNew = Stopwatch.StartNew();
 
-            return Disposable.Create(() => store.Configuration.Logger
-                .LogDebug($"HybridDbMessageQueue: Timed {text}: {startNew.ElapsedMilliseconds}ms."));
+            return Disposable.Create(() => store.Configuration
+                .Logger.LogDebug($"HybridDbMessageQueue: Timed {text}: {startNew.ElapsedMilliseconds}ms."));
         }
-    }
-
-    public sealed record HybridDbMessage(
-        string Id, 
-        object Payload, 
-        string Topic = null, 
-        int Order = 0,
-        Dictionary<string, string> Metadata = null)
-    {
-        public const string EnqueuedAtKey = "enqueued-at";
-        public const string CorrelationIdsKey = "correlation-ids";
-
-        public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
-    }
-
-    public class MessageContext : Dictionary<string, object>
-    {
-        public const string Key = nameof(MessageContext);
-
-        public MessageContext(HybridDbMessage incomingMessage)
-        {
-            IncomingMessage = incomingMessage;
-        }
-
-        public HybridDbMessage IncomingMessage { get; }
     }
 }
