@@ -172,8 +172,7 @@ namespace HybridDb.Queue
             {
                 var newBreadcrumbs = JArray.Parse(breadcrumbs);
 
-                // TODO: Bug. This is the provided id, but this can be changed by the IdGenerator later,
-                // so it might not actually be correct. See test CorrelationIds_WithIdGenerator.
+                // This is the provided ID, but it can be changed by an IdGenerator later.
                 newBreadcrumbs.Add(newMessage.Id);
 
                 newMessage.Metadata.Add(HybridDbMessage.Breadcrumbs, newBreadcrumbs.ToString());

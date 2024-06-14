@@ -40,6 +40,15 @@ namespace HybridDb.Queue
             var id = command.IdGenerator?.Invoke(command.Message.Payload, tx.CommitId) ??
                      command.Message.Id;
 
+            // Update the breadcrumbs if the ID was changed.
+            // This will produce incorrect breadcrumbs if IDs are not unique. However, they are already incorrect.
+            // If the command was not enqueued using QueueEx there will no breadcrumbs to update.
+            if (id != command.Message.Id && command.Message.Metadata.ContainsKey(HybridDbMessage.Breadcrumbs))
+            {
+                command.Message.Metadata[HybridDbMessage.Breadcrumbs] =
+                    command.Message.Metadata[HybridDbMessage.Breadcrumbs].Replace(command.Message.Id, id);
+            }
+
             command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
 
             command.CorrelationId = command.Message.CorrelationId ?? id;

@@ -1012,8 +1012,7 @@ namespace HybridDb.Tests.Queue
 
             messages[0].CorrelationId.ShouldBe("id1");
 
-            // TODO: Bug. See QueueEx.AddBreadcrumb
-            //messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
+            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
         }
 
         [Fact]
