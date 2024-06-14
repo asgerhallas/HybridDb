@@ -28,8 +28,6 @@ namespace HybridDb.Migrations.BuiltIn
                     var tableNameOld = $"{table.Name}_old";
                     var oldTableNameEscaped = store.Database.FormatTableNameAndEscape(tableNameOld);
 
-                    store.Database.RawExecute($"drop table if exists {oldTableNameEscaped};");
-
                     // Rename the old table and the primary key
                     store.Execute(new RenameTable(table.Name, $"{table.Name}_old"));
                     store.Database.RawExecute($"sp_rename [PK_{table.Name}], [PK_{table.Name}_old]");
