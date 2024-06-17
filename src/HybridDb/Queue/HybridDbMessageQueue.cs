@@ -295,7 +295,7 @@ namespace HybridDb.Queue
                     await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
                     session = BeginSession();
-                }
+                }   
 
                 return (session, await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false));
             }

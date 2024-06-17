@@ -1484,6 +1484,20 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void SaveChangesUsesCorrectCommitId()
+        {
+            using var session = store.OpenSession();
+
+            session.Store("id", new Entity());
+
+            session.SaveChanges().ShouldBe(session.CommitId);
+
+            session.Advanced.Clear();
+
+            session.Advanced.GetEtagFor(session.Load<Entity>("id")).ShouldBe(session.CommitId);
+        }
+
+        [Fact]
         public void BaitAndSwitch()
         {
             Document<BaseCase>("Cases");

@@ -367,30 +367,24 @@ namespace HybridDb
 
             store.Configuration.Notify(new SaveChanges_BeforeExecuteCommands(this, commands, deferredCommands));
 
-            var executedCommands = new Dictionary<DmlCommand, object>();
-
-            var commitId = Transactionally(resultingTx =>
+            var executedCommands = Transactionally(resultingTx =>
             {
-                foreach (var command in deferredCommands.Concat(commands.Select(x => x.Value)))
-                {
-                    executedCommands.Add(command, store.Execute(resultingTx, command));
-                }
-
-                return resultingTx.CommitId;
+                return deferredCommands.Concat(commands.Select(x => x.Value))
+                    .ToDictionary(command => command, command => store.Execute(resultingTx, command));
             });
 
-            store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, commitId, executedCommands));
+            store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, CommitId, executedCommands));
 
             deferredCommands.Clear();
 
             foreach (var managedEntity in commands.Keys)
             {
-                managedEntity.Etag = commitId;
+                managedEntity.Etag = CommitId;
             }
 
             saving = false;
 
-            return commitId;
+            return CommitId;
         }
 
         IDictionary<string, object> CreateProjections(ManagedEntity managedEntity) => 
@@ -485,7 +479,7 @@ namespace HybridDb
         internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
             enlistedTx != null 
                 ? func(enlistedTx) 
-                : store.Transactionally(func);
+                : store.Transactionally(CommitId, func);
 
         public void Clear()
         {
