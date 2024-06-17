@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="BoyBoy" Version="1.0.5" />
     <PackageReference Include="FakeItEasy" Version="7.4.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageReference Include="Microsoft.SqlServer.SqlManagementObjects" Version="170.8.0" />
     <PackageReference Include="Serilog" Version="3.0.1" />
