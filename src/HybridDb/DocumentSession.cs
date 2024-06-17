@@ -37,13 +37,33 @@ namespace HybridDb
             this.migrator = migrator;
             this.store = store;
 
+            CommitId = tx?.CommitId ?? Guid.NewGuid();
+
             Enlist(tx);
         }
+
+        internal DocumentSession(DocumentSession session) : this(session.DocumentStore, session.migrator, session.enlistedTx)
+        {
+            CommitId = session.CommitId;
+
+            session.entities.CopyTo(entities);
+
+            foreach (var data in session.SessionData)
+            {
+                SessionData.Add(data.Key, data.Value);
+            }
+
+            events.AddRange(session.events);
+            deferredCommands.AddRange(session.deferredCommands);
+        }
+
+        public Guid CommitId { get; }
 
         public IAdvancedDocumentSession Advanced => this;
 
         public IDocumentStore DocumentStore => store;
         public DocumentTransaction DocumentTransaction => enlistedTx;
+
         public IReadOnlyList<DmlCommand> DeferredCommands => deferredCommands;
         public ManagedEntities ManagedEntities => entities;
         public IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events => events;
@@ -260,22 +280,7 @@ namespace HybridDb
             }
         }
 
-        public IDocumentSession Copy()
-        {
-            var sessionCopy = new DocumentSession(store, migrator, enlistedTx);
-
-            entities.CopyTo(sessionCopy.entities);
-
-            foreach (var data in SessionData)
-            {
-                sessionCopy.SessionData.Add(data.Key, data.Value);
-            }
-
-            sessionCopy.events.AddRange(events);
-            sessionCopy.deferredCommands.AddRange(deferredCommands);
-            
-            return sessionCopy;
-        }
+        public IDocumentSession Copy() => new DocumentSession(this);
 
         public Guid SaveChanges() => SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: false);
 
@@ -512,6 +517,11 @@ namespace HybridDb
             {
                 enlistedTx = null;
                 return;
+            }
+
+            if (tx.CommitId != CommitId)
+            {
+                throw new ArgumentException("Cannot enlist in a transaction with another CommitId than the session.");
             }
 
             if (!ReferenceEquals(tx.Store, DocumentStore))

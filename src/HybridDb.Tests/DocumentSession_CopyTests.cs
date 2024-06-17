@@ -115,13 +115,14 @@ namespace HybridDb.Tests
         public void CopySessionWithEnlistedTx()
         {
             using var session = store.OpenSession();
-            using var tx = store.BeginTransaction();
+            using var tx = store.BeginTransaction(session.CommitId);
 
             session.Advanced.Enlist(tx);
 
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.Advanced.DocumentTransaction.ShouldBe(tx);
+            sessionCopy.CommitId.ShouldBe(session.CommitId);
         }
 
         public class LocalEntity

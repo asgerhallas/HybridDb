@@ -29,6 +29,7 @@ namespace HybridDb
         Guid SaveChanges(bool lastWriteWins, bool forceWriteUnchangedDocument);
         
         IAdvancedDocumentSession Advanced { get; }
+        Guid CommitId { get; }
     }
 
     public interface IAdvancedDocumentSession

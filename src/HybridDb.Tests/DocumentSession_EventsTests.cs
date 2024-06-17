@@ -93,7 +93,7 @@ namespace HybridDb.Tests
             using var session = store.OpenSession();
 
             session.Store(new Profile("asger", true));
-            session.Enqueue((m, e) => "a", new object());
+            session.Enqueue("a", new object());
 
             var commitId = session.SaveChanges();
 

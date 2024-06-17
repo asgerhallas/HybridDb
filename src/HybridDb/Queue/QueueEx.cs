@@ -43,7 +43,6 @@ namespace HybridDb.Queue
             var resultingOrder = GetMessageOrder(session, order);
 
             var id = Guid.NewGuid().ToString();
-
             var correlationId = !resetCorrelationIds ? GetIncomingMessageCorrelationIdOrNull(session) : null;
 
             return Enqueue(
@@ -54,8 +53,7 @@ namespace HybridDb.Queue
                     topic,
                     resultingOrder,
                     correlationId,
-                    metadata),
-                null);
+                    metadata));
         }
 
         public static HybridDbMessage Enqueue(
@@ -82,13 +80,11 @@ namespace HybridDb.Queue
                     topic,
                     resultingOrder,
                     correlationId,
-                    metadata),
-                null);
+                    metadata));
         }
 
         public static HybridDbMessage Enqueue<T>(
             this IDocumentSession session,
-            Func<T, Guid, string> idGenerator,
             T message,
             string topic = null,
             int? order = null,
@@ -96,10 +92,7 @@ namespace HybridDb.Queue
             bool resetCorrelationIds = false
         )
         {
-            if (idGenerator == null) throw new ArgumentNullException(nameof(idGenerator));
             if (message == null) throw new ArgumentNullException(nameof(message));
-
-            string IdGenerator(object p, Guid etag) => idGenerator((T)p, etag);
 
             var resultingOrder = GetMessageOrder(session, order);
 
@@ -113,14 +106,10 @@ namespace HybridDb.Queue
                 correlationId,
                 metadata);
 
-            return Enqueue(session, envelope, IdGenerator);
+            return Enqueue(session, envelope);
         }
 
-        public static HybridDbMessage Enqueue(
-            this IDocumentSession session,
-            HybridDbMessage message,
-            Func<object, Guid, string> idGenerator = null
-        )
+        public static HybridDbMessage Enqueue(this IDocumentSession session, HybridDbMessage message)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
 
@@ -133,7 +122,7 @@ namespace HybridDb.Queue
 
             var queueTable = session.GetQueueTable();
 
-            session.Advanced.Defer(new EnqueueCommand(queueTable, message, idGenerator));
+            session.Advanced.Defer(new EnqueueCommand(queueTable, message));
 
             return message;
         }

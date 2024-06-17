@@ -112,28 +112,6 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
-        public async Task Enqueue_WithIdGenerator()
-        {
-            StartQueue();
-
-            var subject = new ReplaySubject<HybridDbMessage>();
-
-            handler.Call(asserter => subject.OnNext(asserter.Arguments.Get<HybridDbMessage>(1)));
-
-            using var session = store.OpenSession();
-
-            string IdGenerator(MyMessage m, Guid e) => $"{m.Text}/{e}";
-
-            session.Enqueue(IdGenerator, new MyMessage("Some command"));
-
-            var etag = session.SaveChanges();
-
-            var message = await subject.FirstAsync();
-
-            message.Id.ShouldBe($"Some command/{etag}");
-        }
-
-        [Fact]
         public async Task DequeueAndHandle_AsyncHandler_ThatContinuesOnOtherThread()
         {
             StartQueue();
@@ -990,29 +968,6 @@ namespace HybridDb.Tests.Queue
 
             messages[1].CorrelationId.ShouldBe("id2");
             messages[1].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1", "id2").ToString());
-        }
-
-        [Fact]
-        public async Task CorrelationIds_WithIdGenerator()
-        {
-            StartQueue();
-
-            var subject = new ReplaySubject<HybridDbMessage>();
-
-            A.CallTo(handler).Invokes(call => subject.OnNext(call.Arguments.Get<HybridDbMessage>(1)));
-
-            using (var session = store.OpenSession())
-            {
-                session.Enqueue((x, y) => "id1", new MyMessage("Some command"));
-
-                session.SaveChanges();
-            }
-
-            var messages = await subject.Take(1).ToList();
-
-            messages[0].CorrelationId.ShouldBe("id1");
-
-            messages[0].Metadata.ShouldContainKeyAndValue(HybridDbMessage.Breadcrumbs, new JArray("id1").ToString());
         }
 
         [Fact]

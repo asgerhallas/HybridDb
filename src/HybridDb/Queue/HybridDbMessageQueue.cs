@@ -16,7 +16,7 @@ namespace HybridDb.Queue
     {
         readonly CancellationTokenSource cts;
         readonly ConcurrentDictionary<string, int> retries = new();
-        readonly ConcurrentDictionary<DocumentTransaction, int> txs = new();
+        readonly ConcurrentDictionary<IDocumentSession, int> sessions = new();
         readonly ISubject<IHybridDbQueueEvent> events = Subject.Synchronize(new Subject<IHybridDbQueueEvent>());
 
         readonly IDocumentStore store;
@@ -98,7 +98,7 @@ namespace HybridDb.Queue
 
                                 try
                                 {
-                                    var (tx, message) = await NextMessage();
+                                    var (session, message) = await NextMessage();
 
                                     try
                                     {
@@ -108,13 +108,13 @@ namespace HybridDb.Queue
                                             {
                                                 using var _ = Time("HandleMessage");
 
-                                                await HandleMessage(tx, message);
+                                                await HandleMessage(session, message);
                                             }
                                             finally
                                             {
                                                 // open the gate for the next message, when this message is handled.
                                                 release();
-                                                DisposeTransaction(tx);
+                                                DisposeSession(session);
                                             }
                                         },
                                         cts.Token,
@@ -124,7 +124,7 @@ namespace HybridDb.Queue
                                     catch
                                     {
                                         release();
-                                        DisposeTransaction(tx);
+                                        DisposeSession(session);
 
                                         throw;
                                     }
@@ -150,7 +150,7 @@ namespace HybridDb.Queue
                             }
                         }
 
-                        DisposeAllTransactions();
+                        DisposeAllSessions();
 
                         logger.LogInformation($"{nameof(HybridDbMessageQueue)} stopped.");
                     },
@@ -176,7 +176,7 @@ namespace HybridDb.Queue
                 MainLoop.ContinueWith(x => x).Wait();
             }
 
-            DisposeAllTransactions();
+            DisposeAllSessions();
 
             events.OnCompleted();
             subscribeDisposable.Dispose();
@@ -185,27 +185,45 @@ namespace HybridDb.Queue
         static Action ThrowOnSubscribe(IObserver<IHybridDbQueueEvent> _) =>
             throw new InvalidOperationException("You must set MessageQueueOptions.Replay if you want to subscribe to replayed events.");
 
-        DocumentTransaction BeginTransaction()
+        IDocumentSession BeginSession()
         {
             cts.Token.ThrowIfCancellationRequested();
 
-            var tx = store.BeginTransaction(connectionTimeout: options.ConnectionTimeout);
+            // We create the session first to not rely on external implementations of CreateSession
+            // to correctly enlist the transaction. We get the CommitId from the created session and use
+            // it to create the tx and then enlist. Then we use the session as a vehicle for the transaction
+            // as they should always be in sync.
+            var session = options.CreateSession(store);
 
-            if (!txs.TryAdd(tx, 0))
-            {
-                throw new InvalidOperationException("Transaction could not be tracked.");
-            }
-
-            return tx;
-        }
-
-        void DisposeTransaction(DocumentTransaction tx)
-        {
-            if (!txs.TryRemove(tx, out _)) return;
+            var tx = store.BeginTransaction(session.CommitId, connectionTimeout: options.ConnectionTimeout);
 
             try
             {
+                session.Advanced.Enlist(tx);
+
+                if (!sessions.TryAdd(session, 0))
+                {
+                    throw new InvalidOperationException("Transaction could not be tracked.");
+                }
+
+                return session;
+            }
+            catch (Exception)
+            {
                 tx.Dispose();
+
+                throw;
+            }
+        }
+
+        void DisposeSession(IDocumentSession session)
+        {
+            if (!sessions.TryRemove(session, out _)) return;
+
+            try
+            {
+                session.Advanced.DocumentTransaction.Dispose();
+                session.Dispose();
             }
             catch (Exception ex)
             {
@@ -213,11 +231,11 @@ namespace HybridDb.Queue
             }
         }
 
-        void DisposeAllTransactions()
+        void DisposeAllSessions()
         {
-            foreach (var tx in txs)
+            foreach (var tx in sessions)
             {
-                DisposeTransaction(tx.Key);
+                DisposeSession(tx.Key);
             }
         }
 
@@ -240,9 +258,9 @@ namespace HybridDb.Queue
             };
         }
 
-        async Task<(DocumentTransaction, HybridDbMessage)> NextMessage()
+        async Task<(IDocumentSession, HybridDbMessage)> NextMessage()
         {
-            var tx = BeginTransaction();
+            var session = BeginSession();
 
             try
             {
@@ -254,11 +272,11 @@ namespace HybridDb.Queue
 
                     // Querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
                     // from the queue while handling it, so other machines/workers won't try to handle it too.
-                    var message = tx.Execute(new DequeueCommand(table, options.InboxTopics));
+                    var message = session.Advanced.DocumentTransaction.Execute(new DequeueCommand(table, options.InboxTopics));
 
-                    if (message != null) return (tx, message);
+                    if (message != null) return (session, message);
 
-                    DisposeTransaction(tx);
+                    DisposeSession(session);
 
                     events.OnNext(new QueueEmpty(cts.Token));
 
@@ -276,21 +294,23 @@ namespace HybridDb.Queue
                     // Wait for any local enqueue or for the timeout (IdleDelay) to check for remote enqueues at an interval.
                     await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
 
-                    tx = BeginTransaction();
+                    session = BeginSession();
                 }
 
-                return (tx, await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false));
+                return (session, await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false));
             }
             catch
             {
-                DisposeTransaction(tx);
+                DisposeSession(session);
 
                 throw;
             }
         }
 
-        async Task HandleMessage(DocumentTransaction tx, HybridDbMessage message)
+        async Task HandleMessage(IDocumentSession session, HybridDbMessage message)
         {
+            var tx = session.Advanced.DocumentTransaction;
+
             var context = new MessageContext(message);
 
             try
@@ -299,10 +319,7 @@ namespace HybridDb.Queue
                 
                 tx.SqlTransaction.Save("MessageReceived");
 
-                using var session = options.CreateSession(store);
-
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
-                session.Advanced.Enlist(tx);
 
                 events.OnNext(new MessageHandling(session, context, message, cts.Token));
 
