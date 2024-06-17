@@ -367,11 +367,9 @@ namespace HybridDb
 
             store.Configuration.Notify(new SaveChanges_BeforeExecuteCommands(this, commands, deferredCommands));
 
-            var executedCommands = Transactionally(resultingTx =>
-            {
-                return deferredCommands.Concat(commands.Select(x => x.Value))
-                    .ToDictionary(command => command, command => store.Execute(resultingTx, command));
-            });
+            var executedCommands = Transactionally(resultingTx => deferredCommands
+                .Concat(commands.Select(x => x.Value))
+                .ToDictionary(command => command, command => store.Execute(resultingTx, command)));
 
             store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, CommitId, executedCommands));
 
