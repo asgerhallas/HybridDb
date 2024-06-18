@@ -26,7 +26,7 @@ namespace HybridDb
 
         DocumentTransaction enlistedTx;
 
-        bool saving = false;
+        bool saving;
 
         internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
@@ -57,7 +57,7 @@ namespace HybridDb
             deferredCommands.AddRange(session.deferredCommands);
         }
 
-        public Guid CommitId { get; }
+        public Guid CommitId { get; private set; }
 
         public IAdvancedDocumentSession Advanced => this;
 
@@ -153,10 +153,7 @@ namespace HybridDb
 
         public IEnumerable<T> Query<T>(SqlBuilder sql) where T : class => Transactionally(x => x.Query<T>(sql).rows);
 
-        public void Defer(DmlCommand command)
-        {
-            deferredCommands.Add(command);
-        }
+        public void Defer(DmlCommand command) => deferredCommands.Add(command);
 
         public void Evict(object entity)
         {
@@ -382,7 +379,17 @@ namespace HybridDb
 
             saving = false;
 
-            return CommitId;
+            var commitId = CommitId;
+
+            // We must update the CommitId upon saving. If we keep using the same session
+            // and change the already loaded entities, they must get a new CommmitId/Etag when we save again.
+            // If we did not do this, these last changes to entities could be overwriten by other actors.
+            // But if we are in a transaction we keep the same CommitId as we assume that rows are locked
+            // and no other actor can change them. We do not currently handle the case where we reuse the
+            // same session across multiple transactions.
+            CommitId = enlistedTx?.CommitId ?? Guid.NewGuid();
+
+            return commitId;
         }
 
         IDictionary<string, object> CreateProjections(ManagedEntity managedEntity) => 
