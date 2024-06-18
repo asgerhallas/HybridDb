@@ -18,6 +18,8 @@ namespace HybridDb.Queue
         /// </summary>
         public const string Breadcrumbs = "correlation-ids";
 
+        public string CorrelationId { get; init; } = CorrelationId ?? Id;
+
         public Dictionary<string, string> Metadata { get; init; } = Metadata ?? new Dictionary<string, string>();
     }
 }

@@ -33,8 +33,6 @@ namespace HybridDb.Queue
             var tableName = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
-            var id = command.Message.Id;
-
             command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
 
             try
@@ -48,25 +46,25 @@ namespace HybridDb.Queue
                     {
                         command.Message.Topic,
                         Version = options.Version.ToString(),
-                        Id = id,
+                        command.Message.Id,
                         command.Message.Order,
                         tx.CommitId,
                         Discriminator = discriminator,
                         Message = serializer(command.Message.Payload),
                         Metadata = serializer(command.Message.Metadata),
-                        CorrelationId = command.Message.CorrelationId ?? id
+                        command.Message.CorrelationId
                     },
                     tx.SqlTransaction);
             }
             catch (SqlException e)
             {
                 // Enqueuing is idempotent. It should ignore exceptions from primary key or unique index violations.
-                if (e.Number is 2627 or 2601) return id;
+                if (e.Number is 2627 or 2601) return command.Message.Id;
 
                 throw;
             }
 
-            return id;
+            return command.Message.Id;
         }
     }
 }
