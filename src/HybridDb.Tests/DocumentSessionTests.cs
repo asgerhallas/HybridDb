@@ -1490,11 +1490,14 @@ namespace HybridDb.Tests
 
             session.Store("id", new Entity());
 
-            session.SaveChanges().ShouldBe(session.CommitId);
+            // SaveChanges resets the CommitId, so we need to store it
+            var commitId = session.CommitId;
+
+            session.SaveChanges().ShouldBe(commitId);
 
             session.Advanced.Clear();
 
-            session.Advanced.GetEtagFor(session.Load<Entity>("id")).ShouldBe(session.CommitId);
+            session.Advanced.GetEtagFor(session.Load<Entity>("id")).ShouldBe(commitId);
         }
 
         [Fact]
