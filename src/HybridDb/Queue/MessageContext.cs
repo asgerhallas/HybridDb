@@ -2,11 +2,22 @@ using System.Collections.Generic;
 
 namespace HybridDb.Queue
 {
-    public class MessageContext : Dictionary<string, object>
+    public class SessionContext
     {
-        public const string Key = nameof(MessageContext);
+        public const string Key = nameof(SessionContext);
 
-        public MessageContext(HybridDbMessage incomingMessage) => IncomingMessage = incomingMessage;
+        public Dictionary<string, object> Data { get; protected set; } = new();
+    }
+
+    public class MessageContext : SessionContext
+    {
+        public new const string Key = nameof(MessageContext);
+
+        public MessageContext(SessionContext context, HybridDbMessage incomingMessage)
+        {
+            Data = context.Data;
+            IncomingMessage = incomingMessage;
+        }
 
         public HybridDbMessage IncomingMessage { get; }
     }

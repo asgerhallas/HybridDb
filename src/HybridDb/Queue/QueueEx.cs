@@ -155,8 +155,7 @@ namespace HybridDb.Queue
 
         static void AddBreadcrumb(IDocumentSession session, HybridDbMessage newMessage)
         {
-            if (session.Advanced.SessionData.TryGetValue(MessageContext.Key, out var value) &&
-                value is MessageContext messageContext &&
+            if (session.GetMessageContextOrDefault() is { } messageContext &&
                 messageContext.IncomingMessage.Metadata.TryGetValue(HybridDbMessage.Breadcrumbs, out var breadcrumbs))
             {
                 var newBreadcrumbs = JArray.Parse(breadcrumbs);

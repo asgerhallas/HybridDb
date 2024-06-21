@@ -187,6 +187,10 @@ namespace HybridDb.Queue
 
         IDocumentSession BeginSession()
         {
+            var context = new SessionContext();
+
+            events.OnNext(new SessionBeginning(context, cts.Token));
+
             cts.Token.ThrowIfCancellationRequested();
 
             // We create the session first to not rely on external implementations of CreateSession
@@ -194,6 +198,8 @@ namespace HybridDb.Queue
             // it to create the tx and then enlist. Then we use the session as a vehicle for the transaction
             // as they should always be in sync.
             var session = options.CreateSession(store);
+
+            session.Advanced.SessionData.Add(SessionContext.Key, context);
 
             var tx = store.BeginTransaction(session.CommitId, connectionTimeout: options.ConnectionTimeout);
 
@@ -224,6 +230,10 @@ namespace HybridDb.Queue
             {
                 session.Advanced.DocumentTransaction.Dispose();
                 session.Dispose();
+
+                var context = session.GetSessionContext();
+
+                events.OnNext(new SessionEnded(context, cts.Token));
             }
             catch (Exception ex)
             {
@@ -311,7 +321,7 @@ namespace HybridDb.Queue
         {
             var tx = session.Advanced.DocumentTransaction;
 
-            var context = new MessageContext(message);
+            var context = new MessageContext(session.GetSessionContext(), message);
 
             try
             {

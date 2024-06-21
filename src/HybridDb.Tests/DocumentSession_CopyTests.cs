@@ -100,7 +100,7 @@ namespace HybridDb.Tests
         {
             using var session = store.OpenSession();
 
-            var context = new MessageContext(new HybridDbMessage($"{Guid.NewGuid()}", "dbMessage"));
+            var context = new MessageContext(new SessionContext(), new HybridDbMessage($"{Guid.NewGuid()}", "dbMessage"));
 
             session.Advanced.SessionData.Add(MessageContext.Key, context.IncomingMessage.Id);
 

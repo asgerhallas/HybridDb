@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
@@ -20,6 +21,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static HybridDb.Helpers;
 using SqlException = Microsoft.Data.SqlClient.SqlException;
+using Switch = ShinySwitch.Switch;
 using Task = System.Threading.Tasks.Task;
 
 namespace HybridDb.Tests.Queue
@@ -1208,6 +1210,57 @@ namespace HybridDb.Tests.Queue
 
             await observer.AdvanceBy1();
             await observer.WaitForNothingToHappen();
+        }
+
+        public class TheScope : IDisposable
+        {
+            TheScope() { }
+
+            public static TheScope Current { get; private set; }
+
+            public static TheScope Begin() => Current = new TheScope();
+
+            public void Dispose() => Current = null;
+        }
+
+        [Fact]
+        public async Task CanUseEventsForGettingASessionFromIoCContainerWithScope()
+        {
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+
+            var queue = StartQueue(new MessageQueueOptions
+            {
+                CreateSession = x =>
+                {
+                    TheScope.Current.ShouldNotBe(null);
+
+                    return x.OpenSession();
+                },
+                Subscribe = events =>
+                {
+                    var connect = events.Publish();
+
+                    connect.Subscribe(@event => Switch.On(@event)
+                        .Match<SessionBeginning>(m => m.Context.Data.Add("scope", TheScope.Begin()))
+                        .Match<SessionEnded>(m => ((IDisposable)m.Context.Data["scope"]).Dispose()));
+
+                    connect.Subscribe(observer);
+
+                    return connect.Connect();
+                },
+            }.ReplayEvents(TimeSpan.FromSeconds(10)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Some command"));
+
+                session.SaveChanges();
+            }
+
+            await observer.AdvanceUntil<MessageHandled>();
+            await observer.AdvanceUntil<SessionEnded>();
+
+            TheScope.Current.ShouldBe(null);
         }
 
         [Fact]
