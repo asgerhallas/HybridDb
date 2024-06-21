@@ -1046,6 +1046,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
+            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
             await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
             await observer.AdvanceBy1ThenNextShouldBe<MessageReceived>();
         }
@@ -1077,22 +1078,25 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1();
-            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
+            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
             await observer.AdvanceUntil<MessageCommitted>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
 
-            await observer.AdvanceBy1();
-            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
+            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
             await observer.AdvanceUntil<MessageCommitted>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
 
-            await observer.AdvanceBy1();
-            await observer.NextShouldBe<QueuePolling>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
+            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
             await observer.AdvanceUntil<MessageCommitted>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
 
-            await observer.AdvanceBy1();
-            await observer.NextShouldBe<QueuePolling>();
-            await observer.AdvanceBy1();
-            await observer.NextShouldBe<QueueEmpty>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
+            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
+            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
+            await observer.AdvanceBy1ThenNextShouldBe<QueueEmpty>();
             await observer.AdvanceBy1();
             await observer.WaitForNothingToHappen();
         }
@@ -1120,12 +1124,16 @@ namespace HybridDb.Tests.Queue
             }
 
             await observer.NextShouldBeThenAdvanceBy1<QueueStarting>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
             await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
             await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
             await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
             await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
             await observer.NextShouldBe<QueueEmpty>();
 
             using (var session = store.OpenSession())
@@ -1137,12 +1145,16 @@ namespace HybridDb.Tests.Queue
 
             await observer.AdvanceBy1();
 
+            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
             await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
             await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
             await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
             await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
             await observer.NextShouldBeThenAdvanceBy1<QueueEmpty>();
 
             await observer.WaitForNothingToHappen();
@@ -1174,12 +1186,16 @@ namespace HybridDb.Tests.Queue
             }
 
             await observer.AdvanceBy1();
+            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
             await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
             await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
             await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
             await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
             await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
+            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
             await observer.NextShouldBe<QueueEmpty>();
         }
 
