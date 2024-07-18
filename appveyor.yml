@@ -1,6 +1,10 @@
 version: 0.0.{build}
 configuration: Release
 image: Visual Studio 2022
+branches:
+  except:
+    - master
+
 # Environment variables are truncated to the first line in appveyor (see https://github.com/appveyor/ci/issues/1688) 
 # so we join these together as html - and it finally works. We take the message from the tag and use as release message.
 # Also comments in powershell scripts does not work: https://help.appveyor.com/discussions/problems/32779-powershell-comments-changes-the-script
@@ -33,7 +37,7 @@ deploy:
   on:
     APPVEYOR_REPO_TAG: true
   api_key:
-    secure: mRE03twv4zjzuoSdRkStrQe57OayPljdIgSa7LVMzK20ZPJTi/+L8wdqb1dC7Cak
+    secure: lRRaOPPwj9Xyederu0RkBJ2lhRpSY9KXWTK2EI+Hlsy6XBh4F6ZUEtl+U5/vKqGy
 - provider: GitHub
   release: $(APPVEYOR_BUILD_VERSION)
   tag: $(APPVEYOR_REPO_TAG_NAME)   # need to apply the tag it self again, or else github will add one and restart the build recursively

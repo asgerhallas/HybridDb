@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Linq;
 using HybridDb.Events;
@@ -11,10 +11,7 @@ namespace HybridDb.Tests.Events
 {
     public class AppendEventTests : EventStoreTests
     {
-        public AppendEventTests(ITestOutputHelper output) : base(output)
-        {
-            UseEventStore();
-        }
+        public AppendEventTests(ITestOutputHelper output) : base(output) => UseEventStore();
 
         [Fact]
         public void AppendEvent()

@@ -361,7 +361,7 @@ namespace HybridDb.Tests
 
             using var session = store.OpenSession();
 
-            using var tx = store.BeginTransaction();
+            using var tx = store.BeginTransaction(session.CommitId);
             session.Advanced.Enlist(tx);
             session.Advanced.Clear();
             session.Advanced.DocumentTransaction.ShouldBe(null);
@@ -1466,10 +1466,42 @@ namespace HybridDb.Tests
 
             ResetStore();
 
-            using var tx = store.BeginTransaction();
+            using var tx = store.BeginTransaction(session.CommitId);
 
             Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
                 .Message.ShouldBe("Cannot enlist in a transaction that does not originate from the same store as the session.");
+        }
+
+        [Fact]
+        public void CannotEnlistInTransactionWithOtherCommitId()
+        {
+            Document<Entity>();
+
+            using var session = store.OpenSession();
+
+            ResetStore();
+
+            using var tx = store.BeginTransaction(Guid.NewGuid());
+
+            Should.Throw<ArgumentException>(() => session.Advanced.Enlist(tx))
+                .Message.ShouldBe("Cannot enlist in a transaction with another CommitId than the session.");
+        }
+
+        [Fact]
+        public void SaveChangesUsesCorrectCommitId()
+        {
+            using var session = store.OpenSession();
+
+            session.Store("id", new Entity());
+
+            // SaveChanges resets the CommitId, so we need to store it
+            var commitId = session.CommitId;
+
+            session.SaveChanges().ShouldBe(commitId);
+
+            session.Advanced.Clear();
+
+            session.Advanced.GetEtagFor(session.Load<Entity>("id")).ShouldBe(commitId);
         }
 
         [Fact]

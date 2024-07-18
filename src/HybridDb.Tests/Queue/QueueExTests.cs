@@ -1,4 +1,4 @@
-﻿using HybridDb.Queue;
+using HybridDb.Queue;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +23,6 @@ namespace HybridDb.Tests.Queue
 
             session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(9);
             session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(9);
-            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(9);
         }
 
         [Fact]
@@ -36,7 +35,6 @@ namespace HybridDb.Tests.Queue
 
             session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(0);
             session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(0);
-            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(0);
         }
 
         [Fact]
@@ -46,7 +44,6 @@ namespace HybridDb.Tests.Queue
 
             session.Enqueue(new MyMessage("Some command")).Order.ShouldBe(0);
             session.Enqueue("id", new MyMessage("Some command")).Order.ShouldBe(0);
-            session.Enqueue((x, y) => "id", new MyMessage("Some command")).Order.ShouldBe(0);
         }
 
         [Fact]
@@ -59,7 +56,6 @@ namespace HybridDb.Tests.Queue
 
             session.Enqueue(new MyMessage("Some command"), order: 25).Order.ShouldBe(25);
             session.Enqueue("id", new MyMessage("Some command"), order: 26).Order.ShouldBe(26);
-            session.Enqueue((x, y) => "id", new MyMessage("Some command"), order: 27).Order.ShouldBe(27);
         }
 
         [Fact]

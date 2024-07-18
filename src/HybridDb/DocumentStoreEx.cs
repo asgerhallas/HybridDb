@@ -92,18 +92,24 @@ namespace HybridDb
             Transactionally(store, IsolationLevel.ReadCommitted, func);
 
         public static void Transactionally(this IDocumentStore store, IsolationLevel isolationLevel, Action<DocumentTransaction> func) =>
-            store.Transactionally(isolationLevel, tx =>
+            store.Transactionally(isolationLevel, Guid.NewGuid(), tx =>
             {
                 func(tx);
                 return (object)null;
             });
 
-        public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func) =>
-            Transactionally(store, IsolationLevel.ReadCommitted, func);
+        public static T Transactionally<T>(this IDocumentStore store, Guid commitId, Func<DocumentTransaction, T> func) =>
+            Transactionally(store, IsolationLevel.ReadCommitted, commitId, func);
 
-        public static T Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, T> func)
+        public static T Transactionally<T>(this IDocumentStore store, Func<DocumentTransaction, T> func) =>
+            Transactionally(store, IsolationLevel.ReadCommitted, Guid.NewGuid(),  func);
+
+        public static T Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Func<DocumentTransaction, T> func) =>
+            Transactionally(store, isolationLevel, Guid.NewGuid(), func);
+
+        public static T Transactionally<T>(this IDocumentStore store, IsolationLevel isolationLevel, Guid commitId, Func<DocumentTransaction, T> func)
         {
-            using var tx = store.BeginTransaction(isolationLevel);
+            using var tx = store.BeginTransaction(commitId, isolationLevel);
 
             var result = func(tx);
 

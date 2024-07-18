@@ -26,7 +26,7 @@ namespace HybridDb
 
         DocumentTransaction enlistedTx;
 
-        bool saving = false;
+        bool saving;
 
         internal DocumentSession(IDocumentStore store, DocumentMigrator migrator, DocumentTransaction tx = null)
         {
@@ -37,13 +37,33 @@ namespace HybridDb
             this.migrator = migrator;
             this.store = store;
 
+            CommitId = tx?.CommitId ?? Guid.NewGuid();
+
             Enlist(tx);
         }
+
+        internal DocumentSession(DocumentSession session) : this(session.DocumentStore, session.migrator, session.enlistedTx)
+        {
+            CommitId = session.CommitId;
+
+            session.entities.CopyTo(entities);
+
+            foreach (var data in session.SessionData)
+            {
+                SessionData.Add(data.Key, data.Value);
+            }
+
+            events.AddRange(session.events);
+            deferredCommands.AddRange(session.deferredCommands);
+        }
+
+        public Guid CommitId { get; private set; }
 
         public IAdvancedDocumentSession Advanced => this;
 
         public IDocumentStore DocumentStore => store;
         public DocumentTransaction DocumentTransaction => enlistedTx;
+
         public IReadOnlyList<DmlCommand> DeferredCommands => deferredCommands;
         public ManagedEntities ManagedEntities => entities;
         public IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events => events;
@@ -133,10 +153,7 @@ namespace HybridDb
 
         public IEnumerable<T> Query<T>(SqlBuilder sql) => Transactionally(x => x.Query<T>(sql).rows);
 
-        public void Defer(DmlCommand command)
-        {
-            deferredCommands.Add(command);
-        }
+        public void Defer(DmlCommand command) => deferredCommands.Add(command);
 
         public void Evict(object entity)
         {
@@ -260,22 +277,7 @@ namespace HybridDb
             }
         }
 
-        public IDocumentSession Copy()
-        {
-            var sessionCopy = new DocumentSession(store, migrator, enlistedTx);
-
-            entities.CopyTo(sessionCopy.entities);
-
-            foreach (var data in SessionData)
-            {
-                sessionCopy.SessionData.Add(data.Key, data.Value);
-            }
-
-            sessionCopy.events.AddRange(events);
-            sessionCopy.deferredCommands.AddRange(deferredCommands);
-            
-            return sessionCopy;
-        }
+        public IDocumentSession Copy() => new DocumentSession(this);
 
         public Guid SaveChanges() => SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: false);
 
@@ -362,28 +364,30 @@ namespace HybridDb
 
             store.Configuration.Notify(new SaveChanges_BeforeExecuteCommands(this, commands, deferredCommands));
 
-            var executedCommands = new Dictionary<DmlCommand, object>();
+            var executedCommands = Transactionally(resultingTx => deferredCommands
+                .Concat(commands.Select(x => x.Value))
+                .ToDictionary(command => command, command => store.Execute(resultingTx, command)));
 
-            var commitId = Transactionally(resultingTx =>
-            {
-                foreach (var command in deferredCommands.Concat(commands.Select(x => x.Value)))
-                {
-                    executedCommands.Add(command, store.Execute(resultingTx, command));
-                }
-
-                return resultingTx.CommitId;
-            });
-
-            store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, commitId, executedCommands));
+            store.Configuration.Notify(new SaveChanges_AfterExecuteCommands(this, CommitId, executedCommands));
 
             deferredCommands.Clear();
 
             foreach (var managedEntity in commands.Keys)
             {
-                managedEntity.Etag = commitId;
+                managedEntity.Etag = CommitId;
             }
 
             saving = false;
+
+            var commitId = CommitId;
+
+            // We must update the CommitId upon saving. If we keep using the same session
+            // and change the already loaded entities, they must get a new CommmitId/Etag when we save again.
+            // If we did not do this, these last changes to entities could be overwriten by other actors.
+            // But if we are in a transaction we keep the same CommitId as we assume that rows are locked
+            // and no other actor can change them. We do not currently handle the case where we reuse the
+            // same session across multiple transactions.
+            CommitId = enlistedTx?.CommitId ?? Guid.NewGuid();
 
             return commitId;
         }
@@ -480,7 +484,7 @@ namespace HybridDb
         internal T Transactionally<T>(Func<DocumentTransaction, T> func) =>
             enlistedTx != null 
                 ? func(enlistedTx) 
-                : store.Transactionally(func);
+                : store.Transactionally(CommitId, func);
 
         public void Clear()
         {
@@ -512,6 +516,11 @@ namespace HybridDb
             {
                 enlistedTx = null;
                 return;
+            }
+
+            if (tx.CommitId != CommitId)
+            {
+                throw new ArgumentException("Cannot enlist in a transaction with another CommitId than the session.");
             }
 
             if (!ReferenceEquals(tx.Store, DocumentStore))

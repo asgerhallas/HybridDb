@@ -9,18 +9,18 @@ using Microsoft.SqlServer.Management.Smo;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
-using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
-    public class HybridDb_3_11_0_Tests : HybridDbTests
+    public class RecreateMessageTablesAfterSchemaChanges_Tests : HybridDbTests
     {
-        public HybridDb_3_11_0_Tests(ITestOutputHelper output) : base(output) { }
+        public RecreateMessageTablesAfterSchemaChanges_Tests(ITestOutputHelper output) : base(output) { }
 
         [Theory]
-        [InlineData("HybridDb_3_11_0_Tests_Before_Position.sql")]
-        [InlineData("HybridDb_3_11_0_Tests_Before_Version.sql")]
-        public void SchemaChanges_1(string beforeFilename)
+        [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_Position.sql")]
+        [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_Version.sql")]
+        [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_CorrelationId.sql")]
+        public void Test(string beforeFilename)
         {
             UseRealTables();
 
@@ -30,7 +30,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             configuration.UseMessageQueue();
 
-            UseMigrations(new InlineMigration(1, ListOf(new HybridDb_3_11_0())));
+            UseMigrations(new RecreateMessageTablesAfterSchemaChanges(1));
 
             TouchStore();
 
@@ -59,7 +59,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
                         NoCollation = true
                     }));
 
-            join.ShouldBe(File.ReadAllText(SiblingFile("HybridDb_3_11_0_Tests_After.sql")));
+            join.ShouldBe(File.ReadAllText(SiblingFile("RecreateMessageTablesAfterSchemaChanges_Tests_After.sql")));
 
             database.Tables["messages_old"].ShouldBe(null);
         }

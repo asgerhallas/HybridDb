@@ -100,7 +100,7 @@ namespace HybridDb.Tests
         {
             using var session = store.OpenSession();
 
-            var context = new MessageContext(new HybridDbMessage($"{Guid.NewGuid()}", "dbMessage"));
+            var context = new MessageContext(new SessionContext(), new HybridDbMessage($"{Guid.NewGuid()}", "dbMessage"));
 
             session.Advanced.SessionData.Add(MessageContext.Key, context.IncomingMessage.Id);
 
@@ -115,13 +115,14 @@ namespace HybridDb.Tests
         public void CopySessionWithEnlistedTx()
         {
             using var session = store.OpenSession();
-            using var tx = store.BeginTransaction();
+            using var tx = store.BeginTransaction(session.CommitId);
 
             session.Advanced.Enlist(tx);
 
             var sessionCopy = session.Advanced.Copy();
 
             sessionCopy.Advanced.DocumentTransaction.ShouldBe(tx);
+            sessionCopy.CommitId.ShouldBe(session.CommitId);
         }
 
         public class LocalEntity

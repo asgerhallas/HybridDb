@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using HybridDb.Migrations.Schema;
+using System;
 using HybridDb.Queue;
 using Shouldly;
 using Xunit;

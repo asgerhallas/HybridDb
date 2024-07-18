@@ -8,6 +8,9 @@ namespace HybridDb.Queue
         CancellationToken CancellationToken { get; }
     }
 
+    public record SessionBeginning(SessionContext Context, CancellationToken CancellationToken) : IHybridDbQueueEvent;
+    public record SessionEnded(SessionContext Context, CancellationToken CancellationToken) : IHybridDbQueueEvent;
+
     public record MessageReceived(MessageContext Context, HybridDbMessage Message, CancellationToken CancellationToken) : IHybridDbQueueEvent;
     public record MessageHandling(IDocumentSession Session, MessageContext Context, HybridDbMessage Message, CancellationToken CancellationToken) : IHybridDbQueueEvent;
     public record MessageHandled(IDocumentSession Session, MessageContext Context, HybridDbMessage Message, CancellationToken CancellationToken) : IHybridDbQueueEvent;

@@ -102,7 +102,7 @@ namespace HybridDb.Tests
 
         protected void UseRealTables()
         {
-            var uniqueDbName = $"HybridDbTests_{Guid.NewGuid().ToString().Replace("-", "_")}";
+            var uniqueDbName = $"HybridDbTests_{DateTime.Now.ToString("s").Replace(":", "")}_{Guid.NewGuid()}".Replace("-", "_");
 
             using (var connection = new SqlConnection(GetConnectionString() + ";Pooling=false"))
             {
@@ -181,11 +181,12 @@ namespace HybridDb.Tests
             var type = GetType();
 
             var assemblyName = type.Assembly.GetName().Name;
-
-            var relativePath = Path.Combine(
-                type.Namespace!
-                    .Replace($"{assemblyName}.", "")
-                    .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries));
+            var relativePath = assemblyName == type.Namespace
+                ? "" // If file is located in root of project/assembly
+                : Path.Combine(
+                    type.Namespace
+                        .Replace($"{assemblyName}.", "")
+                        .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries));
 
             var basePath = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory!;
 
