@@ -20,7 +20,7 @@ namespace HybridDb.Queue
 
         public Func<IDocumentStore, IDocumentSession> CreateSession { get; set; } = store => store.OpenSession();
         public Func<CancellationTokenSource> GetCancellationTokenSource { get; set; } = () => new CancellationTokenSource();
-        public Func<IObservable<IHybridDbQueueEvent>, IDisposable> Subscribe { get; set; } = events => Disposable.Empty;
+        public Func<IObservable<IHybridDbQueueEvent>, CancellationToken, IDisposable> Subscribe { get; set; } = (events, cancellationToken) => Disposable.Empty;
         public ReplaySubject<IHybridDbQueueEvent> Replay { get; set; }
 
         public MessageQueueOptions ReplayEvents(TimeSpan window)

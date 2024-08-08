@@ -50,11 +50,13 @@ namespace HybridDb.Queue
                 ReplayedEvents = options.Replay;
             }
 
+            cts = options.GetCancellationTokenSource();
+
             // if options are set up to return a disposable that is 
             // not a subscription to events, then it won't automatically
             // be disposed when events are completed. So we need to 
             // keep the disposable and call on Dispose.
-            subscribeDisposable = options.Subscribe(events);
+            subscribeDisposable = options.Subscribe(events, cts.Token);
 
             logger = store.Configuration.Logger;
             table = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
@@ -74,8 +76,6 @@ namespace HybridDb.Queue
                     localEnqueues.Release(enqueueCommands);
                 });
             }
-
-            cts = options.GetCancellationTokenSource();
 
             MainLoop = Task.Factory
                 .StartNew(async () =>
@@ -142,7 +142,7 @@ namespace HybridDb.Queue
                             }
                             catch (Exception exception)
                             {
-                                events.OnNext(new QueueFailed(exception, cts.Token));
+                                events.OnNext(new QueueFailed(exception));
 
                                 logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
@@ -189,7 +189,7 @@ namespace HybridDb.Queue
         {
             var context = new SessionContext();
 
-            events.OnNext(new SessionBeginning(context, cts.Token));
+            events.OnNext(new SessionBeginning(context));
 
             cts.Token.ThrowIfCancellationRequested();
 
@@ -233,7 +233,7 @@ namespace HybridDb.Queue
 
                 var context = session.GetSessionContext();
 
-                events.OnNext(new SessionEnded(context, cts.Token));
+                events.OnNext(new SessionEnded(context));
             }
             catch (Exception ex)
             {
@@ -325,23 +325,23 @@ namespace HybridDb.Queue
 
             try
             {
-                events.OnNext(new MessageReceived(context, message, cts.Token));
+                events.OnNext(new MessageReceived(context, message));
                 
                 tx.SqlTransaction.Save("MessageReceived");
 
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
 
-                events.OnNext(new MessageHandling(session, context, message, cts.Token));
+                events.OnNext(new MessageHandling(session, context, message));
 
                 await handler(session, message);
 
-                events.OnNext(new MessageHandled(session, context, message, cts.Token));
+                events.OnNext(new MessageHandled(session, context, message));
 
                 session.SaveChanges();
                 
                 tx.Complete();
 
-                events.OnNext(new MessageCommitted(session, context, message, cts.Token));
+                events.OnNext(new MessageCommitted(session, context, message));
             }
             catch (Exception exception)
             {
@@ -351,7 +351,7 @@ namespace HybridDb.Queue
 
                 // TODO: log here to ensure we get a log before a new exception is raised
 
-                events.OnNext(new MessageFailed(context, message, exception, failures, cts.Token));
+                events.OnNext(new MessageFailed(context, message, exception, failures));
 
                 if (failures < 5)
                 {
@@ -368,7 +368,7 @@ namespace HybridDb.Queue
 
                 tx.Complete();
 
-                events.OnNext(new PoisonMessage(context, message, exception, cts.Token));
+                events.OnNext(new PoisonMessage(context, message, exception));
 
                 retries.TryRemove(message.Id, out _);
             }

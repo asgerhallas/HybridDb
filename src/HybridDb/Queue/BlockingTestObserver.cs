@@ -1,29 +1,36 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
 
 namespace HybridDb.Queue
 {
-    public class BlockingTestObserver : IObserver<IHybridDbQueueEvent>
+    public class BlockingTestObserver : IObserver<object>
     {
         readonly TimeSpan timeout;
-        readonly BlockingCollection<IHybridDbQueueEvent> queue = new();
-        readonly List<IHybridDbQueueEvent> history = new();
+        readonly BlockingCollection<object> queue = new();
+        readonly List<object> history = new();
         readonly SemaphoreSlim gate = new(0);
-        readonly CancellationTokenSource cts = new();
+
+        CancellationToken observableCancellationToken = new();
+        readonly CancellationTokenSource observerCancellationTokenSource = new();
 
         volatile int waitingAtTheGate;
 
-        public BlockingTestObserver(TimeSpan timeout)
-        {
-            this.timeout = timeout;
-        }
+        public BlockingTestObserver(TimeSpan timeout) => this.timeout = timeout;
 
-        public IDisposable Subscribe(IObservable<IHybridDbQueueEvent> observable) => observable.Subscribe(this);
+        public IDisposable Subscribe<T>(IObservable<T> observable, CancellationToken cancellationToken)
+        {
+            observableCancellationToken = CancellationTokenSource
+                .CreateLinkedTokenSource(observableCancellationToken, cancellationToken)
+                .Token;
+
+            return observable.Select(x => (object)x).Subscribe(this);
+        }
 
         public void OnCompleted()
         {
@@ -35,32 +42,32 @@ namespace HybridDb.Queue
 
         }
 
-        public void OnNext(IHybridDbQueueEvent value)
+        public void OnNext(object value)
         {
-            if (value.CancellationToken.IsCancellationRequested)
+            if (observableCancellationToken.IsCancellationRequested)
             {
                 StopBlocking();
             }
 
-            if (cts.IsCancellationRequested) return;
+            if (observerCancellationTokenSource.IsCancellationRequested) return;
 
             waitingAtTheGate = 1;
 
             // Thread waiting on GetNext will immediately continue, when value is added
             // This will in turn often result in AdvanceBy1 to be executed before
             // the rest the OnNext call is completed. Be aware!
-            queue.Add(value); 
+            queue.Add(value, observableCancellationToken); 
             history.Add(value);
 
             var linkedCts = CancellationTokenSource
-                .CreateLinkedTokenSource(value.CancellationToken, cts.Token);
+                .CreateLinkedTokenSource(observableCancellationToken, observerCancellationTokenSource.Token);
 
             gate.Wait(linkedCts.Token);
         }
 
         public Task AdvanceBy1()
         {
-            if (cts.IsCancellationRequested) return Task.CompletedTask;
+            if (observerCancellationTokenSource.IsCancellationRequested) return Task.CompletedTask;
 
             waitingAtTheGate = 0;
 
@@ -73,7 +80,7 @@ namespace HybridDb.Queue
         {
             GetNextResult() { }
 
-            public record Event(IHybridDbQueueEvent Value) : GetNextResult;
+            public record Event(object Value) : GetNextResult;
             public record Timeout : GetNextResult;
             public record Locked : GetNextResult;
         }
@@ -84,7 +91,7 @@ namespace HybridDb.Queue
         /// <returns>An event if any is present within the timeout, or else null indicating a timeout.</returns>
         public async Task<GetNextResult> GetNext()
         {
-            cts.Token.ThrowIfCancellationRequested();
+            observerCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
             if (waitingAtTheGate == 1)
             {
@@ -100,7 +107,7 @@ namespace HybridDb.Queue
             }
         }
 
-        public async Task<IHybridDbQueueEvent> GetNextOrNull() =>
+        public async Task<object> GetNextOrNull() =>
             await GetNext() switch
             {
                 GetNextResult.Event @event => @event.Value,
@@ -113,7 +120,7 @@ namespace HybridDb.Queue
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-        public async Task<IHybridDbQueueEvent> GetNextOrNullAdvanceIfNeccessary()
+        public async Task<object> GetNextOrNullAdvanceIfNeccessary()
         {
             var next = await GetNext();
 
@@ -180,7 +187,7 @@ namespace HybridDb.Queue
             throw new Exception($"Expected nothing (timeout), got {next.GetType()}. {GetHistoryString()}");
         }
 
-        public void StopBlocking() => cts.Cancel();
+        public void StopBlocking() => observerCancellationTokenSource.Cancel();
 
         string GetHistoryString() =>
             Environment.NewLine + 

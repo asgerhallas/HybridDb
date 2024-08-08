@@ -1252,7 +1252,7 @@ namespace HybridDb.Tests.Queue
 
                     return x.OpenSession();
                 },
-                Subscribe = events =>
+                Subscribe = (events, _) =>
                 {
                     var connect = events.Publish();
 
