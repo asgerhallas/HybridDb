@@ -6,16 +6,17 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Linq.Bonsai;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
-using Newtonsoft.Json;
 using Serilog.Events;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 using static HybridDb.Helpers;
+
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
+
 
 namespace HybridDb.Tests.Migrations
 {

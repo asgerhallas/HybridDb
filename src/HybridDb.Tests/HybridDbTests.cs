@@ -70,7 +70,7 @@ namespace HybridDb.Tests
         protected static string GetConnectionString() =>
             IsAppveyor
                 ? "Server=(local)\\SQL2019;Database=master;User ID=sa;Password=Password12!;Encrypt=False"
-                : "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True";
+                : "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True;Connection Timeout=120;";
 
         public static bool IsAppveyor => Environment.GetEnvironmentVariable("APPVEYOR") != null;
 
