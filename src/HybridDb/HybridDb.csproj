@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+    <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
     <Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
@@ -32,8 +32,4 @@
   <Target Name="ILRepack" AfterTargets="AfterBuild">
     <Exec Command="&quot;$(PkgILRepack)\tools\ilrepack.exe&quot; /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(PkgIndentional)\lib\netstandard2.0\Indentional.dll&quot; &quot;$(PkgInflector)\lib\net45\Inflector.dll&quot; &quot;$(PkgSprache)\lib\netstandard2.0\Sprache.dll&quot;" />
   </Target>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'DevDeploy'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-  </PropertyGroup>
 </Project>
