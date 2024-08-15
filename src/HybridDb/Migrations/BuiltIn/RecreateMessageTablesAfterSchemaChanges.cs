@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Queue;
+using Microsoft.Extensions.Logging;
 
 namespace HybridDb.Migrations.BuiltIn
 {
@@ -13,17 +15,35 @@ namespace HybridDb.Migrations.BuiltIn
 
         public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
         {
-            yield return new RecreateMessageTablesAfterSchemaChangesCommand();
+            yield return new RecreateMessageTablesAfterSchemaChangesCommand(configuration.Logger);
         }
 
         public override string ToString() => "Drop old message tables and recreate message tables";
 
         class RecreateMessageTablesAfterSchemaChangesCommand : DdlCommand
         {
+            readonly ILogger logger;
+
+            public RecreateMessageTablesAfterSchemaChangesCommand(ILogger logger) => this.logger = logger;
+
             public override void Execute(DocumentStore store)
             {
-                foreach (var table in store.Configuration.Tables.Values.OfType<QueueTable>())
+                logger.LogMigrationInfo(nameof(RecreateMessageTablesAfterSchemaChanges), "Invoked");
+
+                var tables = store.Configuration.Tables.Values.OfType<QueueTable>().ToList();
+
+                if (!tables.Any())
                 {
+                    logger.LogMigrationError(nameof(RecreateMessageTablesAfterSchemaChanges), "No queue tables registered.");
+
+                    throw new InvalidOperationException(
+                        $"Migration {nameof(RecreateMessageTablesAfterSchemaChanges)} cannot be used when no queue tables are registered.");
+                }
+
+                foreach (var table in tables)
+                {
+                    logger.LogMigrationInfo(nameof(RecreateMessageTablesAfterSchemaChanges), $"Processing table {table.Name}.");
+
                     var tableNameEscaped = store.Database.FormatTableNameAndEscape(table.Name);
                     var tableNameOld = $"{table.Name}_old";
                     var oldTableNameEscaped = store.Database.FormatTableNameAndEscape(tableNameOld);
