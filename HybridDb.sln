@@ -19,15 +19,20 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		DevDeploy|Any CPU = DevDeploy|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.DevDeploy|Any CPU.ActiveCfg = DevDeploy|Any CPU
+		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.DevDeploy|Any CPU.Build.0 = DevDeploy|Any CPU
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EA62E0F9-FD38-4020-850F-AEEDA6A3214A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.DevDeploy|Any CPU.ActiveCfg = DevDeploy|Any CPU
+		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.DevDeploy|Any CPU.Build.0 = DevDeploy|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD3002BF-212A-4630-8195-5B7FE1CCF063}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
