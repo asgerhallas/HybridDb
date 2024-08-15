@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
+  <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
     <Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
