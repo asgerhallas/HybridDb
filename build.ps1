@@ -1,5 +1,5 @@
 param (
-    [Parameter(Mandatory=$true)][string]$Version
+    [Parameter(Mandatory=$true, ValueFromPipeline=$true)][string]$Version
 )
 
 Import-Module .\functions.ps1 -Force
