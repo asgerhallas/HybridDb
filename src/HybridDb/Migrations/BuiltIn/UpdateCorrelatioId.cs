@@ -11,7 +11,7 @@ namespace HybridDb.Migrations.BuiltIn
     {
         public UpdateCorrelationId(int version) : base(version) { }
 
-        public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
+        public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
         {
             foreach (var table in configuration.Tables.Values.OfType<QueueTable>())
             {
