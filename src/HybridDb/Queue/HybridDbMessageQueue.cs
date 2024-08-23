@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
 using Microsoft.Extensions.Logging;
+using static System.Collections.Specialized.BitVector32;
 
 namespace HybridDb.Queue
 {
@@ -90,7 +91,7 @@ namespace HybridDb.Queue
     
                         using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
 
-                        while (!cts.Token.IsCancellationRequested)
+                        while (!cts.IsCancellationRequested)
                         {
                             try
                             {
@@ -98,35 +99,57 @@ namespace HybridDb.Queue
 
                                 try
                                 {
-                                    var (session, message) = await NextMessage();
-
-                                    try
+                                    while(!cts.IsCancellationRequested)
                                     {
-                                        await Task.Factory.StartNew(async () =>
+                                        var session = BeginSession();
+
+                                        try
                                         {
-                                            try
-                                            {
-                                                using var _ = Time("HandleMessage");
+                                            var message = TryGetNextMessage(session);
 
-                                                await HandleMessage(session, message);
-                                            }
-                                            finally
+                                            if (message == null)
                                             {
-                                                // open the gate for the next message, when this message is handled.
-                                                release();
                                                 DisposeSession(session);
-                                            }
-                                        },
-                                        cts.Token,
-                                        TaskCreationOptions.DenyChildAttach,
-                                        TaskScheduler.Default);
-                                    }
-                                    catch
-                                    {
-                                        release();
-                                        DisposeSession(session);
 
-                                        throw;
+                                                await WaitOnEmptyQueue();
+
+                                                // No message was found, so after some wait
+                                                // we try polling again in the same loop.
+                                                continue;
+                                            }
+
+                                            await Task.Factory.StartNew(async () =>
+                                                {
+                                                    try
+                                                    {
+                                                        using var _ = Time("HandleMessage");
+
+                                                        await HandleMessage(session, message);
+                                                    }
+                                                    finally
+                                                    {
+                                                        DisposeSession(session);
+
+                                                        // open the gate for the next message, when this message is handled.
+                                                        release();
+                                                    }
+                                                },
+                                                cts.Token,
+                                                TaskCreationOptions.DenyChildAttach,
+                                                TaskScheduler.Default);
+
+                                            // Message was retrieved and handling is started on a new thread,
+                                            // so we break out of the to start polling for the next message.
+                                            break;
+                                        }
+                                        catch
+                                        {
+                                            DisposeSession(session);
+
+                                            release();
+
+                                            throw;
+                                        }
                                     }
                                 }
                                 catch
@@ -268,54 +291,40 @@ namespace HybridDb.Queue
             };
         }
 
-        async Task<(IDocumentSession, HybridDbMessage)> NextMessage()
+        HybridDbMessage TryGetNextMessage(IDocumentSession session)
         {
-            var session = BeginSession();
+            events.OnNext(new QueuePolling(cts.Token));
 
-            try
+            var localEnqueuesBeforeLastDequeue = localEnqueues.CurrentCount;
+
+            // Querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
+            // from the queue while handling it, so other machines/workers won't try to handle it too.
+            var message = session.Advanced.DocumentTransaction.Execute(new DequeueCommand(table, options.InboxTopics));
+
+            if (message != null) return message;
+
+            // We only get here if the queue is empty, and that means that we must have handled all local enqueues
+            // that was counted _before_ the dequeue. If any has been locally enqueued after the last empty dequeue,
+            // we keep those to go another round immediately. This loop will count down the semaphore to only include
+            // those new local enqueues.
+            for (; localEnqueuesBeforeLastDequeue > 0; localEnqueuesBeforeLastDequeue--)
             {
-                while (!cts.IsCancellationRequested)
-                {
-                    events.OnNext(new QueuePolling(cts.Token));
-
-                    var count = localEnqueues.CurrentCount;
-
-                    // Querying on the queue is done in same transaction as the subsequent write, and the message is temporarily removed
-                    // from the queue while handling it, so other machines/workers won't try to handle it too.
-                    var message = session.Advanced.DocumentTransaction.Execute(new DequeueCommand(table, options.InboxTopics));
-
-                    if (message != null) return (session, message);
-
-                    DisposeSession(session);
-
-                    events.OnNext(new QueueEmpty(cts.Token));
-
-                    //// We only get here if the queue is empty, and that means that we must have handled all local enqueues
-                    //// that was counted _before_ the dequeue. If any has been locally enqueued after the last empty dequeue,
-                    //// we keep those to go another round immediately.
-                    for (; count > 0; count--)
-                    {
-                        // ReSharper disable once MethodHasAsyncOverload
-                        // We know that we have `count` released locks, so I believe sync Wait is faster here
-                        // though it has to be measured.
-                        localEnqueues.Wait(cts.Token);
-                    }
-
-                    // Wait for any local enqueue or for the timeout (IdleDelay) to check for remote enqueues at an interval.
-                    await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
-
-                    session = BeginSession();
-                }   
-
-                return (session, await Task.FromCanceled<HybridDbMessage>(cts.Token).ConfigureAwait(false));
+                // ReSharper disable once MethodHasAsyncOverload
+                // We know that we have `count` released locks, so I believe sync Wait is faster here
+                // though it has to be measured.
+                localEnqueues.Wait(cts.Token);
             }
-            catch
-            {
-                DisposeSession(session);
 
-                throw;
-            }
-        }
+            return null;
+        }   
+
+        async Task WaitOnEmptyQueue()
+        {
+            events.OnNext(new QueueEmpty(cts.Token));
+          
+            // Wait for any local enqueue OR for the timeout (IdleDelay) to check for remote enqueues at an interval.
+            await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
+        }   
 
         async Task HandleMessage(IDocumentSession session, HybridDbMessage message)
         {
