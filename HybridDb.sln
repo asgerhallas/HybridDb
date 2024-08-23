@@ -13,6 +13,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		appveyor.yml = appveyor.yml
 		old-changelog.md = old-changelog.md
 		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build-tools", "build-tools", "{E69E0A7E-EF32-4DEA-AA01-DED676E1F715}"
+	ProjectSection(SolutionItems) = preProject
+		build.ps1 = build.ps1
+		functions.ps1 = functions.ps1
+		release.ps1 = release.ps1
 		versionize.ps1 = versionize.ps1
 	EndProjectSection
 EndProject
@@ -33,6 +40,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E69E0A7E-EF32-4DEA-AA01-DED676E1F715} = {FB0A3551-B1FE-4704-825C-AF093C57F7F0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B221C08-6406-4F4C-A066-632869DB44C0}

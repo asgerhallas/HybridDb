@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
@@ -13,8 +14,22 @@ namespace HybridDb.Migrations.BuiltIn
 
         public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
         {
-            foreach (var table in configuration.Tables.Values.OfType<QueueTable>())
+            configuration.Logger.LogMigrationInfo(nameof(UpdateCorrelationId), "Invoked");
+
+            var tables = configuration.Tables.Values.OfType<QueueTable>().ToList();
+
+            if (!tables.Any())
             {
+                configuration.Logger.LogMigrationError(nameof(UpdateCorrelationId), "No queue tables registered.");
+
+                throw new InvalidOperationException(
+                    $"Migration {nameof(UpdateCorrelationId)} cannot be used when no queue tables are registered.");
+            }
+
+            foreach (var table in tables)
+            {
+                configuration.Logger.LogMigrationInfo(nameof(UpdateCorrelationId), $"Processing table {table.Name}.");
+
                 yield return new SqlCommand(
                     "Update correlation ID",
                     (sql, db) =>
