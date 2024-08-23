@@ -10,6 +10,7 @@ CREATE TABLE [dbo].[messages](
 	[Message] [nvarchar](max) NULL,
 	[Version] [nvarchar](40) NOT NULL,
 	[Metadata] [nvarchar](max) NOT NULL,
+    [CorrelationId] [nvarchar](850) NOT NULL default 'N/A',
  CONSTRAINT [PK_messages] PRIMARY KEY CLUSTERED 
 (
 	[Topic] ASC,
