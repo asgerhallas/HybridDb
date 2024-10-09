@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             store.Database.RawQuery<string>("select CorrelationId from messages")
                 .ToList()
-                .ShouldBeLike("id1", "id3");
+                .ShouldBeLike("id1", "id3" , "N/A");
         }
     }
 }

@@ -33,26 +33,20 @@ namespace HybridDb.Queue
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
             var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
 
-            string where;
-            object param;
-            if (command.Topics != null)
+            var (where, param) = (command.Topics, command.MessageId) switch
             {
-                where = "where Topic in @Topics";
-                param = new
+                (not null, _) => ("where Topic in @Topics", (object)new
                 {
                     command.Topics,
                     Version = options.Version.ToString()
-                };
-            }
-            else
-            {
-                where = "where Id = @MessageId";
-                param = new
+                }),
+                (_, not null) => ("where Id = @MessageId", new
                 {
                     command.MessageId,
                     Version = options.Version.ToString()
-                };
-            }
+                }),
+                _ => throw new ArgumentException()
+            };
 
             var msg = tx.SqlConnection
                 .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata, string CorrelationId)>($@"

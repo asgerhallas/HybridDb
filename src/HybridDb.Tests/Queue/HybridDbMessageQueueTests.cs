@@ -1230,13 +1230,15 @@ namespace HybridDb.Tests.Queue
 
         public class TheScope : IDisposable
         {
+            static readonly AsyncLocal<TheScope> current = new();
+
             TheScope() { }
 
-            public static TheScope Current { get; private set; }
+            public static TheScope Current => current.Value;
 
-            public static TheScope Begin() => Current = new TheScope();
+            public static TheScope Begin() => current.Value = new TheScope();
 
-            public void Dispose() => Current = null;
+            public void Dispose() => current.Value = null;
         }
 
         [Fact]
@@ -1244,11 +1246,14 @@ namespace HybridDb.Tests.Queue
         {
             var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
 
+            bool scopeWasThereWhenSessionWasCreated = false;
+            bool scopeWasThereWhenMessageWasHandled = false;
+
             var queue = StartQueue(new MessageQueueOptions
             {
                 CreateSession = x =>
                 {
-                    TheScope.Current.ShouldNotBe(null);
+                    scopeWasThereWhenSessionWasCreated = TheScope.Current != null;
 
                     return x.OpenSession();
                 },
@@ -1258,6 +1263,7 @@ namespace HybridDb.Tests.Queue
 
                     connect.Subscribe(@event => Switch.On(@event)
                         .Match<SessionBeginning>(m => m.Context.Data.Add("scope", TheScope.Begin()))
+                        .Match<MessageHandling>(m => scopeWasThereWhenMessageWasHandled = TheScope.Current != null)
                         .Match<SessionEnded>(m => ((IDisposable)m.Context.Data["scope"]).Dispose()));
 
                     connect.Subscribe(observer);
@@ -1273,9 +1279,10 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceUntil<MessageHandled>();
             await observer.AdvanceUntil<SessionEnded>();
 
+            scopeWasThereWhenSessionWasCreated.ShouldBe(true);
+            scopeWasThereWhenMessageWasHandled.ShouldBe(true);
             TheScope.Current.ShouldBe(null);
         }
 

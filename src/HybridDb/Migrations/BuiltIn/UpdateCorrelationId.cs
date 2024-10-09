@@ -11,7 +11,7 @@ namespace HybridDb.Migrations.BuiltIn
     {
         public UpdateCorrelationId(int version) : base(version) { }
 
-        public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
+        public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
         {
             foreach (var table in configuration.Tables.Values.OfType<QueueTable>())
             {
@@ -23,10 +23,10 @@ namespace HybridDb.Migrations.BuiltIn
 
                         sql.Append(@$"
                             update {tableNameEscaped}
-                            set CorrelationId = (select top 1
+                            set CorrelationId = coalesce((select top 1
         		                CorrelationId.value
 	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""{HybridDbMessage.Breadcrumbs}""') X
-	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId)");
+	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId), 'N/A')");
                     });
             }
         }
