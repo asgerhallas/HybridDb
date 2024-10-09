@@ -60,12 +60,12 @@ namespace HybridDb.Linq.Old.Parsers
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
-            if (expression.Object == null)
-            {
-                Visit(expression.Arguments.Skip(1).ToReadOnlyCollection());
-                Visit(expression.Arguments.Take(1).ToReadOnlyCollection());
-            }
-            else
+            //if (expression.Object == null)
+            //{
+            //    Visit(expression.Arguments.Skip(1).ToReadOnlyCollection());
+            //    Visit(expression.Arguments.Take(1).ToReadOnlyCollection());
+            //}
+            //else
             {
                 Visit(expression.Arguments);
                 Visit(expression.Object);

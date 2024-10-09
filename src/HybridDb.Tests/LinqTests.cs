@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -529,11 +529,22 @@ namespace HybridDb.Tests
         {
             var guid1 = new Guid("00000000-0000-0000-0000-000000000001");
             var guid2 = new Guid("00000000-0000-0000-0000-000000000002");
-            var list = new[] {guid1, guid2};
+            var list = new[] { guid1, guid2 };
             var translation = Query<Entity>().Where(x => x.Id.In(list.ToArray())).Translate();
             translation.Where.ShouldBe("([Id] IN (@Value0, @Value1))");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", guid1);
             translation.Parameters.ShouldContainKeyAndValue("@Value1", guid2);
+        }
+
+        [Fact]
+        public void CanQueryWhereWithInColumn()
+        {
+            var guid1 = new Guid("00000000-0000-0000-0000-000000000001");
+
+            var translation = Query<Entity>().Where(x => guid1.In(x.Guids.ToArray())).Translate();
+
+            translation.Where.ShouldBe("(@Value0 IN (Guids))");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", guid1);
         }
 
         [Fact]
@@ -652,6 +663,7 @@ namespace HybridDb.Tests
                 TheChild = new Child();
                 Complex = new object();
                 Children = new List<Child>();
+                Guids = new List<Guid>();
             }
 
             public Guid Id { get; set; }
@@ -662,6 +674,7 @@ namespace HybridDb.Tests
             public bool BoolProp { get; set; }
             public Child TheChild { get; set; }
             public List<Child> Children { get; set; }
+            public List<Guid> Guids { get; set; }
             public object Complex { get; set; }
             public Enumse Enum { get; set; }
 
