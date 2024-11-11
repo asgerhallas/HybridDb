@@ -6,9 +6,9 @@ namespace HybridDb.Events
 {
     public class Metadata : IReadOnlyMetadata
     {
-        static readonly HashSet<string> builtInKeys = new HashSet<string>();
+        static readonly HashSet<string> builtInKeys = new();
 
-        readonly Dictionary<string, string> values = new Dictionary<string, string>();
+        readonly Dictionary<string, string> values = new();
 
         /// <summary>
         /// Unique identifier for the event.

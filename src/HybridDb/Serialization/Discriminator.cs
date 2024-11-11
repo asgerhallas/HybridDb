@@ -5,7 +5,7 @@ namespace HybridDb.Serialization
 {
     public class Discriminator
     {
-        Dictionary<Type, string> tags = new Dictionary<Type, string>(); 
+        Dictionary<Type, string> tags = new(); 
 
         public Discriminator(Type basetype, string name)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -19,7 +19,7 @@ namespace HybridDb
         public static bool IsNullable(this Type type) => type != null && Nullable.GetUnderlyingType(type) != null;
         public static bool CanBeNull(this Type type) => !type.IsValueType || type.IsNullable();
 
-        static readonly Dictionary<Type, List<Type>> dict = new Dictionary<Type, List<Type>>
+        static readonly Dictionary<Type, List<Type>> dict = new()
         {
             { typeof(decimal), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(char) } },
             { typeof(double), new List<Type> { typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(char), typeof(float) } },
