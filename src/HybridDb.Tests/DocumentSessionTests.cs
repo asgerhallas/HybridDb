@@ -1597,7 +1597,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnProjectionUsingSqlBuilder()
         {
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append(@"
                 select '1.1' ProjectedProperty, '1.2' TheChildNestedProperty
@@ -1627,7 +1627,7 @@ namespace HybridDb.Tests
 
             using var session = store.OpenSession();
 
-            session.Advanced.Defer(new SqlCommand(new SqlBuilder($"truncate table {tableName}"), -1));
+            session.Advanced.Defer(new SqlCommand(new SqlBuilderOld($"truncate table {tableName}"), -1));
 
             session.Store(new Entity());
 

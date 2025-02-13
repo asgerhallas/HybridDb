@@ -21,7 +21,7 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            store.Database.RawExecute(new SqlBuilder()
+            store.Database.RawExecute(new SqlBuilderOld()
                 .Append(store.Database is SqlServerUsingRealTables, "", "tempdb..")
                 .Append($"sp_rename '{store.Database.FormatTableNameAndEscape(Table.Name)}.{OldColumnName}', '{NewColumnName}', 'COLUMN'")
                 .ToString());

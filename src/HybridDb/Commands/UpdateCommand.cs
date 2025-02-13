@@ -30,7 +30,7 @@ namespace HybridDb.Commands
             projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
             projections[DocumentTable.LastOperationColumn] = Operation.Updated;
 
-            var sql = new SqlBuilder()
+            var sql = new SqlBuilderOld()
                 .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
                 .Append($"set {string.Join(", ", from column in projections.Keys select $"[{column.Name}] = @{column.Name}")}")
                 .Append($"where {DocumentTable.IdColumn.Name}=@Id")

@@ -20,7 +20,7 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            store.Database.RawExecute(new SqlBuilder()
+            store.Database.RawExecute(new SqlBuilderOld()
                 .Append($"alter table {store.Database.FormatTableNameAndEscape(Tablename)} add {store.Database.Escape(Column.Name)}")
                 .Append(DdlCommandEx.BuildColumnSql(Column))
                 .ToString());

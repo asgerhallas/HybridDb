@@ -3,11 +3,11 @@ using Microsoft.Data.SqlClient;
 
 namespace HybridDb
 {
-    public class SqlBuilder
+    public class SqlBuilderOld
     {
         readonly StringBuilder fragments;
 
-        public SqlBuilder(string sql = null, params SqlParameter[] parameters)
+        public SqlBuilderOld(string sql = null, params SqlParameter[] parameters)
         {
             fragments = new StringBuilder();
             Parameters = new HybridDbParameters();
@@ -16,7 +16,7 @@ namespace HybridDb
 
         public HybridDbParameters Parameters { get; }
 
-        public SqlBuilder Append(string sql, params SqlParameter[] args)
+        public SqlBuilderOld Append(string sql, params SqlParameter[] args)
         {
             if (args != null)
             {
@@ -36,20 +36,20 @@ namespace HybridDb
             return this;
         }
 
-        public SqlBuilder Append(bool predicate, string sql, params SqlParameter[] args)
+        public SqlBuilderOld Append(bool predicate, string sql, params SqlParameter[] args)
         {
             if (predicate) Append(sql, args);
 
             return this;
         }
 
-        public SqlBuilder Append(bool predicate, string sql, string orSql, params SqlParameter[] args) =>
+        public SqlBuilderOld Append(bool predicate, string sql, string orSql, params SqlParameter[] args) =>
             predicate ? Append(sql, args) : Append(orSql, args);
 
-        public SqlBuilder Append(SqlBuilder builder)
+        public SqlBuilderOld Append(SqlBuilderOld builderOld)
         {
-            fragments.Append(builder.fragments);
-            Parameters.Add(builder.Parameters);
+            fragments.Append(builderOld.fragments);
+            Parameters.Add(builderOld.Parameters);
 
             return this;
         }

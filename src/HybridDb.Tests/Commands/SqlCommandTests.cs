@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Commands
 
             updateSession.SaveChanges();
 
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"update {tableName} set Document = @Document where Id = @Id");
             sql.Parameters.Add("@Document", "{\"Field\":\"Updated Value\"}", SqlDbType.NVarChar);
@@ -53,7 +53,7 @@ namespace HybridDb.Tests.Commands
 
             updateSession.SaveChanges();
 
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"update {tableName} set Document = @Document");
             sql.Parameters.Add("@Document", null, SqlDbType.NVarChar);

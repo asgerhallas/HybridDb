@@ -104,7 +104,7 @@ namespace HybridDb
             QueryStats stats = null;
             IEnumerable<QueryResult<TProjection>> result = null;
             var timer = Stopwatch.StartNew();
-            var sqlx = new SqlBuilder();
+            var sqlx = new SqlBuilderOld();
             var isWindowed = window != null;
 
             var from = Store.Database.FormatTableNameAndEscape(table.Name);
@@ -191,7 +191,7 @@ namespace HybridDb
             return (stats, result);
         }
 
-        public (QueryStats stats, IEnumerable<TProjection> rows) Query<TProjection>(SqlBuilder sql)
+        public (QueryStats stats, IEnumerable<TProjection> rows) Query<TProjection>(SqlBuilderOld sql)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
@@ -233,7 +233,7 @@ namespace HybridDb
             return select;
         }
 
-        T InternalQuery<T>(SqlBuilder sql, object parameters, Func<SqlMapper.GridReader, T> read)
+        T InternalQuery<T>(SqlBuilderOld sql, object parameters, Func<SqlMapper.GridReader, T> read)
         {
             var hybridDbParameters = parameters.ToHybridDbParameters();
 

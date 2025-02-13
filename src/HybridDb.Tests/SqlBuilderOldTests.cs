@@ -4,12 +4,12 @@ using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class SqlBuilderTests
+    public class SqlBuilderOldTests
     {
         [Fact]
         public void CtorDoesNotFailWithNullValues()
         {
-            var sql = new SqlBuilder(null, null);
+            var sql = new SqlBuilderOld(null, null);
 
             sql.ToString().ShouldBe("");
             sql.Parameters.Count.ShouldBe(0);
@@ -18,7 +18,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CtorDoesNotFailWithNullValuesParameters()
         {
-            var sql = new SqlBuilder("Dummy", null);
+            var sql = new SqlBuilderOld("Dummy", null);
 
             sql.ToString().ShouldBe("Dummy");
             sql.Parameters.Count.ShouldBe(0);
@@ -27,7 +27,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CtorDoesNotFailWithNullValuesSql()
         {
-            var sql = new SqlBuilder(null, new SqlParameter("@Dummy", "Dummy"));
+            var sql = new SqlBuilderOld(null, new SqlParameter("@Dummy", "Dummy"));
 
             sql.ToString().ShouldBe("");
             sql.Parameters.Count.ShouldBe(1);
@@ -36,7 +36,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AppendDoesNotFailWithNullValues()
         {
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             Should.NotThrow(() => sql.Append(null, null));
 
@@ -47,7 +47,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AppendDoesNotFailWithNullValuesParameters()
         {
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             Should.NotThrow(() => sql.Append("Dummy", null));
 
@@ -58,7 +58,7 @@ namespace HybridDb.Tests
         [Fact]
         public void AppendDoesNotFailWithNullValuesSql()
         {
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             Should.NotThrow(() => sql.Append(null, new SqlParameter("@Dummy", "Dummy")));
 

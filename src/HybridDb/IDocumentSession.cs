@@ -15,7 +15,7 @@ namespace HybridDb
 
         IQueryable<T> Query<T>() where T : class;
 
-        IEnumerable<T> Query<T>(SqlBuilder sql) where T : class;
+        IEnumerable<T> Query<T>(SqlBuilderOld sql) where T : class;
 
         T Store<T>(T entity) where T: class;
         T Store<T>(T entity, Guid? etag) where T : class;

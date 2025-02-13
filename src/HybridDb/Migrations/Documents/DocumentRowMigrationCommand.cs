@@ -23,9 +23,9 @@ namespace HybridDb.Migrations.Documents
                 Type == null || configuration.TryGetDesignFor(Type)?.Table == table
             );
 
-        public override SqlBuilder Matches(IDocumentStore store, int? version)
+        public override SqlBuilderOld Matches(IDocumentStore store, int? version)
         {
-            var builder = new SqlBuilder()
+            var builder = new SqlBuilderOld()
                 .Append(version != null, "Version < @version", new SqlParameter("version", version));
 
             return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store, version)));

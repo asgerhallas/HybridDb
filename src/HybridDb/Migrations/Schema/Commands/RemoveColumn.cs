@@ -24,7 +24,7 @@ namespace HybridDb.Migrations.Schema.Commands
         public override void Execute(DocumentStore store)
         {
             // TODO: sletter kun den første ser det ud til?
-            var dropConstraints = new SqlBuilder()
+            var dropConstraints = new SqlBuilderOld()
                 .Append("DECLARE @ConstraintName nvarchar(200)")
                 .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
                 .Append($"WHERE PARENT_OBJECT_ID = OBJECT_ID('{Table.Name}') ")

@@ -535,7 +535,7 @@ namespace HybridDb.Tests.Migrations
             {
             }
 
-            public override SqlBuilder Matches(IDocumentStore store, int? version) => throw new Exception("Hej do");
+            public override SqlBuilderOld Matches(IDocumentStore store, int? version) => throw new Exception("Hej do");
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row) => throw new NotImplementedException();
         }

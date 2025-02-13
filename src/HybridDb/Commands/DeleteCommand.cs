@@ -23,7 +23,7 @@ namespace HybridDb.Commands
             // Note that last write wins can actually still produce a ConcurrencyException if the 
             // row was already deleted, which would result in 0 resulting rows changed
 
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
             var parameters = new HybridDbParameters();
 
             if (tx.Store.Configuration.SoftDelete)

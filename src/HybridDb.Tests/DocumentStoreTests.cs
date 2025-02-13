@@ -147,7 +147,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"select * from {tableName}");
 
@@ -199,7 +199,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"select * from {tableName} where Field != @name");
             sql.Parameters.Add("name", "Bjarne", table.Table.Columns.Single(x => x.Name == "Field"));
@@ -253,7 +253,7 @@ namespace HybridDb.Tests
             var t = new { Field = "" };
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"select Field from {tableName} where Field = @name");
             sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
@@ -293,7 +293,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"select Field from {tableName}");
 
@@ -334,7 +334,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             sql.Append($"select * from {tableName} where Field = @name");
             sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));

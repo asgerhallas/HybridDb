@@ -4,13 +4,13 @@ namespace HybridDb.Commands
 {
     public class SqlCommand : Command<Guid>
     {
-        public SqlCommand(SqlBuilder sql, int expectedRowCount)
+        public SqlCommand(SqlBuilderOld sql, int expectedRowCount)
         {
             Sql = sql ?? throw new ArgumentNullException(nameof(sql));
             ExpectedRowCount = expectedRowCount;
         }
 
-        public SqlBuilder Sql { get; }
+        public SqlBuilderOld Sql { get; }
         public int ExpectedRowCount { get; }
 
         public static Guid Execute(DocumentTransaction tx, SqlCommand command)

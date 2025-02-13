@@ -32,11 +32,11 @@ namespace HybridDb
 
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
-        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, SqlBuilder sql, out QueryStats stats) =>
+        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, SqlBuilderOld sql, out QueryStats stats) =>
             store.Query<object>(sql, out stats)
                 .Select(x => (IDictionary<string, object>)x);
 
-        public static IEnumerable<T> Query<T>(this IDocumentStore store, SqlBuilder sql, out QueryStats stats)
+        public static IEnumerable<T> Query<T>(this IDocumentStore store, SqlBuilderOld sql, out QueryStats stats)
         {
             using var tx = store.BeginTransaction();
 

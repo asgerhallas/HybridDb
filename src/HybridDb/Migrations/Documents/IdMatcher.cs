@@ -14,7 +14,7 @@ namespace HybridDb.Migrations.Documents
 
         public IReadOnlyList<string> Ids { get; }
 
-        public SqlBuilder Matches(IDocumentStore store, int? version) => new SqlBuilder()
+        public SqlBuilderOld Matches(IDocumentStore store, int? version) => new SqlBuilderOld()
             .Append(Ids.Any(), $" and Id in ({string.Join(", ", Ids.Select(x => $"'{x}'"))})");
 
         public bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)

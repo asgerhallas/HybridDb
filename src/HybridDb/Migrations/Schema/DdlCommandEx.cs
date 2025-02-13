@@ -11,12 +11,12 @@ namespace HybridDb.Migrations.Schema
                     : "object_id('tempdb..{0}') is not null",
                 store.Database.FormatTableName(tablename));
 
-        public static SqlBuilder BuildColumnSql(Column column)
+        public static SqlBuilderOld BuildColumnSql(Column column)
         {
             if (column.Type == null)
                 throw new ArgumentException($"Column {column.Name} must have a type");
 
-            var sql = new SqlBuilder();
+            var sql = new SqlBuilderOld();
 
             var sqlColumn = SqlTypeMap.Convert(column);
             sql.Append(column.DbType.ToString());

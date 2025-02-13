@@ -21,13 +21,13 @@ namespace HybridDb.Migrations.Schema.Commands
                 throw new InvalidOperationException("Cannot create a table with no columns.");
             }
 
-            var sql = new SqlBuilder()
+            var sql = new SqlBuilderOld()
                 .Append($"if not ({DdlCommandEx.BuildTableExistsSql(store, Table.Name)})")
                 .Append($"begin create table {store.Database.FormatTableNameAndEscape(Table.Name)} (");
 
             foreach (var (column, i) in Table.Columns.Select((column, i) => (column, i)))
             {
-                sql.Append(new SqlBuilder()
+                sql.Append(new SqlBuilderOld()
                     .Append(i > 0, ",")
                     .Append(store.Database.Escape(column.Name))
                     .Append(DdlCommandEx.BuildColumnSql(column)));
