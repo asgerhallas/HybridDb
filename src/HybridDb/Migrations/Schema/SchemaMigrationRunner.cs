@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -14,7 +14,7 @@ namespace HybridDb.Migrations.Schema
 {
     public class SchemaMigrationRunner
     {
-        static object locker = new object();
+        static object locker = new();
 
         readonly ILogger logger;
         readonly DocumentStore store;
@@ -82,7 +82,7 @@ namespace HybridDb.Migrations.Schema
         }
 
         static TransactionScope BeginTransaction() => 
-            new TransactionScope(
+            new(
                 TransactionScopeOption.RequiresNew, 
                 new TransactionOptions
                 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -12,8 +12,8 @@ namespace HybridDb
     /// </summary>
     public class ObjectToDictionaryRegistry
     {
-        private static readonly Dictionary<Type, Func<object, IDictionary<string, object>>> cache = new Dictionary<Type, Func<object, IDictionary<string, object>>>();
-        private static readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
+        private static readonly Dictionary<Type, Func<object, IDictionary<string, object>>> cache = new();
+        private static readonly ReaderWriterLockSlim rwLock = new();
 
         /// <summary>
         /// Loads the values of an object's properties into a <see cref="IDictionary{String,Object}"/>.

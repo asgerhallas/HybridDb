@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,12 +20,12 @@ namespace HybridDb.Serialization
     {
         Action<JsonSerializerSettings> setup = x => { };
 
-        List<JsonConverter> converters = new List<JsonConverter>();
+        List<JsonConverter> converters = new();
 
-        readonly List<IContractMutator> contractFilters = new List<IContractMutator>();
+        readonly List<IContractMutator> contractFilters = new();
         readonly HybridDbContractResolver contractResolver;
 
-        readonly List<Func<JsonProperty, bool>> ordering = new List<Func<JsonProperty, bool>>
+        readonly List<Func<JsonProperty, bool>> ordering = new()
         {
             p => p.PropertyName == "Id",
             p => p.PropertyType.IsValueType,
@@ -67,8 +67,7 @@ namespace HybridDb.Serialization
 
         public IDefaultSerializerConfigurator Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
         {
-            var memberExpression = selector.Body as MemberExpression;
-            if (memberExpression == null)
+            if (selector.Body is not MemberExpression memberExpression)
             {
                 throw new ArgumentException("Selector must point to a member.");
             }
@@ -85,25 +84,14 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public void AddConverters(params JsonConverter[] converters)
-        {
+        public void AddConverters(params JsonConverter[] converters) =>
             this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
-        }
 
-        public void AddContractMutator(IContractMutator mutator)
-        {
-            contractFilters.Add(mutator);
-        }
+        public void AddContractMutator(IContractMutator mutator) => contractFilters.Add(mutator);
 
-        public void Order(int index, Func<JsonProperty, bool> predicate)
-        {
-            ordering.Insert(index, predicate);
-        }
+        public void Order(int index, Func<JsonProperty, bool> predicate) => ordering.Insert(index, predicate);
 
-        public void Setup(Action<JsonSerializerSettings> action)
-        {
-            setup += action;
-        }
+        public void Setup(Action<JsonSerializerSettings> action) => setup += action;
 
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
@@ -152,22 +140,22 @@ namespace HybridDb.Serialization
 
         public class HybridDbContractResolver : DefaultContractResolver
         {
-            static readonly Regex matchesBackingFieldForAutoProperty = new Regex(@"\<(?<name>.*?)\>k__BackingField");
-            static readonly Regex matchesFieldNameForAnonymousType = new Regex(@"\<(?<name>.*?)\>i__Field");
+            static readonly Regex matchesBackingFieldForAutoProperty = new(@"\<(?<name>.*?)\>k__BackingField");
+            static readonly Regex matchesFieldNameForAnonymousType = new(@"\<(?<name>.*?)\>i__Field");
 
-            readonly ConcurrentDictionary<Type, JsonContract> contracts = new ConcurrentDictionary<Type, JsonContract>();
+            readonly ConcurrentDictionary<Type, JsonContract> contracts = new();
             readonly DefaultSerializer serializer;
 
-            public HybridDbContractResolver(DefaultSerializer serializer)
-            {
-                this.serializer = serializer;
-            }
+            public HybridDbContractResolver(DefaultSerializer serializer) => this.serializer = serializer;
 
-            public sealed override JsonContract ResolveContract(Type type)
-            {
-                return contracts.GetOrAdd(type, key =>
+            public sealed override JsonContract ResolveContract(Type type) =>
+                contracts.GetOrAdd(type, key =>
                 {
-                    var contract = base.ResolveContract(type);
+                    // Create a new contract. Don't use ResolveContract as that might
+                    // return a cached instance and that will then possibly be mutated twice
+                    // in the code below.
+                    var contract = base.CreateContract(type);
+
                     foreach (var filter in serializer.contractFilters)
                     {
                         filter.Mutate(contract);
@@ -175,7 +163,6 @@ namespace HybridDb.Serialization
 
                     return contract;
                 });
-            }
 
             protected override JsonObjectContract CreateObjectContract(Type objectType)
             {
@@ -204,12 +191,10 @@ namespace HybridDb.Serialization
                 return members;
             }
 
-            protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
-            {
-                return base.CreateProperties(type, memberSerialization)
+            protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) =>
+                base.CreateProperties(type, memberSerialization)
                     .OrderBy(Ordering).ThenBy(x => x.PropertyName)
                     .ToList();
-            }
 
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {
@@ -248,12 +233,10 @@ namespace HybridDb.Serialization
                 property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
             }
 
-            static void UppercaseFirstLetterOfFieldName(JsonProperty property)
-            {
+            static void UppercaseFirstLetterOfFieldName(JsonProperty property) =>
                 property.PropertyName =
                     property.PropertyName.First().ToString(CultureInfo.InvariantCulture).ToUpper() +
                     property.PropertyName.Substring(1);
-            }
         }
 
         public class AutomaticBackReferencesContractMutator : ContractMutator<JsonObjectContract>
@@ -328,12 +311,10 @@ namespace HybridDb.Serialization
                 serializer.Serialize(writer, value);
             }
 
-            public override bool CanConvert(Type objectType)
-            {
+            public override bool CanConvert(Type objectType) =>
                 throw new NotSupportedException(
                     "This converter is only supposed to be used directly on JsonProperty.Converter and JsonProperty.MemberConverter. " +
                     "If it is registered on the serializer to handle all types it will loop infinitely.");
-            }
         }
 
         public class DiscriminatedTypeConverter : JsonConverter
@@ -378,10 +359,7 @@ namespace HybridDb.Serialization
         {
             readonly Discriminators discriminators;
 
-            public DiscriminatorContractMutator(Discriminators discriminators)
-            {
-                this.discriminators = discriminators;
-            }
+            public DiscriminatorContractMutator(Discriminators discriminators) => this.discriminators = discriminators;
 
             public override void Mutate(JsonObjectContract contract)
             {
@@ -403,22 +381,15 @@ namespace HybridDb.Serialization
         {
             readonly Discriminators discriminator;
 
-            public DiscriminatorValueProvider(Discriminators discriminator)
-            {
-                this.discriminator = discriminator;
-            }
+            public DiscriminatorValueProvider(Discriminators discriminator) => this.discriminator = discriminator;
 
-            public void SetValue(object target, object value)
-            {
-                throw new NotSupportedException();
-            }
+            public void SetValue(object target, object value) => throw new NotSupportedException();
 
             public object GetValue(object target)
             {
-                string value;
-                if (!discriminator.TryGetFromType(target.GetType(), out value))
+                if (!discriminator.TryGetFromType(target.GetType(), out var value))
                 {
-                    throw new InvalidOperationException(string.Format("Type {0} is not discriminated.", target.GetType()));
+                    throw new InvalidOperationException($"Type {target.GetType()} is not discriminated.");
                 }
 
                 return value;

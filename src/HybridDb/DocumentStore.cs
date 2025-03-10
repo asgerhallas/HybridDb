@@ -83,7 +83,7 @@ namespace HybridDb
         public ILogger Logger { get;  }
         public Configuration Configuration { get; }
         public TableMode TableMode { get; }
-        public StoreStats Stats { get; } = new StoreStats();
+        public StoreStats Stats { get; } = new();
         public DocumentMigrationRunner DocumentMigrationRunner { get; }
 
         public bool IsInitialized { get; private set; }

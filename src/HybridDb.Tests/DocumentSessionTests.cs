@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -22,6 +23,33 @@ namespace HybridDb.Tests
     public class DocumentSessionTests : HybridDbTests
     {
         public DocumentSessionTests(ITestOutputHelper output) : base(output) { }
+
+        [Fact]
+        public async Task MultipleConcurrentReadsWhileSaving()
+        {
+            UseDefaultSerializer().EnableAutomaticBackReferences();
+
+            Document<OtherEntity>().With(x => x.Number);
+
+            var task1 = new Task(() =>
+            {
+                using var session = store.OpenSession();
+                session.Store(new OtherEntity() { Id = "a" });
+                session.SaveChanges();
+            });
+
+            var task2 = new Task(() =>
+            {
+                using var session = store.OpenSession();
+                session.Store(new OtherEntity() { Id = "b" });
+                session.SaveChanges();
+            });
+
+            task1.Start();
+            task2.Start();
+
+            await Task.WhenAll(task1, task2);
+        }
 
         [Fact]
         public void CanEvictEntity()

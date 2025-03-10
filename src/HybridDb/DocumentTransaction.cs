@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
@@ -286,7 +286,7 @@ namespace HybridDb
             public byte[] RowVersion { get; set; }
         }
 
-        static readonly HashSet<Type> simpleTypes = new HashSet<Type>
+        static readonly HashSet<Type> simpleTypes = new()
         {
             typeof(byte),
             typeof(sbyte),

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace HybridDb.Events
 {
@@ -37,13 +37,13 @@ namespace HybridDb.Events
         public IReadOnlyMetadata Metadata { get; }
         public T Data { get; }
 
-        public EventData<T> WithSeq(long seq) => new EventData<T>(StreamId, EventId, Name, seq, Metadata, Data);
-        public EventData<T> WithName(string name) => new EventData<T>(StreamId, EventId, name, SequenceNumber, Metadata, Data);
-        public EventData<T> WithMetadataKey(string key, string value) => new EventData<T>(StreamId, EventId, Name, SequenceNumber, new Metadata(Metadata) { [key] = value }, Data);
-        public EventData<T> WithoutMetadataKey(string key) => new EventData<T>(StreamId, EventId, Name, SequenceNumber, new Metadata(Metadata, key), Data);
-        public EventData<T> WithStreamId(string streamId) => new EventData<T>(streamId, EventId, Name, SequenceNumber, Metadata, Data);
-        public EventData<T> WithEventId(Guid eventId) => new EventData<T>(StreamId, eventId, Name, SequenceNumber, Metadata, Data);
+        public EventData<T> WithSeq(long seq) => new(StreamId, EventId, Name, seq, Metadata, Data);
+        public EventData<T> WithName(string name) => new(StreamId, EventId, name, SequenceNumber, Metadata, Data);
+        public EventData<T> WithMetadataKey(string key, string value) => new(StreamId, EventId, Name, SequenceNumber, new Metadata(Metadata) { [key] = value }, Data);
+        public EventData<T> WithoutMetadataKey(string key) => new(StreamId, EventId, Name, SequenceNumber, new Metadata(Metadata, key), Data);
+        public EventData<T> WithStreamId(string streamId) => new(streamId, EventId, Name, SequenceNumber, Metadata, Data);
+        public EventData<T> WithEventId(Guid eventId) => new(StreamId, eventId, Name, SequenceNumber, Metadata, Data);
 
-        public EventData<TData> WithData<TData>(TData data) => new EventData<TData>(StreamId, EventId, Name, SequenceNumber, Metadata, data);
+        public EventData<TData> WithData<TData>(TData data) => new(StreamId, EventId, Name, SequenceNumber, Metadata, data);
     }
 }

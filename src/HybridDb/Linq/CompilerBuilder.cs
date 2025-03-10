@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -38,14 +38,12 @@ namespace HybridDb.Linq
             }, new Emitter(emitter));
         }
 
-        public static Compiler Compose(params Func<Expression, Compiler, Compiler, BonsaiExpression>[] steps) =>
-            new Compiler(Compose(steps.Select(Convert)));
+        public static Compiler Compose(params Func<Expression, Compiler, Compiler, BonsaiExpression>[] steps) => new(Compose(steps.Select(Convert)));
 
         public static PostProcessor Compose(params Func<BonsaiExpression, PostProcessor, PostProcessor, BonsaiExpression>[] steps) =>
-            new PostProcessor(Compose(steps.Select(Convert)));
+            new(Compose(steps.Select(Convert)));
 
-        public static Emitter Compose(params Func<BonsaiExpression, Emitter, Emitter, string>[] steps) =>
-            new Emitter(Compose(steps.Select(Convert)));
+        public static Emitter Compose(params Func<BonsaiExpression, Emitter, Emitter, string>[] steps) => new(Compose(steps.Select(Convert)));
 
         static Func<TIn, TOut> Compose<TIn, TOut>(IEnumerable<Func<TIn, Func<TIn, TOut>, Func<TIn, TOut>, TOut>> steps)
         {
