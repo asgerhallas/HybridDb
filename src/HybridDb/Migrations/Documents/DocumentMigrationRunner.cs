@@ -41,7 +41,7 @@ namespace HybridDb.Migrations.Documents
                 {
                     configuration.Notify(new MigrationStarted(store));
 
-                    const int batchSize = 500;
+                    const int batchSize = 50;
 
                     var random = new Random();
 
