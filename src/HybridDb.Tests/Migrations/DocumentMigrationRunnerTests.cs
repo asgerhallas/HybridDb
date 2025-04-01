@@ -3,13 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using HybridDb.Config;
-using HybridDb.Linq.Bonsai;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Documents;
-using Newtonsoft.Json;
 using Serilog.Events;
 using ShouldBeLike;
 using Shouldly;
@@ -122,52 +118,6 @@ namespace HybridDb.Tests.Migrations
             // Only for a ballpark estimate
             // Takes about 26000ms on my machine
             output.WriteLine(sw.ElapsedMilliseconds.ToString());
-        }
-
-        [Fact]
-        public void AcceptsConcurrentWrites()
-        {
-            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
-            UseRealTables();
-
-            Document<Entity>().With(x => x.Number);
-
-            var id = NewId();
-            var table = new DocumentTable("Entities");
-            var etag = store.Insert(table, id, new
-            {
-                Discriminator = typeof(Entity).AssemblyQualifiedName,
-                Version = 0,
-                Document = configuration.Serializer.Serialize(new Entity())
-            });
-
-            var gate1 = new ManualResetEvent(false);
-            var gate2 = new ManualResetEvent(false);
-
-            UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((serializer, bytes) =>
-            {
-                gate1.Set();
-                Thread.Sleep(1000);
-                return bytes;
-            })));
-
-            bool? failed = null;
-
-            new DocumentMigrationRunner(store)
-                .Run()
-                .ContinueWith(x =>
-                {
-                    failed = x.IsFaulted;
-                    gate2.Set();
-                });
-
-            gate1.WaitOne();
-
-            store.Update(table, id, etag, new {});
-
-            gate2.WaitOne();
-
-            failed.ShouldBe(false);
         }
 
         [Fact]

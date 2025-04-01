@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -151,7 +151,7 @@ namespace HybridDb.Tests
 
             sql.Append($"select * from {tableName}");
 
-            var rows = store.Query<ProjectionWithNestedProperty>(sql, out _).ToList();
+            var rows = store.Query<ProjectionWithNestedProperty>(sql).ToList();
 
             rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
         }
@@ -204,7 +204,7 @@ namespace HybridDb.Tests
             sql.Append($"select * from {tableName} where Field != @name");
             sql.Parameters.Add("name", "Bjarne", table.Table.Columns.Single(x => x.Name == "Field"));
 
-            var rows = store.Query(sql, out _).ToList();
+            var rows = store.Query(sql).ToList();
 
             rows.Count().ShouldBe(2);
             var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
@@ -258,7 +258,7 @@ namespace HybridDb.Tests
             sql.Append($"select Field from {tableName} where Field = @name");
             sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
 
-            IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql, out _).Cast<dynamic>();
+            IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql).Cast<dynamic>();
 
             var rows = Query(t).ToList();
 
@@ -297,7 +297,7 @@ namespace HybridDb.Tests
 
             sql.Append($"select Field from {tableName}");
 
-            var rows = store.Query<string>(sql, out _).ToList();
+            var rows = store.Query<string>(sql).ToList();
 
             Assert.Equal("Asger", rows.Single());
         }
@@ -339,7 +339,7 @@ namespace HybridDb.Tests
             sql.Append($"select * from {tableName} where Field = @name");
             sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
 
-            var rows = store.Query(sql, out _).ToList();
+            var rows = store.Query(sql).ToList();
 
             rows.Count.ShouldBe(1);
             var row = rows.Single();
