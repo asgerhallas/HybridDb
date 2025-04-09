@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.Linq;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
@@ -23,10 +24,9 @@ namespace HybridDb.Migrations.Documents
                 Type == null || configuration.TryGetDesignFor(Type)?.Table == table
             );
 
-        public override SqlBuilderOld Matches(IDocumentStore store, int? version)
+        public override Sql Matches(IDocumentStore store, int? version)
         {
-            var builder = new SqlBuilderOld()
-                .Append(version != null, "Version < @version", new SqlParameter("version", version));
+            var builder = Sql.From(version != null, $"Version < {version}");
 
             return Matchers.Aggregate(builder, (current, matcher) => current.Append(matcher.Matches(store, version)));
         }

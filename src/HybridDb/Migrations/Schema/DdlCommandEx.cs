@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema
 {
@@ -11,18 +12,18 @@ namespace HybridDb.Migrations.Schema
                     : "object_id('tempdb..{0}') is not null",
                 store.Database.FormatTableName(tablename));
 
-        public static SqlBuilderOld BuildColumnSql(Column column)
+        public static Sql BuildColumnSql(Column column)
         {
             if (column.Type == null)
                 throw new ArgumentException($"Column {column.Name} must have a type");
 
-            var sql = new SqlBuilderOld();
+            var sql = Sql.Empty;
 
             var sqlColumn = SqlTypeMap.Convert(column);
             sql.Append(column.DbType.ToString());
             sql.Append(sqlColumn.Length != null, "(" + sqlColumn.Length + ")");
             sql.Append(column.Nullable, " NULL", " NOT NULL");
-            sql.Append(column.DefaultValue != null, $" DEFAULT '{column.DefaultValue}'");
+            sql.Append(column.DefaultValue != null, $" DEFAULT '{column.DefaultValue:@}'");
             sql.Append(column.IsPrimaryKey, " PRIMARY KEY");
 
             return sql;

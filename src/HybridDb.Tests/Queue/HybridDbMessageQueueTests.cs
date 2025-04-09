@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
@@ -14,6 +13,7 @@ using BoyBoy;
 using FakeItEasy;
 using HybridDb.Config;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
@@ -463,8 +463,8 @@ namespace HybridDb.Tests.Queue
 
             // Manipulate the topic directly in database - like returning errors to queue
             var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
-            store.Database.RawExecute(
-                $"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Topic] = 'myothertopic'");
+
+            store.Database.RawExecute(Sql.From($"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Topic] = 'myothertopic'"));
 
             var messages = new List<object>();
 

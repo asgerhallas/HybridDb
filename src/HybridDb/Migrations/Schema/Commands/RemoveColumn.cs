@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
@@ -23,8 +24,8 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            // TODO: sletter kun den første ser det ud til?
-            var dropConstraints = new SqlBuilderOld()
+            // TODO: sletter kun den fÃ¸rste ser det ud til?
+            var dropConstraints = Sql.Empty
                 .Append("DECLARE @ConstraintName nvarchar(200)")
                 .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
                 .Append($"WHERE PARENT_OBJECT_ID = OBJECT_ID('{Table.Name}') ")
@@ -32,9 +33,9 @@ namespace HybridDb.Migrations.Schema.Commands
                 .Append($"IF @ConstraintName IS NOT NULL ")
                 .Append($"EXEC('ALTER TABLE {Table.Name} DROP CONSTRAINT ' + @ConstraintName)");
 
-            store.Database.RawExecute(dropConstraints.ToString());
+            store.Database.RawExecute(dropConstraints);
 
-            store.Database.RawExecute($"alter table {store.Database.FormatTableNameAndEscape(Table.Name)} drop column {store.Database.Escape(Name)};");
+            store.Database.RawExecute(Sql.From($"alter table {store.Database.FormatTableNameAndEscape(Table.Name)} drop column {store.Database.Escape(Name)};"));
         }
     }
 }

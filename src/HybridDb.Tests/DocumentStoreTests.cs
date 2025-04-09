@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -147,11 +148,9 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilderOld();
+            var sql = Sql.Empty.Append($"select * from {tableName}");
 
-            sql.Append($"select * from {tableName}");
-
-            var rows = store.Query<ProjectionWithNestedProperty>(sql, out _).ToList();
+            var rows = store.Query<ProjectionWithNestedProperty>(sql).ToList();
 
             rows.Single().TheChildNestedDouble.ShouldBe(9.8d);
         }
@@ -199,12 +198,11 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilderOld();
 
-            sql.Append($"select * from {tableName} where Field != @name");
-            sql.Parameters.Add("name", "Bjarne", table.Table.Columns.Single(x => x.Name == "Field"));
+            var name = "Bjarne";
+            var sql = Sql.Empty.Append($"select * from {tableName} where Field != {name}");
 
-            var rows = store.Query(sql, out _).ToList();
+            var rows = store.Query(sql).ToList();
 
             rows.Count().ShouldBe(2);
             var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
@@ -253,12 +251,10 @@ namespace HybridDb.Tests
             var t = new { Field = "" };
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilderOld();
+            var name = "Asger";
+            var sql = Sql.Empty.Append($"select Field from {tableName} where Field = {name}");
 
-            sql.Append($"select Field from {tableName} where Field = @name");
-            sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
-
-            IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql, out _).Cast<dynamic>();
+            IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql).Cast<dynamic>();
 
             var rows = Query(t).ToList();
 
@@ -293,11 +289,9 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilderOld();
+            var sql = Sql.Empty.Append($"select Field from {tableName}");
 
-            sql.Append($"select Field from {tableName}");
-
-            var rows = store.Query<string>(sql, out _).ToList();
+            var rows = store.Query<string>(sql).ToList();
 
             Assert.Equal("Asger", rows.Single());
         }
@@ -334,12 +328,11 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
 
             var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilderOld();
+            var column = table.Table.Columns.Single(x => x.Name == "Field");
+            var name = "Asger";
+            var sql = Sql.Empty.Append($"select * from {tableName} where Field = {name}");
 
-            sql.Append($"select * from {tableName} where Field = @name");
-            sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
-
-            var rows = store.Query(sql, out _).ToList();
+            var rows = store.Query(sql).ToList();
 
             rows.Count.ShouldBe(1);
             var row = rows.Single();

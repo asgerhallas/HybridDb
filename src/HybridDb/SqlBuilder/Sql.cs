@@ -14,6 +14,13 @@ namespace HybridDb.SqlBuilder
         public bool IsEmpty => fragments.Count == 0;
         public IReadOnlyList<Fragment> Fragments => fragments;
 
+        /// <summary>
+        /// Do not use ToString
+        /// </summary>
+        public new void ToString() { }
+
+        public string ToString(IDocumentStore store) => Build(store, out _);
+
         public string Build(IDocumentStore store, out HybridDbParameters parameters)
         {
             parameters = new HybridDbParameters();
@@ -25,7 +32,7 @@ namespace HybridDb.SqlBuilder
         {
             var sql = new StringBuilder();
 
-            var previousValue = (string?)null;
+            string? previousValue = null;
 
             foreach (var fragment in fragments)
             {
@@ -128,6 +135,17 @@ namespace HybridDb.SqlBuilder
         public static Sql From(SqlStringHandler handler) => Sql.Empty.Append(handler.fragments);
         public Sql Append(SqlStringHandler handler) => Append(handler.fragments);
 
+        public static Sql From(SqlStringHandler handler, object param) => Sql.Empty.Append(handler, param);
+        public Sql Append(SqlStringHandler handler, object param)
+        {
+            Append(handler.fragments);
+            Append(param.ToHybridDbParameters().Parameters
+                .Select(x => new ParameterFragment(x))
+                .ToList());
+
+            return this;
+        }
+
         public static Sql From(Sql builder) => Empty.Append(builder);
         public Sql Append(Sql builder)
         {
@@ -151,13 +169,18 @@ namespace HybridDb.SqlBuilder
             return sql.Sql2;
         }
 
-        public static Sql From(bool predicate, SqlStringHandler handler) => Empty.Append(predicate, handler);
-        public Sql Append(bool predicate, SqlStringHandler handler) => predicate ? Append(handler) : this;
+        public static Sql From(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) => Empty.Append(predicate, handler);
+        public Sql Append(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) =>
+            predicate
+                ? Append(handler)
+                : elseHandler is { } @else
+                    ? Append(@else)
+                    : this;
 
         public static Sql From(bool predicate, Func<SqlStringHandler> handler) => Empty.Append(predicate, handler);
         public Sql Append(bool predicate, Func<SqlStringHandler> handler) => predicate ? Append(handler()) : this;
 
-        public static Sql From(string infix, SqlStringHandler handler) => Sql.Empty.Append(infix, Empty.Append(handler));
+        public static Sql From(string infix, SqlStringHandler handler) => Empty.Append(infix, Empty.Append(handler));
         public Sql Append(string infix, SqlStringHandler handler) => Append(infix, Empty.Append(handler));
 
         public static Sql From(string infix, Sql sql) => Sql.Empty.Append(infix, sql);

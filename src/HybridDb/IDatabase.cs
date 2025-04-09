@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb
 {
@@ -15,7 +16,7 @@ namespace HybridDb
         string FormatTableName(string tablename);
         string FormatTableNameAndEscape(string tablename);
 
-        int RawExecute(string sql, object parameters = null, bool schema = false, int? commandTimeout = null);
-        IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false);
+        int RawExecute(Sql sql, bool schema = false, int? commandTimeout = null);
+        IEnumerable<T> RawQuery<T>(Sql sql, bool schema = false);
     }
 }

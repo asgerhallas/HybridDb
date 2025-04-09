@@ -1,6 +1,7 @@
 using System.Linq;
 using HybridDb.Migrations.BuiltIn;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using ShouldBeLike;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +28,7 @@ namespace HybridDb.Tests.Migrations.BuiltIn
 
             TouchStore();
 
-            store.Database.RawQuery<string>("select CorrelationId from messages")
+            store.Database.RawQuery<string>(Sql.From("select CorrelationId from messages"))
                 .ToList()
                 .ShouldBeLike("id1", "id3" , "N/A");
         }

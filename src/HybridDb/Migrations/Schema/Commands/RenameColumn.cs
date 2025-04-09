@@ -1,4 +1,5 @@
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
@@ -21,10 +22,9 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            store.Database.RawExecute(new SqlBuilderOld()
+            store.Database.RawExecute(Sql.Empty
                 .Append(store.Database is SqlServerUsingRealTables, "", "tempdb..")
-                .Append($"sp_rename '{store.Database.FormatTableNameAndEscape(Table.Name)}.{OldColumnName}', '{NewColumnName}', 'COLUMN'")
-                .ToString());
+                .Append($"sp_rename '{store.Database.FormatTableNameAndEscape(Table.Name)}.{OldColumnName}', '{NewColumnName}', 'COLUMN'"));
         }
     }
 }

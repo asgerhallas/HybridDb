@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Data;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb
 {
@@ -18,6 +19,8 @@ namespace HybridDb
         DocumentTransaction BeginTransaction(IsolationLevel level = IsolationLevel.ReadCommitted, TimeSpan? connectionTimeout = null);
         DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted, TimeSpan? connectionTimeout = null);
 
+        //void Execute(Sql sql);
+        //void Execute(DocumentTransaction tx, Sql sql);
         void Execute(DdlCommand command);
         object Execute(DocumentTransaction tx, DmlCommand command);
         T Execute<T>(DocumentTransaction tx, Command<T> command);

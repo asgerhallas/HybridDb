@@ -10,6 +10,7 @@ using HybridDb.Config;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Microsoft.Data.SqlClient;
 using ShinySwitch;
 using ShouldBeLike;
@@ -745,8 +746,12 @@ namespace HybridDb.Tests
 
             using var session = store.OpenSession();
 
-            session.Store(new Entity { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
-            session.Store(new Entity { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+            session.Store(new Entity
+                { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
+
+            session.Store(new Entity
+                { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+
             session.SaveChanges();
             session.Advanced.Clear();
 
@@ -1597,9 +1602,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnProjectionUsingSqlBuilder()
         {
-            var sql = new SqlBuilderOld();
-
-            sql.Append(@"
+            var sql = Sql.Empty.Append(@"
                 select '1.1' ProjectedProperty, '1.2' TheChildNestedProperty
                 union
                 select '2.1' ProjectedProperty, '2.2' TheChildNestedProperty
@@ -1614,6 +1617,21 @@ namespace HybridDb.Tests
             entities[0].TheChildNestedProperty.ShouldBe("1.2");
             entities[1].ProjectedProperty.ShouldBe("2.1");
             entities[1].TheChildNestedProperty.ShouldBe("2.2");
+        }
+
+        [Fact]
+        public void CanQueryAndReturnSimpleTypeUsingSqlBuilder()
+        {
+            var sql = Sql.From(@"
+                select 1
+            ");
+
+            using var session = store.OpenSession();
+
+            var result = session.Query<int>(sql).ToList();
+
+            result.Count.ShouldBe(1);
+            result[0].ShouldBe(1);
         }
 
         [Fact]

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Documents
 {
@@ -14,8 +15,7 @@ namespace HybridDb.Migrations.Documents
 
         public IReadOnlyList<string> Ids { get; }
 
-        public SqlBuilderOld Matches(IDocumentStore store, int? version) => new SqlBuilderOld()
-            .Append(Ids.Any(), $" and Id in ({string.Join(", ", Ids.Select(x => $"'{x}'"))})");
+        public Sql Matches(IDocumentStore store, int? version) => Sql.From(Ids.Any(), $" and Id in ({string.Join(", ", Ids.Select(x => $"'{x}'"))})");
 
         public bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)
         {

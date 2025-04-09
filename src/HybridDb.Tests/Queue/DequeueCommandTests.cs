@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace HybridDb.Tests.Queue
 
             // Manipulate the topic directly in database - like returning errors to queue
             var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
-            store.Database.RawExecute($"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Id] = 'OtherId', [Topic] = 'OtherTopic'");
+            store.Database.RawExecute(Sql.From($"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Id] = 'OtherId', [Topic] = 'OtherTopic'"));
 
             var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),

@@ -1,4 +1,5 @@
 using HybridDb.Migrations.Schema;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Queue
 {
@@ -19,7 +20,7 @@ namespace HybridDb.Queue
         {
             var tableName = store.Database.FormatTableName(QueueTable.Name);
 
-            store.Database.RawExecute($@"
+            store.Database.RawExecute(Sql.From($@"
                 if (object_id('{tableName}', 'U') is null)
                 begin
                     CREATE TABLE [dbo].[{tableName}] (
@@ -38,7 +39,7 @@ namespace HybridDb.Queue
                     )
     
                     CREATE UNIQUE NONCLUSTERED INDEX [{tableName}_Topic_Id] ON [dbo].[{tableName}] ([Topic], [Id])  
-                end", schema: true);
+                end"), schema: true);
         }
     }
 }

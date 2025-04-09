@@ -4,6 +4,7 @@ using HybridDb.Config;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.BuiltIn
 {
@@ -30,7 +31,7 @@ namespace HybridDb.Migrations.BuiltIn
 
                     // Rename the old table and the primary key
                     store.Execute(new RenameTable(table.Name, $"{table.Name}_old"));
-                    store.Database.RawExecute($"sp_rename [PK_{table.Name}], [PK_{table.Name}_old]");
+                    store.Database.RawExecute(Sql.From($"sp_rename [PK_{table.Name}], [PK_{table.Name}_old]"));
 
                     // Create the new table as it should be, with correct ordering of columns
                     store.Execute(table.GetCreateCommand());
@@ -44,26 +45,25 @@ namespace HybridDb.Migrations.BuiltIn
                     var identityInsertOn = columns.Count(x => x.IsIdentity == 1) == columnsOld.Count(x => x.IsIdentity == 1);
 
                     // Move the data from the old to the new table
-                    store.Database.RawExecute(
+                    store.Database.RawExecute(Sql.From(
                         $"""
                              {(identityInsertOn ? $"set identity_insert {tableNameEscaped} on;" : "")}
                              insert into {tableNameEscaped} ({columnNamesOldEscaped})
                              select {columnNamesOldEscaped} from {oldTableNameEscaped};
                              {(identityInsertOn ? $"set identity_insert {tableNameEscaped} off;" : "")}
-                         """);
+                         """));
 
-                    store.Database.RawExecute($"drop table {oldTableNameEscaped};");
+                    store.Database.RawExecute(Sql.From($"drop table {oldTableNameEscaped};"));
                 }
             }
 
             static List<(string Name, int IsIdentity)> GetColumns(IDatabase database, string tableName) =>
-                database.RawQuery<(string Name, int IsIdentity)>(
-                    """
+                database.RawQuery<(string Name, int IsIdentity)>(Sql.From(
+                    $"""
                         select column_name, columnproperty(object_id('messages'), COLUMN_NAME, 'IsIdentity')
                         from information_schema.columns
-                        where table_name = @TableName
-                    """,
-                    new { TableName = tableName }).ToList();
+                        where table_name = {tableName}
+                    """)).ToList();
 
             public override string ToString() => "Drop old message tables and recreate message tables";
         }

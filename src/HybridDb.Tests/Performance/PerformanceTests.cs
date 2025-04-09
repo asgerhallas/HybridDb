@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using HybridDb.Commands;
+using HybridDb.SqlBuilder;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -137,7 +138,7 @@ namespace HybridDb.Tests.Performance
                     decimal time = 0;
                     for (var i = 0; i < 10; i++)
                     {
-                        time += Time(() => ((DocumentStore)store).Database.RawQuery<object>("select * from #LocalEntities").ToList(), 1m);
+                        time += Time(() => store.Database.RawQuery<object>(Sql.From("select * from #LocalEntities")).ToList(), 1m);
                     }
 
                     // The below constant is chosen to get as close 1.0 on my machine as possible.

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Events;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb
 {
@@ -15,7 +16,7 @@ namespace HybridDb
 
         IQueryable<T> Query<T>() where T : class;
 
-        IEnumerable<T> Query<T>(SqlBuilderOld sql) where T : class;
+        IEnumerable<T> Query<T>(Sql sql);
 
         T Store<T>(T entity) where T: class;
         T Store<T>(T entity, Guid? etag) where T : class;

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Transactions;
 using Dapper;
 using HybridDb.Migrations.Schema.Commands;
+using HybridDb.SqlBuilder;
 using Microsoft.Extensions.Logging;
 using static Indentional.Text;
 using IsolationLevel = System.Transactions.IsolationLevel;
@@ -57,7 +58,7 @@ namespace HybridDb.Migrations.Schema
         {
             var sw = Stopwatch.StartNew();
 
-            store.Database.RawExecute($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;");
+            store.Database.RawExecute(Sql.From($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;"));
 
             if (isTempTables)
             {
@@ -126,19 +127,18 @@ namespace HybridDb.Migrations.Schema
 
             var hybridDbTableName = store.Database.FormatTableNameAndEscape(metadata.Name);
 
-            store.Database.RawExecute($@"
+            store.Database.RawExecute(Sql.From($@"
                 if not exists (select * from {hybridDbTableName})
-                    insert into {hybridDbTableName} (SchemaVersion) values (-1);", 
+                    insert into {hybridDbTableName} (SchemaVersion) values (-1);"), 
                 schema: true);
         }
 
         int GetAndUpdateSchemaVersion(int nextSchemaVersion)
         {
-            var currentSchemaVersion = store.Database.RawQuery<int>($@"
+            var currentSchemaVersion = store.Database.RawQuery<int>(Sql.From($@"
                 update {store.Database.FormatTableNameAndEscape("HybridDb")}
-                set [SchemaVersion] = @nextSchemaVersion
-                output DELETED.SchemaVersion", 
-                new { nextSchemaVersion }, 
+                set [SchemaVersion] = {nextSchemaVersion}
+                output DELETED.SchemaVersion"), 
                 schema: true
             ).SingleOrDefault();
 
@@ -230,9 +230,7 @@ namespace HybridDb.Migrations.Schema
                 var design = store.Configuration.TryGetDesignByTablename(tablename);
                 if (design == null) continue;
 
-                store.Database.RawExecute(
-                    $"update {store.Database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection=@AwaitsReprojection",
-                    new { AwaitsReprojection = true },
+                store.Database.RawExecute(Sql.From($"update {store.Database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection={true}"),
                     schema: true,
                     commandTimeout: 300);
             }

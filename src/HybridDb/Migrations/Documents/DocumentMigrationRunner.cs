@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Linq.Old;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Microsoft.Extensions.Logging;
 using static Indentional.Text;
 
@@ -60,36 +61,31 @@ namespace HybridDb.Migrations.Documents
                             var baseDesign = configuration.TryGetDesignByTablename(table.Name)
                                              ?? throw new InvalidOperationException($"Design not found for table '{table.Name}'");
 
-                            var numberOfRowsLeft = 0;
-
                             while (!cts.IsCancellationRequested)
                             {
                                 try
                                 {
                                     var where = command.Matches(store, migration?.Version);
 
-                                    var skip = numberOfRowsLeft > batchSize
-                                        ? random.Next(0, numberOfRowsLeft)
-                                        : 0;
+                                    using var tx = store.BeginTransaction();
 
-                                    var rows = store
-                                        .Query(table, out var stats,
-                                            select: "*",
-                                            where: where.ToString(),
-                                            window: new SkipTake(skip, batchSize),
-                                            parameters: where.Parameters)
+                                    var formattedTableName = store.Database.FormatTableNameAndEscape(table.Name);
+
+                                    var totalResults = tx
+                                        .Query<int>(Sql.From($"select count(*) from {formattedTableName} where {where}"))
+                                        .First();
+
+                                    if (totalResults == 0) break;
+
+                                    var rows = tx
+                                        .Query<object>(Sql.From($"select top {batchSize} * from {formattedTableName} with (xlock, readpast) where {where}"))
+                                        .Select(x => (IDictionary<string, object>)x)
                                         .ToList();
-
-                                    if (stats.TotalResults == 0) break;
-
-                                    numberOfRowsLeft = stats.TotalResults - stats.RetrievedResults;
 
                                     logger.LogInformation(Indent(@"
                                         Migrating {NumberOfDocumentsInBatch} documents from {Table}. 
                                         {NumberOfPendingDocuments} documents left."
-                                    ), stats.RetrievedResults, table.Name, stats.TotalResults);
-
-                                    using var tx = store.BeginTransaction();
+                                    ), rows.Count, table.Name, totalResults);
 
                                     foreach (var row in rows)
                                     {

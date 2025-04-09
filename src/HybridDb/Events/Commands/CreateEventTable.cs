@@ -1,4 +1,5 @@
-﻿using HybridDb.Migrations.Schema;
+using HybridDb.Migrations.Schema;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Events.Commands
 {
@@ -19,7 +20,7 @@ namespace HybridDb.Events.Commands
         {
             var tableName = store.Database.FormatTableName(EventTable.Name);
 
-            store.Database.RawExecute($@"
+            store.Database.RawExecute(Sql.From($@"
                 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName}')
                 BEGIN                       
                     CREATE TABLE [dbo].[{tableName}] (
@@ -43,7 +44,7 @@ namespace HybridDb.Events.Commands
 
                     CREATE NONCLUSTERED INDEX [{tableName}_CommitId] ON [dbo].[{tableName}] ([CommitId])  
 
-                END", schema: true);
+                END"), schema: true);
         }
     }
 }

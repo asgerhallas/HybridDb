@@ -8,6 +8,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using Microsoft.Data.SqlClient;
 using IsolationLevel = System.Data.IsolationLevel;
 
@@ -191,23 +192,14 @@ namespace HybridDb
             return (stats, result);
         }
 
-        public (QueryStats stats, IEnumerable<TProjection> rows) Query<TProjection>(SqlBuilderOld sql)
+        public IEnumerable<TProjection> Query<TProjection>(Sql sql)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
 
-            var timer = Stopwatch.StartNew();
+            var result = SqlConnection.Query<TProjection>(sql.Build(Store, out var parameters), parameters, SqlTransaction).ToList();
 
-            var result = SqlConnection.Query<TProjection>(sql.ToString(), sql.Parameters, SqlTransaction).ToList();
-
-            var stats = new QueryStats
-            {
-                TotalResults = result.Count,
-                FirstRowNumberOfWindow = 0,
-                QueryDurationInMilliseconds = timer.ElapsedMilliseconds
-            };
-
-            return (stats, result);
+            return result;
         }
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)

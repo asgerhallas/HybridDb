@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,7 +19,7 @@ namespace HybridDb.Tests.Migrations
             var tablename = "messages";
             var tableNameFormatted = store.Database.FormatTableName(tablename);
 
-            store.Database.RawExecute($@"
+            store.Database.RawExecute(Sql.From($@"
                 if (object_id('{tableNameFormatted}', 'U') is null)
                 begin
                     CREATE TABLE [dbo].[{tableNameFormatted}] (
@@ -30,9 +31,9 @@ namespace HybridDb.Tests.Migrations
 
                         CONSTRAINT [PK_{tableNameFormatted}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
-                end", schema: true);
+                end"), schema: true);
 
-            store.Database.RawExecute(@$"
+            store.Database.RawExecute(Sql.From(@$"
                 insert into {store.Database.FormatTableNameAndEscape(tablename)} 
                 (Topic, Id, CommitId, Discriminator, Message)
                 values (@Topic, @Id, @CommitId, @Discriminator, @Message);",
@@ -43,7 +44,7 @@ namespace HybridDb.Tests.Migrations
                     CommitId = Guid.NewGuid().ToString(),
                     Discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Message)),
                     Message = configuration.Serializer.Serialize(new Message()),
-                });
+                }));
 
             ResetConfiguration();
 
@@ -65,7 +66,7 @@ namespace HybridDb.Tests.Migrations
             var tablename = "messages";
             var tableNameFormatted = store.Database.FormatTableName(tablename);
 
-            store.Database.RawExecute($@"
+            store.Database.RawExecute(Sql.From($@"
                 if (object_id('{tableNameFormatted}', 'U') is null)
                 begin
                     CREATE TABLE [dbo].[{tableNameFormatted}] (
@@ -77,9 +78,9 @@ namespace HybridDb.Tests.Migrations
 
                         CONSTRAINT [PK_{tableNameFormatted}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
-                end", schema: true);
+                end"), schema: true);
 
-            store.Database.RawExecute(@$"
+            store.Database.RawExecute(Sql.From(@$"
                 insert into {store.Database.FormatTableNameAndEscape(tablename)} 
                 (Topic, Id, CommitId, Discriminator, Message)
                 values (@Topic, @Id, @CommitId, @Discriminator, @Message);",
@@ -90,7 +91,7 @@ namespace HybridDb.Tests.Migrations
                     CommitId = Guid.NewGuid().ToString(),
                     Discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Message)),
                     Message = configuration.Serializer.Serialize(new Message()),
-                });
+                }));
 
             ResetConfiguration();
 

@@ -1,3 +1,5 @@
+using HybridDb.SqlBuilder;
+
 namespace HybridDb.Migrations.Schema.Commands
 {
     public class RemoveTable : DdlCommand
@@ -15,7 +17,7 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            store.Database.RawExecute($"drop table {store.Database.FormatTableNameAndEscape(Tablename)};");
+            store.Database.RawExecute(Sql.From($"drop table {store.Database.FormatTableNameAndEscape(Tablename)};"));
         }
     }
 }
