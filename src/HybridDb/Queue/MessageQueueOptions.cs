@@ -11,7 +11,7 @@ namespace HybridDb.Queue
         public Version Version { get; set; } = new(1, 0);
         public TimeSpan IdleDelay { get; set; } = TimeSpan.FromMilliseconds(100);
         public TimeSpan ExceptionBackoff { get; set; } = TimeSpan.FromSeconds(15);
-        public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public int MaxConcurrency { get; set; } = 4;
         public string TableName { get; set; } = "messages";
         public bool UseLocalEnqueueTrigger { get; set; } = true;
