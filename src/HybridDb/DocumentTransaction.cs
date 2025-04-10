@@ -9,7 +9,6 @@ using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.SqlBuilder;
-using Microsoft.Data.SqlClient;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
