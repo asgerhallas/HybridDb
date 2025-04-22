@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
@@ -191,23 +191,14 @@ namespace HybridDb
             return (stats, result);
         }
 
-        public (QueryStats stats, IEnumerable<TProjection> rows) Query<TProjection>(SqlBuilder sql)
+        public IEnumerable<TProjection> Query<TProjection>(SqlBuilder sql)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
 
-            var timer = Stopwatch.StartNew();
-
             var result = SqlConnection.Query<TProjection>(sql.ToString(), sql.Parameters, SqlTransaction).ToList();
 
-            var stats = new QueryStats
-            {
-                TotalResults = result.Count,
-                FirstRowNumberOfWindow = 0,
-                QueryDurationInMilliseconds = timer.ElapsedMilliseconds
-            };
-
-            return (stats, result);
+            return result;
         }
 
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
@@ -286,7 +277,7 @@ namespace HybridDb
             public byte[] RowVersion { get; set; }
         }
 
-        static readonly HashSet<Type> simpleTypes = new HashSet<Type>
+        static readonly HashSet<Type> simpleTypes = new()
         {
             typeof(byte),
             typeof(sbyte),

@@ -7,8 +7,8 @@ namespace HybridDb.Serialization
     public class SerializationContext
     {
         readonly Type[] valueTypes;
-        readonly HashSet<object> uniqueSerializedObjects = new HashSet<object>(new ReferenceEqualityComparer<object>());
-        readonly Stack<object> ancestors = new Stack<object>();
+        readonly HashSet<object> uniqueSerializedObjects = new(new ReferenceEqualityComparer<object>());
+        readonly Stack<object> ancestors = new();
 
         public SerializationContext(params Type[] valueTypes)
         {

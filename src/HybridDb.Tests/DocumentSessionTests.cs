@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Commands;
 using HybridDb.Config;
@@ -22,6 +23,33 @@ namespace HybridDb.Tests
     public class DocumentSessionTests : HybridDbTests
     {
         public DocumentSessionTests(ITestOutputHelper output) : base(output) { }
+
+        [Fact]
+        public async Task MultipleConcurrentReadsWhileSaving()
+        {
+            UseDefaultSerializer().EnableAutomaticBackReferences();
+
+            Document<OtherEntity>().With(x => x.Number);
+
+            var task1 = new Task(() =>
+            {
+                using var session = store.OpenSession();
+                session.Store(new OtherEntity() { Id = "a" });
+                session.SaveChanges();
+            });
+
+            var task2 = new Task(() =>
+            {
+                using var session = store.OpenSession();
+                session.Store(new OtherEntity() { Id = "b" });
+                session.SaveChanges();
+            });
+
+            task1.Start();
+            task2.Start();
+
+            await Task.WhenAll(task1, task2);
+        }
 
         [Fact]
         public void CanEvictEntity()
@@ -717,8 +745,12 @@ namespace HybridDb.Tests
 
             using var session = store.OpenSession();
 
-            session.Store(new Entity { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
-            session.Store(new Entity { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+            session.Store(new Entity
+                { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
+
+            session.Store(new Entity
+                { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+
             session.SaveChanges();
             session.Advanced.Clear();
 
@@ -1586,6 +1618,23 @@ namespace HybridDb.Tests
             entities[0].TheChildNestedProperty.ShouldBe("1.2");
             entities[1].ProjectedProperty.ShouldBe("2.1");
             entities[1].TheChildNestedProperty.ShouldBe("2.2");
+        }
+
+        [Fact]
+        public void CanQueryAndReturnSimpleTypeUsingSqlBuilder()
+        {
+            var sql = new SqlBuilder();
+
+            sql.Append(@"
+                select 1
+            ");
+
+            using var session = store.OpenSession();
+
+            var result = session.Query<int>(sql).ToList();
+
+            result.Count.ShouldBe(1);
+            result[0].ShouldBe(1);
         }
 
         [Fact]

@@ -19,10 +19,10 @@ namespace HybridDb.Events
         public long Begin { get; }
         public long End { get; }
 
-        public static Commit<T> Create<T>(Guid id, int generation, long end, IReadOnlyList<EventData<T>> events) => 
-            new Commit<T>(id, generation, end + 1 - events.Count, end, events);
+        public static Commit<T> Create<T>(Guid id, int generation, long end, IReadOnlyList<EventData<T>> events) =>
+            new(id, generation, end + 1 - events.Count, end, events);
 
-        public static Commit<T> Empty<T>() => new Commit<T>(Guid.Empty, 0, -1, -1);
+        public static Commit<T> Empty<T>() => new(Guid.Empty, 0, -1, -1);
     }
 
     public class Commit<T> : Commit
@@ -34,7 +34,7 @@ namespace HybridDb.Events
             : base(id, generation, begin, end) => Events = events;
 
         public Commit<TOut> Map<TOut>(Func<EventData<T>, IEnumerable<EventData<TOut>>> selector) =>
-            new Commit<TOut>(Id, Generation, Begin, End, Events.SelectMany(selector).ToList());
+            new(Id, Generation, Begin, End, Events.SelectMany(selector).ToList());
 
         public IReadOnlyList<EventData<T>> Events { get; }
     }
