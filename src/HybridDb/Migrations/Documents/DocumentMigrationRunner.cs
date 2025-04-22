@@ -167,7 +167,8 @@ namespace HybridDb.Migrations.Documents
             {
                 store.Logger.LogError(exception,
                     "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
-                    concreteDesign.DocumentType.FullName, key,
+                    concreteDesign.DocumentType.FullName,
+                    key,
                     concreteDesign.Table.Name);
 
                 return false;

@@ -8,6 +8,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using static System.Collections.Specialized.BitVector32;
 
@@ -163,11 +164,21 @@ namespace HybridDb.Queue
                             {
                                 break;
                             }
+                            catch (SqlException exception) when (exception.Number == -2)
+                            {
+                                // Timouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
+
+                                logger.LogInformation(exception, $"{nameof(HybridDbMessageQueue)} failed with timeout. Will retry.");
+
+                                await Task.Delay(options.ExceptionBackoff, cts.Token);
+                            }
                             catch (Exception exception)
                             {
                                 events.OnNext(new QueueFailed(exception, cts.Token));
 
-                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                logger.LogWarning(
+                                    exception,
+                                    $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
                                 await Task.Delay(options.ExceptionBackoff, cts.Token);
                             }
