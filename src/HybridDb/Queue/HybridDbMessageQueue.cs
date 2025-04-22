@@ -8,6 +8,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
 namespace HybridDb.Queue
@@ -103,25 +104,25 @@ namespace HybridDb.Queue
                                     try
                                     {
                                         await Task.Factory.StartNew(async () =>
-                                        {
-                                            try
                                             {
-                                                using var _ = Time("HandleMessage");
+                                                try
+                                                {
+                                                    using var _ = Time("HandleMessage");
 
-                                                await HandleMessage(session, message);
-                                            }
-                                            finally
-                                            {
-                                                // open the gate for the next message, when this message is handled.
-                                                release();
-                                                DisposeSession(session);
-                                            }
-                                        },
-                                        cts.Token,
-                                        TaskCreationOptions.DenyChildAttach,
-                                        TaskScheduler.Default);
+                                                    await HandleMessage(session, message);
+                                                }
+                                                finally
+                                                {
+                                                    // open the gate for the next message, when this message is handled.
+                                                    release();
+                                                    DisposeSession(session);
+                                                }
+                                            },
+                                            cts.Token,
+                                            TaskCreationOptions.DenyChildAttach,
+                                            TaskScheduler.Default);
                                     }
-                                    catch
+                                    catch (Exception e)
                                     {
                                         release();
                                         DisposeSession(session);
@@ -140,11 +141,21 @@ namespace HybridDb.Queue
                             {
                                 break;
                             }
+                            catch (SqlException exception) when (exception.Number == -2)
+                            {
+                                // Timouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
+
+                                logger.LogInformation(exception, $"{nameof(HybridDbMessageQueue)} failed with timeout. Will retry.");
+
+                                await Task.Delay(options.ExceptionBackoff, cts.Token);
+                            }
                             catch (Exception exception)
                             {
                                 events.OnNext(new QueueFailed(exception, cts.Token));
 
-                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                logger.LogWarning(
+                                    exception,
+                                    $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
                                 await Task.Delay(options.ExceptionBackoff, cts.Token);
                             }
