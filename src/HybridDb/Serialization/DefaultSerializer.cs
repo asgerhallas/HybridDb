@@ -84,14 +84,33 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public void AddConverters(params JsonConverter[] newConverters) =>
+        public DefaultSerializer AddConverters(params JsonConverter[] newConverters)
+        {
             converters = converters.Concat(newConverters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
 
-        public void AddContractMutator(IContractMutator mutator) => contractFilters.Add(mutator);
+            return this;
+        }
 
-        public void Order(int index, Func<JsonProperty, bool> predicate) => ordering.Insert(index, predicate);
+        public DefaultSerializer AddContractMutator(IContractMutator mutator)
+        {
+            contractFilters.Add(mutator);
 
-        public void Setup(Action<JsonSerializerSettings> action) => setup += action;
+            return this;
+        }
+
+        public DefaultSerializer Order(int index, Func<JsonProperty, bool> predicate)
+        {
+            ordering.Insert(index, predicate);
+
+            return this;
+        }
+
+        public DefaultSerializer Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+
+            return this;
+        }
 
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
@@ -115,27 +134,24 @@ namespace HybridDb.Serialization
             return JsonSerializer.Create(settings);
         }
 
-
         public virtual string Serialize(object obj)
         {
-            using (var stream = new StringWriter())
-            using (var writer = new JsonTextWriter(stream))
-            {
-                CreateSerializer().Serialize(writer, obj);
+            using var stream = new StringWriter();
+            using var writer = new JsonTextWriter(stream);
 
-                writer.Flush();
+            CreateSerializer().Serialize(writer, obj);
 
-                return stream.ToString();
-            }
+            writer.Flush();
+
+            return stream.ToString();
         }
 
         public virtual object Deserialize(string data, Type type)
         {
-            using (var stream = new StringReader(data))
-            using (var reader = new JsonTextReader(stream))
-            {
-                return CreateSerializer().Deserialize(reader, type);
-            }
+            using var stream = new StringReader(data);
+            using var reader = new JsonTextReader(stream);
+
+            return CreateSerializer().Deserialize(reader, type);
         }
 
         public class HybridDbContractResolver : DefaultContractResolver
