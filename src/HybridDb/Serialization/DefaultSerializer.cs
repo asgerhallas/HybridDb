@@ -16,7 +16,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace HybridDb.Serialization
 {
-    internal class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+    public class DefaultSerializer : ISerializer
     {
         Action<JsonSerializerSettings> setup = x => { };
 
@@ -39,7 +39,7 @@ namespace HybridDb.Serialization
             contractResolver = new HybridDbContractResolver(this);
         }
 
-        public IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes)
+        public DefaultSerializer EnableAutomaticBackReferences(params Type[] valueTypes)
         {
             AddContractMutator(new AutomaticBackReferencesContractMutator());
 
@@ -52,7 +52,7 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public IDefaultSerializerConfigurator EnableDiscriminators(params Discriminator[] discriminators)
+        public DefaultSerializer EnableDiscriminators(params Discriminator[] discriminators)
         {
             var collection = new Discriminators(discriminators);
 
@@ -65,7 +65,7 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public IDefaultSerializerConfigurator Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
+        public DefaultSerializer Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
         {
             if (selector.Body is not MemberExpression memberExpression)
             {
@@ -77,15 +77,15 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public IDefaultSerializerConfigurator Hide<T>(string name, Func<object> @default)
+        public DefaultSerializer Hide<T>(string name, Func<object> @default)
         {
             AddContractMutator(new HidePropertyContractMutatator<T>(name, @default));
 
             return this;
         }
 
-        public void AddConverters(params JsonConverter[] converters) =>
-            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        public void AddConverters(params JsonConverter[] newConverters) =>
+            converters = converters.Concat(newConverters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
 
         public void AddContractMutator(IContractMutator mutator) => contractFilters.Add(mutator);
 
