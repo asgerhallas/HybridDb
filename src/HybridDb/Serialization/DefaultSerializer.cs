@@ -156,8 +156,7 @@ namespace HybridDb.Serialization
 
         public class HybridDbContractResolver : DefaultContractResolver
         {
-            static readonly Regex matchesBackingFieldForAutoProperty = new(@"\<(?<name>.*?)\>k__BackingField");
-            static readonly Regex matchesFieldNameForAnonymousType = new(@"\<(?<name>.*?)\>i__Field");
+            static readonly Regex matchesCompilerGeneratedBackingField = new(@"\<(?<name>.*?)\>");
 
             readonly ConcurrentDictionary<Type, JsonContract> contracts = new();
             readonly DefaultSerializer serializer;
@@ -207,10 +206,31 @@ namespace HybridDb.Serialization
                 return members;
             }
 
-            protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) =>
-                base.CreateProperties(type, memberSerialization)
+            protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
+            {
+                var members = GetSerializableMembers(type);
+
+                return members
+                    // First we eliminate duplicates which have the exact same name before we normalize them,
+                    // see NormalizeCompilerGeneratedBackingFieldName. This would be virtual and overridden auto properties.
+                    // Members are ordered by most derived first, and we keep the most derived member, see GetSerializableMembers.
+                    // GroupBy keeps the original ordering: https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.groupby?view=net-9.0
+                    .GroupBy(x => x.Name, x => x, (_, group) => group.First())
+                    .Select(member => CreateProperty(member, memberSerialization))
+                    .GroupBy(x => x.PropertyName)
+                    .Select(x =>
+                    {
+                        if (x.Count() == 1) return x.Single();
+
+                        // If we, after NormalizeCompilerGeneratedBackingFieldName, have members with the same name, we must fail
+                        // to avoid losing data on serialization. This would be automatic parameter fields captured by readonly properties
+                        // or properties declared with the new keyword.
+
+                        throw new JsonSerializationException($"Duplicate property name '{x.Key}'. Counted {x.Count()}.");
+                    })
                     .OrderBy(Ordering).ThenBy(x => x.PropertyName)
                     .ToList();
+            }
 
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {
@@ -219,8 +239,7 @@ namespace HybridDb.Serialization
                 property.Writable = member.MemberType == MemberTypes.Field;
                 property.Readable = member.MemberType == MemberTypes.Field;
 
-                NormalizeAutoPropertyBackingFieldName(property);
-                NormalizeAnonymousTypeFieldName(property);
+                NormalizeCompilerGeneratedBackingFieldName(property);
                 UppercaseFirstLetterOfFieldName(property);
 
                 return property;
@@ -237,16 +256,13 @@ namespace HybridDb.Serialization
                 return int.MaxValue;
             }
 
-            static void NormalizeAutoPropertyBackingFieldName(JsonProperty property)
+            static void NormalizeCompilerGeneratedBackingFieldName(JsonProperty property)
             {
-                var match = matchesBackingFieldForAutoProperty.Match(property.PropertyName);
-                property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
-            }
+                var match = matchesCompilerGeneratedBackingField.Match(property.PropertyName);
 
-            static void NormalizeAnonymousTypeFieldName(JsonProperty property)
-            {
-                var match = matchesFieldNameForAnonymousType.Match(property.PropertyName);
-                property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
+                property.PropertyName = match.Success
+                    ? match.Groups["name"].Value
+                    : property.PropertyName;
             }
 
             static void UppercaseFirstLetterOfFieldName(JsonProperty property) =>

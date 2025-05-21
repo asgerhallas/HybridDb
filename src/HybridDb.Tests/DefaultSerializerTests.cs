@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -467,6 +467,50 @@ namespace HybridDb.Tests
         }
         
         [Fact]
+        public void ParameterName_VsPropertyNameInBaseClass()
+        {
+            var input = new B(2, "myid");
+
+            Should.Throw<Exception>(() => JObject.FromObject(input, CreateSerializer()));
+        }
+        
+        [Fact]
+        public void Parameter_UsedInReadOnlyProperty()
+        {
+            var input = new C("myid");
+
+            var jObject = JObject.FromObject(input, CreateSerializer());
+
+            jObject.ShouldContainKeyAndValue("Id", "myid");
+
+            var copy = jObject.ToObject<C>(CreateSerializer());
+
+            copy.Id.ShouldBe("myidKamilla");
+        }
+
+        [Fact]
+        public void ParameterName_VsNewProperty()
+        {
+            var input = new D("myid");
+
+            Should.Throw<Exception>(() => JObject.FromObject(input, CreateSerializer()));
+        }
+
+        [Fact]
+        public void ParameterName_VsOverrideProperty()
+        {
+            var input = new E("myid");
+
+            var jObject = JObject.FromObject(input, CreateSerializer());
+
+            jObject.ShouldContainKeyAndValue("Id", "myidKamilla");
+
+            var copy = jObject.ToObject<E>(CreateSerializer());
+
+            copy.Id.ShouldBe("myidKamilla");
+        }
+
+        [Fact]
         public void CanHideFields()
         {
             serializer.Hide((WithPropertyAndField x) => x.field, () => new List<string>());
@@ -644,7 +688,35 @@ namespace HybridDb.Tests
             }
 
             public List<string> field = new List<string>();
-            public ICollection<string> Property { get; private set; }
+            public ICollection<string> Property { get; set; }
+        }
+
+        public class A(string id)
+        {
+            public virtual string Id { get; } = id;
+        }
+
+        // For testing serialization of fields with same name as base class property
+        public class B(int id, string baseId) : A(baseId)
+        {
+            public int Hulla => id;
+        }
+
+        // For testing serialization of fields with same name as base class property with new
+        public class D(string id) : A(id)
+        {
+            public new string Id => $"{id}Kamilla";
+        }
+
+        // For testing serialization of fields with same name as base class property with override
+        public class E(string id) : A(id)
+        {
+            public override string Id { get; } = $"{id}Kamilla";
+        }
+
+        public class C(string id)
+        {
+            public string Id => $"{id}Kamilla";
         }
 
         public class WithMethod
