@@ -3,7 +3,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class DeleteCommand : Command<Guid>
+    public class DeleteCommand : HybridDbCommand<Guid>
     {
         public DocumentTable Table { get; }
         public string Key { get; }

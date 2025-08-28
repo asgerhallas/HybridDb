@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 
 namespace HybridDb
 {
-    public abstract class DmlCommand
+    /// <summary>
+    /// Base class for data modification commands that can be issues by the DocumentStore.
+    /// </summary>
+    public abstract class HybridDbCommand
     {
         public static IDictionary<Column, object> ConvertAnonymousToProjections(Table table, object projections) =>
             projections as IDictionary<Column, object> ?? (
@@ -16,5 +19,5 @@ namespace HybridDb
 
     }
 
-    public abstract class Command<TResult> : DmlCommand { }
+    public abstract class HybridDbCommand<TResult> : HybridDbCommand { }
 }

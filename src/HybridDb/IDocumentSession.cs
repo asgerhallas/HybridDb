@@ -37,7 +37,7 @@ namespace HybridDb
         IDocumentStore DocumentStore { get; }
         DocumentTransaction DocumentTransaction { get; }
 
-        void Defer(DmlCommand command);
+        void Defer(HybridDbCommand command);
         void Enlist(DocumentTransaction tx);
         void Evict(object entity);
         void Clear();
@@ -55,7 +55,7 @@ namespace HybridDb
         bool TryGetManagedEntity<T>(string key, out T entity);
 
         Dictionary<object, object> SessionData { get; }
-        IReadOnlyList<DmlCommand> DeferredCommands { get; }
+        IReadOnlyList<HybridDbCommand> DeferredCommands { get; }
         IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events { get; }
     }
 }

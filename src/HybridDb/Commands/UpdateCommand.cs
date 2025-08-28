@@ -5,7 +5,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class UpdateCommand : Command<Guid>
+    public class UpdateCommand : HybridDbCommand<Guid>
     {
         public DocumentTable Table { get; }
         public string Id { get; }

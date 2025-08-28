@@ -53,7 +53,7 @@ namespace HybridDb.Config
 
             Register<DdlCommandExecutor>(container => (store, command) => command.Execute(store));
 
-            Register<DmlCommandExecutor>(container => (tx, command) => 
+            Register<HybridDbCommandExecutor>(container => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<InsertCommand>(insertCommand => InsertCommand.Execute(tx, insertCommand))
                     .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
@@ -278,7 +278,7 @@ namespace HybridDb.Config
 
             tables.TryAdd(tableName, new EventTable(tableName));
 
-            Decorate<DmlCommandExecutor>((container, decoratee) => (tx, command) => 
+            Decorate<HybridDbCommandExecutor>((container, decoratee) => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))

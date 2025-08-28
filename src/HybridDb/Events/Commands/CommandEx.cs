@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    internal static class CommandEx
+    static class CommandEx
     {
         public static IEnumerable<Commit<byte[]>> Batch(this IEnumerable<Row> rows)
         {
@@ -37,7 +37,6 @@ namespace HybridDb.Events.Commands
 
                 events.Add(new EventData<byte[]>(row.StreamId, row.EventId, row.Name, row.SequenceNumber, metadata, row.Data));
             }
-
 
             if (events.Any())
             {

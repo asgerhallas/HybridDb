@@ -24,14 +24,14 @@ namespace HybridDb.Tests
             {
                 if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
 
-                foreach (var (managedEntity, dmlCommand) in savingChanges.DocumentCommands)
+                foreach (var (managedEntity, hybridDbCommand) in savingChanges.DocumentCommands)
                 {
                     if (managedEntity.Design.DocumentType != typeof(Case)) continue;
-                    if (dmlCommand is not UpdateCommand && dmlCommand is not DeleteCommand) continue;
+                    if (hybridDbCommand is not UpdateCommand && hybridDbCommand is not DeleteCommand) continue;
 
                     var profile = savingChanges.Session.Load<Profile>(((Case)managedEntity.Entity).ProfileId);
 
-                    if (!profile.CanWrite) throw new Exception($"Can not execute {dmlCommand.GetType().Name}!");
+                    if (!profile.CanWrite) throw new Exception($"Can not execute {hybridDbCommand.GetType().Name}!");
 
                     ((Case) managedEntity.Entity).Text = "hullabulla"; 
                 }

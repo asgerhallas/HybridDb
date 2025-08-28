@@ -4,7 +4,7 @@ using Microsoft.Data.SqlClient;
 
 namespace HybridDb.Queue
 {
-    public class EnqueueCommand : Command<string>
+    public class EnqueueCommand : HybridDbCommand<string>
     {
         public const string DefaultTopic = "default";
 

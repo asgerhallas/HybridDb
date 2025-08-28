@@ -2,7 +2,7 @@ using System;
 
 namespace HybridDb.Commands
 {
-    public class SqlCommand : Command<Guid>
+    public class SqlCommand : HybridDbCommand<Guid>
     {
         public SqlCommand(SqlBuilder sql, int expectedRowCount)
         {

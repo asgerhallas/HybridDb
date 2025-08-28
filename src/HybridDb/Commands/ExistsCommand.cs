@@ -4,7 +4,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class ExistsCommand : Command<Guid?>
+    public class ExistsCommand : HybridDbCommand<Guid?>
     {
         public ExistsCommand(DocumentTable table, string id)
         {

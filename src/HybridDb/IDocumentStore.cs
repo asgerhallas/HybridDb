@@ -19,7 +19,7 @@ namespace HybridDb
         DocumentTransaction BeginTransaction(Guid commitId, IsolationLevel level = IsolationLevel.ReadCommitted, TimeSpan? connectionTimeout = null);
 
         void Execute(DdlCommand command);
-        object Execute(DocumentTransaction tx, DmlCommand command);
-        T Execute<T>(DocumentTransaction tx, Command<T> command);
+        object Execute(DocumentTransaction tx, HybridDbCommand command);
+        T Execute<T>(DocumentTransaction tx, HybridDbCommand<T> command);
     }
 }

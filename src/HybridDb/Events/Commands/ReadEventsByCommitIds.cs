@@ -6,7 +6,7 @@ using HybridDb.Commands;
 
 namespace HybridDb.Events.Commands
 {
-    public class ReadEventsByCommitIds : Command<IEnumerable<Commit<byte[]>>>
+    public class ReadEventsByCommitIds : HybridDbCommand<IEnumerable<Commit<byte[]>>>
     {
         public ReadEventsByCommitIds(EventTable table, params Guid[] ids)
         {

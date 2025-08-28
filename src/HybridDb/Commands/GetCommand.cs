@@ -5,7 +5,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class GetCommand : Command<IDictionary<string, IDictionary<string, object>>>
+    public class GetCommand : HybridDbCommand<IDictionary<string, IDictionary<string, object>>>
     {
         public GetCommand(DocumentTable table, IReadOnlyList<string> ids)
         {

@@ -19,10 +19,10 @@ namespace HybridDb
         public static Guid Delete(this IDocumentStore store, DocumentTable table, string key, Guid? etag) =>
             store.Transactionally(tx => tx.Execute(new DeleteCommand(table, key, etag)));
 
-        public static T Execute<T>(this IDocumentStore store, Command<T> command) => store.Transactionally(tx => store.Execute(tx, command));
+        public static T Execute<T>(this IDocumentStore store, HybridDbCommand<T> command) => store.Transactionally(tx => store.Execute(tx, command));
 
-        public static void Execute(this IDocumentStore store, IEnumerable<DmlCommand> commands) => store.Execute(commands.ToArray());
-        public static void Execute(this IDocumentStore store, params DmlCommand[] commands) => store.Transactionally(tx =>
+        public static void Execute(this IDocumentStore store, IEnumerable<HybridDbCommand> commands) => store.Execute(commands.ToArray());
+        public static void Execute(this IDocumentStore store, params HybridDbCommand[] commands) => store.Transactionally(tx =>
         {
             foreach (var command in commands)
             {

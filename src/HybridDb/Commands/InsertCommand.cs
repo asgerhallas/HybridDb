@@ -5,7 +5,7 @@ using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class InsertCommand : Command<Guid>
+    public class InsertCommand : HybridDbCommand<Guid>
     {
         public InsertCommand(DocumentTable table, string id, object projections)
         {

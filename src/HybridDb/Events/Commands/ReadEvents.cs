@@ -5,7 +5,7 @@ using Dapper;
 
 namespace HybridDb.Events.Commands
 {
-    public class ReadEvents : Command<IEnumerable<Commit<byte[]>>>
+    public class ReadEvents : HybridDbCommand<IEnumerable<Commit<byte[]>>>
     {
         public ReadEvents(EventTable table, long fromPositionIncluding, bool readPastActiveTransactions)
         {

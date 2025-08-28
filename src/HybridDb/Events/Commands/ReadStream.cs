@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    public class ReadStream : Command<IEnumerable<Commit<byte[]>>>
+    public class ReadStream : HybridDbCommand<IEnumerable<Commit<byte[]>>>
     {
         public ReadStream(EventTable table, string streamId, long fromStreamSeq, long toPosition = long.MaxValue, Direction direction = Direction.Forward)
         {

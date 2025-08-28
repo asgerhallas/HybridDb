@@ -5,7 +5,7 @@ using Dapper;
 
 namespace HybridDb.Queue
 {
-    public class DequeueCommand : Command<HybridDbMessage>
+    public class DequeueCommand : HybridDbCommand<HybridDbMessage>
     {
         public DequeueCommand(QueueTable table, IReadOnlyList<string> topics)
         {
