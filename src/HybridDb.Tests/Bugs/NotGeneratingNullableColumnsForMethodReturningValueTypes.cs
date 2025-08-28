@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Shouldly;
 using Xunit;
@@ -6,10 +6,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class NotGeneratingNullableColumnsForMethodReturningValueTypes : HybridDbTests
+    public class NotGeneratingNullableColumnsForMethodReturningValueTypes(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public NotGeneratingNullableColumnsForMethodReturningValueTypes(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void Fails()
         {

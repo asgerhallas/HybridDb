@@ -8,12 +8,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_EventsTests : HybridDbTests
+    public class DocumentSession_EventsTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_EventsTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void Events_SaveChanges_BeforeExecuteCommands()
         {

@@ -12,10 +12,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_CopyTests : HybridDbTests
+    public class DocumentSession_CopyTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_CopyTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void CopySession()
         {
@@ -62,7 +60,7 @@ namespace HybridDb.Tests
         {
             using var session = store.OpenSession();
 
-            session.Append(1, new EventData<byte[]>("1", Guid.NewGuid(), "Name1", 1, new Metadata(), new[] { (byte)1 }));
+            session.Append(1, new EventData<byte[]>("1", Guid.NewGuid(), "Name1", 1, new Metadata(), [(byte)1]));
 
             var sessionCopy = session.Advanced.Copy();
 

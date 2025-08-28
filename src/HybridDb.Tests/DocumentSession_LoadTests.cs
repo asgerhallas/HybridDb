@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -7,12 +7,8 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_LoadTests : HybridDbTests
+    public class DocumentSession_LoadTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_LoadTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void Load_Multiple()
         {

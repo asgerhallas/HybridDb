@@ -10,9 +10,7 @@ namespace HybridDb.Tests.Linq.Plugins
 {
     public class CastEnumsTests : CompilerTests
     {
-        readonly PostProcessor compile;
-
-        public CastEnumsTests() => compile = CompilerBuilder.Compose(new CastEnums().PostProcess, new LinqCompilerRoot().PostProcess);
+        readonly PostProcessor compile = CompilerBuilder.Compose(new CastEnums().PostProcess, new LinqCompilerRoot().PostProcess);
 
         [Fact]
         public void CastIntsToEnumsInEnumComparisons()

@@ -4,11 +4,9 @@ using Serilog.Events;
 
 namespace HybridDb.Tests
 {
-    public class ListSink : ILogEventSink
+    public class ListSink(List<LogEvent> list) : ILogEventSink
     {
-        public ListSink(List<LogEvent> list) => Captures = list;
-
-        public List<LogEvent> Captures { get; set; }
+        public List<LogEvent> Captures { get; set; } = list;
 
         public void Emit(LogEvent logEvent) => Captures.Add(logEvent);
     }

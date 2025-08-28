@@ -6,10 +6,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Commands
 {
-    public class SqlCommandTests : HybridDbTests
+    public class SqlCommandTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public SqlCommandTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void SqlCommand_Success()
         {

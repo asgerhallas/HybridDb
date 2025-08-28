@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Data.SqlClient;
 using System.Linq;
 using Shouldly;
@@ -7,10 +7,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_IdCaseSensivityTests : HybridDbTests
+    public class DocumentSession_IdCaseSensivityTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_IdCaseSensivityTests(ITestOutputHelper output) : base(output) { }
-
         [Theory]
         [InlineData("asger")]
         [InlineData("ASGER")]

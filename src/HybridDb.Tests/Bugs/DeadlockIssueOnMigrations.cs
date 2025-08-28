@@ -6,10 +6,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class DeadlockIssueOnMigrations : HybridDbTests
+    public class DeadlockIssueOnMigrations(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DeadlockIssueOnMigrations(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void ShouldTryNotToDeadlockOnSchemaMigationsForTempDb()
         {

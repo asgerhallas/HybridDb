@@ -7,10 +7,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class QueryProviderTests : HybridDbTests
+    public class QueryProviderTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public QueryProviderTests(ITestOutputHelper output) : base(output) { }
-
         [Fact(Skip="Not yet implemented")]
         public void CanExecuteUntypedExpression()
         {

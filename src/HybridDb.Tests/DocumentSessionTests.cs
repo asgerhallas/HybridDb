@@ -20,10 +20,8 @@ using SqlCommand = HybridDb.Commands.SqlCommand;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSessionTests : HybridDbTests
+    public class DocumentSessionTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSessionTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public async Task MultipleConcurrentReadsWhileSaving()
         {
@@ -103,6 +101,7 @@ namespace HybridDb.Tests
 
             var entity = store.Query(table, out _, where: $"Id = '{id}'").SingleOrDefault();
             Assert.NotNull(entity);
+            entity.Get<string>("Id").ShouldBe(id);
         }
 
         [Fact]
@@ -143,8 +142,8 @@ namespace HybridDb.Tests
 
             var entity = store.Query(table, out _).SingleOrDefault();
             Assert.NotNull(entity);
-            Assert.NotNull(entity["Document"]);
-            Assert.NotEqual(0, ((string)entity["Document"]).Length);
+            Assert.NotNull(entity.Get<string>("Document"));
+            Assert.NotEqual(0, entity.Get<string>("Document").Length);
         }
 
         [Fact]
@@ -989,7 +988,7 @@ namespace HybridDb.Tests
 
             var table = configuration.GetDesignFor<Entity>().Table;
             var row = store.Get(table, id);
-            ((int)row[DocumentTable.VersionColumn]).ShouldBe(1);
+            row.Get(DocumentTable.VersionColumn).ShouldBe(1);
         }
 
         [Fact]
@@ -1021,7 +1020,7 @@ namespace HybridDb.Tests
             }
 
             var row = store.Get(table, id);
-            ((int)row[DocumentTable.VersionColumn]).ShouldBe(2);
+            row.Get(DocumentTable.VersionColumn).ShouldBe(2);
         }
 
         [Fact]
@@ -1273,7 +1272,7 @@ namespace HybridDb.Tests
                     entity,
                     new Dictionary<string, List<string>>
                     {
-                        ["key"] = new() { "value1", "value2" }
+                        ["key"] = ["value1", "value2"]
                     });
 
                 session.SaveChanges();
@@ -1285,7 +1284,7 @@ namespace HybridDb.Tests
 
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
-                metadata["key"].ShouldBe(new List<string> { "value1", "value2" });
+                metadata["key"].ShouldBe(["value1", "value2"]);
             }
         }
 
@@ -1304,7 +1303,7 @@ namespace HybridDb.Tests
                     entity,
                     new Dictionary<string, List<string>>
                     {
-                        ["key"] = new() { "value1", "value2" }
+                        ["key"] = ["value1", "value2"]
                     });
 
                 session.SaveChanges();
@@ -1323,7 +1322,7 @@ namespace HybridDb.Tests
 
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
-                metadata["key"].ShouldBe(new List<string> { "value1", "value2" });
+                metadata["key"].ShouldBe(["value1", "value2"]);
             }
         }
 
@@ -1342,7 +1341,7 @@ namespace HybridDb.Tests
                     entity,
                     new Dictionary<string, List<string>>
                     {
-                        ["key"] = new() { "value1", "value2" }
+                        ["key"] = ["value1", "value2"]
                     });
 
                 session.SaveChanges();
@@ -1355,7 +1354,7 @@ namespace HybridDb.Tests
                     entity,
                     new Dictionary<string, List<string>>
                     {
-                        ["another-key"] = new() { "value" }
+                        ["another-key"] = ["value"]
                     });
 
                 session.SaveChanges();
@@ -1368,7 +1367,7 @@ namespace HybridDb.Tests
                 var metadata = session.Advanced.GetMetadataFor(entity);
 
                 metadata.Keys.Count.ShouldBe(1);
-                metadata["another-key"].ShouldBe(new List<string> { "value" });
+                metadata["another-key"].ShouldBe(["value"]);
             }
         }
 
@@ -1385,7 +1384,7 @@ namespace HybridDb.Tests
                     entity,
                     new Dictionary<string, List<string>>
                     {
-                        ["key"] = new() { "value1", "value2" }
+                        ["key"] = ["value1", "value2"]
                     });
 
                 session.SaveChanges();
@@ -1481,7 +1480,7 @@ namespace HybridDb.Tests
             }
 
             var row = store.Get(store.Configuration.GetDesignFor<Entity>().Table, id);
-            row["Children"]
+            row.Get<string>("Children")
                 .ShouldBe("[{\"NestedDouble\":0.0,\"NestedProperty\":\"A\"},{\"NestedDouble\":0.0,\"NestedProperty\":\"B\"}]");
         }
 

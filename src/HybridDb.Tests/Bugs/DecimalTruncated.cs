@@ -1,13 +1,11 @@
-﻿using Shouldly;
+using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class DecimalTruncated : HybridDbTests
+    public class DecimalTruncated(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DecimalTruncated(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void ShouldHaveRightPrecisionAndScale()
         {

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -7,9 +7,7 @@ namespace HybridDb
 {
     public class ColumnNameBuilder : ExpressionVisitor
     {
-        public ColumnNameBuilder() => ColumnName = "";
-
-        string ColumnName { get; set; }
+        string ColumnName { get; set; } = "";
 
         public static string GetColumnNameByConventionFor(Expression projector)
         {

@@ -28,7 +28,7 @@ namespace HybridDb.Tests.Events
 
             var events = Execute(new ReadStream(new EventTable("events"), "stream-1", 0));
 
-            events.Select(x => x.SequenceNumber).ShouldBe(new long[] { 0, 1 });
+            events.Select(x => x.SequenceNumber).ShouldBe([0, 1]);
         }
 
         [Fact]
@@ -40,7 +40,7 @@ namespace HybridDb.Tests.Events
 
             var events = Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 1));
 
-            events.Select(x => x.SequenceNumber).ShouldBe(new long[] {0, 1});
+            events.Select(x => x.SequenceNumber).ShouldBe([0, 1]);
         }
 
         [Fact]
@@ -53,7 +53,7 @@ namespace HybridDb.Tests.Events
 
             var events = Execute(new ReadStream(new EventTable("events"), "stream-1", 0, 2));
 
-            events.Select(x => x.SequenceNumber).ShouldBe(new long[] {0, 1});
+            events.Select(x => x.SequenceNumber).ShouldBe([0, 1]);
         }
 
         [Fact]
@@ -112,7 +112,7 @@ namespace HybridDb.Tests.Events
 
             events
                 .Select(x => x.SequenceNumber)
-                .ShouldBe(new long[] { 5, 6, 7, 8, 9 });
+                .ShouldBe([5, 6, 7, 8, 9]);
         }
 
         [Fact]
@@ -129,7 +129,7 @@ namespace HybridDb.Tests.Events
 
             events
                 .Select(x => x.SequenceNumber)
-                .ShouldBe(new long[] { 10, 11, 12, 13, 14, 15 });
+                .ShouldBe([10, 11, 12, 13, 14, 15]);
         }
 
         List<EventData<byte[]>> Execute(ReadStream command) => store.Transactionally(IsolationLevel.Snapshot, tx => tx

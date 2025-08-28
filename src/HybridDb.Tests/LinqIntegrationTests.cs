@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
@@ -268,17 +268,12 @@ namespace HybridDb.Tests
 
         public class Entity
         {
-            public Entity()
-            {
-                TheChild = new Child();
-            }
-
             public string Field;
             public string Id { get; set; }
             public int Property { get; set; }
             public string StringProp { get; set; }
             public DateTime DateTimeProp { get; set; }
-            public Child TheChild { get; set; }
+            public Child TheChild { get; set; } = new();
 
             public class Child
             {

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
-using HybridDb.Migrations;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
@@ -10,16 +9,10 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class SchemaDifferTests : HybridDbTests
+    public class SchemaDifferTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        readonly Dictionary<string, List<string>> schema;
-        readonly SchemaDiffer migrator;
-
-        public SchemaDifferTests(ITestOutputHelper output) : base(output)
-        {
-            schema = new Dictionary<string, List<string>>();
-            migrator = new SchemaDiffer();
-        }
+        readonly Dictionary<string, List<string>> schema = new();
+        readonly SchemaDiffer migrator = new();
 
         [Fact]
         public void FindNewTable()
@@ -63,7 +56,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void FindMissingTables()
         {
-            schema.Add("Entities", new List<string>());
+            schema.Add("Entities", []);
 
             var command = (RemoveTable)migrator.CalculateSchemaChanges(schema, configuration).Single();
 
@@ -131,12 +124,7 @@ namespace HybridDb.Tests.Migrations
 
         public class FakeSchema
         {
-            readonly List<Table> tables;
-
-            public FakeSchema()
-            {
-                tables = new List<Table>();
-            }
+            readonly List<Table> tables = [];
 
             public void CreateTable(Table table)
             {

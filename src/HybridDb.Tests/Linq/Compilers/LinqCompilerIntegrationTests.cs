@@ -1,4 +1,4 @@
-﻿using HybridDb.Linq;
+using HybridDb.Linq;
 using HybridDb.Linq.Plugins;
 using ShouldBeLike;
 using Xunit;
@@ -7,9 +7,7 @@ namespace HybridDb.Tests.Linq.Compilers
 {
     public class LinqCompilerIntegrationTests : CompilerTests
     {
-        readonly LinqCompiler compiler;
-
-        public LinqCompilerIntegrationTests() => compiler = CompilerBuilder.DefaultCompiler;
+        readonly LinqCompiler compiler = CompilerBuilder.DefaultCompiler;
 
         [Fact]
         public void EnumComparisons()

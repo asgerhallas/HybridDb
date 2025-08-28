@@ -12,22 +12,22 @@ namespace HybridDb.Tests
         public void WritesToFile()
         {
             var writer = new FileBackupWriter(".");
-            writer.Write("hans.bak", new byte[]{ 1, 2, 3 });
+            writer.Write("hans.bak", [1, 2, 3]);
 
             var bytes = File.ReadAllBytes("hans.bak");
-            bytes.ShouldBe(new byte[] { 1, 2, 3 });
+            bytes.ShouldBe([1, 2, 3]);
         }
 
         [Fact]
         public void CanWriteSameDocumentTwice()
         {
             var writer = new FileBackupWriter(".");
-            writer.Write("jacob.bak", new byte[]{ 1, 2, 3 });
+            writer.Write("jacob.bak", [1, 2, 3]);
             
-            Should.NotThrow(() => writer.Write("jacob.bak", new byte[]{ 1, 2, 3 }));
+            Should.NotThrow(() => writer.Write("jacob.bak", [1, 2, 3]));
 
             var bytes = File.ReadAllBytes("jacob.bak");
-            bytes.ShouldBe(new byte[] { 1, 2, 3 });
+            bytes.ShouldBe([1, 2, 3]);
         }
 
         [Fact]
@@ -36,7 +36,7 @@ namespace HybridDb.Tests
             using (File.Create("jacob.bak"))
             {
                 var writer = new FileBackupWriter(".");
-                Should.NotThrow(() => writer.Write("jacob.bak", new byte[] { 1, 2, 3 }));
+                Should.NotThrow(() => writer.Write("jacob.bak", [1, 2, 3]));
             }
         }
     }

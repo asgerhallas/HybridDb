@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -11,10 +11,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class LinqTests : HybridDbTests
+    public class LinqTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public LinqTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void CanQueryUsingQueryComprehensionSyntax()
         {
@@ -647,22 +645,15 @@ namespace HybridDb.Tests
         {
             public string Field;
 
-            public Entity()
-            {
-                TheChild = new Child();
-                Complex = new object();
-                Children = new List<Child>();
-            }
-
             public Guid Id { get; set; }
             public int Property { get; set; }
             public int? NullableProperty { get; set; }
             public string StringProp { get; set; }
             public DateTime DateTimeProp { get; set; }
             public bool BoolProp { get; set; }
-            public Child TheChild { get; set; }
-            public List<Child> Children { get; set; }
-            public object Complex { get; set; }
+            public Child TheChild { get; set; } = new();
+            public List<Child> Children { get; set; } = [];
+            public object Complex { get; set; } = new();
             public Enumse Enum { get; set; }
 
             public class Child

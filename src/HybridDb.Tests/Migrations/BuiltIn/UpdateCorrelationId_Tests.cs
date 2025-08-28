@@ -7,10 +7,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
-    public class UpdateCorrelationId_Tests : HybridDbTests
+    public class UpdateCorrelationId_Tests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public UpdateCorrelationId_Tests(ITestOutputHelper output) : base(output) { }
-
         [Theory]
         [InlineData("UpdateCorrelationId_Tests_Before.sql")]
         public void Test(string beforeFilename)

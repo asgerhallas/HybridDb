@@ -14,9 +14,7 @@ namespace HybridDb.Tests
 {
     public class ConfigurationTests
     {
-        readonly Configuration configuration;
-
-        public ConfigurationTests() => configuration = new Configuration();
+        readonly Configuration configuration = new();
 
         [Fact]
         public void RegisterDocumentDesign()
@@ -27,7 +25,7 @@ namespace HybridDb.Tests
             design.DocumentType.ShouldBe(typeof(Entity));
             design.Discriminator.ShouldBe("ConfigurationTests+Entity");
             design.Parent.ShouldBe(null);
-            design.DecendentsAndSelf.Values.ShouldBe(new[] { design });
+            design.DecendentsAndSelf.Values.ShouldBe([design]);
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("Entities");
@@ -42,7 +40,7 @@ namespace HybridDb.Tests
             design.DocumentType.ShouldBe(typeof(Entity));
             design.Discriminator.ShouldBe("Hans+Grete");
             design.Parent.ShouldBe(null);
-            design.DecendentsAndSelf.Values.ShouldBe(new[] { design });
+            design.DecendentsAndSelf.Values.ShouldBe([design]);
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("Entities");
@@ -57,11 +55,11 @@ namespace HybridDb.Tests
             var designs = configuration.DocumentDesigns;
             designs[0].DocumentType.ShouldBe(typeof(AbstractEntity));
             designs[0].Parent.ShouldBe(null);
-            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0], designs[1] });
+            designs[0].DecendentsAndSelf.Values.ShouldBe([designs[0], designs[1]]);
 
             designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
             designs[1].Parent.ShouldBe(designs[0]);
-            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
+            designs[1].DecendentsAndSelf.Values.ShouldBe([designs[1]]);
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("AbstractEntities");
@@ -76,11 +74,11 @@ namespace HybridDb.Tests
             var designs = configuration.DocumentDesigns;
             designs[0].DocumentType.ShouldBe(typeof(AbstractEntity));
             designs[0].Parent.ShouldBe(null);
-            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0], designs[1] });
+            designs[0].DecendentsAndSelf.Values.ShouldBe([designs[0], designs[1]]);
 
             designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
             designs[1].Parent.ShouldBe(designs[0]);
-            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
+            designs[1].DecendentsAndSelf.Values.ShouldBe([designs[1]]);
 
             var table = configuration.Tables.Single();
             table.Key.ShouldBe("mytable");
@@ -95,12 +93,12 @@ namespace HybridDb.Tests
             var designs = configuration.DocumentDesigns;
             designs[0].DocumentType.ShouldBe(typeof(AbstractEntity));
             designs[0].Parent.ShouldBe(null);
-            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0], designs[1] });
+            designs[0].DecendentsAndSelf.Values.ShouldBe([designs[0], designs[1]]);
 
             designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
             designs[1].Discriminator.ShouldBe("DD");
             designs[1].Parent.ShouldBe(designs[0]);
-            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
+            designs[1].DecendentsAndSelf.Values.ShouldBe([designs[1]]);
         }
 
         [Fact]
@@ -121,15 +119,15 @@ namespace HybridDb.Tests
             var designs = configuration.DocumentDesigns;
             designs[0].DocumentType.ShouldBe(typeof(object));
             designs[0].Parent.ShouldBe(null);
-            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0], designs[1] });
+            designs[0].DecendentsAndSelf.Values.ShouldBe([designs[0], designs[1]]);
 
             designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
             designs[1].Parent.ShouldBe(designs[0]);
-            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
+            designs[1].DecendentsAndSelf.Values.ShouldBe([designs[1]]);
 
             designs[2].DocumentType.ShouldBe(typeof(MoreDerivedEntity1));
             designs[2].Parent.ShouldBe(null);
-            designs[2].DecendentsAndSelf.Values.ShouldBe(new[] { designs[2] });
+            designs[2].DecendentsAndSelf.Values.ShouldBe([designs[2]]);
 
             var tables = configuration.Tables.Keys.OrderBy(x => x).ToList();
             tables.Count.ShouldBe(3);
@@ -147,11 +145,11 @@ namespace HybridDb.Tests
             var designs = configuration.DocumentDesigns;
             designs[0].DocumentType.ShouldBe(typeof(AbstractEntity));
             designs[0].Parent.ShouldBe(null);
-            designs[0].DecendentsAndSelf.Values.ShouldBe(new[] { designs[0] });
+            designs[0].DecendentsAndSelf.Values.ShouldBe([designs[0]]);
 
             designs[1].DocumentType.ShouldBe(typeof(DerivedEntity));
             designs[1].Parent.ShouldBe(null);
-            designs[1].DecendentsAndSelf.Values.ShouldBe(new[] { designs[1] });
+            designs[1].DecendentsAndSelf.Values.ShouldBe([designs[1]]);
 
             var tables = configuration.Tables.Keys.OrderBy(x => x).ToList();
             tables.Count.ShouldBe(2);
@@ -316,12 +314,8 @@ namespace HybridDb.Tests
         {
         }
 
-        public class OtherTypeMapper : ITypeMapper
+        public class OtherTypeMapper(string discriminator) : ITypeMapper
         {
-            readonly string discriminator;
-
-            public OtherTypeMapper(string discriminator) => this.discriminator = discriminator;
-
             public string ToDiscriminator(Type type) => discriminator;
 
             public Type ToType(Type basetype, string discriminator) => throw new NotImplementedException();

@@ -12,9 +12,7 @@ namespace HybridDb.Tests
 {
     public class DefaultSerializerTests
     {
-        readonly DefaultSerializer serializer;
-
-        public DefaultSerializerTests() => serializer = new DefaultSerializer();
+        readonly DefaultSerializer serializer = new();
 
         JsonSerializer CreateSerializer() => serializer.CreateSerializer();
 
@@ -201,19 +199,16 @@ namespace HybridDb.Tests
                 Parent = root
             };
 
-            root.Children = new List<Parent.ParentsChild>
-            {
-                child
-            };
+            root.Children = [child];
 
-            child.GrandChildren = new List<Parent.ParentsChild>
-            {
+            child.GrandChildren =
+            [
                 new Parent.ParentsChild
                 {
                     Root = root,
                     Parent = child
                 }
-            };
+            ];
 
             var jObject = JObject.FromObject(root, CreateSerializer());
 
@@ -513,7 +508,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanHideFields()
         {
-            serializer.Hide((WithPropertyAndField x) => x.field, () => new List<string>());
+            serializer.Hide((WithPropertyAndField x) => x.field, () => []);
 
             var input = new WithPropertyAndField
             {
@@ -560,10 +555,7 @@ namespace HybridDb.Tests
             }
         }
 
-        public class ByTypeNameDiscriminator : Discriminator 
-        {
-            public ByTypeNameDiscriminator(Type basetype, string name) : base(basetype, name) {}
-        }
+        public class ByTypeNameDiscriminator(Type basetype, string name) : Discriminator(basetype, name);
 
         public class StrangeConverterThatAlwaysCreatedAnInstanceOfDerived2 : JsonConverter
         {
@@ -620,15 +612,12 @@ namespace HybridDb.Tests
 
         public class WithSomePrivates
         {
-            public WithSomePrivates() => 
-                PrivateSetProperty = 42;
-
 #pragma warning disable 414
             string privateField = "lars";
 #pragma warning restore 414
 
             public string field = "asger";
-            public int PrivateSetProperty { get; private set; }
+            public int PrivateSetProperty { get; private set; } = 42;
         }
 
         public class WithThrowingProperty
@@ -651,13 +640,12 @@ namespace HybridDb.Tests
             }
         }
 
-        public class WithMutatingCtor
+        public class WithMutatingCtor(string value)
         {
             [JsonConstructor]
             public WithMutatingCtor() : this("DEFAULT CTOR") { }
-            public WithMutatingCtor(string value) => ValueSetByCtor = value;
 
-            public string ValueSetByCtor { get; set; }
+            public string ValueSetByCtor { get; set; } = value;
         }
 
         public class WithEvent
@@ -682,13 +670,8 @@ namespace HybridDb.Tests
 
         public class WithPropertyAndField
         {
-            public WithPropertyAndField()
-            {
-                Property = new List<string>();
-            }
-
-            public List<string> field = new List<string>();
-            public ICollection<string> Property { get; set; }
+            public List<string> field = [];
+            public ICollection<string> Property { get; set; } = new List<string>();
         }
 
         public class A(string id)

@@ -11,12 +11,7 @@ namespace HybridDb.Tests
 {
     public class DocumentDesignerTests
     {
-        readonly Configuration configuration;
-
-        public DocumentDesignerTests()
-        {
-            configuration = new Configuration();
-        }
+        readonly Configuration configuration = new();
 
         public Dictionary<string, Projection> ProjectionsFor<T>()
         {
@@ -265,7 +260,7 @@ namespace HybridDb.Tests
         {
             configuration.Document<Entity>().With(x => x.Strings);
 
-            ProjectionsFor<Entity>()["Strings"].Projector(new Entity { Strings = new List<string>{"hej","okay"} }, null).ShouldBe("[\"hej\",\"okay\"]");
+            ProjectionsFor<Entity>()["Strings"].Projector(new Entity { Strings = ["hej", "okay"] }, null).ShouldBe("[\"hej\",\"okay\"]");
         }
 
         [Fact]

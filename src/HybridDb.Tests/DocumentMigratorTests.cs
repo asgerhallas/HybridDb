@@ -9,10 +9,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class DocumentMigratorTests : HybridDbTests
+    public class DocumentMigratorTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentMigratorTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void AppliesDocumentChangeMigration()
         {
@@ -77,7 +75,7 @@ namespace HybridDb.Tests
         [Fact]
         public void Bug_DontCallTypeMapperDirectly()
         {
-            Document<Entity>(discriminator: "BusseBøhMand");
+            Document<Entity>(discriminator: "BusseBÃ¸hMand");
 
             UseMigrations(new InlineMigration(1, new ChangeDocument<Entity>((serializer, json) => json)));
 
@@ -111,11 +109,9 @@ namespace HybridDb.Tests
             migration.NumberOfCallsToBackgroundMethod.ShouldBe(1);
         }
 
-        class MyMigration : Migration
+        class MyMigration(int version) : Migration(version)
         {
-            public int NumberOfCallsToBackgroundMethod = 0; 
-
-            public MyMigration(int version) : base(version) { }
+            public int NumberOfCallsToBackgroundMethod = 0;
 
             public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
             {

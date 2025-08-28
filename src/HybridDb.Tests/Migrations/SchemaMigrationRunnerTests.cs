@@ -411,12 +411,8 @@ namespace HybridDb.Tests.Migrations
             new CreateTable(new Table("HybridDb",
                 new Column("SchemaVersion", typeof(int)))));
 
-        public class FakeSchemaDiffer : ISchemaDiffer
+        public class FakeSchemaDiffer(params DdlCommand[] commands) : ISchemaDiffer
         {
-            readonly DdlCommand[] commands;
-
-            public FakeSchemaDiffer(params DdlCommand[] commands) => this.commands = commands;
-
             public IReadOnlyList<DdlCommand> CalculateSchemaChanges(IReadOnlyDictionary<string, List<string>> schema, Configuration configuration) => 
                 commands.ToList();
         }

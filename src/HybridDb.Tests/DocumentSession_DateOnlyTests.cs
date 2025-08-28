@@ -7,12 +7,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_DateOnlyTests : HybridDbTests
+    public class DocumentSession_DateOnlyTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_DateOnlyTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void Store_Load()
         {

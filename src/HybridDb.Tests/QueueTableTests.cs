@@ -11,10 +11,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class QueueTableTests : HybridDbTests
+    public class QueueTableTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public QueueTableTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void Create()
         {

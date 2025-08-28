@@ -15,10 +15,8 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class DocumentMigrationRunnerTests : HybridDbTests
+    public class DocumentMigrationRunnerTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentMigrationRunnerTests(ITestOutputHelper output) : base(output) { }
-
         [Theory]
         [InlineData(true, 42)]
         [InlineData(false, 0)]
@@ -249,7 +247,7 @@ namespace HybridDb.Tests.Migrations
             var migratedIds = new List<string>();
 
             UseMigrations(
-                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(new []{ "b", "d", "e", "G" })),
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(["b", "d", "e", "G"])),
                     (session, serializer, r) =>
                     {
                         migratedIds.Add(r.Get(DocumentTable.IdColumn));
@@ -363,7 +361,7 @@ namespace HybridDb.Tests.Migrations
             UseMigrations(
                 new InlineMigration(1, new ChangeDocument<Entity>(ListOf<IDocumentMigrationMatcher>(
                         new IdPrefixMatcher("a"),
-                        new IdMatcher(new[] { "b", "aatest", "e", "G" })),
+                        new IdMatcher(["b", "aatest", "e", "G"])),
                     (session, serializer, r) =>
                     {
                         migratedIds.Add(r.Get(DocumentTable.IdColumn));
@@ -409,7 +407,7 @@ namespace HybridDb.Tests.Migrations
             Document<Entity>().With(x => x.Number);
 
             UseMigrations(
-                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
+                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(["aatest", "AaAtest"]))));
 
             await store.DocumentMigration;
 
@@ -453,7 +451,7 @@ namespace HybridDb.Tests.Migrations
             Document<OtherEntity>().With(x => x.Number);
 
             UseMigrations(
-                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(new[] { "aatest", "AaAtest" }))));
+                new InlineMigration(1, new DeleteDocuments<Entity>(new IdMatcher(["aatest", "AaAtest"]))));
 
             await store.DocumentMigration;
 
@@ -466,11 +464,9 @@ namespace HybridDb.Tests.Migrations
             otherEntities.Count.ShouldBe(3);
         }
 
-        public class TrackingCommand : DocumentRowMigrationCommand
+        public class TrackingCommand() : DocumentRowMigrationCommand(null, null)
         {
-            public List<string> MigratedIds { get; private set; } = new();
-
-            public TrackingCommand() : base(null, null) { }
+            public List<string> MigratedIds { get; private set; } = [];
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row)
             {
@@ -479,12 +475,9 @@ namespace HybridDb.Tests.Migrations
             }
         }
 
-        public class MigrationFailsBeforeLoadingDocument : DocumentRowMigrationCommand
+        public class MigrationFailsBeforeLoadingDocument(Type type, params IDocumentMigrationMatcher[] matchers)
+            : DocumentRowMigrationCommand(type, matchers)
         {
-            public MigrationFailsBeforeLoadingDocument(Type type, params IDocumentMigrationMatcher[] matchers) : base(type, matchers)
-            {
-            }
-
             public override SqlBuilder Matches(IDocumentStore store, int? version) => throw new Exception("Hej do");
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row) => throw new NotImplementedException();

@@ -12,10 +12,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
-    public class RecreateMessageTablesAfterSchemaChanges_Tests : HybridDbTests
+    public class RecreateMessageTablesAfterSchemaChanges_Tests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public RecreateMessageTablesAfterSchemaChanges_Tests(ITestOutputHelper output) : base(output) { }
-
         [Theory]
         [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_Position.sql")]
         [InlineData("RecreateMessageTablesAfterSchemaChanges_Tests_Before_Version.sql")]

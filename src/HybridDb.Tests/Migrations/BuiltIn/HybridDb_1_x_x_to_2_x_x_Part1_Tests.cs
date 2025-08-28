@@ -16,11 +16,10 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests.Migrations.BuiltIn
 {
-    public class HybridDb_1_x_x_to_2_x_x_Part1_Tests : HybridDbTests
+    public class HybridDb_1_x_x_to_2_x_x_Part1_Tests(ITestOutputHelper output) : HybridDbTests(output)
     {
         // To export data for use in these tests, use "Tasks > Generate Scripts" in SQL Management Studio.
         // Under "Advanced" select "Schema and data" for "Types of data to script"
-        public HybridDb_1_x_x_to_2_x_x_Part1_Tests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
         public void BackgroundCommand_0_10_64_And_Later_MoveAndEncode()

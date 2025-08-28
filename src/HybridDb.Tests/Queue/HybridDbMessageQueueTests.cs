@@ -25,12 +25,9 @@ using Task = System.Threading.Tasks.Task;
 
 namespace HybridDb.Tests.Queue
 {
-    public class HybridDbMessageQueueTests : HybridDbTests
+    public class HybridDbMessageQueueTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
-
-        public HybridDbMessageQueueTests(ITestOutputHelper output) : base(output) =>
-            handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
+        readonly Func<IDocumentSession, HybridDbMessage, Task> handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
 
         HybridDbMessageQueue StartQueue(MessageQueueOptions options = null)
         {
