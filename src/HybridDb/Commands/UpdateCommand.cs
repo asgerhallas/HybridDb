@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
@@ -50,7 +50,9 @@ namespace HybridDb.Commands
             {
                 Sql = sql,
                 Parameters = parameters,
-                ExpectedRowCount = 1
+                ExpectedRowCount = 1,
+                Table = command.Table,
+                DocumentId = command.Id
             });
 
             return tx.CommitId;

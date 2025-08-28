@@ -324,5 +324,7 @@ namespace HybridDb
         public string Sql { get; set; }
         public HybridDbParameters Parameters { get; set; }
         public int ExpectedRowCount { get; set; }
+        public Table Table { get; set; }
+        public string DocumentId { get; set; }
     }
 }

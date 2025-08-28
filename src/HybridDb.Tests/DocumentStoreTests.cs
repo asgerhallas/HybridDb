@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
+using Microsoft.Data.SqlClient;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -72,7 +73,14 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, id, Guid.NewGuid(), new { Field = "Lars" }));
+            Should.Throw<ConcurrencyException>(() =>
+                store.Update(table.Table, id, etag: Guid.NewGuid(), new { Field = "Lars" })
+            ).Message.ShouldBe(
+               $"""
+                Someone beat you to it. Expected 1 changes, but got 0.
+                
+                The transaction is rolled back now. Document in table 'Entities' with Id '{id}' was not saved.
+                """);
         }
 
         [Fact]
@@ -81,11 +89,19 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var etag = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new { Field = "Asger", Document = document });
+            var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new { Field = "Lars" }));
+            var newId = NewId();
+
+            Should.Throw<ConcurrencyException>(() =>
+                store.Update(table.Table, newId, etag, new { Field = "Lars" })
+            ).Message.ShouldBe(
+                $"""
+                 Someone beat you to it. Expected 1 changes, but got 0.
+
+                 The transaction is rolled back now. Document in table 'Entities' with Id '{newId}' was not saved.
+                 """); ;
         }
 
         [Fact]
@@ -381,7 +397,27 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, id, Guid.NewGuid()));
+            Should.Throw<ConcurrencyException>(() =>
+                store.Delete(table.Table, id, Guid.NewGuid())
+            ).Message.ShouldBe(
+                $"""
+                 Someone beat you to it. Expected 1 changes, but got 0.
+
+                 The transaction is rolled back now. Document in table 'Entities' with Id '{id}' was not saved.
+                 """);
+        }
+
+        [Fact]
+        public void InsertDuplicateKeys()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table.Table, id, new { });
+
+            Should.Throw<SqlException>(() => store.Insert(table.Table, id, new { }))
+                .Number.ShouldBe(2627);
         }
 
         [Fact]
@@ -393,7 +429,16 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, NewId(), etag));
+            var newId = NewId();
+
+            Should.Throw<ConcurrencyException>(() =>
+                store.Delete(table.Table, newId, etag)
+            ).Message.ShouldBe(
+                $"""
+                 Someone beat you to it. Expected 1 changes, but got 0.
+
+                 The transaction is rolled back now. Document in table 'Entities' with Id '{newId}' was not saved.
+                 """);
         }
 
         [Fact]

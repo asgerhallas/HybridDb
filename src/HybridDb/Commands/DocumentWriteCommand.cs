@@ -21,9 +21,16 @@ namespace HybridDb.Commands
 
             if (rowcount != preparedCommand.ExpectedRowCount)
             {
+                var documentDetails = preparedCommand is { Table: not null, DocumentId: not null }
+                        ? $" Document in table '{preparedCommand.Table.Name}' with Id '{preparedCommand.DocumentId}' was not saved."
+                        : "";
+
                 throw new ConcurrencyException(
-                    $"Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}. " +
-                    $"The transaction is rolled back now, so no changes were actually made.");
+                    $"""
+                     Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}.
+                     
+                     The transaction is rolled back now.{documentDetails}
+                     """);
             }
 
             tx.Store.Stats.LastWrittenEtag = tx.CommitId;
