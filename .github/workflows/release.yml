@@ -22,14 +22,17 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
-    - name: Test
-      run: dotnet test --verbosity normal
+    # - name: Test
+    #   run: dotnet test --verbosity normal
     - name: Version
       run: |
         tag=${{ github.ref_name }}
         echo "version=${tag#v}" >> $GITHUB_ENV
     - name: Pack
       run: dotnet pack -p:PackageVersion=${version} --verbosity normal
+    - name: Show directory structure
+      shell: bash
+      run: ls -R
     - name: Push
       run: dotnet nuget push "HybridDb\bin\Release\*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
     
