@@ -1023,20 +1023,20 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering()
         {
-            var observer = new BlockingTestObserver(timeout);
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o)
                 });
 
             Using(new HybridDbMessageQueue(store,
                 (_, message) => Task.CompletedTask));
 
-            await observer.AdvanceUntil<QueueEmpty>();
+            await o.PauseWhen<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1045,9 +1045,11 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
-            await observer.AdvanceBy1ThenNextShouldBe<MessageReceived>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<MessageReceived>();
+
+            o.Continue();
         }
 
         [Fact]
@@ -1200,7 +1202,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
-            var observer = new BlockingTestObserver(timeout);
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1208,12 +1210,12 @@ namespace HybridDb.Tests.Queue
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
                     InboxTopics = { "topic1" },
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o)
                 }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            await observer.AdvanceUntil<QueueEmpty>();
+            await o.PauseWhen<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1222,8 +1224,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1();
-            await observer.WaitForNothingToHappen();
+            await o.WaitForNothingToHappen(timeout);
         }
 
         public class TheScope : IDisposable
@@ -1242,7 +1243,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task CanUseEventsForGettingASessionFromIoCContainerWithScope()
         {
-            var observer = new BlockingTestObserver(timeout);
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             bool scopeWasThereWhenSessionWasCreated = false;
             bool scopeWasThereWhenMessageWasHandled = false;
@@ -1264,7 +1265,7 @@ namespace HybridDb.Tests.Queue
                         .Match<MessageHandling>(m => scopeWasThereWhenMessageWasHandled = TheScope.Current != null)
                         .Match<SessionEnded>(m => ((IDisposable)m.Context.Data["scope"]).Dispose()));
 
-                    connect.Subscribe(observer);
+                    connect.Subscribe(o);
 
                     return connect.Connect();
                 },
@@ -1277,11 +1278,13 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceUntil<SessionEnded>();
+            await o.PauseWhen<SessionEnded>();
 
             scopeWasThereWhenSessionWasCreated.ShouldBe(true);
             scopeWasThereWhenMessageWasHandled.ShouldBe(true);
             TheScope.Current.ShouldBe(null);
+
+            o.Continue();
         }
 
         [Fact]
