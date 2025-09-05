@@ -34,5 +34,5 @@ jobs:
       shell: bash
       run: ls -R
     - name: Push
-      run: dotnet nuget push "HybridDb\bin\Release\*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push "src/HybridDb/bin/Release/*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
     
