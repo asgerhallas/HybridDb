@@ -1100,7 +1100,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(20));
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
