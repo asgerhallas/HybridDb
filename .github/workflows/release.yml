@@ -33,6 +33,9 @@ jobs:
     - name: Show directory structure
       shell: bash
       run: ls -R
+    - name: Show working dir
+      shell: bash
+      run: pwd
     - name: Push
       run: dotnet nuget push "src/HybridDb/bin/Release/*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
     
