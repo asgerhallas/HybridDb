@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
     <Description>It's an O/RM... it's a document store... no it's SQL Server!</Description>
     <Copyright>Copyright 2013</Copyright>
@@ -24,7 +24,7 @@
     <PackageReference Include="ShinySwitch" Version="1.0.76" />
     <PackageReference Include="Sprache" Version="2.3.1" PrivateAssets="All" GeneratePathProperty="true" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="All" GeneratePathProperty="true" />
+    <PackageReference Include="ILRepack" Version="2.0.44" PrivateAssets="All" GeneratePathProperty="true" />
     <PackageReference Include="System.Reactive" Version="4.4.1" />
   </ItemGroup>
 

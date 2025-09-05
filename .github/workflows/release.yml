@@ -11,7 +11,10 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
     - uses: actions/checkout@v4
@@ -28,5 +31,5 @@ jobs:
     - name: Pack
       run: dotnet pack -p:PackageVersion=${version} --verbosity normal
     - name: Push
-      run: dotnet nuget push "TyDs/bin/Release/*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push ./src/HybridDb/bin/Release/*.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
     
