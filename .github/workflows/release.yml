@@ -30,12 +30,8 @@ jobs:
         echo "version=${tag#v}" >> $GITHUB_ENV
     - name: Pack
       run: dotnet pack -p:PackageVersion=${version} --verbosity normal
-    - name: Show directory structure
-      shell: bash
-      run: ls -R
-    - name: Show working dir
-      shell: bash
-      run: pwd
+    - name: List .nupkg files
+      run: ls ./src/HybridDb/bin/Release/
     - name: Push
-      run: dotnet nuget push "src/HybridDb/bin/Release/*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push "./src/HybridDb/bin/Release/*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
     
