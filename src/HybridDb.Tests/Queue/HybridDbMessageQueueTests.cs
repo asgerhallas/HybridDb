@@ -27,6 +27,8 @@ namespace HybridDb.Tests.Queue
 {
     public class HybridDbMessageQueueTests(ITestOutputHelper output) : HybridDbTests(output)
     {
+        readonly TimeSpan timeout = IsGithubActions ? TimeSpan.FromSeconds(120) : TimeSpan.FromSeconds(10);
+
         readonly Func<IDocumentSession, HybridDbMessage, Task> handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
 
         HybridDbMessageQueue StartQueue(MessageQueueOptions options = null)
@@ -1020,7 +1022,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(timeout);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1050,7 +1052,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Many()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(timeout);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1100,7 +1102,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(120));
+            var observer = new BlockingTestObserver(timeout);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1159,7 +1161,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_Topics()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(timeout);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1198,7 +1200,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(timeout);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1240,7 +1242,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task CanUseEventsForGettingASessionFromIoCContainerWithScope()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            var observer = new BlockingTestObserver(timeout);
 
             bool scopeWasThereWhenSessionWasCreated = false;
             bool scopeWasThereWhenMessageWasHandled = false;

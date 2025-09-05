@@ -67,12 +67,9 @@ namespace HybridDb.Tests
             }
         }
 
-        protected static string GetConnectionString() =>
-            IsAppveyor
-                ? "Server=(local)\\SQL2019;Database=master;User ID=sa;Password=Password12!;Encrypt=False"
-                : "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True";
+        protected static string GetConnectionString() => "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True";
 
-        public static bool IsAppveyor => Environment.GetEnvironmentVariable("APPVEYOR") != null;
+        public static bool IsGithubActions => Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != null;
 
         protected void NoInitialize() => autoInitialize = false;
 
