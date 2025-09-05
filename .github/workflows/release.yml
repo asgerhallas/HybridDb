@@ -31,5 +31,5 @@ jobs:
     - name: Pack
       run: dotnet pack -p:PackageVersion=${version} --verbosity normal
     - name: Push
-      run: dotnet nuget push "HybridDb/bin/Release/*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push "HybridDb\bin\Release\*.nupkg" -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
     
