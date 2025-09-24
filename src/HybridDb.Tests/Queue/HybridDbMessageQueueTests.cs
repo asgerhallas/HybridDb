@@ -303,6 +303,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task Poison_GoesToErrorTopic()
         {
+            var now = DateTimeOffset.Now;
+
             var queue = StartQueue();
 
             A.CallTo(handler).WithReturnType<Task>()
@@ -326,6 +328,10 @@ namespace HybridDb.Tests.Queue
             var message = store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "errors/default" }));
 
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
+
+            DateTimeOffset.Parse(message.Metadata["ExceptionAt"]).ShouldBeInRange(now, now.AddSeconds(1));
+            message.Metadata["ExceptionType"].ShouldBe("ArgumentException");
+            message.Metadata["ExceptionMessage"].ShouldBe("Value does not fall within the expected range.");
 
             // Original message is removed
             store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "default" })).ShouldBe(null);
