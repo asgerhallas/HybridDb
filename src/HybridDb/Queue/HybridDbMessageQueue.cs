@@ -386,6 +386,7 @@ namespace HybridDb.Queue
                 message.Metadata["ExceptionAt"] = DateTimeOffset.Now.ToString("O");
                 message.Metadata["ExceptionType"] = exception.GetType().Name;
                 message.Metadata["ExceptionMessage"] = exception.Message;
+                message.Metadata["Exception"] = exception.ToString();
 
                 tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 
