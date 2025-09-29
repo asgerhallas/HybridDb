@@ -384,9 +384,7 @@ namespace HybridDb.Queue
                 logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
 
                 message.Metadata["ExceptionAt"] = DateTimeOffset.Now.ToString("O");
-                message.Metadata["ExceptionType"] = exception.GetType().Name;
-                message.Metadata["ExceptionMessage"] = exception.Message;
-                message.Metadata["Exception"] = exception.ToString();
+                message.Metadata["ExceptionDetails"] = exception.ToString();
 
                 tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 

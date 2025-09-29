@@ -330,9 +330,7 @@ namespace HybridDb.Tests.Queue
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
 
             DateTimeOffset.Parse(message.Metadata["ExceptionAt"]).ShouldBeInRange(now, now.AddSeconds(2));
-            message.Metadata["ExceptionType"].ShouldBe("ArgumentException");
-            message.Metadata["ExceptionMessage"].ShouldBe("Value does not fall within the expected range.");
-            message.Metadata["Exception"].ShouldStartWith("System.ArgumentException: Value does not fall within the expected range.");
+            message.Metadata["ExceptionDetails"].ShouldStartWith("System.ArgumentException: Value does not fall within the expected range.\r\n");
 
             // Original message is removed
             store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "default" })).ShouldBe(null);
