@@ -258,8 +258,8 @@ namespace HybridDb.Tests.Migrations
 
             await store.DocumentMigration;
             
-            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
-                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfDocumentsInBatch"]).Value)
                 .ShouldBe(4);
 
             migratedIds.ShouldBeLikeUnordered("B", "d", "E", "g");
@@ -310,8 +310,8 @@ namespace HybridDb.Tests.Migrations
 
             await store.DocumentMigration;
 
-            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
-                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfDocumentsInBatch"]).Value)
                 .ShouldBe(2);
 
             migratedIds.ShouldBeLikeUnordered("aatest", "AaAtest");
@@ -372,8 +372,8 @@ namespace HybridDb.Tests.Migrations
 
             await store.DocumentMigration;
 
-            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
-                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfDocumentsInBatch"]).Value)
                 .ShouldBe(1);
 
             migratedIds.ShouldBeLikeUnordered("aatest");
@@ -411,8 +411,8 @@ namespace HybridDb.Tests.Migrations
 
             await store.DocumentMigration;
 
-            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}. {NumberOfPendingDocuments} documents left.")
-                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfPendingDocuments"]).Value)
+            log.Where(x => x.MessageTemplate.Text == "Migrating {NumberOfDocumentsInBatch} documents from {Table}.")
+                .Sum(x => (int)((ScalarValue)x.Properties["NumberOfDocumentsInBatch"]).Value)
                 .ShouldBe(2);
 
             var entities = store.OpenSession().Query<Entity>().ToList();

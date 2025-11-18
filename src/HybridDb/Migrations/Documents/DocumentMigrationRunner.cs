@@ -70,23 +70,18 @@ namespace HybridDb.Migrations.Documents
 
                                     var formattedTableName = store.Database.FormatTableNameAndEscape(table.Name);
 
-                                    var totalResults = tx
-                                        .Query<int>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                                            .Append($"select count(*) from {formattedTableName} where {where}"))
-                                        .First();
-
-                                    if (totalResults == 0) break;
 
                                     var rows = tx
                                         .Query<object>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                                            .Append($"select top {batchSize} * from {formattedTableName} with (xlock, readpast) where {where}"))
+                                            .Append($"select top {batchSize} * from {formattedTableName} with (rowlock, updlock, readpast) where {where}"))
                                         .Select(x => (IDictionary<string, object>)x)
                                         .ToList();
 
+                                    if (rows.Count == 0) break;
+
                                     logger.LogInformation(Indent(@"
-                                        Migrating {NumberOfDocumentsInBatch} documents from {Table}. 
-                                        {NumberOfPendingDocuments} documents left."
-                                    ), rows.Count, table.Name, totalResults);
+                                        Migrating {NumberOfDocumentsInBatch} documents from {Table}."
+                                    ), rows.Count, table.Name);
 
                                     foreach (var row in rows)
                                     {
