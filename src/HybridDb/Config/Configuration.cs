@@ -45,6 +45,7 @@ namespace HybridDb.Config
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunBackgroundMigrations = true;
+            MigrationBatchSize = 500;
             RunUpfrontMigrationsOnTempTables = false;
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
@@ -76,6 +77,7 @@ namespace HybridDb.Config
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
         public bool RunBackgroundMigrations { get; private set; }
+        public int MigrationBatchSize { get; private set; }
         public bool RunUpfrontMigrationsOnTempTables { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
@@ -296,6 +298,8 @@ namespace HybridDb.Config
         /// but a document will still be migrated when it is loaded into a session.
         /// </summary>
         public void DisableBackgroundMigrations() => RunBackgroundMigrations = false;
+
+        public void UseMigrationBatchSize(int migrationBatchSize) => MigrationBatchSize = migrationBatchSize;
 
         public void EnableUpfrontMigrationsOnTempTables() => RunUpfrontMigrationsOnTempTables = true;
 

@@ -41,8 +41,6 @@ namespace HybridDb.Migrations.Documents
                 {
                     configuration.Notify(new MigrationStarted(store));
 
-                    const int batchSize = 500;
-
                     var random = new Random();
 
                     foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
@@ -73,7 +71,7 @@ namespace HybridDb.Migrations.Documents
 
                                     var rows = tx
                                         .Query<object>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                                            .Append($"select top {batchSize} * from {formattedTableName} with (rowlock, updlock, readpast) where {where}"))
+                                            .Append($"select top {configuration.MigrationBatchSize} * from {formattedTableName} with (rowlock, updlock, readpast) where {where}"))
                                         .Select(x => (IDictionary<string, object>)x)
                                         .ToList();
 

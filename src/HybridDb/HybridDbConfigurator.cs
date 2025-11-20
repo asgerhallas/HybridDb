@@ -44,6 +44,8 @@ namespace HybridDb
 
         protected void DisableBackgroundMigrations() => configuration.DisableBackgroundMigrations();
 
+        protected void UseMigrationBatchSize(int migrationBatchSize) => configuration.UseMigrationBatchSize(migrationBatchSize);
+
         protected void EnableUpfrontMigrationsOnTempTables() => configuration.EnableUpfrontMigrationsOnTempTables();
     }
 }
