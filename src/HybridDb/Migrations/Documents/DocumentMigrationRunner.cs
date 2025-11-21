@@ -68,10 +68,14 @@ namespace HybridDb.Migrations.Documents
 
                                     var formattedTableName = store.Database.FormatTableNameAndEscape(table.Name);
 
-
+                                    // Order by Version to avoid large index scans, which can lead to lock escalations
+                                    // We use descending order in order to migrate most recent documents first, which are more likely to be accessed
                                     var rows = tx
                                         .Query<object>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                                            .Append($"select top {configuration.MigrationBatchSize} * from {formattedTableName} with (rowlock, updlock, readpast) where {where}"))
+                                            .Append($"select top {configuration.MigrationBatchSize} * " +
+                                                    $"from {formattedTableName} with (rowlock, updlock, readpast) " +
+                                                    $"where {where} " +
+                                                    $"order by {DocumentTable.VersionColumn.Name} desc"))
                                         .Select(x => (IDictionary<string, object>)x)
                                         .ToList();
 
