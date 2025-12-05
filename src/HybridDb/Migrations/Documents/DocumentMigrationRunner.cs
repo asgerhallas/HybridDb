@@ -63,35 +63,60 @@ namespace HybridDb.Migrations.Documents
                                 try
                                 {
                                     var where = command.Matches(store, migration?.Version);
-
-                                    using var tx = store.BeginTransaction();
-
                                     var formattedTableName = store.Database.FormatTableNameAndEscape(table.Name);
 
-                                    // Order by Version to avoid large index scans, which can lead to lock escalations
-                                    // We use descending order in order to migrate most recent documents first, which are more likely to be accessed
-                                    var rows = tx
-                                        .Query<object>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                                            .Append($"select top {configuration.MigrationBatchSize} * " +
-                                                    $"from {formattedTableName} with (rowlock, updlock, readpast) " +
-                                                    $"where {where} " +
-                                                    $"order by {DocumentTable.VersionColumn.Name} desc"))
-                                        .Select(x => (IDictionary<string, object>)x)
-                                        .ToList();
+                                    List<string> ids;
 
-                                    if (rows.Count == 0) break;
+                                    {
+                                        using var tx = store.BeginTransaction();
+
+                                        // Order by Version to avoid large index scans, which can lead to lock escalations
+                                        // We use descending order in order to migrate most recent documents first, which are more likely to be accessed
+                                        ids = tx
+                                            .Query<string>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
+                                                .Append($"select top {configuration.MigrationBatchSize} Id " +
+                                                        $"from {formattedTableName} with (readpast) " +
+                                                        $"where {where} " +
+                                                        $"order by {DocumentTable.VersionColumn.Name} desc"))
+                                            .ToList();
+
+                                        tx.Complete();
+                                    }
+
+                                    if (ids.Count == 0) break;
 
                                     logger.LogInformation(Indent(@"
                                         Migrating {NumberOfDocumentsInBatch} documents from {Table}."
-                                    ), rows.Count, table.Name);
+                                    ), ids.Count, table.Name);
 
-                                    foreach (var row in rows)
+                                    foreach (var id in ids)
                                     {
-                                        if (!await MigrateAndSave(store, tx, baseDesign, row))
-                                            goto nextTable;
-                                    }
+                                        using var tx = store.BeginTransaction();
 
-                                    tx.Complete();
+                                        var row = tx
+                                            .Query<object>(new SqlBuilder()
+                                                .Append($"select * from {formattedTableName} with (updlock, rowlock, readpast) where Id = '{id}'"))
+                                            .Cast<IDictionary<string, object>>()
+                                            .FirstOrDefault();
+
+                                        // Continue if row is skipped by readpast
+                                        if (row == null)
+                                        {
+                                            continue;
+                                        }
+
+                                        if ((int)row[DocumentTable.VersionColumn] >= migration?.Version)
+                                        {
+                                            continue;
+                                        }
+
+                                        if (!await MigrateAndSave(store, tx, baseDesign, row))
+                                        {
+                                            goto nextTable;
+                                        }
+
+                                        tx.Complete();
+                                    }
                                 }
                                 catch (SqlException exception)
                                 {
