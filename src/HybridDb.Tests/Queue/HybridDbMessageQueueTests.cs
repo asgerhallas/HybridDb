@@ -292,8 +292,10 @@ namespace HybridDb.Tests.Queue
             var messageHandlings = messages.OfType<MessageHandling>().ToList();
             messageHandlings.Count.ShouldBe(5);
             messageHandlings
-                .Select(x => x.Message).OfType<MyMessage>()
-                .Select(x => x.Text).ShouldAllBe(x => x == "Some command");
+                .Select(x => x.Message.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLike(["Some command", "Some command", "Some command", "Some command", "Some command"]);
 
             messages.OfType<MessageFailed>()
                 .Select(x => x.Message).ShouldBe(messageHandlings

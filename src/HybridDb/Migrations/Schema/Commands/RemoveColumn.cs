@@ -23,7 +23,7 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            // TODO: sletter kun den første ser det ud til?
+            // TODO: sletter kun den fÃ¸rste ser det ud til?
             var dropConstraints = new SqlBuilder()
                 .Append("DECLARE @ConstraintName nvarchar(200)")
                 .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
