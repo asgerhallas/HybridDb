@@ -1459,7 +1459,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanProjectCollection()
         {
-            Document<Entity>().With(x => x.Children);
+            Document<Entity>().With(x => x.Children, new AsJson());
 
             var id = NewId();
 

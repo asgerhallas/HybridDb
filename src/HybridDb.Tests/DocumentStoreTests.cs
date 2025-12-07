@@ -1101,7 +1101,7 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryWithPropertyOfComplexType()
         {
-            Document<Entity>().With(x => x.Complex).With(x => x.Number);
+            Document<Entity>().With(x => x.Complex, new AsJson()).With(x => x.Number);
 
             using var session = store.OpenSession();
 
@@ -1116,8 +1116,9 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryWithPropertyOfComplexTypes()
         {
-            Document<Entity>().With(x => x.Complex)
-                .With(x => x.TheChild)
+            Document<Entity>()
+                .With(x => x.Complex, new AsJson())
+                .With(x => x.TheChild, new AsJson())
                 .With(x => x.Property);
 
             var entity = new Entity
@@ -1139,8 +1140,8 @@ namespace HybridDb.Tests
         public void QueryWithListsOfComplexType()
         {
             Document<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>()
-                .With(x => x.Things)
-                .With(x => x.OtherThings);
+                .With(x => x.Things, new AsJson())
+                .With(x => x.OtherThings, new AsJson());
 
             using var session = store.OpenSession();
 

@@ -258,7 +258,7 @@ namespace HybridDb.Tests
         [Fact]
         public void JsonProjection()
         {
-            configuration.Document<Entity>().With(x => x.Strings);
+            configuration.Document<Entity>().With(x => x.Strings, new AsJson());
 
             ProjectionsFor<Entity>()["Strings"].Projector(new Entity { Strings = ["hej", "okay"] }, null).ShouldBe("[\"hej\",\"okay\"]");
         }
@@ -266,7 +266,7 @@ namespace HybridDb.Tests
         [Fact]
         public void JsonProjection_Object()
         {
-            configuration.Document<Entity<object>>().With(x => x.Value);
+            configuration.Document<Entity<object>>().With(x => x.Value, new AsJson());
 
             ProjectionsFor<Entity<object>>()["Value"].Projector(new Entity<object> { Value = new object()}, null).ShouldBe("{}");
         }
@@ -274,7 +274,7 @@ namespace HybridDb.Tests
         [Fact]
         public void JsonProjection_ComplexType()
         {
-            configuration.Document<Entity<OtherEntity>>().With(x => x.Value);
+            configuration.Document<Entity<OtherEntity>>().With(x => x.Value, new AsJson());
 
             ProjectionsFor<Entity<OtherEntity>>()["Value"].Projector(new Entity<OtherEntity>{Value =  new OtherEntity{String = "ThisIsAString"}}, null)
                 .ShouldBe("{\"String\":\"ThisIsAString\"}");
@@ -291,14 +291,14 @@ namespace HybridDb.Tests
         [Fact]
         public void CorrectLengthOnJsonProperty()
         {
-            configuration.Document<Entity<object>>().With(x => x.Value);
+            configuration.Document<Entity<object>>().With(x => x.Value, new AsJson());
             TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(-1);
         }
 
         [Fact]
         public void CorrectLengthOnJsonPropertyWhenOverwritingLength()
         {
-            configuration.Document<Entity<object>>().With(x => x.Value, new MaxLength(50));
+            configuration.Document<Entity<object>>().With(x => x.Value, new MaxLength(50), new AsJson());
 
             TableFor<Entity<object>>().Columns.Single(x => x.Name == "Value").Length.ShouldBe(50);
         }
