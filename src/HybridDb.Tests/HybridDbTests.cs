@@ -67,7 +67,7 @@ namespace HybridDb.Tests
             }
         }
 
-        protected static string GetConnectionString() => "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True;Max Pool Size=100;";
+        protected static string GetConnectionString() => "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True;Max Pool Size=200;";
 
         public static bool IsGithubActions => Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != null;
 
