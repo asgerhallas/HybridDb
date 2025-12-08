@@ -62,26 +62,9 @@ namespace HybridDb.Migrations.Documents
                             {
                                 try
                                 {
-                                    var where = command.Matches(store, migration?.Version);
                                     var formattedTableName = store.Database.FormatTableNameAndEscape(table.Name);
-
-                                    List<string> ids;
-
-                                    {
-                                        using var tx = store.BeginTransaction();
-
-                                        // Order by Version to avoid large index scans, which can lead to lock escalations
-                                        // We use descending order in order to migrate most recent documents first, which are more likely to be accessed
-                                        ids = tx
-                                            .Query<string>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                                                .Append($"select top {configuration.MigrationBatchSize} Id " +
-                                                        $"from {formattedTableName} with (readpast) " +
-                                                        $"where {where} " +
-                                                        $"order by {DocumentTable.VersionColumn.Name} desc"))
-                                            .ToList();
-
-                                        tx.Complete();
-                                    }
+                                    var where = command.Matches(store, migration?.Version);
+                                    var ids = GetIds(formattedTableName, where, configuration.MigrationBatchSize);
 
                                     if (ids.Count == 0) break;
 
@@ -156,6 +139,17 @@ namespace HybridDb.Migrations.Documents
             cts.Cancel();
             
             loop.ContinueWith(x => x).Wait();
+        }
+
+        List<string> GetIds(string tableName, SqlBuilder where, int batchSize)
+        {
+            return store
+                .Query<string>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
+                    .Append($"select top {batchSize} Id " +
+                            $"from {tableName} with (readpast) " +
+                            $"where {where} " +
+                            $"order by {DocumentTable.VersionColumn.Name} desc"))
+                .ToList();
         }
 
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)
