@@ -1,13 +1,14 @@
+using Dapper;
+using HybridDb.Config;
+using HybridDb.Linq.Old;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using HybridDb.Config;
-using HybridDb.Linq.Old;
-using HybridDb.Queue;
-using Microsoft.Extensions.Logging;
 using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
@@ -76,9 +77,12 @@ namespace HybridDb.Migrations.Documents
                                     {
                                         using var tx = store.BeginTransaction();
 
-                                        var row = tx
-                                            .Query<object>(new SqlBuilder()
-                                                .Append($"select * from {formattedTableName} with (updlock, rowlock, readpast) where Id = '{id}'"))
+                                        var sql = $"select * from {formattedTableName} with (updlock, rowlock, readpast) where Id = @Id";
+
+                                        var idParameter = new DbString {Value = id, IsAnsi = false, IsFixedLength = false, Length = 850};
+
+                                        var row = tx.SqlConnection
+                                            .Query<object>(sql, new {Id = idParameter}, tx.SqlTransaction, buffered: false)
                                             .Cast<IDictionary<string, object>>()
                                             .FirstOrDefault();
 
@@ -141,15 +145,21 @@ namespace HybridDb.Migrations.Documents
             loop.ContinueWith(x => x).Wait();
         }
 
-        List<string> GetIds(string tableName, SqlBuilder where, int batchSize)
+        IReadOnlyList<string> GetIds(string tableName, SqlBuilder where, int batchSize)
         {
-            return store
+            using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
+
+            var ids = tx
                 .Query<string>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
                     .Append($"select top {batchSize} Id " +
-                            $"from {tableName} with (readpast) " +
+                            $"from {tableName} " +
                             $"where {where} " +
                             $"order by {DocumentTable.VersionColumn.Name} desc"))
                 .ToList();
+
+            tx.Complete();
+
+            return ids;
         }
 
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)
