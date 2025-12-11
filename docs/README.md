@@ -38,22 +38,20 @@ dotnet add package HybridDb
 var store = DocumentStore.ForTesting(TableMode.TempTables);
 store.Document<Product>().With(x => x.Name);
 
-using (var session = store.OpenSession())
-{
-    session.Store(new Product { Id = "p1", Name = "Widget" });
-    session.SaveChanges();
-}
+using var session = store.OpenSession();
+
+session.Store(new Product { Id = "p1", Name = "Widget" });
+session.SaveChanges();
 ```
 
 **Querying**
 ```csharp
-using (var session = store.OpenSession())
-{
-    var products = session.Query<Product>()
-        .Where(x => x.Price > 100)
-        .OrderBy(x => x.Name)
-        .ToList();
-}
+using var session = store.OpenSession();
+
+var products = session.Query<Product>()
+    .Where(x => x.Price > 100)
+    .OrderBy(x => x.Name)
+    .ToList();
 ```
 
 ### Key Features

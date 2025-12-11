@@ -116,19 +116,16 @@ public void CanStoreAndLoadEntity()
     var entity = new Entity { Id = NewId(), Property = "Test" };
     
     // Act
-    using (var session = store.OpenSession())
-    {
-        session.Store(entity);
-        session.SaveChanges();
-    }
+     using var session = store.OpenSession();
+
+    session.Store(entity);
+    session.SaveChanges();
     
     // Assert
-    using (var session = store.OpenSession())
-    {
-        var loaded = session.Load<Entity>(entity.Id);
-        loaded.Property.ShouldBe("Test");
-    }
-}
+     using var session = store.OpenSession();
+
+    var loaded = session.Load<Entity>(entity.Id);
+    loaded.Property.ShouldBe("Test");
 ```
 
 ### Commit Messages
@@ -208,9 +205,7 @@ store.Configuration.AddEventHandler(@event =>
 {
     if (@event is SqlCommandExecuted executed)
     {
-        Console.WriteLine(executed.Sql);
-    }
-});
+    Console.WriteLine(executed.Sql););
 ```
 
 ### Debugging Migrations

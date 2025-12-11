@@ -53,9 +53,7 @@ var store = DocumentStore.ForTesting(TableMode.TempTables);
 store.Document<Entity>().With(x => x.Property);
 
 // Use the store
-using (var session = store.OpenSession())
-{
-    // Store a document
+using var session = store.OpenSession();`n`n    // Store a document
     session.Store(new Entity 
     { 
         Id = Guid.NewGuid(), 
@@ -66,9 +64,7 @@ using (var session = store.OpenSession())
     session.SaveChanges();
 }
 
-using (var session = store.OpenSession())
-{
-    // Query documents using LINQ
+using var session = store.OpenSession();`n`n    // Query documents using LINQ
     var entity = session.Query<Entity>()
         .Single(x => x.Property == "Hello");
     
@@ -180,8 +176,6 @@ public class ProductRepository
         return session.Query<Product>()
             .Where(x => x.Category == category)
             .ToList();
-    }
-}
 ```
 
 ### Using Transactions
@@ -192,18 +186,14 @@ using var tx = store.BeginTransaction();
 
 try
 {
-    using (var session = store.OpenSession(tx))
-    {
-        var entity = session.Load<Entity>("some-id");
-        entity.Property = "Updated";
-        session.SaveChanges();
-    }
+    using var session1 = store.OpenSession(tx);
+    var entity = session1.Load<Entity>("some-id");
+    entity.Property = "Updated";
+    session1.SaveChanges();
     
-    using (var session = store.OpenSession(tx))
-    {
-        session.Store(new AnotherEntity { Id = "new-id" });
-        session.SaveChanges();
-    }
+    using var session2 = store.OpenSession(tx);
+    session2.Store(new AnotherEntity { Id = "new-id" });
+    session2.SaveChanges();
     
     // Commit the transaction
     tx.Commit();

@@ -7,9 +7,7 @@
 Remove an entity from session tracking:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
     
     // Evict from session cache
     session.Advanced.Evict(product);
@@ -27,9 +25,7 @@ using (var session = store.OpenSession())
 Clear all tracked entities and deferred commands:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    session.Store(new Product { Id = "p1", Name = "Widget" });
+using var session = store.OpenSession();`n`n    session.Store(new Product { Id = "p1", Name = "Widget" });
     session.Store(new Product { Id = "p2", Name = "Gadget" });
     
     // Clear everything
@@ -45,18 +41,15 @@ using (var session = store.OpenSession())
 Create a copy of a session with the same state:
 
 ```csharp
-using (var session1 = store.OpenSession())
-{
-    session1.Store(new Product { Id = "p1", Name = "Widget" });
+using var session1 = store.OpenSession();
+    session1.Store(new Product { Id = "p1", Name = "Widget" );
     
     // Create a copy
-    using (var session2 = session1.Advanced.Copy())
-    {
-        // session2 has the same tracked entities
-        var product = session2.Load<Product>("p1");
-        Assert.Equal("Widget", product.Name);
-    }
-}
+     using var session2 = session1.Advanced.Copy();
+
+    // session2 has the same tracked entities
+    var product = session2.Load<Product>("p1");
+    Assert.Equal("Widget", product.Name);
 ```
 
 ## Entity Metadata
@@ -66,18 +59,14 @@ using (var session1 = store.OpenSession())
 Retrieve metadata for an entity:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
     
     var metadata = session.Advanced.GetMetadataFor(product);
     
     if (metadata.TryGetValue("CreatedBy", out var createdByList))
     {
-        var createdBy = createdByList.FirstOrDefault();
-        Console.WriteLine($"Created by: {createdBy}");
-    }
-}
+    var createdBy = createdByList.FirstOrDefault();
+    Console.WriteLine($"Created by: {createdBy}");
 ```
 
 ### Setting Metadata
@@ -85,16 +74,14 @@ using (var session = store.OpenSession())
 Add or update metadata for an entity:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = new Product { Id = "p1", Name = "Widget" };
+using var session = store.OpenSession();`n`n    var product = new Product { Id = "p1", Name = "Widget" };
     session.Store(product);
     
     var metadata = new Dictionary<string, List<string>>
     {
-        ["CreatedBy"] = new List<string> { "john@example.com" },
-        ["Tags"] = new List<string> { "electronics", "gadgets" },
-        ["Version"] = new List<string> { "1.0" }
+    ["CreatedBy"] = new List<string> { "john@example.com" },
+    ["Tags"] = new List<string> { "electronics", "gadgets" },
+    ["Version"] = new List<string> { "1.0" }
     };
     
     session.Advanced.SetMetadataFor(product, metadata);
@@ -125,9 +112,7 @@ session.Advanced.SetMetadataFor(entity, metadata);
 Retrieve the ETag for an entity:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
     var etag = session.Advanced.GetEtagFor(product);
     
     Console.WriteLine($"Current ETag: {etag}");
@@ -141,25 +126,23 @@ public void UpdateProductPrice(string productId, decimal newPrice)
 {
     using (var session = store.OpenSession())
     {
-        var product = session.Load<Product>(productId);
-        var etag = session.Advanced.GetEtagFor(product);
-        
-        product.Price = newPrice;
-        
-        // Store with ETag check
-        session.Store(productId, product, etag);
-        
-        try
-        {
-            session.SaveChanges();
-        }
-        catch (ConcurrencyException)
-        {
-            // Another process modified the document
-            throw new InvalidOperationException("Product was modified by another user");
-        }
+    var product = session.Load<Product>(productId);
+    var etag = session.Advanced.GetEtagFor(product);
+    
+    product.Price = newPrice;
+    
+    // Store with ETag check
+    session.Store(productId, product, etag);
+    
+    try
+    {
+        session.SaveChanges();
     }
-}
+    catch (ConcurrencyException)
+    {
+        // Another process modified the document
+        throw new InvalidOperationException("Product was modified by another user");
+    }
 ```
 
 ### Retry Pattern with ETags
@@ -172,28 +155,28 @@ public async Task<bool> TryUpdateWithRetry<T>(
 {
     for (int attempt = 0; attempt < maxRetries; attempt++)
     {
-        try
+    try
+    {
+        using (var session = store.OpenSession())
         {
-            using (var session = store.OpenSession())
-            {
-                var entity = session.Load<T>(id);
-                if (entity == null) return false;
-                
-                var etag = session.Advanced.GetEtagFor(entity);
-                
-                update(entity);
-                
-                session.Store(id, entity, etag);
-                session.SaveChanges();
-                
-                return true;
-            }
+            var entity = session.Load<T>(id);
+            if (entity == null) return false;
+            
+            var etag = session.Advanced.GetEtagFor(entity);
+            
+            update(entity);
+            
+            session.Store(id, entity, etag);
+            session.SaveChanges();
+            
+            return true;
         }
-        catch (ConcurrencyException) when (attempt < maxRetries - 1)
-        {
-            // Exponential backoff
-            await Task.Delay(TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100));
-        }
+    }
+    catch (ConcurrencyException) when (attempt < maxRetries - 1)
+    {
+        // Exponential backoff
+        await Task.Delay(TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100));
+    }
     }
     
     return false;
@@ -211,16 +194,12 @@ await TryUpdateWithRetry<Product>("product-1", product =>
 ### Check if Document Exists
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    // Check existence without loading
+using var session = store.OpenSession();`n`n    // Check existence without loading
     bool exists = session.Advanced.Exists<Product>("product-1", out Guid? etag);
     
     if (exists)
     {
-        Console.WriteLine($"Document exists with ETag: {etag}");
-    }
-}
+    Console.WriteLine($"Document exists with ETag: {etag}");
 ```
 
 ### Exists vs Load
@@ -247,19 +226,17 @@ Execute custom commands when `SaveChanges` is called:
 ### Basic Deferred Command
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var table = store.Configuration.GetDesignFor<Product>().Table;
+using var session = store.OpenSession();`n`n    var table = store.Configuration.GetDesignFor<Product>().Table;
     
     // Defer a custom insert
     session.Advanced.Defer(new InsertCommand(
-        table,
-        "product-custom",
-        new Dictionary<string, object>
-        {
-            ["Id"] = "product-custom",
-            ["Document"] = "{\"Name\":\"Custom Product\"}"
-        }
+    table,
+    "product-custom",
+    new Dictionary<string, object>
+    {
+        ["Id"] = "product-custom",
+        ["Document"] = "{\"Name\":\"Custom Product\"}"
+    }
     ));
     
     session.SaveChanges();  // Command executes here
@@ -269,18 +246,16 @@ using (var session = store.OpenSession())
 ### Batch Operations with Deferred Commands
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var table = store.Configuration.GetDesignFor<Product>().Table;
+using var session = store.OpenSession();`n`n    var table = store.Configuration.GetDesignFor<Product>().Table;
     
     // Defer multiple commands
     for (int i = 0; i < 100; i++)
     {
-        session.Advanced.Defer(new InsertCommand(
-            table,
-            $"product-{i}",
-            CreateProjections(new Product { Id = $"product-{i}", Name = $"Product {i}" })
-        ));
+    session.Advanced.Defer(new InsertCommand(
+        table,
+        $"product-{i}",
+        CreateProjections(new Product { Id = $"product-{i}", Name = $"Product {i}" })
+    ));
     }
     
     // All executed in one transaction
@@ -291,13 +266,11 @@ using (var session = store.OpenSession())
 ### Custom SQL Commands
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    // Defer a raw SQL command
+using var session = store.OpenSession();`n`n    // Defer a raw SQL command
     session.Advanced.Defer(new SqlCommand(
-        new SqlBuilder()
-            .Append("UPDATE Products SET Featured = 1")
-            .Append("WHERE CategoryId = @category", new SqlParameter("category", "electronics"))
+    new SqlBuilder()
+        .Append("UPDATE Products SET Featured = 1")
+        .Append("WHERE CategoryId = @category", new SqlParameter("category", "electronics"))
     ));
     
     session.SaveChanges();
@@ -309,28 +282,22 @@ using (var session = store.OpenSession())
 ### Accessing Managed Entities
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
     
     // Get managed entity information
     var managedEntities = session.Advanced.ManagedEntities;
     
     foreach (var managed in managedEntities.Values)
     {
-        Console.WriteLine($"Key: {managed.Key}");
-        Console.WriteLine($"State: {managed.State}");
-        Console.WriteLine($"Type: {managed.Design.DocumentType}");
-    }
-}
+    Console.WriteLine($"Key: {managed.Key}");
+    Console.WriteLine($"State: {managed.State}");
+    Console.WriteLine($"Type: {managed.Design.DocumentType}");
 ```
 
 ### Checking if Entity is Managed
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = new Product { Id = "p1", Name = "Widget" };
+using var session = store.OpenSession();`n`n    var product = new Product { Id = "p1", Name = "Widget" };
     
     // Not yet managed
     bool isManaged = session.Advanced.TryGetManagedEntity<Product>("p1", out _);
@@ -351,9 +318,7 @@ using (var session = store.OpenSession())
 Store arbitrary data in the session:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    // Store data in session
+using var session = store.OpenSession();`n`n    // Store data in session
     session.Advanced.SessionData["CurrentUser"] = "john@example.com";
     session.Advanced.SessionData["RequestId"] = Guid.NewGuid();
     
@@ -371,8 +336,8 @@ void ProcessOrder(IDocumentSession session)
     // Use in business logic
     var order = new Order 
     { 
-        Id = Guid.NewGuid().ToString(),
-        CreatedBy = userId
+    Id = Guid.NewGuid().ToString(),
+    CreatedBy = userId
     };
     
     session.Store(order);
@@ -389,11 +354,11 @@ using (var tx = store.BeginTransaction())
 {
     using (var session = store.OpenSession())
     {
-        // Enlist session in transaction
-        session.Advanced.Enlist(tx);
-        
-        session.Store(new Product { Id = "p1", Name = "Widget" });
-        session.SaveChanges();
+    // Enlist session in transaction
+    session.Advanced.Enlist(tx);
+    
+    session.Store(new Product { Id = "p1", Name = "Widget" });
+    session.SaveChanges();
     }
     
     tx.Complete();
@@ -408,17 +373,17 @@ using (var tx = store.BeginTransaction())
     // Session 1
     using (var session1 = store.OpenSession())
     {
-        session1.Advanced.Enlist(tx);
-        session1.Store(new Product { Id = "p1", Name = "Widget" });
-        session1.SaveChanges();
+    session1.Advanced.Enlist(tx);
+    session1.Store(new Product { Id = "p1", Name = "Widget" });
+    session1.SaveChanges();
     }
     
     // Session 2
     using (var session2 = store.OpenSession())
     {
-        session2.Advanced.Enlist(tx);
-        session2.Store(new Order { Id = "o1", ProductId = "p1" });
-        session2.SaveChanges();
+    session2.Advanced.Enlist(tx);
+    session2.Store(new Order { Id = "o1", ProductId = "p1" });
+    session2.SaveChanges();
     }
     
     // Both committed together
@@ -429,9 +394,7 @@ using (var tx = store.BeginTransaction())
 ## Accessing Store and Transaction
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    // Access the document store
+using var session = store.OpenSession();`n`n    // Access the document store
     var documentStore = session.Advanced.DocumentStore;
     
     // Access current transaction (if any)
@@ -439,9 +402,7 @@ using (var session = store.OpenSession())
     
     if (transaction != null)
     {
-        Console.WriteLine($"Commit ID: {transaction.CommitId}");
-    }
-}
+    Console.WriteLine($"Commit ID: {transaction.CommitId}");
 ```
 
 ## Advanced Query Scenarios
@@ -449,45 +410,39 @@ using (var session = store.OpenSession())
 ### Custom Projections
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var sql = new SqlBuilder()
-        .Append(@"
-            SELECT 
-                p.Id,
-                p.Name,
-                p.Price,
-                c.Name as CategoryName
-            FROM Products p
-            LEFT JOIN Categories c ON p.CategoryId = c.Id
-            WHERE p.Price > @minPrice",
-            new SqlParameter("minPrice", 100)
-        );
+using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
+    .Append(@"
+        SELECT 
+            p.Id,
+            p.Name,
+            p.Price,
+            c.Name as CategoryName
+        FROM Products p
+        LEFT JOIN Categories c ON p.CategoryId = c.Id
+        WHERE p.Price > @minPrice",
+        new SqlParameter("minPrice", 100)
+    );
     
     var results = session.Query<dynamic>(sql).ToList();
     
     foreach (var result in results)
     {
-        Console.WriteLine($"{result.Name} - {result.CategoryName}: ${result.Price}");
-    }
-}
+    Console.WriteLine($"{result.Name} - {result.CategoryName}: ${result.Price}");
 ```
 
 ### Aggregations
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var sql = new SqlBuilder()
-        .Append(@"
-            SELECT 
-                CategoryId,
-                COUNT(*) as ProductCount,
-                AVG(Price) as AvgPrice,
-                MAX(Price) as MaxPrice
-            FROM Products
-            GROUP BY CategoryId
-        ");
+using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
+    .Append(@"
+        SELECT 
+            CategoryId,
+            COUNT(*) as ProductCount,
+            AVG(Price) as AvgPrice,
+            MAX(Price) as MaxPrice
+        FROM Products
+        GROUP BY CategoryId
+    ");
     
     var stats = session.Query<dynamic>(sql).ToList();
 }
@@ -502,19 +457,17 @@ store.Configuration.AddEventHandler(@event =>
 {
     switch (@event)
     {
-        case SaveChanges_BeforePrepareCommands before:
-            Console.WriteLine($"About to save {before.Session.Advanced.ManagedEntities.Count} entities");
-            break;
-            
-        case SaveChanges_AfterExecuteCommands after:
-            Console.WriteLine($"Executed {after.ExecutedCommands.Count} commands");
-            break;
-            
-        case EntityLoaded loaded:
-            Console.WriteLine($"Loaded {loaded.ManagedEntity.Design.DocumentType.Name}");
-            break;
-    }
-});
+    case SaveChanges_BeforePrepareCommands before:
+        Console.WriteLine($"About to save {before.Session.Advanced.ManagedEntities.Count} entities");
+        break;
+        
+    case SaveChanges_AfterExecuteCommands after:
+        Console.WriteLine($"Executed {after.ExecutedCommands.Count} commands");
+        break;
+        
+    case EntityLoaded loaded:
+        Console.WriteLine($"Loaded {loaded.ManagedEntity.Design.DocumentType.Name}");
+        break;);
 ```
 
 ## Best Practices
@@ -523,18 +476,14 @@ store.Configuration.AddEventHandler(@event =>
 
 ```csharp
 // Process large batch without keeping all in memory
-using (var session = store.OpenSession())
-{
-    foreach (var id in largeListOfIds)
+using var session = store.OpenSession();`n`n    foreach (var id in largeListOfIds)
     {
-        var product = session.Load<Product>(id);
-        UpdateProduct(product);
-        session.SaveChanges();
-        
-        // Evict to free memory
-        session.Advanced.Evict(product);
-    }
-}
+    var product = session.Load<Product>(id);
+    UpdateProduct(product);
+    session.SaveChanges();
+    
+    // Evict to free memory
+    session.Advanced.Evict(product);
 ```
 
 ### 2. Use Metadata for Audit Trails
@@ -546,8 +495,8 @@ public void StoreWithAudit<T>(IDocumentSession session, T entity, string userId)
     
     var metadata = new Dictionary<string, List<string>>
     {
-        ["ModifiedBy"] = new List<string> { userId },
-        ["ModifiedAt"] = new List<string> { DateTime.UtcNow.ToString("o") }
+    ["ModifiedBy"] = new List<string> { userId },
+    ["ModifiedAt"] = new List<string> { DateTime.UtcNow.ToString("o") }
     };
     
     session.Advanced.SetMetadataFor(entity, metadata);
@@ -579,16 +528,14 @@ public class AuditInterceptor
 {
     public void OnSave(IDocumentSession session, object entity)
     {
-        if (session.Advanced.SessionData.TryGetValue("UserId", out var userId))
-        {
-            var metadata = session.Advanced.GetMetadataFor(entity) 
-                ?? new Dictionary<string, List<string>>();
-            
-            metadata["ModifiedBy"] = new List<string> { userId.ToString() };
-            session.Advanced.SetMetadataFor(entity, metadata);
-        }
+    if (session.Advanced.SessionData.TryGetValue("UserId", out var userId))
+    {
+        var metadata = session.Advanced.GetMetadataFor(entity) 
+            ?? new Dictionary<string, List<string>>();
+        
+        metadata["ModifiedBy"] = new List<string> { userId.ToString() };
+        session.Advanced.SetMetadataFor(entity, metadata);
     }
-}
 ```
 
 ### 5. Implement Optimistic Concurrency Strategically
@@ -599,32 +546,28 @@ public void DecrementStock(string productId, int quantity)
 {
     using (var session = store.OpenSession())
     {
-        var product = session.Load<Product>(productId);
-        var etag = session.Advanced.GetEtagFor(product);
-        
-        if (product.Stock < quantity)
-        {
-            throw new InvalidOperationException("Insufficient stock");
-        }
-        
-        product.Stock -= quantity;
-        
-        session.Store(productId, product, etag);  // Ensure no concurrent updates
-        session.SaveChanges();
+    var product = session.Load<Product>(productId);
+    var etag = session.Advanced.GetEtagFor(product);
+    
+    if (product.Stock < quantity)
+    {
+        throw new InvalidOperationException("Insufficient stock");
     }
-}
+    
+    product.Stock -= quantity;
+    
+    session.Store(productId, product, etag);  // Ensure no concurrent updates
+    session.SaveChanges();
 
 // For non-critical operations, last write wins
 public void UpdateDescription(string productId, string description)
 {
     using (var session = store.OpenSession())
     {
-        var product = session.Load<Product>(productId);
-        product.Description = description;
-        
-        session.SaveChanges(lastWriteWins: true);  // Allow overwrites
-    }
-}
+    var product = session.Load<Product>(productId);
+    product.Description = description;
+    
+    session.SaveChanges(lastWriteWins: true);  // Allow overwrites
 ```
 
 ## Troubleshooting

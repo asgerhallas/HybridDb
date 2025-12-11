@@ -64,9 +64,7 @@ bool isInitialized = store.IsInitialized;
 Sessions represent a unit of work:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
     product.Price = 99.99m;
     session.SaveChanges();
 }
@@ -98,9 +96,7 @@ var exists = store.Execute(
 var store = DocumentStore.Create(config => { /* ... */ });
 
 // Use the store
-using (var session = store.OpenSession())
-{
-    // ...
+using var session = store.OpenSession();`n`n    // ...
 }
 
 // Dispose when done (important for temp tables)
@@ -152,9 +148,7 @@ store.Configuration.AddEventHandler(@event =>
             
         case SqlCommandExecuted executed:
             Console.WriteLine($"SQL: {executed.Sql}");
-            break;
-    }
-});
+            break;);
 ```
 
 ## DocumentTransaction
@@ -166,17 +160,12 @@ store.Configuration.AddEventHandler(@event =>
 #### Basic Transaction
 
 ```csharp
-using (var tx = store.BeginTransaction())
-{
-    using (var session = store.OpenSession(tx))
-    {
-        session.Store(new Product { Id = "product-1", Name = "Widget" });
-        session.SaveChanges();
-    }
+ using var tx = store.BeginTransaction();
+
+using var session = store.OpenSession(tx);`n`n        session.Store(new Product { Id = "product-1", Name = "Widget" });
+    session.SaveChanges();
     
-    using (var session = store.OpenSession(tx))
-    {
-        session.Store(new Order { Id = "order-1", ProductId = "product-1" });
+    using var session = store.OpenSession(tx);`n`n        session.Store(new Order { Id = "order-1", ProductId = "product-1" });
         session.SaveChanges();
     }
     
@@ -188,15 +177,12 @@ using (var tx = store.BeginTransaction())
 #### With Isolation Level
 
 ```csharp
-using (var tx = store.BeginTransaction(IsolationLevel.Serializable))
-{
-    // Critical section with serializable isolation
-    using (var session = store.OpenSession(tx))
-    {
-        var product = session.Load<Product>("product-1");
-        product.Stock--;
-        session.SaveChanges();
-    }
+ using var tx = store.BeginTransaction(IsolationLevel.Serializable);
+
+// Critical section with serializable isolation
+using var session = store.OpenSession(tx);`n`n        var product = session.Load<Product>("product-1");
+    product.Stock--;
+    session.SaveChanges();
     
     tx.Complete();
 }
@@ -207,16 +193,13 @@ using (var tx = store.BeginTransaction(IsolationLevel.Serializable))
 ```csharp
 var commitId = Guid.NewGuid();
 
-using (var tx = store.BeginTransaction(commitId))
-{
-    // All changes in this transaction will have the same commit ID
-    // Useful for tracking related changes
-    
-    using (var session = store.OpenSession(tx))
-    {
-        session.Store(product);
-        session.SaveChanges();
-    }
+ using var tx = store.BeginTransaction(commitId);
+
+// All changes in this transaction will have the same commit ID
+// Useful for tracking related changes
+
+using var session = store.OpenSession(tx);`n`n        session.Store(product);
+    session.SaveChanges();
     
     tx.Complete();
 }
@@ -258,25 +241,24 @@ using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
 ### Executing Commands in Transactions
 
 ```csharp
-using (var tx = store.BeginTransaction())
-{
-    var table = store.Configuration.GetDesignFor<Product>().Table;
-    
-    // Get document
-    var doc = tx.Get(table, "product-1");
-    
-    // Get multiple documents
-    var docs = tx.Get(table, new[] { "product-1", "product-2" });
-    
-    // Query
-    var (stats, results) = tx.Query<Product>(
-        table,
-        join: "",
-        where: "Price > 100"
-    );
-    
-    tx.Complete();
-}
+ using var tx = store.BeginTransaction();
+
+var table = store.Configuration.GetDesignFor<Product>().Table;
+
+// Get document
+var doc = tx.Get(table, "product-1");
+
+// Get multiple documents
+var docs = tx.Get(table, new[] { "product-1", "product-2" });
+
+// Query
+var (stats, results) = tx.Query<Product>(
+    table,
+    join: "",
+    where: "Price > 100"
+);
+
+tx.Complete();
 ```
 
 ### Transaction Timeout
@@ -290,9 +272,7 @@ using (var tx = store.BeginTransaction(
 {
     // Transaction will fail if connection can't be acquired within 30 seconds
     
-    using (var session = store.OpenSession(tx))
-    {
-        // ...
+    using var session = store.OpenSession(tx);`n`n        // ...
     }
     
     tx.Complete();
@@ -304,27 +284,25 @@ using (var tx = store.BeginTransaction(
 Transactions automatically roll back if not completed:
 
 ```csharp
-using (var tx = store.BeginTransaction())
+ using var tx = store.BeginTransaction();
+
+try
 {
-    try
+    using (var session = store.OpenSession(tx))
     {
-        using (var session = store.OpenSession(tx))
-        {
-            session.Store(product);
-            session.SaveChanges();
-        }
-        
-        // Some operation that might fail
-        ProcessPayment();
-        
-        tx.Complete();  // Only commits if we reach here
+        session.Store(product);
+        session.SaveChanges();
     }
-    catch (Exception)
-    {
-        // Transaction automatically rolls back on dispose
-        throw;
-    }
+    
+    // Some operation that might fail
+    ProcessPayment();
+    
+    tx.Complete();  // Only commits if we reach here
 }
+catch (Exception)
+{
+    // Transaction automatically rolls back on dispose
+    throw;
 ```
 
 ## Transaction Patterns
@@ -336,29 +314,29 @@ Use multiple sessions within one transaction:
 ```csharp
 using (var tx = store.BeginTransaction())
 {
-    // Session 1: Update product
-    using (var session1 = store.OpenSession(tx))
-    {
-        var product = session1.Load<Product>("product-1");
-        product.Stock--;
-        session1.SaveChanges();
-    }
-    
-    // Session 2: Create order
-    using (var session2 = store.OpenSession(tx))
-    {
-        var order = new Order 
-        { 
-            Id = Guid.NewGuid().ToString(),
-            ProductId = "product-1",
-            Quantity = 1
-        };
-        session2.Store(order);
-        session2.SaveChanges();
-    }
-    
-    // Both operations committed together
-    tx.Complete();
+// Session 1: Update product
+using (var session1 = store.OpenSession(tx))
+{
+    var product = session1.Load<Product>("product-1");
+    product.Stock--;
+    session1.SaveChanges();
+}
+
+// Session 2: Create order
+using (var session2 = store.OpenSession(tx))
+{
+    var order = new Order 
+    { 
+        Id = Guid.NewGuid().ToString(),
+        ProductId = "product-1",
+        Quantity = 1
+    };
+    session2.Store(order);
+    session2.SaveChanges();
+}
+
+// Both operations committed together
+tx.Complete();
 }
 ```
 
@@ -369,21 +347,21 @@ Use with TransactionScope for distributed transactions:
 ```csharp
 using (var scope = new TransactionScope())
 {
-    // HybridDb transaction
-    using (var session = store.OpenSession())
-    {
-        session.Store(new Product { Id = "product-1" });
-        session.SaveChanges();
-    }
-    
-    // Another database operation
-    using (var otherConnection = new SqlConnection(otherConnectionString))
-    {
-        otherConnection.Open();
-        // ...
-    }
-    
-    scope.Complete();
+// HybridDb transaction
+using (var session = store.OpenSession())
+{
+    session.Store(new Product { Id = "product-1" });
+    session.SaveChanges();
+}
+
+// Another database operation
+using (var otherConnection = new SqlConnection(otherConnectionString))
+{
+    otherConnection.Open();
+    // ...
+}
+
+scope.Complete();
 }
 ```
 
@@ -392,28 +370,24 @@ using (var scope = new TransactionScope())
 Use ETags for optimistic locking:
 
 ```csharp
-using (var session = store.OpenSession())
+using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
+var etag = session.Advanced.GetEtagFor(product);
+
+// ... do work ...
+
+product.Price = 99.99m;
+
+// Store with the original etag
+session.Store("product-1", product, etag);
+
+try
 {
-    var product = session.Load<Product>("product-1");
-    var etag = session.Advanced.GetEtagFor(product);
-    
-    // ... do work ...
-    
-    product.Price = 99.99m;
-    
-    // Store with the original etag
-    session.Store("product-1", product, etag);
-    
-    try
-    {
-        session.SaveChanges();
-    }
-    catch (ConcurrencyException)
-    {
-        // Document was modified by another process
-        // Handle conflict
-    }
+    session.SaveChanges();
 }
+catch (ConcurrencyException)
+{
+    // Document was modified by another process
+    // Handle conflict
 ```
 
 ### Idempotent Operations
@@ -423,30 +397,28 @@ Use consistent commit IDs for idempotent operations:
 ```csharp
 public void ProcessOrder(Guid orderId)
 {
-    // Use orderId as commitId for idempotency
-    using (var tx = store.BeginTransaction(orderId))
+// Use orderId as commitId for idempotency
+using (var tx = store.BeginTransaction(orderId))
+{
+    using (var session = store.OpenSession(tx))
     {
-        using (var session = store.OpenSession(tx))
+        // Check if already processed
+        if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
         {
-            // Check if already processed
-            if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
-            {
-                return; // Already processed
-            }
-            
-            // Process order
-            var order = session.Load<Order>(orderId.ToString());
-            ProcessOrderItems(order);
-            
-            // Mark as processed
-            session.Store(new ProcessedOrder { Id = orderId.ToString() });
-            
-            session.SaveChanges();
+            return; // Already processed
         }
         
-        tx.Complete();
+        // Process order
+        var order = session.Load<Order>(orderId.ToString());
+        ProcessOrderItems(order);
+        
+        // Mark as processed
+        session.Store(new ProcessedOrder { Id = orderId.ToString() });
+        
+        session.SaveChanges();
     }
-}
+    
+    tx.Complete();
 ```
 
 ## Best Practices
@@ -457,27 +429,23 @@ public void ProcessOrder(Guid orderId)
 // Good: Quick transaction
 using (var tx = store.BeginTransaction())
 {
-    using (var session = store.OpenSession(tx))
-    {
-        var product = session.Load<Product>("product-1");
-        product.Price = 99.99m;
-        session.SaveChanges();
-    }
-    tx.Complete();
+using var session = store.OpenSession(tx);`n`n        var product = session.Load<Product>("product-1");
+    product.Price = 99.99m;
+    session.SaveChanges();
+}
+tx.Complete();
 }
 
 // Avoid: Long-running transaction
 using (var tx = store.BeginTransaction())
 {
-    // Don't do expensive I/O or external API calls in transaction
-    var data = await DownloadFromExternalApi();  // Bad!
-    
-    using (var session = store.OpenSession(tx))
-    {
-        session.Store(ConvertToProduct(data));
-        session.SaveChanges();
-    }
-    tx.Complete();
+// Don't do expensive I/O or external API calls in transaction
+var data = await DownloadFromExternalApi();  // Bad!
+
+using var session = store.OpenSession(tx);`n`n        session.Store(ConvertToProduct(data));
+    session.SaveChanges();
+}
+tx.Complete();
 }
 ```
 
@@ -500,20 +468,20 @@ using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
 // Good: Using statement ensures disposal
 using (var tx = store.BeginTransaction())
 {
-    // ...
-    tx.Complete();
+// ...
+tx.Complete();
 }
 
 // Or with explicit disposal
 var tx = store.BeginTransaction();
 try
 {
-    // ...
-    tx.Complete();
+// ...
+tx.Complete();
 }
 finally
 {
-    tx.Dispose();
+tx.Dispose();
 }
 ```
 
@@ -523,25 +491,23 @@ finally
 int retries = 3;
 while (retries-- > 0)
 {
-    try
+try
+{
+    using (var session = store.OpenSession())
     {
-        using (var session = store.OpenSession())
-        {
-            var product = session.Load<Product>(id);
-            var etag = session.Advanced.GetEtagFor(product);
-            
-            product.Stock--;
-            session.Store(id, product, etag);
-            session.SaveChanges();
-            break;
-        }
-    }
-    catch (ConcurrencyException) when (retries > 0)
-    {
-        // Retry with exponential backoff
-        await Task.Delay(100 * (3 - retries));
+        var product = session.Load<Product>(id);
+        var etag = session.Advanced.GetEtagFor(product);
+        
+        product.Stock--;
+        session.Store(id, product, etag);
+        session.SaveChanges();
+        break;
     }
 }
+catch (ConcurrencyException) when (retries > 0)
+{
+    // Retry with exponential backoff
+    await Task.Delay(100 * (3 - retries));
 ```
 
 ### 5. Use Transactions for Related Changes
@@ -550,17 +516,15 @@ while (retries-- > 0)
 // Good: Transaction ensures both updates succeed or fail together
 using (var tx = store.BeginTransaction())
 {
-    using (var session = store.OpenSession(tx))
-    {
-        var product = session.Load<Product>(productId);
-        product.Stock--;
-        
-        var order = new Order { ProductId = productId, Quantity = 1 };
-        session.Store(order);
-        
-        session.SaveChanges();
-    }
-    tx.Complete();
+using var session = store.OpenSession(tx);`n`n        var product = session.Load<Product>(productId);
+    product.Stock--;
+    
+    var order = new Order { ProductId = productId, Quantity = 1 };
+    session.Store(order);
+    
+    session.SaveChanges();
+}
+tx.Complete();
 }
 ```
 

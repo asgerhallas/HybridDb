@@ -95,8 +95,6 @@ public class MyMigration : Migration
         // Also runs on-demand when documents are loaded
         // You CANNOT know when these complete!
         yield break;
-    }
-}
 ```
 
 **Critical Migration Timing:**
@@ -192,8 +190,6 @@ public class AddDefaultPriceColumn : Migration
             table.Name, 
             new Column("Price", typeof(decimal), defaultValue: 0m)
         );
-    }
-}
 ```
 
 **Use case**: Add columns with default values to avoid triggering re-projection.
@@ -222,8 +218,6 @@ public class AddIndexes : Migration
             ON {table.Name} (Price) 
             WHERE Price > 0
         ");
-    }
-}
 ```
 
 **Use case**: Add indexes, constraints, or other schema enhancements after auto-migration.
@@ -295,8 +289,6 @@ public class UpdateProductSchema : Migration
             
             return doc.ToString();
         });
-    }
-}
 ```
 
 ### ChangeDocument - JSON-Based Migrations
@@ -459,8 +451,6 @@ public class Migration003_RestructureProducts : Migration
             doc["Category"] = MapOldCategoryToNew((string)doc["OldCategory"]);
             return doc.ToString();
         });
-    }
-}
 ```
 
 ### Renaming Document Properties
@@ -493,8 +483,6 @@ public class RenameProductName : Migration
             
             return doc.ToString();
         });
-    }
-}
 ```
 
 ### Splitting Documents
@@ -540,8 +528,6 @@ public class SplitOrdersAndInvoices : Migration
             
             return orderDoc.ToString();
         });
-    }
-}
 ```
 
 ### Merging Documents
@@ -579,8 +565,6 @@ public class MergeUserAndProfile : Migration
             
             return userDoc.ToString();
         });
-    }
-}
 ```
 
 ## Migration Patterns
@@ -647,8 +631,6 @@ public class ChangePriceToDecimal : Migration
         // Rename new column
         var table = configuration.GetDesignFor<Product>().Table;
         yield return new RenameColumn(table, "PriceDecimal", "Price");
-    }
-}
 ```
 
 ## Testing Migrations
@@ -671,19 +653,16 @@ public void MigrationAddsCategory()
     store.Initialize();
     
     // Act: Store a product
-    using (var session = store.OpenSession())
-    {
-        session.Store(new Product { Id = "prod-1", Name = "Widget" });
-        session.SaveChanges();
-    }
+     using var session = store.OpenSession();
+
+    session.Store(new Product { Id = "prod-1", Name = "Widget" });
+    session.SaveChanges();
     
     // Assert: Category was added by migration
-    using (var session = store.OpenSession())
-    {
-        var product = session.Load<Product>("prod-1");
-        product.Category.ShouldBe("Uncategorized");
-    }
-}
+     using var session = store.OpenSession();
+
+    var product = session.Load<Product>("prod-1");
+    product.Category.ShouldBe("Uncategorized");
 ```
 
 ### Test Schema Changes
@@ -694,19 +673,19 @@ public void MigrationAddsIndex()
 {
     var store = DocumentStore.ForTesting(TableMode.RealTables, config =>
     {
-        config.Document<Product>()
-            .With(x => x.CategoryId);
-        
-        config.UseMigrations(new AddIndexMigration());
+    config.Document<Product>()
+        .With(x => x.CategoryId);
+    
+    config.UseMigrations(new AddIndexMigration());
     });
     
     store.Initialize();
     
     // Check that index exists
     var indexes = store.Database.RawQuery<string>(@"
-        SELECT name FROM sys.indexes 
-        WHERE object_id = OBJECT_ID('Products') 
-        AND name = 'IX_Products_CategoryId'
+    SELECT name FROM sys.indexes 
+    WHERE object_id = OBJECT_ID('Products') 
+    AND name = 'IX_Products_CategoryId'
     ");
     
     indexes.ShouldContain("IX_Products_CategoryId");
@@ -763,14 +742,12 @@ config.AddEventHandler(@event =>
 {
     if (@event is MigrationStarted started)
     {
-        logger.LogInformation("Background migration started");
+    logger.LogInformation("Background migration started");
     }
     
     if (@event is MigrationEnded ended)
     {
-        logger.LogInformation("Background migration completed");
-    }
-});
+    logger.LogInformation("Background migration completed"););
 ```
 
 ## Troubleshooting
@@ -814,9 +791,7 @@ public class Migration001_Initial : Migration
     
     public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration config)
     {
-        yield return new RawSqlCommand("CREATE INDEX IX_Products_Name ON Products (Name)");
-    }
-}
+    yield return new RawSqlCommand("CREATE INDEX IX_Products_Name ON Products (Name)");
 
 // Version 2: Add categories
 public class Migration002_AddCategories : Migration
@@ -825,17 +800,15 @@ public class Migration002_AddCategories : Migration
     
     public override IEnumerable<RowMigrationCommand> Background(Configuration config)
     {
-        yield return new ChangeDocument<Product>((serializer, json) =>
+    yield return new ChangeDocument<Product>((serializer, json) =>
+    {
+        var doc = JObject.Parse(json);
+        if (doc["Category"] == null)
         {
-            var doc = JObject.Parse(json);
-            if (doc["Category"] == null)
-            {
-                doc["Category"] = "General";
-            }
-            return doc.ToString();
-        });
-    }
-}
+            doc["Category"] = "General";
+        }
+        return doc.ToString();
+    });
 
 // Version 3: Split into subcategories
 public class Migration003_AddSubcategories : Migration
@@ -844,8 +817,6 @@ public class Migration003_AddSubcategories : Migration
     
     public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration config)
     {
-        yield return new AddColumn("Products", 
-            new Column("Subcategory", typeof(string), defaultValue: ""));
-    }
-}
+    yield return new AddColumn("Products", 
+        new Column("Subcategory", typeof(string), defaultValue: ""));
 ```

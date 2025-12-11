@@ -180,8 +180,6 @@ public abstract class HybridDbTestBase : IDisposable
     public void Dispose()
     {
         Store?.Dispose();
-    }
-}
 
 // Usage in tests
 public class MyTests : HybridDbTestBase
@@ -197,8 +195,6 @@ public class MyTests : HybridDbTestBase
     {
         using var session = Store.OpenSession();
         // ... test code
-    }
-}
 ```
 
 ### In-Memory Testing Alternative
@@ -249,8 +245,6 @@ public class TestDatabaseFixture : IDisposable
         using var cmd = connection.CreateCommand();
         cmd.CommandText = $"DROP DATABASE [{dbName}]";
         cmd.ExecuteNonQuery();
-    }
-}
 ```
 
 ## Configuration Options

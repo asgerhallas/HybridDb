@@ -300,8 +300,6 @@ public class MyMigration : Migration
         
         yield return new RawSqlCommand(
             "CREATE INDEX IX_Products_Name ON Products (Name)");
-    }
-}
 
 store.Configuration.UseMigrations(new MyMigration());
 ```
@@ -320,8 +318,6 @@ public class MyMigration : Migration
         yield return new RawSqlCommand(@"
             CREATE INDEX IX_Products_Category_Price 
             ON Products (CategoryId, Price)");
-    }
-}
 ```
 
 ## Extended Projections
@@ -361,8 +357,6 @@ public class TenantStore
             config.UseConnectionString(connectionString);
             config.UseTableNamePrefix($"{tenantId}_");
         });
-    }
-}
 
 // Each tenant gets isolated tables:
 // Tenant1_Products, Tenant1_Orders

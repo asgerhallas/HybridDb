@@ -9,9 +9,7 @@ HybridDb provides powerful querying capabilities through LINQ and SQL. You can q
 ### Basic LINQ Query
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var products = session.Query<Product>()
+using var session = store.OpenSession();`n`n    var products = session.Query<Product>()
         .Where(x => x.Price > 100)
         .ToList();
 }
@@ -20,18 +18,14 @@ using (var session = store.OpenSession())
 ### Query All Documents
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var allProducts = session.Query<Product>().ToList();
+using var session = store.OpenSession();`n`n    var allProducts = session.Query<Product>().ToList();
 }
 ```
 
 ### Query with Single Result
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Query<Product>()
+using var session = store.OpenSession();`n`n    var product = session.Query<Product>()
         .Where(x => x.Name == "Widget")
         .SingleOrDefault();
 }
@@ -40,9 +34,7 @@ using (var session = store.OpenSession())
 ### Query with First
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var product = session.Query<Product>()
+using var session = store.OpenSession();`n`n    var product = session.Query<Product>()
         .Where(x => x.Price > 50)
         .FirstOrDefault();
 }
@@ -306,9 +298,7 @@ var bigDogs = session.Query<Animal>()
 ### Basic SQL Query
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var sql = new SqlBuilder()
+using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
         .Append("SELECT * FROM Products")
         .Append("WHERE Price > @minPrice", new SqlParameter("minPrice", 100));
     
@@ -427,33 +417,31 @@ var products = query.ToList();
 ```csharp
 public List<Product> SearchProducts(string searchTerm, string category, decimal? minPrice, decimal? maxPrice)
 {
-    using (var session = store.OpenSession())
+     using var session = store.OpenSession();
+
+    var query = session.Query<Product>();
+    
+    if (!string.IsNullOrEmpty(searchTerm))
     {
-        var query = session.Query<Product>();
-        
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            query = query.Where(x => x.Name.Contains(searchTerm));
-        }
-        
-        if (!string.IsNullOrEmpty(category))
-        {
-            query = query.Where(x => x.CategoryId == category);
-        }
-        
-        if (minPrice.HasValue)
-        {
-            query = query.Where(x => x.Price >= minPrice.Value);
-        }
-        
-        if (maxPrice.HasValue)
-        {
-            query = query.Where(x => x.Price <= maxPrice.Value);
-        }
-        
-        return query.OrderBy(x => x.Name).ToList();
+        query = query.Where(x => x.Name.Contains(searchTerm));
     }
-}
+    
+    if (!string.IsNullOrEmpty(category))
+    {
+        query = query.Where(x => x.CategoryId == category);
+    }
+    
+    if (minPrice.HasValue)
+    {
+        query = query.Where(x => x.Price >= minPrice.Value);
+    }
+    
+    if (maxPrice.HasValue)
+    {
+        query = query.Where(x => x.Price <= maxPrice.Value);
+    }
+    
+    return query.OrderBy(x => x.Name).ToList();
 ```
 
 ### Paginated Results
@@ -472,26 +460,24 @@ public PagedResult<Product> GetProductsPage(int pageNumber, int pageSize)
 {
     using (var session = store.OpenSession())
     {
-        var query = session.Query<Product>()
-            .Where(x => x.Status == "Active");
-        
-        var total = query.Count();
-        
-        var items = query
-            .OrderBy(x => x.Name)
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-        
-        return new PagedResult<Product>
-        {
-            Items = items,
-            TotalCount = total,
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-    }
-}
+    var query = session.Query<Product>()
+        .Where(x => x.Status == "Active");
+    
+    var total = query.Count();
+    
+    var items = query
+        .OrderBy(x => x.Name)
+        .Skip((pageNumber - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+    
+    return new PagedResult<Product>
+    {
+        Items = items,
+        TotalCount = total,
+        PageNumber = pageNumber,
+        PageSize = pageSize
+    };
 ```
 
 ### Existence Check
@@ -501,18 +487,14 @@ public bool ProductExists(string productId)
 {
     using (var session = store.OpenSession())
     {
-        return session.Advanced.Exists<Product>(productId, out _);
-    }
-}
+    return session.Advanced.Exists<Product>(productId, out _);
 
 public bool HasProductsInCategory(string categoryId)
 {
     using (var session = store.OpenSession())
     {
-        return session.Query<Product>()
-            .Any(x => x.CategoryId == categoryId);
-    }
-}
+    return session.Query<Product>()
+        .Any(x => x.CategoryId == categoryId);
 ```
 
 ## Best Practices
@@ -559,12 +541,10 @@ public List<Product> GetProducts()
 {
     using (var session = store.OpenSession())
     {
-        // Documents won't be tracked or modified
-        return session.Query<Product>()
-            .Where(x => x.Status == "Active")
-            .ToList();
-    }
-}
+    // Documents won't be tracked or modified
+    return session.Query<Product>()
+        .Where(x => x.Status == "Active")
+        .ToList();
 ```
 
 ### 5. Combine Filters Efficiently

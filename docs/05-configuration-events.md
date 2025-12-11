@@ -56,9 +56,7 @@ public class EventData<T>
 Append events to a stream using the session:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var eventData = new EventData<byte[]>(
+using var session = store.OpenSession();`n`n    var eventData = new EventData<byte[]>(
         streamId: "order-123",
         eventId: Guid.NewGuid(),
         name: "OrderCreated",
@@ -77,9 +75,7 @@ using (var session = store.OpenSession())
 Append multiple events in the same commit:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var event1 = new EventData<byte[]>(
+using var session = store.OpenSession();`n`n    var event1 = new EventData<byte[]>(
         streamId: "order-123",
         eventId: Guid.NewGuid(),
         name: "OrderCreated",
@@ -109,9 +105,7 @@ using (var session = store.OpenSession())
 Use `SequenceNumber.Any` to let HybridDb assign sequence numbers automatically:
 
 ```csharp
-using (var session = store.OpenSession())
-{
-    var event1 = new EventData<byte[]>(
+using var session = store.OpenSession();`n`n    var event1 = new EventData<byte[]>(
         streamId: "order-123",
         eventId: Guid.NewGuid(),
         name: "OrderCreated",
@@ -146,8 +140,6 @@ foreach (var commit in commits)
     foreach (var eventData in commit.Events)
     {
         Console.WriteLine($"Event: {eventData.Name}, Seq: {eventData.SequenceNumber}");
-    }
-}
 ```
 
 ### Read All Events
@@ -169,8 +161,6 @@ foreach (var commit in commits)
     foreach (var eventData in commit.Events)
     {
         Console.WriteLine($"  {eventData.Name} at position {eventData.SequenceNumber}");
-    }
-}
 ```
 
 ### Read by Commit IDs
@@ -222,8 +212,6 @@ foreach (var commit in commits)
         {
             Console.WriteLine($"Event created by user: {userId}");
         }
-    }
-}
 ```
 
 ## Commits and Generations
@@ -266,21 +254,19 @@ Prevent concurrent writes to the same stream:
 ```csharp
 try
 {
-    using (var session = store.OpenSession())
-    {
-        var event = new EventData<byte[]>(
-            streamId: "order-123",
-            eventId: Guid.NewGuid(),
-            name: "OrderUpdated",
-            sequenceNumber: 5,  // Expecting this to be the next sequence
-            metadata: new Metadata(),
-            data: eventData
-        );
-        
-        session.Append(0, event);
-        session.SaveChanges();
-    }
-}
+     using var session = store.OpenSession();
+
+    var event = new EventData<byte[]>(
+        streamId: "order-123",
+        eventId: Guid.NewGuid(),
+        name: "OrderUpdated",
+        sequenceNumber: 5,  // Expecting this to be the next sequence
+        metadata: new Metadata(),
+        data: eventData
+    );
+    
+    session.Append(0, event);
+    session.SaveChanges();
 catch (ConcurrencyException)
 {
     // Another process already appended event with sequence number 5
@@ -316,40 +302,38 @@ public class OrderProjection
     
     public async Task ProjectEvents()
     {
-        var commits = store.Transactionally(IsolationLevel.Snapshot, tx =>
+    var commits = store.Transactionally(IsolationLevel.Snapshot, tx =>
+    {
+        var table = store.Configuration.Tables.Values.OfType<EventTable>().Single();
+        return tx.Execute(new ReadEvents(table, lastProcessedPosition, false))
+            .ToList();
+    });
+    
+    foreach (var commit in commits)
+    {
+        foreach (var eventData in commit.Events)
         {
-            var table = store.Configuration.Tables.Values.OfType<EventTable>().Single();
-            return tx.Execute(new ReadEvents(table, lastProcessedPosition, false))
-                .ToList();
-        });
-        
-        foreach (var commit in commits)
-        {
-            foreach (var eventData in commit.Events)
-            {
-                await HandleEvent(eventData);
-            }
-            
-            lastProcessedPosition = commit.End + 1;
+            await HandleEvent(eventData);
         }
+        
+        lastProcessedPosition = commit.End + 1;
+    }
     }
     
     private async Task HandleEvent(EventData<byte[]> eventData)
     {
-        switch (eventData.Name)
-        {
-            case "OrderCreated":
-                // Create order document
-                break;
-            case "ItemAdded":
-                // Update order document
-                break;
-            case "OrderShipped":
-                // Update order status
-                break;
-        }
+    switch (eventData.Name)
+    {
+        case "OrderCreated":
+            // Create order document
+            break;
+        case "ItemAdded":
+            // Update order document
+            break;
+        case "OrderShipped":
+            // Update order status
+            break;
     }
-}
 ```
 
 ## Event Store Patterns
@@ -368,48 +352,48 @@ public class Order
     // Apply events to rebuild state
     public void Apply(EventData<byte[]> eventData)
     {
-        switch (eventData.Name)
-        {
-            case "OrderCreated":
-                var created = Deserialize<OrderCreatedEvent>(eventData.Data);
-                Id = created.OrderId;
-                Status = "Created";
-                break;
-                
-            case "ItemAdded":
-                var itemAdded = Deserialize<ItemAddedEvent>(eventData.Data);
-                Items.Add(new OrderItem { ProductId = itemAdded.ProductId, Quantity = itemAdded.Quantity });
-                break;
-        }
+    switch (eventData.Name)
+    {
+        case "OrderCreated":
+            var created = Deserialize<OrderCreatedEvent>(eventData.Data);
+            Id = created.OrderId;
+            Status = "Created";
+            break;
+            
+        case "ItemAdded":
+            var itemAdded = Deserialize<ItemAddedEvent>(eventData.Data);
+            Items.Add(new OrderItem { ProductId = itemAdded.ProductId, Quantity = itemAdded.Quantity });
+            break;
+    }
     }
     
     // Command: Create order
     public static Order Create(string orderId)
     {
-        var order = new Order();
-        order.RaiseEvent("OrderCreated", new OrderCreatedEvent { OrderId = orderId });
-        return order;
+    var order = new Order();
+    order.RaiseEvent("OrderCreated", new OrderCreatedEvent { OrderId = orderId });
+    return order;
     }
     
     // Command: Add item
     public void AddItem(string productId, int quantity)
     {
-        RaiseEvent("ItemAdded", new ItemAddedEvent { ProductId = productId, Quantity = quantity });
+    RaiseEvent("ItemAdded", new ItemAddedEvent { ProductId = productId, Quantity = quantity });
     }
     
     private void RaiseEvent(string name, object @event)
     {
-        var eventData = new EventData<byte[]>(
-            streamId: Id,
-            eventId: Guid.NewGuid(),
-            name: name,
-            sequenceNumber: uncommittedEvents.Count,
-            metadata: new Metadata(),
-            data: Serialize(@event)
-        );
-        
-        Apply(eventData);
-        uncommittedEvents.Add(eventData);
+    var eventData = new EventData<byte[]>(
+        streamId: Id,
+        eventId: Guid.NewGuid(),
+        name: name,
+        sequenceNumber: uncommittedEvents.Count,
+        metadata: new Metadata(),
+        data: Serialize(@event)
+    );
+    
+    Apply(eventData);
+    uncommittedEvents.Add(eventData);
     }
     
     public IEnumerable<EventData<byte[]>> GetUncommittedEvents() => uncommittedEvents;
@@ -421,11 +405,9 @@ public class Order
 var order = Order.Create("order-123");
 order.AddItem("product-1", 2);
 
-using (var session = store.OpenSession())
-{
-    foreach (var eventData in order.GetUncommittedEvents())
+using var session = store.OpenSession();`n`n    foreach (var eventData in order.GetUncommittedEvents())
     {
-        session.Append(0, eventData);
+    session.Append(0, eventData);
     }
     
     session.SaveChanges();
@@ -446,10 +428,8 @@ public class ProjectionCheckpoint
 }
 
 // Save checkpoint
-using (var session = store.OpenSession())
-{
-    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection") 
-        ?? new ProjectionCheckpoint { Id = "order-projection" };
+using var session = store.OpenSession();`n`n    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection") 
+    ?? new ProjectionCheckpoint { Id = "order-projection" };
     
     checkpoint.Position = lastProcessedPosition;
     checkpoint.LastUpdated = DateTime.UtcNow;
@@ -459,9 +439,7 @@ using (var session = store.OpenSession())
 }
 
 // Load checkpoint
-using (var session = store.OpenSession())
-{
-    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection");
+using var session = store.OpenSession();`n`n    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection");
     var fromPosition = checkpoint?.Position ?? 0;
     
     // Process events from this position
@@ -531,16 +509,14 @@ if (eventCount % 100 == 0)
 {
     using (var session = store.OpenSession())
     {
-        session.Store(new OrderSnapshot 
-        { 
-            Id = order.Id,
-            EventVersion = eventCount,
-            Status = order.Status,
-            Items = order.Items.ToList()
-        });
-        session.SaveChanges();
-    }
-}
+    session.Store(new OrderSnapshot 
+    { 
+        Id = order.Id,
+        EventVersion = eventCount,
+        Status = order.Status,
+        Items = order.Items.ToList()
+    });
+    session.SaveChanges();
 ```
 
 ### 5. Handle Event Versioning
@@ -555,16 +531,14 @@ private void HandleOrderCreated(EventData<byte[]> eventData)
     
     switch (version)
     {
-        case "1":
-            var v1 = DeserializeEvent<OrderCreatedV1>(eventData.Data);
-            // Handle V1
-            break;
-        case "2":
-            var v2 = DeserializeEvent<OrderCreatedV2>(eventData.Data);
-            // Handle V2
-            break;
-    }
-}
+    case "1":
+        var v1 = DeserializeEvent<OrderCreatedV1>(eventData.Data);
+        // Handle V1
+        break;
+    case "2":
+        var v2 = DeserializeEvent<OrderCreatedV2>(eventData.Data);
+        // Handle V2
+        break;
 ```
 
 ### 6. Use Transactions for Consistency
@@ -574,17 +548,15 @@ Ensure events and documents are saved together:
 ```csharp
 using (var tx = store.BeginTransaction())
 {
-    using (var session = store.OpenSession(tx))
-    {
-        // Append events
-        session.Append(0, eventData);
-        
-        // Update read model
-        var order = session.Load<Order>(orderId);
-        order.Status = "Shipped";
-        session.Store(order);
-        
-        session.SaveChanges();
+    using var session = store.OpenSession(tx);`n`n        // Append events
+    session.Append(0, eventData);
+    
+    // Update read model
+    var order = session.Load<Order>(orderId);
+    order.Status = "Shipped";
+    session.Store(order);
+    
+    session.SaveChanges();
     }
     
     tx.Commit();
