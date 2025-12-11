@@ -11,7 +11,7 @@ HybridDb provides powerful querying capabilities through LINQ and SQL. You can q
 ```csharp
 using var session = store.OpenSession();
 
-    var products = session.Query<Product>()
+var products = session.Query<Product>()
         .Where(x => x.Price > 100)
         .ToList();
 }
@@ -22,7 +22,7 @@ using var session = store.OpenSession();
 ```csharp
 using var session = store.OpenSession();
 
-    var allProducts = session.Query<Product>().ToList();
+var allProducts = session.Query<Product>().ToList();
 }
 ```
 
@@ -31,7 +31,7 @@ using var session = store.OpenSession();
 ```csharp
 using var session = store.OpenSession();
 
-    var product = session.Query<Product>()
+var product = session.Query<Product>()
         .Where(x => x.Name == "Widget")
         .SingleOrDefault();
 }
@@ -42,7 +42,7 @@ using var session = store.OpenSession();
 ```csharp
 using var session = store.OpenSession();
 
-    var product = session.Query<Product>()
+var product = session.Query<Product>()
         .Where(x => x.Price > 50)
         .FirstOrDefault();
 }
@@ -235,11 +235,11 @@ Console.WriteLine($"Showing {page.Count} of {total} products");
 ```csharp
 var productSummaries = session.Query<Product>()
     .Select(x => new 
-    { 
+{ 
         x.Id, 
         x.Name, 
         x.Price 
-    })
+})
     .ToList();
 ```
 
@@ -248,18 +248,18 @@ var productSummaries = session.Query<Product>()
 ```csharp
 public class ProductSummary
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public decimal Price { get; set; }
+public string Id { get; set; }
+public string Name { get; set; }
+public decimal Price { get; set; }
 }
 
 var summaries = session.Query<Product>()
     .Select(x => new ProductSummary 
-    { 
+{ 
         Id = x.Id, 
         Name = x.Name, 
         Price = x.Price 
-    })
+})
     .ToList();
 ```
 
@@ -270,18 +270,18 @@ var summaries = session.Query<Product>()
 ```csharp
 public abstract class Animal
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
+public string Id { get; set; }
+public string Name { get; set; }
 }
 
 public class Dog : Animal
 {
-    public string Breed { get; set; }
+public string Breed { get; set; }
 }
 
 public class Cat : Animal
 {
-    public int Lives { get; set; }
+public int Lives { get; set; }
 }
 
 // Query all animals
@@ -308,11 +308,11 @@ var bigDogs = session.Query<Animal>()
 ```csharp
 using var session = store.OpenSession();
 
-    var sql = new SqlBuilder()
+var sql = new SqlBuilder()
         .Append("SELECT * FROM Products")
         .Append("WHERE Price > @minPrice", new SqlParameter("minPrice", 100));
     
-    var products = session.Query<Product>(sql).ToList();
+var products = session.Query<Product>(sql).ToList();
 }
 ```
 
@@ -344,8 +344,8 @@ var products = session.Query<Product>(sql).ToList();
 
 ```csharp
 var sql = new SqlBuilder(
-    parameters: new SqlParameter("status", "Active"),
-    new SqlParameter("minStock", 10))
+parameters: new SqlParameter("status", "Active"),
+new SqlParameter("minStock", 10))
     .Append("SELECT * FROM Products")
     .Append("WHERE Status = @status AND Stock >= @minStock");
 
@@ -429,29 +429,29 @@ public List<Product> SearchProducts(string searchTerm, string category, decimal?
 {
      using var session = store.OpenSession();
 
-    var query = session.Query<Product>();
+var query = session.Query<Product>();
     
-    if (!string.IsNullOrEmpty(searchTerm))
-    {
+if (!string.IsNullOrEmpty(searchTerm))
+{
         query = query.Where(x => x.Name.Contains(searchTerm));
-    }
+}
     
-    if (!string.IsNullOrEmpty(category))
-    {
+if (!string.IsNullOrEmpty(category))
+{
         query = query.Where(x => x.CategoryId == category);
-    }
+}
     
-    if (minPrice.HasValue)
-    {
+if (minPrice.HasValue)
+{
         query = query.Where(x => x.Price >= minPrice.Value);
-    }
+}
     
-    if (maxPrice.HasValue)
-    {
+if (maxPrice.HasValue)
+{
         query = query.Where(x => x.Price <= maxPrice.Value);
-    }
+}
     
-    return query.OrderBy(x => x.Name).ToList();
+return query.OrderBy(x => x.Name).ToList();
 ```
 
 ### Paginated Results
@@ -459,35 +459,35 @@ public List<Product> SearchProducts(string searchTerm, string category, decimal?
 ```csharp
 public class PagedResult<T>
 {
-    public List<T> Items { get; set; }
-    public int TotalCount { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+public List<T> Items { get; set; }
+public int TotalCount { get; set; }
+public int PageNumber { get; set; }
+public int PageSize { get; set; }
+public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
 }
 
 public PagedResult<Product> GetProductsPage(int pageNumber, int pageSize)
 {
-    using (var session = store.OpenSession())
-    {
-    var query = session.Query<Product>()
+using (var session = store.OpenSession())
+{
+var query = session.Query<Product>()
         .Where(x => x.Status == "Active");
     
-    var total = query.Count();
+var total = query.Count();
     
-    var items = query
+var items = query
         .OrderBy(x => x.Name)
         .Skip((pageNumber - 1) * pageSize)
         .Take(pageSize)
         .ToList();
     
-    return new PagedResult<Product>
-    {
+return new PagedResult<Product>
+{
         Items = items,
         TotalCount = total,
         PageNumber = pageNumber,
         PageSize = pageSize
-    };
+};
 ```
 
 ### Existence Check
@@ -495,15 +495,15 @@ public PagedResult<Product> GetProductsPage(int pageNumber, int pageSize)
 ```csharp
 public bool ProductExists(string productId)
 {
-    using (var session = store.OpenSession())
-    {
-    return session.Advanced.Exists<Product>(productId, out _);
+using (var session = store.OpenSession())
+{
+return session.Advanced.Exists<Product>(productId, out _);
 
 public bool HasProductsInCategory(string categoryId)
 {
-    using (var session = store.OpenSession())
-    {
-    return session.Query<Product>()
+using (var session = store.OpenSession())
+{
+return session.Query<Product>()
         .Any(x => x.CategoryId == categoryId);
 ```
 
@@ -549,10 +549,10 @@ var allProducts = session.Query<Product>().ToList();  // Could be huge!
 ```csharp
 public List<Product> GetProducts()
 {
-    using (var session = store.OpenSession())
-    {
-    // Documents won't be tracked or modified
-    return session.Query<Product>()
+using (var session = store.OpenSession())
+{
+// Documents won't be tracked or modified
+return session.Query<Product>()
         .Where(x => x.Status == "Active")
         .ToList();
 ```

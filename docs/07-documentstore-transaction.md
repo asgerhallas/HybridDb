@@ -11,15 +11,15 @@ The `DocumentStore` is the central component of HybridDb. It manages database co
 ```csharp
 var store = DocumentStore.Create(config =>
 {
-    config.UseConnectionString(
+config.UseConnectionString(
         "Server=localhost;Database=MyApp;Integrated Security=True;Encrypt=False;");
     
-    // Configure documents
-    config.Document<Product>()
+// Configure documents
+config.Document<Product>()
         .With(x => x.Name)
         .With(x => x.Price);
     
-    config.Document<Order>()
+config.Document<Order>()
         .With(x => x.CustomerId)
         .With(x => x.OrderDate);
 });
@@ -29,12 +29,12 @@ var store = DocumentStore.Create(config =>
 
 ```csharp
 var store = DocumentStore.ForTesting(
-    TableMode.GlobalTempTables,
-    config =>
-    {
+TableMode.GlobalTempTables,
+config =>
+{
         config.Document<Product>()
             .With(x => x.Name);
-    }
+}
 );
 ```
 
@@ -66,10 +66,9 @@ Sessions represent a unit of work:
 ```csharp
 using var session = store.OpenSession();
 
-    var product = session.Load<Product>("product-1");
-    product.Price = 99.99m;
-    session.SaveChanges();
-}
+var product = session.Load<Product>("product-1");
+product.Price = 99.99m;
+session.SaveChanges();
 ```
 
 ### Executing Commands
@@ -80,14 +79,14 @@ Direct command execution:
 // Execute a command
 var table = store.Configuration.GetDesignFor<Product>().Table;
 var result = store.Execute(
-    transaction, 
-    new GetCommand(table, new[] { "product-1" })
+transaction, 
+new GetCommand(table, new[] { "product-1" })
 );
 
 // Execute a command with result
 var exists = store.Execute(
-    transaction,
-    new ExistsCommand(table, "product-1")
+transaction,
+new ExistsCommand(table, "product-1")
 );
 ```
 
@@ -100,8 +99,7 @@ var store = DocumentStore.Create(config => { /* ... */ });
 // Use the store
 using var session = store.OpenSession();
 
-    // ...
-}
+// ...
 
 // Dispose when done (important for temp tables)
 store.Dispose();
@@ -140,8 +138,8 @@ Subscribe to store events:
 ```csharp
 store.Configuration.AddEventHandler(@event =>
 {
-    switch (@event)
-    {
+switch (@event)
+{
         case MigrationStarted started:
             Console.WriteLine("Migration started");
             break;
@@ -152,7 +150,9 @@ store.Configuration.AddEventHandler(@event =>
             
         case SqlCommandExecuted executed:
             Console.WriteLine($"SQL: {executed.Sql}");
-            break;);
+            break;
+}
+});
 ```
 
 ## DocumentTransaction
@@ -164,38 +164,35 @@ store.Configuration.AddEventHandler(@event =>
 #### Basic Transaction
 
 ```csharp
- using var tx = store.BeginTransaction();
+using var tx = store.BeginTransaction();
 
 using var session = store.OpenSession(tx);
 
-        session.Store(new Product { Id = "product-1", Name = "Widget" });
-    session.SaveChanges();
-    
-    using var session = store.OpenSession(tx);
+session.Store(new Product { Id = "product-1", Name = "Widget" });
+session.SaveChanges();
 
-        session.Store(new Order { Id = "order-1", ProductId = "product-1" });
-        session.SaveChanges();
-    }
-    
-    // Commit the transaction
-    tx.Complete();
-}
+using var session2 = store.OpenSession(tx);
+
+session2.Store(new Order { Id = "order-1", ProductId = "product-1" });
+session2.SaveChanges();
+
+// Commit the transaction
+tx.Complete();
 ```
 
 #### With Isolation Level
 
 ```csharp
- using var tx = store.BeginTransaction(IsolationLevel.Serializable);
+using var tx = store.BeginTransaction(IsolationLevel.Serializable);
 
 // Critical section with serializable isolation
 using var session = store.OpenSession(tx);
 
-        var product = session.Load<Product>("product-1");
-    product.Stock--;
-    session.SaveChanges();
-    
-    tx.Complete();
-}
+var product = session.Load<Product>("product-1");
+product.Stock--;
+session.SaveChanges();
+
+tx.Complete();
 ```
 
 #### With Commit ID
@@ -203,18 +200,17 @@ using var session = store.OpenSession(tx);
 ```csharp
 var commitId = Guid.NewGuid();
 
- using var tx = store.BeginTransaction(commitId);
+using var tx = store.BeginTransaction(commitId);
 
 // All changes in this transaction will have the same commit ID
 // Useful for tracking related changes
 
 using var session = store.OpenSession(tx);
 
-        session.Store(product);
-    session.SaveChanges();
-    
-    tx.Complete();
-}
+session.Store(product);
+session.SaveChanges();
+
+tx.Complete();
 ```
 
 ### Transaction Properties
@@ -265,9 +261,9 @@ var docs = tx.Get(table, new[] { "product-1", "product-2" });
 
 // Query
 var (stats, results) = tx.Query<Product>(
-    table,
-    join: "",
-    where: "Price > 100"
+table,
+join: "",
+where: "Price > 100"
 );
 
 tx.Complete();
@@ -279,17 +275,17 @@ Set a timeout for acquiring the database connection:
 
 ```csharp
 using (var tx = store.BeginTransaction(
-    IsolationLevel.ReadCommitted, 
-    connectionTimeout: TimeSpan.FromSeconds(30)))
+IsolationLevel.ReadCommitted, 
+connectionTimeout: TimeSpan.FromSeconds(30)))
 {
-    // Transaction will fail if connection can't be acquired within 30 seconds
+// Transaction will fail if connection can't be acquired within 30 seconds
     
-    using var session = store.OpenSession(tx);
+using var session = store.OpenSession(tx);
 
         // ...
-    }
+}
     
-    tx.Complete();
+tx.Complete();
 }
 ```
 
@@ -302,21 +298,21 @@ Transactions automatically roll back if not completed:
 
 try
 {
-    using (var session = store.OpenSession(tx))
-    {
+using (var session = store.OpenSession(tx))
+{
         session.Store(product);
         session.SaveChanges();
-    }
+}
     
-    // Some operation that might fail
-    ProcessPayment();
+// Some operation that might fail
+ProcessPayment();
     
-    tx.Complete();  // Only commits if we reach here
+tx.Complete();  // Only commits if we reach here
 }
 catch (Exception)
 {
-    // Transaction automatically rolls back on dispose
-    throw;
+// Transaction automatically rolls back on dispose
+throw;
 ```
 
 ## Transaction Patterns
@@ -331,22 +327,22 @@ using (var tx = store.BeginTransaction())
 // Session 1: Update product
 using (var session1 = store.OpenSession(tx))
 {
-    var product = session1.Load<Product>("product-1");
-    product.Stock--;
-    session1.SaveChanges();
+var product = session1.Load<Product>("product-1");
+product.Stock--;
+session1.SaveChanges();
 }
 
 // Session 2: Create order
 using (var session2 = store.OpenSession(tx))
 {
-    var order = new Order 
-    { 
+var order = new Order 
+{ 
         Id = Guid.NewGuid().ToString(),
         ProductId = "product-1",
         Quantity = 1
-    };
-    session2.Store(order);
-    session2.SaveChanges();
+};
+session2.Store(order);
+session2.SaveChanges();
 }
 
 // Both operations committed together
@@ -364,15 +360,15 @@ using (var scope = new TransactionScope())
 // HybridDb transaction
 using (var session = store.OpenSession())
 {
-    session.Store(new Product { Id = "product-1" });
-    session.SaveChanges();
+session.Store(new Product { Id = "product-1" });
+session.SaveChanges();
 }
 
 // Another database operation
 using (var otherConnection = new SqlConnection(otherConnectionString))
 {
-    otherConnection.Open();
-    // ...
+otherConnection.Open();
+// ...
 }
 
 scope.Complete();
@@ -386,7 +382,7 @@ Use ETags for optimistic locking:
 ```csharp
 using var session = store.OpenSession();
 
-    var product = session.Load<Product>("product-1");
+var product = session.Load<Product>("product-1");
 var etag = session.Advanced.GetEtagFor(product);
 
 // ... do work ...
@@ -398,12 +394,12 @@ session.Store("product-1", product, etag);
 
 try
 {
-    session.SaveChanges();
+session.SaveChanges();
 }
 catch (ConcurrencyException)
 {
-    // Document was modified by another process
-    // Handle conflict
+// Document was modified by another process
+// Handle conflict
 ```
 
 ### Idempotent Operations
@@ -416,8 +412,8 @@ public void ProcessOrder(Guid orderId)
 // Use orderId as commitId for idempotency
 using (var tx = store.BeginTransaction(orderId))
 {
-    using (var session = store.OpenSession(tx))
-    {
+using (var session = store.OpenSession(tx))
+{
         // Check if already processed
         if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
         {
@@ -432,9 +428,9 @@ using (var tx = store.BeginTransaction(orderId))
         session.Store(new ProcessedOrder { Id = orderId.ToString() });
         
         session.SaveChanges();
-    }
+}
     
-    tx.Complete();
+tx.Complete();
 ```
 
 ## Best Practices
@@ -448,8 +444,8 @@ using (var tx = store.BeginTransaction())
 using var session = store.OpenSession(tx);
 
         var product = session.Load<Product>("product-1");
-    product.Price = 99.99m;
-    session.SaveChanges();
+product.Price = 99.99m;
+session.SaveChanges();
 }
 tx.Complete();
 }
@@ -463,7 +459,7 @@ var data = await DownloadFromExternalApi();  // Bad!
 using var session = store.OpenSession(tx);
 
         session.Store(ConvertToProduct(data));
-    session.SaveChanges();
+session.SaveChanges();
 }
 tx.Complete();
 }
@@ -513,8 +509,8 @@ while (retries-- > 0)
 {
 try
 {
-    using (var session = store.OpenSession())
-    {
+using (var session = store.OpenSession())
+{
         var product = session.Load<Product>(id);
         var etag = session.Advanced.GetEtagFor(product);
         
@@ -522,12 +518,12 @@ try
         session.Store(id, product, etag);
         session.SaveChanges();
         break;
-    }
+}
 }
 catch (ConcurrencyException) when (retries > 0)
 {
-    // Retry with exponential backoff
-    await Task.Delay(100 * (3 - retries));
+// Retry with exponential backoff
+await Task.Delay(100 * (3 - retries));
 ```
 
 ### 5. Use Transactions for Related Changes
@@ -539,12 +535,12 @@ using (var tx = store.BeginTransaction())
 using var session = store.OpenSession(tx);
 
         var product = session.Load<Product>(productId);
-    product.Stock--;
+product.Stock--;
     
-    var order = new Order { ProductId = productId, Quantity = 1 };
-    session.Store(order);
+var order = new Order { ProductId = productId, Quantity = 1 };
+session.Store(order);
     
-    session.SaveChanges();
+session.SaveChanges();
 }
 tx.Complete();
 }
