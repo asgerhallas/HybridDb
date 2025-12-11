@@ -23,11 +23,7 @@ Install HybridDb via NuGet:
 dotnet add package HybridDb
 ```
 
-For JSON serialization support using Newtonsoft.Json:
-
-```bash
-dotnet add package HybridDb.NewtonsoftJson
-```
+HybridDb includes Newtonsoft.Json for JSON serialization by default.
 
 ## Quick Start
 
@@ -53,7 +49,7 @@ var store = DocumentStore.ForTesting(TableMode.TempTables);
 store.Document<Entity>().With(x => x.Property);
 
 // Use the store
-using var session = store.OpenSession();`n`n    // Store a document
+using var session = store.OpenSession();    // Store a document
     session.Store(new Entity 
     { 
         Id = Guid.NewGuid(), 
@@ -64,7 +60,7 @@ using var session = store.OpenSession();`n`n    // Store a document
     session.SaveChanges();
 }
 
-using var session = store.OpenSession();`n`n    // Query documents using LINQ
+using var session = store.OpenSession();    // Query documents using LINQ
     var entity = session.Query<Entity>()
         .Single(x => x.Property == "Hello");
     

@@ -215,7 +215,7 @@ session.SaveChanges(lastWriteWins: true, forceWriteUnchangedDocument: false);
 Write documents even if they haven't changed:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-123");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-123");
     
     // Force save even if unchanged (updates ModifiedAt timestamp)
     session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
@@ -227,7 +227,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 ### Delete by Entity
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-123");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-123");
     
     session.Delete(product);
     session.SaveChanges();
@@ -237,7 +237,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 ### Delete Without Loading
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Create a stub entity to delete
+using var session = store.OpenSession();    // Create a stub entity to delete
     var product = new Product { Id = "product-123" };
     session.Store(product, Guid.Empty);  // Store with empty etag
     session.Delete(product);
@@ -255,7 +255,7 @@ If soft delete is configured, documents are marked as deleted but not removed:
 config.UseSoftDelete();
 
 // Deleted documents remain in database
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-123");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-123");
     session.Delete(product);
     session.SaveChanges();
     
@@ -263,7 +263,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 }
 
 // Query including deleted documents
-using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
+using var session = store.OpenSession();    var sql = new SqlBuilder()
         .Append("select * from Products where Id = @id", new SqlParameter("id", "product-123"));
     
     var deleted = session.Query<Product>(sql).FirstOrDefault();
@@ -287,7 +287,7 @@ public enum EntityState
 ### Checking Entity State
 
 ```csharp
-using var session = store.OpenSession();`n`n    // New entity: Transient
+using var session = store.OpenSession();    // New entity: Transient
     var newProduct = new Product { Id = "p1", Name = "New" };
     session.Store(newProduct);
     // State: Transient
@@ -312,7 +312,7 @@ using var session = store.OpenSession();`n`n    // New entity: Transient
 The session caches loaded documents:
 
 ```csharp
-using var session = store.OpenSession();`n`n    // First load hits database
+using var session = store.OpenSession();    // First load hits database
     var product1 = session.Load<Product>("product-123");
     
     // Second load returns cached instance (no database hit)
@@ -326,7 +326,7 @@ using var session = store.OpenSession();`n`n    // First load hits database
 ### Cache Implications
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-123");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-123");
     product.Price = 99.99m;
     
     // Loading again returns the modified instance
@@ -350,7 +350,7 @@ public class Order
     public List<string> ProductIds { get; set; }
 }
 
-using var session = store.OpenSession();`n`n    var order = session.Load<Order>("order-123");
+using var session = store.OpenSession();    var order = session.Load<Order>("order-123");
     
     // Load customer
     var customer = session.Load<Customer>(order.CustomerId);
@@ -363,7 +363,7 @@ using var session = store.OpenSession();`n`n    var order = session.Load<Order>(
 ### Storing Related Documents
 
 ```csharp
-using var session = store.OpenSession();`n`n    var customer = new Customer 
+using var session = store.OpenSession();    var customer = new Customer 
     { 
         Id = "customer-1",
         Name = "John Doe"
@@ -388,7 +388,7 @@ using var session = store.OpenSession();`n`n    var customer = new Customer
 Every save operation has a commit ID:
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Auto-generated commit ID
+using var session = store.OpenSession();    // Auto-generated commit ID
     var commitId = session.CommitId;
     Console.WriteLine($"This session's commit ID: {commitId}");
     
@@ -407,10 +407,10 @@ var commitId = Guid.NewGuid();
 
  using var tx = store.BeginTransaction(commitId);
 
-using var session = store.OpenSession(tx);`n`n        session.Store(new Product { Id = "p1", Name = "Widget" });
+using var session = store.OpenSession(tx);        session.Store(new Product { Id = "p1", Name = "Widget" });
     session.SaveChanges();
     
-    using var session = store.OpenSession(tx);`n`n        session.Store(new Order { Id = "o1", ProductId = "p1" });
+    using var session = store.OpenSession(tx);        session.Store(new Order { Id = "o1", ProductId = "p1" });
         session.SaveChanges();
     }
     
@@ -457,7 +457,7 @@ public List<Product> GetProducts(List<string> ids)
 
 ```csharp
 // Good: Batch related operations
-using var session = store.OpenSession();`n`n    session.Store(customer);
+using var session = store.OpenSession();    session.Store(customer);
     session.Store(order);
     session.Store(invoice);
     
@@ -465,10 +465,10 @@ using var session = store.OpenSession();`n`n    session.Store(customer);
 }
 
 // Avoid: Multiple saves
-using var session = store.OpenSession();`n`n    session.Store(customer);
+using var session = store.OpenSession();    session.Store(customer);
     session.SaveChanges();
 }
-using var session = store.OpenSession();`n`n    session.Store(order);
+using var session = store.OpenSession();    session.Store(order);
     session.SaveChanges();
 }
 ```
@@ -519,7 +519,7 @@ using var session1 = store.OpenSession();
     session2.Store(product);  // Bad!
 
 // Good: Use entities within their session
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("p1");
+using var session = store.OpenSession();    var product = session.Load<Product>("p1");
     product.Price = 99.99m;
     session.Store(product);
     session.SaveChanges();
@@ -531,7 +531,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 ### Document Not Found
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("non-existent-id");
+using var session = store.OpenSession();    var product = session.Load<Product>("non-existent-id");
     
     if (product == null)
     {
@@ -559,7 +559,7 @@ catch (SqlException ex) when (ex.Number == 2627)
 
 ```csharp
 // Avoid: Reusing session after save
-using var session = store.OpenSession();`n`n    session.Store(new Product { Id = "p1", Name = "Widget" });
+using var session = store.OpenSession();    session.Store(new Product { Id = "p1", Name = "Widget" });
     session.SaveChanges();
     
     // After SaveChanges, session can still be used
@@ -571,7 +571,7 @@ using var session = store.OpenSession();`n`n    session.Store(new Product { Id =
 ### Type Mismatch
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Trying to load as wrong type throws exception
+using var session = store.OpenSession();    // Trying to load as wrong type throws exception
     try
     {
     var product = session.Load<Product>("order-123");  // Actually an Order

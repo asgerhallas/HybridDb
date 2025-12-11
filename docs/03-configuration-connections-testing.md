@@ -267,16 +267,41 @@ config.UseLogger(loggerFactory.CreateLogger("HybridDb"));
 
 ### Serializer
 
-HybridDb uses a default serializer, but you can configure custom serialization:
+HybridDb uses Newtonsoft.Json with a custom opinionated configuration called `DefaultSerializer`.
+
+**DefaultSerializer Features:**
+
+The `DefaultSerializer` is specifically designed for document storage with the following characteristics:
+
+- **Field-based serialization**: Always serializes fields only, not properties. Auto properties are serialized by their hidden backing field.
+- **Polymorphism support**: Special handling for polymorphic types and discriminators.
+- **Reference tracking**: Handles parent and root references within JSON documents for performance and readable JSON documents.
+- **Deterministic property order**: Orders properties in a specific, consistent manner.
+- **Constructor bypass**: Bypasses constructors during deserialization to not run any logic at all.
+
+**Using the Default Serializer:**
 
 ```csharp
-// Using Newtonsoft.Json (requires HybridDb.NewtonsoftJson package)
-config.UseSerializer(new NewtonsoftJsonSerializer());
-
-// Using the default serializer with options
+// Configure the default serializer with options
 var serializer = config.UseDefaultSerializer();
 serializer.EnableAutomaticBackReferences();
 ```
+
+**Custom Serializer:**
+
+You can provide your own serializer by implementing the `ISerializer` interface:
+
+```csharp
+public class MyCustomSerializer : ISerializer
+{
+    // Implement serialization methods
+}
+
+// Use your custom serializer
+config.UseSerializer(new MyCustomSerializer());
+```
+
+This allows you to use any serialization strategy that fits your needs, whether it's a different JSON library, protocol buffers, or any other format.
 
 ### Type Mapper
 

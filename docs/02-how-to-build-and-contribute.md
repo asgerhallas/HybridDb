@@ -53,7 +53,6 @@ HybridDb/
 │   │   ├── Migrations/              # Schema and document migrations
 │   │   ├── Queue/                   # Message queue implementation
 │   │   └── Serialization/           # Serialization abstractions
-│   ├── HybridDb.NewtonsoftJson/     # Newtonsoft.Json serializer
 │   └── HybridDb.Tests/              # Test suite
 ├── tools/                           # Build and deployment tools
 ├── HybridDb.sln                     # Solution file

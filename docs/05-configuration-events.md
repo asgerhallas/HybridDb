@@ -56,7 +56,7 @@ public class EventData<T>
 Append events to a stream using the session:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var eventData = new EventData<byte[]>(
+using var session = store.OpenSession();    var eventData = new EventData<byte[]>(
         streamId: "order-123",
         eventId: Guid.NewGuid(),
         name: "OrderCreated",
@@ -75,7 +75,7 @@ using var session = store.OpenSession();`n`n    var eventData = new EventData<by
 Append multiple events in the same commit:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var event1 = new EventData<byte[]>(
+using var session = store.OpenSession();    var event1 = new EventData<byte[]>(
         streamId: "order-123",
         eventId: Guid.NewGuid(),
         name: "OrderCreated",
@@ -105,7 +105,7 @@ using var session = store.OpenSession();`n`n    var event1 = new EventData<byte[
 Use `SequenceNumber.Any` to let HybridDb assign sequence numbers automatically:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var event1 = new EventData<byte[]>(
+using var session = store.OpenSession();    var event1 = new EventData<byte[]>(
         streamId: "order-123",
         eventId: Guid.NewGuid(),
         name: "OrderCreated",
@@ -405,7 +405,7 @@ public class Order
 var order = Order.Create("order-123");
 order.AddItem("product-1", 2);
 
-using var session = store.OpenSession();`n`n    foreach (var eventData in order.GetUncommittedEvents())
+using var session = store.OpenSession();    foreach (var eventData in order.GetUncommittedEvents())
     {
     session.Append(0, eventData);
     }
@@ -428,7 +428,7 @@ public class ProjectionCheckpoint
 }
 
 // Save checkpoint
-using var session = store.OpenSession();`n`n    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection") 
+using var session = store.OpenSession();    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection") 
     ?? new ProjectionCheckpoint { Id = "order-projection" };
     
     checkpoint.Position = lastProcessedPosition;
@@ -439,7 +439,7 @@ using var session = store.OpenSession();`n`n    var checkpoint = session.Load<Pr
 }
 
 // Load checkpoint
-using var session = store.OpenSession();`n`n    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection");
+using var session = store.OpenSession();    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection");
     var fromPosition = checkpoint?.Position ?? 0;
     
     // Process events from this position
@@ -548,7 +548,7 @@ Ensure events and documents are saved together:
 ```csharp
 using (var tx = store.BeginTransaction())
 {
-    using var session = store.OpenSession(tx);`n`n        // Append events
+    using var session = store.OpenSession(tx);        // Append events
     session.Append(0, eventData);
     
     // Update read model

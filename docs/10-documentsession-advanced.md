@@ -7,7 +7,7 @@
 Remove an entity from session tracking:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-1");
     
     // Evict from session cache
     session.Advanced.Evict(product);
@@ -25,7 +25,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 Clear all tracked entities and deferred commands:
 
 ```csharp
-using var session = store.OpenSession();`n`n    session.Store(new Product { Id = "p1", Name = "Widget" });
+using var session = store.OpenSession();    session.Store(new Product { Id = "p1", Name = "Widget" });
     session.Store(new Product { Id = "p2", Name = "Gadget" });
     
     // Clear everything
@@ -59,7 +59,7 @@ using var session1 = store.OpenSession();
 Retrieve metadata for an entity:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-1");
     
     var metadata = session.Advanced.GetMetadataFor(product);
     
@@ -74,7 +74,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 Add or update metadata for an entity:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = new Product { Id = "p1", Name = "Widget" };
+using var session = store.OpenSession();    var product = new Product { Id = "p1", Name = "Widget" };
     session.Store(product);
     
     var metadata = new Dictionary<string, List<string>>
@@ -112,7 +112,7 @@ session.Advanced.SetMetadataFor(entity, metadata);
 Retrieve the ETag for an entity:
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-1");
     var etag = session.Advanced.GetEtagFor(product);
     
     Console.WriteLine($"Current ETag: {etag}");
@@ -194,7 +194,7 @@ await TryUpdateWithRetry<Product>("product-1", product =>
 ### Check if Document Exists
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Check existence without loading
+using var session = store.OpenSession();    // Check existence without loading
     bool exists = session.Advanced.Exists<Product>("product-1", out Guid? etag);
     
     if (exists)
@@ -226,7 +226,7 @@ Execute custom commands when `SaveChanges` is called:
 ### Basic Deferred Command
 
 ```csharp
-using var session = store.OpenSession();`n`n    var table = store.Configuration.GetDesignFor<Product>().Table;
+using var session = store.OpenSession();    var table = store.Configuration.GetDesignFor<Product>().Table;
     
     // Defer a custom insert
     session.Advanced.Defer(new InsertCommand(
@@ -246,7 +246,7 @@ using var session = store.OpenSession();`n`n    var table = store.Configuration.
 ### Batch Operations with Deferred Commands
 
 ```csharp
-using var session = store.OpenSession();`n`n    var table = store.Configuration.GetDesignFor<Product>().Table;
+using var session = store.OpenSession();    var table = store.Configuration.GetDesignFor<Product>().Table;
     
     // Defer multiple commands
     for (int i = 0; i < 100; i++)
@@ -266,7 +266,7 @@ using var session = store.OpenSession();`n`n    var table = store.Configuration.
 ### Custom SQL Commands
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Defer a raw SQL command
+using var session = store.OpenSession();    // Defer a raw SQL command
     session.Advanced.Defer(new SqlCommand(
     new SqlBuilder()
         .Append("UPDATE Products SET Featured = 1")
@@ -282,7 +282,7 @@ using var session = store.OpenSession();`n`n    // Defer a raw SQL command
 ### Accessing Managed Entities
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();    var product = session.Load<Product>("product-1");
     
     // Get managed entity information
     var managedEntities = session.Advanced.ManagedEntities;
@@ -297,7 +297,7 @@ using var session = store.OpenSession();`n`n    var product = session.Load<Produ
 ### Checking if Entity is Managed
 
 ```csharp
-using var session = store.OpenSession();`n`n    var product = new Product { Id = "p1", Name = "Widget" };
+using var session = store.OpenSession();    var product = new Product { Id = "p1", Name = "Widget" };
     
     // Not yet managed
     bool isManaged = session.Advanced.TryGetManagedEntity<Product>("p1", out _);
@@ -318,7 +318,7 @@ using var session = store.OpenSession();`n`n    var product = new Product { Id =
 Store arbitrary data in the session:
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Store data in session
+using var session = store.OpenSession();    // Store data in session
     session.Advanced.SessionData["CurrentUser"] = "john@example.com";
     session.Advanced.SessionData["RequestId"] = Guid.NewGuid();
     
@@ -394,7 +394,7 @@ using (var tx = store.BeginTransaction())
 ## Accessing Store and Transaction
 
 ```csharp
-using var session = store.OpenSession();`n`n    // Access the document store
+using var session = store.OpenSession();    // Access the document store
     var documentStore = session.Advanced.DocumentStore;
     
     // Access current transaction (if any)
@@ -410,7 +410,7 @@ using var session = store.OpenSession();`n`n    // Access the document store
 ### Custom Projections
 
 ```csharp
-using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
+using var session = store.OpenSession();    var sql = new SqlBuilder()
     .Append(@"
         SELECT 
             p.Id,
@@ -433,7 +433,7 @@ using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
 ### Aggregations
 
 ```csharp
-using var session = store.OpenSession();`n`n    var sql = new SqlBuilder()
+using var session = store.OpenSession();    var sql = new SqlBuilder()
     .Append(@"
         SELECT 
             CategoryId,
@@ -476,7 +476,7 @@ store.Configuration.AddEventHandler(@event =>
 
 ```csharp
 // Process large batch without keeping all in memory
-using var session = store.OpenSession();`n`n    foreach (var id in largeListOfIds)
+using var session = store.OpenSession();    foreach (var id in largeListOfIds)
     {
     var product = session.Load<Product>(id);
     UpdateProduct(product);
