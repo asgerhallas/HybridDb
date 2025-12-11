@@ -31,62 +31,51 @@ HybridDb includes Newtonsoft.Json for JSON serialization by default.
 
 Here's a simple example to get started with HybridDb:
 
+<!-- embed:Doc01_GettingStartedTests#QuickStart_BasicExample -->
 ```csharp
-using HybridDb;
-
-// Define your entity
-public class Entity
-{
-    public Guid Id { get; set; }
-    public string Property { get; set; }
-    public int Field { get; set; }
-}
-
 // Create a document store for testing (uses temp tables)
-var store = DocumentStore.ForTesting(TableMode.TempTables);
-
-// Configure the document and its indexed properties
-store.Document<Entity>().With(x => x.Property);
+Document<Entity>();
+Document<Entity>().With(x => x.Property);
 
 // Use the store
-using var session = store.OpenSession();    // Store a document
-    
+using var session = store.OpenSession();
+
+// Store a document
 session.Store(new Entity 
 { 
-    Id = Guid.NewGuid(), 
+    Id = Guid.NewGuid().ToString(), 
     Property = "Hello", 
-    Field = 2001 
+    Number = 2001 
 });
 
 session.SaveChanges();
-
-using var session = store.OpenSession();    // Query documents using LINQ
-
-var entity = session.Query<Entity>()
-    .Single(x => x.Property == "Hello");
-
-// Update the entity
-entity.Field++;
-
-session.SaveChanges();
+//
 ```
+<!-- /embed -->
 
 ### Production Setup
 
 For production use, create a store with real tables:
 
+<!-- embed:Doc01_GettingStartedTests#ProductionSetup -->
 ```csharp
 var store = DocumentStore.Create(configuration =>
 {
     configuration.UseConnectionString(
-        "Server=localhost;Database=MyApp;Integrated Security=True;");
-    
+        "Server=localhost;Database=MyApp;Integrated Security=True;Encrypt=False;");
+
     // Configure documents
-    configuration.Document<Entity>()
-        .With(x => x.Property)
-        .With(x => x.Field);
-});
+    configuration.Document<Product>()
+        .With(x => x.Name)
+        .With(x => x.Price);
+
+    configuration.Document<Order>()
+        .With(x => x.CustomerId)
+        .With(x => x.OrderDate);
+}, initialize: false);
+//
 ```
+<!-- /embed -->
 
 ## Core Concepts
 
@@ -114,13 +103,15 @@ The `DocumentSession` represents a unit of work and acts as a first-level cache.
 
 Documents must be registered with the store and can have indexed properties:
 
+<!-- embed:Doc01_GettingStartedTests#DocumentConfiguration -->
 ```csharp
-store.Document<Product>()
+Document<Product>()
     .With(x => x.Name)           // Index the Name property
     .With(x => x.Price)          // Index the Price property
-    .With(x => x.Category)       // Index the Category property
-    .Key(x => x.ProductCode);    // Use custom key instead of Id property
+    .With(x => x.CategoryId);    // Index the CategoryId property
+//
 ```
+<!-- /embed -->
 
 ### Table Modes
 
@@ -176,6 +167,7 @@ public class ProductRepository
 
 ### Using Transactions
 
+<!-- embed:Doc01_GettingStartedTests#UsingTransactions -->
 ```csharp
 // Begin a transaction
 using var tx = store.BeginTransaction();
@@ -184,22 +176,27 @@ try
 {
     using var session1 = store.OpenSession(tx);
     var entity = session1.Load<Entity>("some-id");
-    entity.Property = "Updated";
-    session1.SaveChanges();
-    
+    if (entity != null)
+    {
+        entity.Property = "Updated";
+        session1.SaveChanges();
+    }
+
     using var session2 = store.OpenSession(tx);
-    session2.Store(new AnotherEntity { Id = "new-id" });
+    session2.Store(new Entity { Id = Guid.NewGuid().ToString(), Property = "New" });
     session2.SaveChanges();
-    
+
     // Commit the transaction
-    tx.Commit();
+    tx.Complete();
 }
 catch
 {
-    tx.Rollback();
+    // Transaction rolls back automatically
     throw;
 }
+//
 ```
+<!-- /embed -->
 
 ## Troubleshooting
 
