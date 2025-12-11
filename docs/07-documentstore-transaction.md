@@ -64,7 +64,9 @@ bool isInitialized = store.IsInitialized;
 Sessions represent a unit of work:
 
 ```csharp
-using var session = store.OpenSession();    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();
+
+    var product = session.Load<Product>("product-1");
     product.Price = 99.99m;
     session.SaveChanges();
 }
@@ -96,7 +98,9 @@ var exists = store.Execute(
 var store = DocumentStore.Create(config => { /* ... */ });
 
 // Use the store
-using var session = store.OpenSession();    // ...
+using var session = store.OpenSession();
+
+    // ...
 }
 
 // Dispose when done (important for temp tables)
@@ -162,10 +166,14 @@ store.Configuration.AddEventHandler(@event =>
 ```csharp
  using var tx = store.BeginTransaction();
 
-using var session = store.OpenSession(tx);        session.Store(new Product { Id = "product-1", Name = "Widget" });
+using var session = store.OpenSession(tx);
+
+        session.Store(new Product { Id = "product-1", Name = "Widget" });
     session.SaveChanges();
     
-    using var session = store.OpenSession(tx);        session.Store(new Order { Id = "order-1", ProductId = "product-1" });
+    using var session = store.OpenSession(tx);
+
+        session.Store(new Order { Id = "order-1", ProductId = "product-1" });
         session.SaveChanges();
     }
     
@@ -180,7 +188,9 @@ using var session = store.OpenSession(tx);        session.Store(new Product { Id
  using var tx = store.BeginTransaction(IsolationLevel.Serializable);
 
 // Critical section with serializable isolation
-using var session = store.OpenSession(tx);        var product = session.Load<Product>("product-1");
+using var session = store.OpenSession(tx);
+
+        var product = session.Load<Product>("product-1");
     product.Stock--;
     session.SaveChanges();
     
@@ -198,7 +208,9 @@ var commitId = Guid.NewGuid();
 // All changes in this transaction will have the same commit ID
 // Useful for tracking related changes
 
-using var session = store.OpenSession(tx);        session.Store(product);
+using var session = store.OpenSession(tx);
+
+        session.Store(product);
     session.SaveChanges();
     
     tx.Complete();
@@ -272,7 +284,9 @@ using (var tx = store.BeginTransaction(
 {
     // Transaction will fail if connection can't be acquired within 30 seconds
     
-    using var session = store.OpenSession(tx);        // ...
+    using var session = store.OpenSession(tx);
+
+        // ...
     }
     
     tx.Complete();
@@ -370,7 +384,9 @@ scope.Complete();
 Use ETags for optimistic locking:
 
 ```csharp
-using var session = store.OpenSession();    var product = session.Load<Product>("product-1");
+using var session = store.OpenSession();
+
+    var product = session.Load<Product>("product-1");
 var etag = session.Advanced.GetEtagFor(product);
 
 // ... do work ...
@@ -429,7 +445,9 @@ using (var tx = store.BeginTransaction(orderId))
 // Good: Quick transaction
 using (var tx = store.BeginTransaction())
 {
-using var session = store.OpenSession(tx);        var product = session.Load<Product>("product-1");
+using var session = store.OpenSession(tx);
+
+        var product = session.Load<Product>("product-1");
     product.Price = 99.99m;
     session.SaveChanges();
 }
@@ -442,7 +460,9 @@ using (var tx = store.BeginTransaction())
 // Don't do expensive I/O or external API calls in transaction
 var data = await DownloadFromExternalApi();  // Bad!
 
-using var session = store.OpenSession(tx);        session.Store(ConvertToProduct(data));
+using var session = store.OpenSession(tx);
+
+        session.Store(ConvertToProduct(data));
     session.SaveChanges();
 }
 tx.Complete();
@@ -516,7 +536,9 @@ catch (ConcurrencyException) when (retries > 0)
 // Good: Transaction ensures both updates succeed or fail together
 using (var tx = store.BeginTransaction())
 {
-using var session = store.OpenSession(tx);        var product = session.Load<Product>(productId);
+using var session = store.OpenSession(tx);
+
+        var product = session.Load<Product>(productId);
     product.Stock--;
     
     var order = new Order { ProductId = productId, Quantity = 1 };

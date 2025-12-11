@@ -9,7 +9,9 @@ HybridDb provides powerful querying capabilities through LINQ and SQL. You can q
 ### Basic LINQ Query
 
 ```csharp
-using var session = store.OpenSession();    var products = session.Query<Product>()
+using var session = store.OpenSession();
+
+    var products = session.Query<Product>()
         .Where(x => x.Price > 100)
         .ToList();
 }
@@ -18,14 +20,18 @@ using var session = store.OpenSession();    var products = session.Query<Product
 ### Query All Documents
 
 ```csharp
-using var session = store.OpenSession();    var allProducts = session.Query<Product>().ToList();
+using var session = store.OpenSession();
+
+    var allProducts = session.Query<Product>().ToList();
 }
 ```
 
 ### Query with Single Result
 
 ```csharp
-using var session = store.OpenSession();    var product = session.Query<Product>()
+using var session = store.OpenSession();
+
+    var product = session.Query<Product>()
         .Where(x => x.Name == "Widget")
         .SingleOrDefault();
 }
@@ -34,7 +40,9 @@ using var session = store.OpenSession();    var product = session.Query<Product>
 ### Query with First
 
 ```csharp
-using var session = store.OpenSession();    var product = session.Query<Product>()
+using var session = store.OpenSession();
+
+    var product = session.Query<Product>()
         .Where(x => x.Price > 50)
         .FirstOrDefault();
 }
@@ -298,7 +306,9 @@ var bigDogs = session.Query<Animal>()
 ### Basic SQL Query
 
 ```csharp
-using var session = store.OpenSession();    var sql = new SqlBuilder()
+using var session = store.OpenSession();
+
+    var sql = new SqlBuilder()
         .Append("SELECT * FROM Products")
         .Append("WHERE Price > @minPrice", new SqlParameter("minPrice", 100));
     

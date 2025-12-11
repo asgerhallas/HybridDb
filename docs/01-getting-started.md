@@ -50,25 +50,25 @@ store.Document<Entity>().With(x => x.Property);
 
 // Use the store
 using var session = store.OpenSession();    // Store a document
-    session.Store(new Entity 
-    { 
-        Id = Guid.NewGuid(), 
-        Property = "Hello", 
-        Field = 2001 
-    });
     
-    session.SaveChanges();
-}
+session.Store(new Entity 
+{ 
+    Id = Guid.NewGuid(), 
+    Property = "Hello", 
+    Field = 2001 
+});
+
+session.SaveChanges();
 
 using var session = store.OpenSession();    // Query documents using LINQ
-    var entity = session.Query<Entity>()
-        .Single(x => x.Property == "Hello");
-    
-    // Update the entity
-    entity.Field++;
-    
-    session.SaveChanges();
-}
+
+var entity = session.Query<Entity>()
+    .Single(x => x.Property == "Hello");
+
+// Update the entity
+entity.Field++;
+
+session.SaveChanges();
 ```
 
 ### Production Setup
