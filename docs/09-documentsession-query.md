@@ -14,7 +14,6 @@ using var session = store.OpenSession();
 var products = session.Query<Product>()
         .Where(x => x.Price > 100)
         .ToList();
-}
 ```
 
 ### Query All Documents
@@ -23,7 +22,6 @@ var products = session.Query<Product>()
 using var session = store.OpenSession();
 
 var allProducts = session.Query<Product>().ToList();
-}
 ```
 
 ### Query with Single Result
@@ -34,7 +32,6 @@ using var session = store.OpenSession();
 var product = session.Query<Product>()
         .Where(x => x.Name == "Widget")
         .SingleOrDefault();
-}
 ```
 
 ### Query with First
@@ -45,7 +42,6 @@ using var session = store.OpenSession();
 var product = session.Query<Product>()
         .Where(x => x.Price > 50)
         .FirstOrDefault();
-}
 ```
 
 ## Where Clauses
@@ -313,7 +309,6 @@ var sql = new SqlBuilder()
         .Append("WHERE Price > @minPrice", new SqlParameter("minPrice", 100));
     
 var products = session.Query<Product>(sql).ToList();
-}
 ```
 
 ### SQL with Parameters
@@ -468,26 +463,27 @@ public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
 
 public PagedResult<Product> GetProductsPage(int pageNumber, int pageSize)
 {
-using (var session = store.OpenSession())
-{
-var query = session.Query<Product>()
-        .Where(x => x.Status == "Active");
-    
-var total = query.Count();
-    
-var items = query
-        .OrderBy(x => x.Name)
-        .Skip((pageNumber - 1) * pageSize)
-        .Take(pageSize)
-        .ToList();
-    
-return new PagedResult<Product>
-{
-        Items = items,
-        TotalCount = total,
-        PageNumber = pageNumber,
-        PageSize = pageSize
-};
+    using (var session = store.OpenSession())
+    {
+        var query = session.Query<Product>()
+            .Where(x => x.Status == "Active");
+        
+        var total = query.Count();
+        
+        var items = query
+            .OrderBy(x => x.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+        
+        return new PagedResult<Product>
+        {
+            Items = items,
+            TotalCount = total,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+    }
 ```
 
 ### Existence Check
@@ -495,16 +491,19 @@ return new PagedResult<Product>
 ```csharp
 public bool ProductExists(string productId)
 {
-using (var session = store.OpenSession())
-{
-return session.Advanced.Exists<Product>(productId, out _);
+    using (var session = store.OpenSession())
+    {
+        return session.Advanced.Exists<Product>(productId, out _);
+    }
+}
 
 public bool HasProductsInCategory(string categoryId)
 {
-using (var session = store.OpenSession())
-{
-return session.Query<Product>()
-        .Any(x => x.CategoryId == categoryId);
+    using (var session = store.OpenSession())
+    {
+        return session.Query<Product>()
+            .Any(x => x.CategoryId == categoryId);
+    }
 ```
 
 ## Best Practices
@@ -549,12 +548,13 @@ var allProducts = session.Query<Product>().ToList();  // Could be huge!
 ```csharp
 public List<Product> GetProducts()
 {
-using (var session = store.OpenSession())
-{
-// Documents won't be tracked or modified
-return session.Query<Product>()
-        .Where(x => x.Status == "Active")
-        .ToList();
+    using (var session = store.OpenSession())
+    {
+        // Documents won't be tracked or modified
+        return session.Query<Product>()
+            .Where(x => x.Status == "Active")
+            .ToList();
+    }
 ```
 
 ### 5. Combine Filters Efficiently

@@ -204,7 +204,9 @@ store.Configuration.AddEventHandler(@event =>
 {
     if (@event is SqlCommandExecuted executed)
     {
-    Console.WriteLine(executed.Sql););
+        Console.WriteLine(executed.Sql);
+    }
+});
 ```
 
 ### Debugging Migrations

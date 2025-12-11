@@ -70,4 +70,10 @@
     </None>
   </ItemGroup>
 
+  <Target Name="EmbedCodeSamples" AfterTargets="Build">
+    <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\embed-code-samples.ps1&quot;" 
+          IgnoreExitCode="true" 
+          ContinueOnError="true" />
+  </Target>
+
 </Project>

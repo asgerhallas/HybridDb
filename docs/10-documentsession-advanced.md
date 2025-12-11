@@ -19,7 +19,6 @@ var product2 = session.Load<Product>("product-1");
     
 // Different instances (not cached)
 Assert.NotSame(product, product2);
-}
 ```
 
 ### Clearing the Session
@@ -37,7 +36,6 @@ session.Advanced.Clear();
     
 // Session is now empty
 session.SaveChanges();  // Nothing saved
-}
 ```
 
 ### Copying a Session
@@ -46,10 +44,10 @@ Create a copy of a session with the same state:
 
 ```csharp
 using var session1 = store.OpenSession();
-session1.Store(new Product { Id = "p1", Name = "Widget" );
+session1.Store(new Product { Id = "p1", Name = "Widget" });
     
 // Create a copy
-     using var session2 = session1.Advanced.Copy();
+using var session2 = session1.Advanced.Copy();
 
 // session2 has the same tracked entities
 var product = session2.Load<Product>("p1");
@@ -71,8 +69,8 @@ var metadata = session.Advanced.GetMetadataFor(product);
     
 if (metadata.TryGetValue("CreatedBy", out var createdByList))
 {
-var createdBy = createdByList.FirstOrDefault();
-Console.WriteLine($"Created by: {createdBy}");
+    var createdBy = createdByList.FirstOrDefault();
+    Console.WriteLine($"Created by: {createdBy}");
 ```
 
 ### Setting Metadata
@@ -94,7 +92,6 @@ var metadata = new Dictionary<string, List<string>>
     
 session.Advanced.SetMetadataFor(product, metadata);
 session.SaveChanges();
-}
 ```
 
 ### Metadata Use Cases
@@ -126,7 +123,6 @@ var product = session.Load<Product>("product-1");
 var etag = session.Advanced.GetEtagFor(product);
     
 Console.WriteLine($"Current ETag: {etag}");
-}
 ```
 
 ### Using ETags for Concurrency Control
@@ -134,25 +130,26 @@ Console.WriteLine($"Current ETag: {etag}");
 ```csharp
 public void UpdateProductPrice(string productId, decimal newPrice)
 {
-using (var session = store.OpenSession())
-{
-var product = session.Load<Product>(productId);
-var etag = session.Advanced.GetEtagFor(product);
-    
-product.Price = newPrice;
-    
-// Store with ETag check
-session.Store(productId, product, etag);
-    
-try
-{
-        session.SaveChanges();
-}
-catch (ConcurrencyException)
-{
-        // Another process modified the document
-        throw new InvalidOperationException("Product was modified by another user");
-}
+    using (var session = store.OpenSession())
+    {
+        var product = session.Load<Product>(productId);
+        var etag = session.Advanced.GetEtagFor(product);
+        
+        product.Price = newPrice;
+        
+        // Store with ETag check
+        session.Store(productId, product, etag);
+        
+        try
+        {
+            session.SaveChanges();
+        }
+        catch (ConcurrencyException)
+        {
+            // Another process modified the document
+            throw new InvalidOperationException("Product was modified by another user");
+        }
+    }
 ```
 
 ### Retry Pattern with ETags
@@ -211,7 +208,7 @@ bool exists = session.Advanced.Exists<Product>("product-1", out Guid? etag);
     
 if (exists)
 {
-Console.WriteLine($"Document exists with ETag: {etag}");
+    Console.WriteLine($"Document exists with ETag: {etag}");
 ```
 
 ### Exists vs Load
@@ -228,7 +225,6 @@ var product = session.Load<Product>("product-1");
 if (product != null)
 {
 // Do something
-}
 ```
 
 ## Deferred Commands
@@ -254,7 +250,6 @@ new Dictionary<string, object>
 ));
     
 session.SaveChanges();  // Command executes here
-}
 ```
 
 ### Batch Operations with Deferred Commands
@@ -276,7 +271,6 @@ session.Advanced.Defer(new InsertCommand(
     
 // All executed in one transaction
 session.SaveChanges();
-}
 ```
 
 ### Custom SQL Commands
@@ -292,7 +286,6 @@ new SqlBuilder()
 ));
     
 session.SaveChanges();
-}
 ```
 
 ## Managed Entities
@@ -332,7 +325,6 @@ session.Store(product);
 isManaged = session.Advanced.TryGetManagedEntity<Product>("p1", out var managedProduct);
 Assert.True(isManaged);
 Assert.Same(product, managedProduct);
-}
 ```
 
 ## Session Data
@@ -366,7 +358,6 @@ CreatedBy = userId
     
 session.Store(order);
 session.SaveChanges();
-}
 ```
 
 ## Transaction Enlistment
@@ -386,7 +377,6 @@ session.SaveChanges();
 }
     
 tx.Complete();
-}
 ```
 
 ### Multiple Sessions in One Transaction
@@ -412,7 +402,6 @@ session2.SaveChanges();
     
 // Both committed together
 tx.Complete();
-}
 ```
 
 ## Accessing Store and Transaction
@@ -428,7 +417,7 @@ var transaction = session.Advanced.DocumentTransaction;
     
 if (transaction != null)
 {
-Console.WriteLine($"Commit ID: {transaction.CommitId}");
+    Console.WriteLine($"Commit ID: {transaction.CommitId}");
 ```
 
 ## Advanced Query Scenarios
@@ -455,7 +444,7 @@ var results = session.Query<dynamic>(sql).ToList();
     
 foreach (var result in results)
 {
-Console.WriteLine($"{result.Name} - {result.CategoryName}: ${result.Price}");
+    Console.WriteLine($"{result.Name} - {result.CategoryName}: ${result.Price}");
 ```
 
 ### Aggregations
@@ -475,7 +464,6 @@ var sql = new SqlBuilder()
     ");
     
 var stats = session.Query<dynamic>(sql).ToList();
-}
 ```
 
 ## Event Handling
@@ -533,7 +521,6 @@ var metadata = new Dictionary<string, List<string>>
 };
     
 session.Advanced.SetMetadataFor(entity, metadata);
-}
 ```
 
 ### 3. Check Existence Before Load
@@ -551,7 +538,6 @@ var product = session.Load<Product>(productId);
 if (product != null)
 {
 // ...
-}
 ```
 
 ### 4. Use Session Data for Context
@@ -568,7 +554,6 @@ if (session.Advanced.SessionData.TryGetValue("UserId", out var userId))
         
         metadata["ModifiedBy"] = new List<string> { userId.ToString() };
         session.Advanced.SetMetadataFor(entity, metadata);
-}
 ```
 
 ### 5. Implement Optimistic Concurrency Strategically
@@ -577,30 +562,33 @@ if (session.Advanced.SessionData.TryGetValue("UserId", out var userId))
 // For critical operations
 public void DecrementStock(string productId, int quantity)
 {
-using (var session = store.OpenSession())
-{
-var product = session.Load<Product>(productId);
-var etag = session.Advanced.GetEtagFor(product);
-    
-if (product.Stock < quantity)
-{
-        throw new InvalidOperationException("Insufficient stock");
+    using (var session = store.OpenSession())
+    {
+        var product = session.Load<Product>(productId);
+        var etag = session.Advanced.GetEtagFor(product);
+        
+        if (product.Stock < quantity)
+        {
+            throw new InvalidOperationException("Insufficient stock");
+        }
+        
+        product.Stock -= quantity;
+        
+        session.Store(productId, product, etag);  // Ensure no concurrent updates
+        session.SaveChanges();
+    }
 }
-    
-product.Stock -= quantity;
-    
-session.Store(productId, product, etag);  // Ensure no concurrent updates
-session.SaveChanges();
 
 // For non-critical operations, last write wins
 public void UpdateDescription(string productId, string description)
 {
-using (var session = store.OpenSession())
-{
-var product = session.Load<Product>(productId);
-product.Description = description;
-    
-session.SaveChanges(lastWriteWins: true);  // Allow overwrites
+    using (var session = store.OpenSession())
+    {
+        var product = session.Load<Product>(productId);
+        product.Description = description;
+        
+        session.SaveChanges(lastWriteWins: true);  // Allow overwrites
+    }
 ```
 
 ## Troubleshooting

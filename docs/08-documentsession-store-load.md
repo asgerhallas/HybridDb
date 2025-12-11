@@ -87,7 +87,6 @@ catch (ConcurrencyException)
 {
         // Document was modified by another process
         // Handle the conflict
-}
 ```
 
 ### Store Multiple Documents
@@ -122,7 +121,6 @@ var product = session.Load<Product>("product-123");
 if (product != null)
 {
 Console.WriteLine($"Found: {product.Name}");
-}
 ```
 
 ### Load Multiple Documents
@@ -151,7 +149,6 @@ var entity = session.Load<Entity>("some-id");
 if (entity is Product p)
 {
 Console.WriteLine($"Product: {p.Name}");
-}
 ```
 
 ### Load as Read-Only
@@ -180,7 +177,6 @@ var products = session.Load<Product>(ids, readOnly: true);
 foreach (var product in products)
 {
 Console.WriteLine(product.Name);
-}
 ```
 
 ## SaveChanges
@@ -221,7 +217,6 @@ var product = session.Load<Product>("product-123");
     
 // Force save even if unchanged (updates ModifiedAt timestamp)
 session.SaveChanges(lastWriteWins: false, forceWriteUnchangedDocument: true);
-}
 ```
 
 ## Deleting Documents
@@ -234,9 +229,7 @@ using var session = store.OpenSession();
 var product = session.Load<Product>("product-123");
     
 session.Delete(product);
-session.SaveChanges();
-}
-```
+session.SaveChanges();`n```
 
 ### Delete Without Loading
 
@@ -248,9 +241,7 @@ var product = new Product { Id = "product-123" };
 session.Store(product, Guid.Empty);  // Store with empty etag
 session.Delete(product);
     
-session.SaveChanges();
-}
-```
+session.SaveChanges();`n```
 
 ### Soft Delete
 
@@ -278,7 +269,6 @@ var sql = new SqlBuilder()
     
 var deleted = session.Query<Product>(sql).FirstOrDefault();
 // Can retrieve soft-deleted document
-}
 ```
 
 ## Entity States
@@ -291,7 +281,6 @@ public enum EntityState
 Transient,  // New document, not yet in database
 Loaded,     // Loaded from database or updated
 Deleted     // Marked for deletion
-}
 ```
 
 ### Checking Entity State
@@ -315,9 +304,7 @@ var existing = session.Load<Product>("p2");
 session.Delete(existing);
 // State: Deleted
     
-session.SaveChanges();
-}
-```
+session.SaveChanges();`n```
 
 ## Session as First-Level Cache
 
@@ -334,7 +321,6 @@ var product2 = session.Load<Product>("product-123");
     
 // Same instance
 Assert.Same(product1, product2);
-}
 ```
 
 ### Cache Implications
@@ -350,9 +336,7 @@ var sameProduct = session.Load<Product>("product-123");
 Assert.Equal(99.99m, sameProduct.Price);
     
 // Changes not saved yet
-session.SaveChanges();
-}
-```
+session.SaveChanges();`n```
 
 ## Working with Related Documents
 
@@ -375,7 +359,6 @@ var customer = session.Load<Customer>(order.CustomerId);
     
 // Load products
 var products = session.Load<Product>(order.ProductIds);
-}
 ```
 
 ### Storing Related Documents
@@ -399,9 +382,7 @@ var order = new Order
 session.Store(customer);
 session.Store(order);
     
-session.SaveChanges();
-}
-```
+session.SaveChanges();`n```
 
 ## Commit ID
 
@@ -418,7 +399,6 @@ session.Store(new Product { Id = "p1", Name = "Widget" });
     
 var savedCommitId = session.SaveChanges();
 Assert.Equal(commitId, savedCommitId);
-}
 ```
 
 ### Tracking Changes by Commit ID
@@ -454,18 +434,20 @@ tx.Complete();
 // Good: Short-lived session
 public Product GetProduct(string id)
 {
-     using var session = store.OpenSession();
+    using var session = store.OpenSession();
 
-return session.Load<Product>(id);
+    return session.Load<Product>(id);
+}
 
 // Avoid: Long-lived session
 public class ProductRepository
 {
-private IDocumentSession session;  // Bad!
+    private IDocumentSession session;  // Bad!
     
-public ProductRepository(IDocumentStore store)
-{
-session = store.OpenSession();  // Session kept open
+    public ProductRepository(IDocumentStore store)
+    {
+        session = store.OpenSession();  // Session kept open
+    }
 ```
 
 ### 2. Use Read-Only for Read Operations
@@ -474,9 +456,10 @@ session = store.OpenSession();  // Session kept open
 // Good: Read-only for queries
 public List<Product> GetProducts(List<string> ids)
 {
-using (var session = store.OpenSession())
-{
-return session.Load<Product>(ids, readOnly: true).ToList();
+    using (var session = store.OpenSession())
+    {
+        return session.Load<Product>(ids, readOnly: true).ToList();
+    }
 ```
 
 ### 3. Batch Related Changes
@@ -490,19 +473,17 @@ session.Store(order);
 session.Store(invoice);
     
 session.SaveChanges();  // Single transaction
-}
 
 // Avoid: Multiple saves
-using var session = store.OpenSession();
-
-session.Store(customer);
-session.SaveChanges();
+using (var session1 = store.OpenSession())
+{
+    session1.Store(customer);
+    session1.SaveChanges();
 }
-using var session = store.OpenSession();
-
-session.Store(order);
-session.SaveChanges();
-}
+using (var session2 = store.OpenSession())
+{
+    session2.Store(order);
+    session2.SaveChanges();
 ```
 
 ### 4. Handle Concurrency Exceptions
@@ -535,7 +516,6 @@ catch (ConcurrencyException) when (retries > 0)
 }
     
 throw new Exception("Failed to update product after retries");
-}
 ```
 
 ### 5. Don't Mix Sessions
@@ -547,8 +527,9 @@ var product = session1.Load<Product>("p1");
     
 using (var session2 = store.OpenSession())
 {
-// Don't store entity from session1 in session2
-session2.Store(product);  // Bad!
+    // Don't store entity from session1 in session2
+    session2.Store(product);  // Bad!
+}
 
 // Good: Use entities within their session
 using var session = store.OpenSession();
@@ -557,7 +538,6 @@ var product = session.Load<Product>("p1");
 product.Price = 99.99m;
 session.Store(product);
 session.SaveChanges();
-
 ```
 
 ## Troubleshooting
@@ -571,8 +551,8 @@ var product = session.Load<Product>("non-existent-id");
     
 if (product == null)
 {
-// Handle missing document
-throw new NotFoundException("Product not found");
+    // Handle missing document
+    throw new NotFoundException("Product not found");
 ```
 
 ### Duplicate Key Errors
@@ -580,15 +560,16 @@ throw new NotFoundException("Product not found");
 ```csharp
 try
 {
-using (var session = store.OpenSession())
-{
-session.Store(new Product { Id = "p1", Name = "Widget" });
-session.SaveChanges();
+    using (var session = store.OpenSession())
+    {
+        session.Store(new Product { Id = "p1", Name = "Widget" });
+        session.SaveChanges();
+    }
+}
 catch (SqlException ex) when (ex.Number == 2627)
 {
-// Primary key violation
-// Document with this ID already exists
-}
+    // Primary key violation
+    // Document with this ID already exists
 ```
 
 ### Session State Errors
@@ -602,9 +583,7 @@ session.SaveChanges();
     
 // After SaveChanges, session can still be used
 session.Store(new Product { Id = "p2", Name = "Gadget" });
-session.SaveChanges();
-}
-```
+session.SaveChanges();`n```
 
 ### Type Mismatch
 
