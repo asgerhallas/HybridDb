@@ -8,25 +8,37 @@ The `DocumentSession` represents a unit of work and acts as a first-level cache 
 
 ### Basic Session
 
-```csharp
+<!-- snippet: BasicSession -->
+<a id='snippet-BasicSession'></a>
+
+```cs
 using var session = store.OpenSession();
 
 // Work with documents
+session.Store(new Product { Id = "p1", Name = "Widget" });
 session.SaveChanges();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L23-L29' title='Snippet source file'>snippet source</a> | <a href='#snippet-BasicSession' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Session with Transaction
 
-```csharp
+<!-- snippet: SessionWithTransaction -->
+<a id='snippet-SessionWithTransaction'></a>
+
+```cs
 using var tx = store.BeginTransaction();
 
 using var session = store.OpenSession(tx);
 
 // Work with documents
+session.Store(new Product { Id = "p1", Name = "Widget" });
 session.SaveChanges();
 
 tx.Complete();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L37-L47' title='Snippet source file'>snippet source</a> | <a href='#snippet-SessionWithTransaction' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Storing Documents
 
@@ -34,42 +46,55 @@ tx.Complete();
 
 Store a new document with auto-generated or specified ID:
 
-```csharp
+<!-- snippet: StoreNewDocument -->
+<a id='snippet-StoreNewDocument'></a>
+
+```cs
 using var session = store.OpenSession();
 
 // Auto-generated ID (from Id property)
 var product = new Product 
 { 
-Id = Guid.NewGuid().ToString(),
-Name = "Widget",
-Price = 19.99m
+    Id = Guid.NewGuid().ToString(),
+    Name = "Widget",
+    Price = 19.99m
 };
 
 session.Store(product);
 session.SaveChanges();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L55-L68' title='Snippet source file'>snippet source</a> | <a href='#snippet-StoreNewDocument' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Store with Explicit Key
 
-```csharp
+<!-- snippet: StoreWithExplicitKey -->
+<a id='snippet-StoreWithExplicitKey'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var product = new Product 
 { 
-Name = "Widget",
-Price = 19.99m
+    Name = "Widget",
+    Price = 19.99m
 };
 
 // Specify the key explicitly
 session.Store("product-123", product);
 session.SaveChanges();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L76-L88' title='Snippet source file'>snippet source</a> | <a href='#snippet-StoreWithExplicitKey' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Store with Etag (Update)
 
 Store an existing document with optimistic concurrency control:
 
-```csharp
+<!-- snippet: StoreWithEtag -->
+<a id='snippet-StoreWithEtag'></a>
+
+```cs
 using var session = store.OpenSession();
 var product = session.Load<Product>("product-123");
 var etag = session.Advanced.GetEtagFor(product);
@@ -81,58 +106,77 @@ session.Store("product-123", product, etag);
     
 try
 {
-        session.SaveChanges();
+    session.SaveChanges();
 }
 catch (ConcurrencyException)
 {
-        // Document was modified by another process
-        // Handle the conflict
+    // Document was modified by another process
+    // Handle the conflict
+}
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L103-L122' title='Snippet source file'>snippet source</a> | <a href='#snippet-StoreWithEtag' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Store Multiple Documents
 
-```csharp
+<!-- snippet: StoreMultipleDocuments -->
+<a id='snippet-StoreMultipleDocuments'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var products = new[]
 {
-new Product { Id = "p1", Name = "Widget" },
-new Product { Id = "p2", Name = "Gadget" },
-new Product { Id = "p3", Name = "Gizmo" }
+    new Product { Id = "p1", Name = "Widget" },
+    new Product { Id = "p2", Name = "Gadget" },
+    new Product { Id = "p3", Name = "Gizmo" }
 };
 
 foreach (var product in products)
 {
-session.Store(product);
+    session.Store(product);
 }
 
 session.SaveChanges();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L130-L146' title='Snippet source file'>snippet source</a> | <a href='#snippet-StoreMultipleDocuments' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Loading Documents
 
 ### Load Single Document
 
-```csharp
+<!-- snippet: LoadSingleDocument -->
+<a id='snippet-LoadSingleDocument'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var product = session.Load<Product>("product-123");
 
 if (product != null)
 {
-Console.WriteLine($"Found: {product.Name}");
+    output.WriteLine($"Found: {product.Name}");
+}
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L161-L170' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoadSingleDocument' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Load Multiple Documents
 
-```csharp
+<!-- snippet: LoadMultipleDocuments -->
+<a id='snippet-LoadMultipleDocuments'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var ids = new[] { "product-1", "product-2", "product-3" };
 var products = session.Load<Product>(ids);
 
-Console.WriteLine($"Loaded {products.Count} products");
+output.WriteLine($"Loaded {products.Count} products");
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L189-L196' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoadMultipleDocuments' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Load with Type Checking
 
@@ -155,20 +199,25 @@ Console.WriteLine($"Product: {p.Name}");
 
 Load documents that won't be modified:
 
-```csharp
+<!-- snippet: LoadAsReadOnly -->
+<a id='snippet-LoadAsReadOnly'></a>
+
+```cs
 using var session = store.OpenSession();
 var product = session.Load<Product>("product-123", readOnly: true);
     
 // product can be read but not modified
-Console.WriteLine(product.Name);
-    
-// This would throw an exception:
-// session.Store(product);
+output.WriteLine(product.Name);
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L213-L219' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoadAsReadOnly' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Load Multiple as Read-Only
 
-```csharp
+<!-- snippet: LoadMultipleAsReadOnly -->
+<a id='snippet-LoadMultipleAsReadOnly'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var ids = new[] { "p1", "p2", "p3" };
@@ -176,21 +225,29 @@ var products = session.Load<Product>(ids, readOnly: true);
 
 foreach (var product in products)
 {
-Console.WriteLine(product.Name);
+    output.WriteLine(product.Name);
+}
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L238-L248' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoadMultipleAsReadOnly' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## SaveChanges
 
 ### Basic Save
 
-```csharp
+<!-- snippet: BasicSave -->
+<a id='snippet-BasicSave'></a>
+
+```cs
 using var session = store.OpenSession();
 
 session.Store(new Product { Id = "p1", Name = "Widget" });
 
 var commitId = session.SaveChanges();
-Console.WriteLine($"Saved with commit ID: {commitId}");
+output.WriteLine($"Saved with commit ID: {commitId}");
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc08_StoreLoadTests.cs#L258-L265' title='Snippet source file'>snippet source</a> | <a href='#snippet-BasicSave' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Save with Last Write Wins
 

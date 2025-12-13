@@ -8,35 +8,45 @@ The `DocumentStore` is the central component of HybridDb. It manages database co
 
 #### For Production
 
-```csharp
-var store = DocumentStore.Create(config =>
+<!-- snippet: CreateDocumentStore_ForProduction -->
+<a id='snippet-CreateDocumentStore_ForProduction'></a>
+
+```cs
+var newStore = DocumentStore.Create(config =>
 {
-config.UseConnectionString(
+    config.UseConnectionString(
         "Server=localhost;Database=MyApp;Integrated Security=True;Encrypt=False;");
     
-// Configure documents
-config.Document<Product>()
+    // Configure documents
+    config.Document<Product>()
         .With(x => x.Name)
         .With(x => x.Price);
     
-config.Document<Order>()
+    config.Document<Order>()
         .With(x => x.CustomerId)
         .With(x => x.OrderDate);
-});
+}, initialize: false);
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L22-L37' title='Snippet source file'>snippet source</a> | <a href='#snippet-CreateDocumentStore_ForProduction' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 #### For Testing
 
-```csharp
-var store = DocumentStore.ForTesting(
-TableMode.GlobalTempTables,
-config =>
-{
+<!-- snippet: CreateDocumentStore_ForTesting -->
+<a id='snippet-CreateDocumentStore_ForTesting'></a>
+
+```cs
+var newStore = DocumentStore.ForTesting(
+    TableMode.GlobalTempTables,
+    config =>
+    {
         config.Document<Product>()
             .With(x => x.Name);
-}
+    }
 );
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L45-L54' title='Snippet source file'>snippet source</a> | <a href='#snippet-CreateDocumentStore_ForTesting' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### DocumentStore Properties
 
@@ -163,7 +173,10 @@ switch (@event)
 
 #### Basic Transaction
 
-```csharp
+<!-- snippet: BasicTransaction -->
+<a id='snippet-BasicTransaction'></a>
+
+```cs
 using var tx = store.BeginTransaction();
 
 using var session = store.OpenSession(tx);
@@ -179,10 +192,53 @@ session2.SaveChanges();
 // Commit the transaction
 tx.Complete();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L66-L81' title='Snippet source file'>snippet source</a> | <a href='#snippet-BasicTransaction' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
+
+#### Multiple Sessions in One Transaction
+
+A more realistic example showing how to coordinate multiple operations across different sessions:
+
+<!-- snippet: MultiSessionTransaction -->
+<a id='snippet-MultiSessionTransaction'></a>
+
+```cs
+using (var tx = store.BeginTransaction())
+{
+    // Session 1: Update product
+    using (var session1 = store.OpenSession(tx))
+    {
+        var product = session1.Load<Product>("product-1");
+        product.Stock--;
+        session1.SaveChanges();
+    }
+
+    // Session 2: Create order
+    using (var session2 = store.OpenSession(tx))
+    {
+        var order = new Order 
+        { 
+            Id = Guid.NewGuid().ToString(),
+            ProductId = "product-1",
+            Quantity = 1
+        };
+        session2.Store(order);
+        session2.SaveChanges();
+    }
+
+    // Both operations committed together
+    tx.Complete();
+}
+```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L198-L225' title='Snippet source file'>snippet source</a> | <a href='#snippet-MultiSessionTransaction' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 #### With Isolation Level
 
-```csharp
+<!-- snippet: TransactionWithIsolationLevel -->
+<a id='snippet-TransactionWithIsolationLevel'></a>
+
+```cs
 using var tx = store.BeginTransaction(IsolationLevel.Serializable);
 
 // Critical section with serializable isolation
@@ -194,10 +250,15 @@ session.SaveChanges();
 
 tx.Complete();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L96-L107' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithIsolationLevel' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 #### With Commit ID
 
-```csharp
+<!-- snippet: TransactionWithCommitId -->
+<a id='snippet-TransactionWithCommitId'></a>
+
+```cs
 var commitId = Guid.NewGuid();
 
 using var tx = store.BeginTransaction(commitId);
@@ -207,11 +268,14 @@ using var tx = store.BeginTransaction(commitId);
 
 using var session = store.OpenSession(tx);
 
+var product = new Product { Id = "p1", Name = "Widget" };
 session.Store(product);
 session.SaveChanges();
 
 tx.Complete();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L115-L130' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithCommitId' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Transaction Properties
 
@@ -273,7 +337,10 @@ tx.Complete();
 
 Set a timeout for acquiring the database connection:
 
-```csharp
+<!-- snippet: TransactionWithConnectionTimeout -->
+<a id='snippet-TransactionWithConnectionTimeout'></a>
+
+```cs
 using (var tx = store.BeginTransaction(
     IsolationLevel.ReadCommitted, 
     connectionTimeout: TimeSpan.FromSeconds(30)))
@@ -287,18 +354,24 @@ using (var tx = store.BeginTransaction(
     tx.Complete();
 }
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L138-L151' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithConnectionTimeout' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Rollback
 
 Transactions automatically roll back if not completed:
 
-```csharp
+<!-- snippet: TransactionRollback -->
+<a id='snippet-TransactionRollback'></a>
+
+```cs
 using var tx = store.BeginTransaction();
 
 try
 {
     using (var session = store.OpenSession(tx))
     {
+        var product = new Product { Id = "p1", Name = "Widget" };
         session.Store(product);
         session.SaveChanges();
     }
@@ -314,41 +387,8 @@ catch (Exception)
     throw;
 }
 ```
-
-## Transaction Patterns
-
-### Multi-Session Transaction
-
-Use multiple sessions within one transaction:
-
-```csharp
-using (var tx = store.BeginTransaction())
-{
-    // Session 1: Update product
-    using (var session1 = store.OpenSession(tx))
-    {
-        var product = session1.Load<Product>("product-1");
-        product.Stock--;
-        session1.SaveChanges();
-    }
-
-    // Session 2: Create order
-    using (var session2 = store.OpenSession(tx))
-    {
-        var order = new Order 
-        { 
-            Id = Guid.NewGuid().ToString(),
-            ProductId = "product-1",
-            Quantity = 1
-        };
-        session2.Store(order);
-        session2.SaveChanges();
-    }
-
-    // Both operations committed together
-    tx.Complete();
-}
-```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L160-L182' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionRollback' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Distributed Transaction
 
@@ -406,40 +446,44 @@ catch (ConcurrencyException)
 
 Use consistent commit IDs for idempotent operations:
 
-```csharp
-public void ProcessOrder(Guid orderId)
+<!-- snippet: IdempotentOperations -->
+<a id='snippet-IdempotentOperations'></a>
+
+```cs
+// Use orderId as commitId for idempotency
+using (var tx = store.BeginTransaction(orderId))
 {
-    // Use orderId as commitId for idempotency
-    using (var tx = store.BeginTransaction(orderId))
+    using (var session = store.OpenSession(tx))
     {
-        using (var session = store.OpenSession(tx))
+        // Check if already processed
+        if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
         {
-            // Check if already processed
-            if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
-            {
-                return; // Already processed
-            }
-            
-            // Process order
-            var order = session.Load<Order>(orderId.ToString());
-            ProcessOrderItems(order);
-            
-            // Mark as processed
-            session.Store(new ProcessedOrder { Id = orderId.ToString() });
-            
-            session.SaveChanges();
+            return; // Already processed
         }
         
-        tx.Complete();
+        // Process order
+        var order = session.Load<Order>(orderId.ToString());
+        
+        // Mark as processed
+        session.Store(new ProcessedOrder { Id = orderId.ToString() });
+        
+        session.SaveChanges();
     }
+    
+    tx.Complete();
 }
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L243-L266' title='Snippet source file'>snippet source</a> | <a href='#snippet-IdempotentOperations' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Best Practices
 
 ### 1. Keep Transactions Short
 
-```csharp
+<!-- snippet: ShortTransaction_Good -->
+<a id='snippet-ShortTransaction_Good'></a>
+
+```cs
 // Good: Quick transaction
 using (var tx = store.BeginTransaction())
 {
@@ -451,6 +495,9 @@ using (var tx = store.BeginTransaction())
     
     tx.Complete();
 }
+```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L281-L293' title='Snippet source file'>snippet source</a> | <a href='#snippet-ShortTransaction_Good' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 // Avoid: Long-running transaction
 using (var tx = store.BeginTransaction())
@@ -505,7 +552,10 @@ tx.Dispose();
 
 ### 4. Handle Concurrency Exceptions
 
-```csharp
+<!-- snippet: ConcurrencyExceptionRetry -->
+<a id='snippet-ConcurrencyExceptionRetry'></a>
+
+```cs
 int retries = 3;
 while (retries-- > 0)
 {
@@ -529,10 +579,15 @@ while (retries-- > 0)
     }
 }
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L309-L332' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConcurrencyExceptionRetry' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### 5. Use Transactions for Related Changes
 
-```csharp
+<!-- snippet: RelatedChangesTransaction -->
+<a id='snippet-RelatedChangesTransaction'></a>
+
+```cs
 // Good: Transaction ensures both updates succeed or fail together
 using (var tx = store.BeginTransaction())
 {
@@ -549,6 +604,8 @@ using (var tx = store.BeginTransaction())
     tx.Complete();
 }
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L349-L365' title='Snippet source file'>snippet source</a> | <a href='#snippet-RelatedChangesTransaction' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Troubleshooting
 

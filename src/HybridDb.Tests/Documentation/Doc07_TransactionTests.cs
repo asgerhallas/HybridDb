@@ -19,7 +19,7 @@ namespace HybridDb.Tests.Documentation
         [Fact]
         public void CreateDocumentStore_ForProduction()
         {
-            // #region CreateDocumentStore_ForProduction
+            #region CreateDocumentStore_ForProduction
             var newStore = DocumentStore.Create(config =>
             {
                 config.UseConnectionString(
@@ -34,7 +34,7 @@ namespace HybridDb.Tests.Documentation
                     .With(x => x.CustomerId)
                     .With(x => x.OrderDate);
             }, initialize: false);
-            // #endregion
+            #endregion
 
             newStore.ShouldNotBeNull();
         }
@@ -42,7 +42,7 @@ namespace HybridDb.Tests.Documentation
         [Fact]
         public void CreateDocumentStore_ForTesting()
         {
-            // #region CreateDocumentStore_ForTesting
+            #region CreateDocumentStore_ForTesting
             var newStore = DocumentStore.ForTesting(
                 TableMode.GlobalTempTables,
                 config =>
@@ -51,7 +51,7 @@ namespace HybridDb.Tests.Documentation
                         .With(x => x.Name);
                 }
             );
-            // #endregion
+            #endregion
 
             newStore.ShouldNotBeNull();
             newStore.Dispose();
@@ -63,7 +63,7 @@ namespace HybridDb.Tests.Documentation
             Document<Product>();
             Document<Order>();
 
-            // #region BasicTransaction
+            #region BasicTransaction
             using var tx = store.BeginTransaction();
 
             using var session = store.OpenSession(tx);
@@ -78,7 +78,7 @@ namespace HybridDb.Tests.Documentation
 
             // Commit the transaction
             tx.Complete();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -93,7 +93,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region TransactionWithIsolationLevel
+            #region TransactionWithIsolationLevel
             using var tx = store.BeginTransaction(IsolationLevel.Serializable);
 
             // Critical section with serializable isolation
@@ -104,7 +104,7 @@ namespace HybridDb.Tests.Documentation
             session.SaveChanges();
 
             tx.Complete();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -112,7 +112,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region TransactionWithCommitId
+            #region TransactionWithCommitId
             var commitId = Guid.NewGuid();
 
             using var tx = store.BeginTransaction(commitId);
@@ -127,7 +127,7 @@ namespace HybridDb.Tests.Documentation
             session.SaveChanges();
 
             tx.Complete();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -135,7 +135,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region TransactionWithConnectionTimeout
+            #region TransactionWithConnectionTimeout
             using (var tx = store.BeginTransaction(
                 IsolationLevel.ReadCommitted, 
                 connectionTimeout: TimeSpan.FromSeconds(30)))
@@ -148,7 +148,7 @@ namespace HybridDb.Tests.Documentation
                 
                 tx.Complete();
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -157,7 +157,7 @@ namespace HybridDb.Tests.Documentation
             Document<Product>();
             Document<Order>();
 
-            // #region TransactionRollback
+            #region TransactionRollback
             using var tx = store.BeginTransaction();
 
             try
@@ -179,7 +179,7 @@ namespace HybridDb.Tests.Documentation
                 // Transaction automatically rolls back on dispose
                 throw;
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -195,7 +195,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region MultiSessionTransaction
+            #region MultiSessionTransaction
             using (var tx = store.BeginTransaction())
             {
                 // Session 1: Update product
@@ -222,7 +222,7 @@ namespace HybridDb.Tests.Documentation
                 // Both operations committed together
                 tx.Complete();
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -240,7 +240,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region IdempotentOperations
+            #region IdempotentOperations
             // Use orderId as commitId for idempotency
             using (var tx = store.BeginTransaction(orderId))
             {
@@ -263,7 +263,7 @@ namespace HybridDb.Tests.Documentation
                 
                 tx.Complete();
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -278,7 +278,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region ShortTransaction_Good
+            #region ShortTransaction_Good
             // Good: Quick transaction
             using (var tx = store.BeginTransaction())
             {
@@ -290,7 +290,7 @@ namespace HybridDb.Tests.Documentation
                 
                 tx.Complete();
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -306,7 +306,7 @@ namespace HybridDb.Tests.Documentation
                 session.SaveChanges();
             });
 
-            // #region ConcurrencyExceptionRetry
+            #region ConcurrencyExceptionRetry
             int retries = 3;
             while (retries-- > 0)
             {
@@ -329,7 +329,7 @@ namespace HybridDb.Tests.Documentation
                     await Task.Delay(100 * (3 - retries));
                 }
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -346,7 +346,7 @@ namespace HybridDb.Tests.Documentation
                 session.SaveChanges();
             });
 
-            // #region RelatedChangesTransaction
+            #region RelatedChangesTransaction
             // Good: Transaction ensures both updates succeed or fail together
             using (var tx = store.BeginTransaction())
             {
@@ -362,7 +362,7 @@ namespace HybridDb.Tests.Documentation
                 
                 tx.Complete();
             }
-            // #endregion
+            #endregion
         }
     }
 }

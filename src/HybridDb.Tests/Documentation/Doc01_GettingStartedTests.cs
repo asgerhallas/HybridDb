@@ -19,12 +19,15 @@ namespace HybridDb.Tests.Documentation
         [Fact]
         public void QuickStart_BasicExample()
         {
-            // #region QuickStart_BasicExample
-            // Create a document store for testing (uses temp tables)
-            Document<Entity>();
-            Document<Entity>().With(x => x.Property);
+            #region QuickStart_BasicExample
 
-            // Use the store
+            // Create a document store for testing (uses temp tables)
+            var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, configuration => 
+            {
+                configuration.Document<Entity>().With(x => x.Property);
+            });
+
+            // Open a session
             using var session = store.OpenSession();
             
             // Store a document
@@ -35,8 +38,9 @@ namespace HybridDb.Tests.Documentation
                 Number = 2001 
             });
 
+            // Save changes to the database
             session.SaveChanges();
-            // #endregion
+            #endregion
 
             // Query documents using LINQ
             using var session2 = store.OpenSession();
@@ -54,7 +58,7 @@ namespace HybridDb.Tests.Documentation
         [Fact]
         public void ProductionSetup()
         {
-            // #region ProductionSetup
+            #region ProductionSetup
             var store = DocumentStore.Create(configuration =>
             {
                 configuration.UseConnectionString(
@@ -68,8 +72,8 @@ namespace HybridDb.Tests.Documentation
                 configuration.Document<Order>()
                     .With(x => x.CustomerId)
                     .With(x => x.OrderDate);
-            }, initialize: false);
-            // #endregion
+            });
+            #endregion
 
             store.ShouldNotBeNull();
         }
@@ -77,18 +81,19 @@ namespace HybridDb.Tests.Documentation
         [Fact]
         public void DocumentConfiguration()
         {
-            // #region DocumentConfiguration
-            Document<Product>()
-                .With(x => x.Name)           // Index the Name property
-                .With(x => x.Price)          // Index the Price property
-                .With(x => x.CategoryId);    // Index the CategoryId property
-            // #endregion
+            #region DocumentConfiguration
+            // Create a table named Products and add a database column for the Name, Price and CategoryId properties and keep the values up-to-date on each call to Session.SaveChanges()
+            configuration.Document<Product>()
+                .With(x => x.Name)
+                .With(x => x.Price)
+                .With(x => x.CategoryId);
+            #endregion
         }
 
         [Fact]
         public void RepositoryPattern()
         {
-            // #region RepositoryPattern
+            #region RepositoryPattern
             Document<Product>().With(x => x.Name).With(x => x.Category);
 
             var repository = new ProductRepository(store);
@@ -101,7 +106,7 @@ namespace HybridDb.Tests.Documentation
             
             var products = repository.FindByCategory("Tools");
             products.Count.ShouldBe(1);
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -109,7 +114,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Entity>();
 
-            // #region UsingTransactions
+            #region UsingTransactions
             // Begin a transaction
             using var tx = store.BeginTransaction();
 
@@ -135,7 +140,7 @@ namespace HybridDb.Tests.Documentation
                 // Transaction rolls back automatically
                 throw;
             }
-            // #endregion
+            #endregion
         }
 
         // Sample repository class for documentation

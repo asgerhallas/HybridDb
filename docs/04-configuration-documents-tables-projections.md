@@ -2,14 +2,17 @@
 
 ## Document Configuration
 
-Documents are the core entities stored in HybridDb. Each document type must be registered with the store to configure its table and indexed properties.
+Documents are the core entities stored in HybridDb. Each document type must be registered with the store to configure its table and projected properties.
 
 > **Note on Initialization**: By default, `DocumentStore.Create()` and `DocumentStore.ForTesting()` automatically initialize the store (creating tables and running migrations). You only need to call `store.Initialize()` manually if you pass `initialize: false` to the factory method. This is useful when you need to configure the store from multiple places before initialization.
 
 ### Basic Document Registration
 
 ```csharp
-store.Configuration.Document<Product>();
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>();
+});
 ```
 
 This creates a table named "Products" (pluralized by convention) with:
@@ -25,7 +28,10 @@ This creates a table named "Products" (pluralized by convention) with:
 Override the default table name:
 
 ```csharp
-store.Configuration.Document<Product>("MyProductTable");
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>("MyProductTable");
+});
 ```
 
 ### Custom Discriminators
@@ -33,7 +39,10 @@ store.Configuration.Document<Product>("MyProductTable");
 Specify a custom discriminator for a document type:
 
 ```csharp
-store.Configuration.Document<Product>(discriminator: "Prod");
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>(discriminator: "Prod");
+});
 ```
 
 Discriminators are used for:
@@ -41,19 +50,22 @@ Discriminators are used for:
 - Document type identification
 - Type mapping during deserialization
 
-## Projections (Indexed Properties)
+## Projections (Projected Properties)
 
 Projections extract properties from documents into indexed columns for efficient querying.
 
 ### Simple Projections
 
-Index a property:
+Project a property:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Name)
-    .With(x => x.Price)
-    .With(x => x.CategoryId);
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Name)
+        .With(x => x.Price)
+        .With(x => x.CategoryId);
+});
 ```
 
 This creates columns for `Name`, `Price`, and `CategoryId` that can be queried efficiently.
@@ -63,8 +75,11 @@ This creates columns for `Name`, `Price`, and `CategoryId` that can be queried e
 Specify a custom column name:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With("ProductName", x => x.Name);
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With("ProductName", x => x.Name);
+});
 ```
 
 ### Projections with Converters
@@ -72,9 +87,12 @@ store.Configuration.Document<Product>()
 Transform the value before storing:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Price, price => Math.Round(price, 2))
-    .With(x => x.Name, name => name?.ToUpperInvariant());
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Price, price => Math.Round(price, 2))
+        .With(x => x.Name, name => name?.ToUpperInvariant());
+});
 ```
 
 ### Complex Property Projections
@@ -95,10 +113,13 @@ public class Address
     public string Country { get; set; }
 }
 
-store.Configuration.Document<Order>()
-    .With("ShippingCity", x => x.ShippingAddress.City)
-    .With("ShippingCountry", x => x.ShippingAddress.Country)
-    .With(x => x.Total);
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Order>()
+        .With("ShippingCity", x => x.ShippingAddress.City)
+        .With("ShippingCountry", x => x.ShippingAddress.Country)
+        .With(x => x.Total);
+});
 ```
 
 **Important**: HybridDb automatically injects null checks, so `x.ShippingAddress.City` won't throw if `ShippingAddress` is null.
@@ -108,9 +129,12 @@ store.Configuration.Document<Order>()
 Project computed values:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With("FullName", x => $"{x.Brand} {x.Name}")
-    .With("IsExpensive", x => x.Price > 1000);
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With("FullName", x => $"{x.Brand} {x.Name}")
+        .With("IsExpensive", x => x.Price > 1000);
+});
 ```
 
 ### JSON Projections
@@ -118,12 +142,15 @@ store.Configuration.Document<Product>()
 Store complex objects as JSON in a column:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Tags, x => x, new AsJson());
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Tags, x => x, new AsJson());
 
-// Or with custom column name
-store.Configuration.Document<Product>()
-    .With("ProductTags", x => x.Tags, x => x, new AsJson());
+    // Or with custom column name
+    config.Document<Product>()
+        .With("ProductTags", x => x.Tags, x => x, new AsJson());
+});
 ```
 
 This is useful for complex nested objects that you want to index but don't need to query on individual properties.
@@ -135,8 +162,11 @@ This is useful for complex nested objects that you want to index but don't need 
 Set maximum length for string columns:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Description, new MaxLength(1000));
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Description, new MaxLength(1000));
+});
 
 // Default for strings is 850 if not specified
 ```
@@ -146,8 +176,11 @@ store.Configuration.Document<Product>()
 Store value as JSON:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Specifications, new AsJson());
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Specifications, new AsJson());
+});
 ```
 
 #### DisableNullCheckInjection
@@ -155,8 +188,11 @@ store.Configuration.Document<Product>()
 Disable automatic null checking:
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Name, new DisableNullCheckInjection());
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Name, new DisableNullCheckInjection());
+});
 ```
 
 Use this if you're sure the property path won't be null, or if you want to handle nulls explicitly.
@@ -168,21 +204,27 @@ By default, HybridDb looks for an `Id` property. You can customize this:
 ### Using Key Method
 
 ```csharp
-store.Configuration.Document<Product>()
-    .Key(x => x.ProductCode);
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .Key(x => x.ProductCode);
+});
 ```
 
 ### Using Global Key Resolver
 
 ```csharp
-store.Configuration.UseKeyResolver(entity =>
+var store = DocumentStore.Create(config =>
 {
-    return entity switch
+    config.UseKeyResolver(entity =>
     {
-        Product p => p.ProductCode,
-        Order o => o.OrderNumber,
-        _ => entity.GetType().GetProperty("Id")?.GetValue(entity)?.ToString()
-    };
+        return entity switch
+        {
+            Product p => p.ProductCode,
+            Order o => o.OrderNumber,
+            _ => entity.GetType().GetProperty("Id")?.GetValue(entity)?.ToString()
+        };
+    });
 });
 ```
 
@@ -209,16 +251,19 @@ public class Cat : Animal
     public int Lives { get; set; }
 }
 
-// Configure the base type
-store.Configuration.Document<Animal>()
-    .With(x => x.Name);
+var store = DocumentStore.Create(config =>
+{
+    // Configure the base type
+    config.Document<Animal>()
+        .With(x => x.Name);
 
-// Configure derived types
-store.Configuration.Document<Dog>()
-    .With(x => x.Breed);
+    // Configure derived types
+    config.Document<Dog>()
+        .With(x => x.Breed);
 
-store.Configuration.Document<Cat>()
-    .With(x => x.Lives);
+    config.Document<Cat>()
+        .With(x => x.Lives);
+});
 ```
 
 All animals are stored in the "Animals" table with different discriminators.
@@ -244,9 +289,12 @@ var bigDogs = session.Query<Animal>()
 Sometimes you want derived types in separate tables:
 
 ```csharp
-store.Configuration.Document<Animal>("Animals");
-store.Configuration.Document<Dog>("Dogs");  // Separate table
-store.Configuration.Document<Cat>("Cats");  // Separate table
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Animal>("Animals");
+    config.Document<Dog>("Dogs");  // Separate table
+    config.Document<Cat>("Cats");  // Separate table
+});
 ```
 
 ## Table Design
@@ -300,8 +348,13 @@ public class MyMigration : Migration
         
         yield return new RawSqlCommand(
             "CREATE INDEX IX_Products_Name ON Products (Name)");
+    }
+}
 
-store.Configuration.UseMigrations(new MyMigration());
+var store = DocumentStore.Create(config =>
+{
+    config.UseMigrations(new MyMigration());
+});
 ```
 
 ### Composite Indexes
@@ -331,15 +384,18 @@ public class ProductIndex
     public string Supplier { get; set; }
 }
 
-store.Configuration.Document<Product>()
-    .Extend<ProductIndex>(index =>
-    {
-        index.With(x => x.Category)
-             .With(x => x.Supplier);
-    });
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .Extend<ProductIndex>(index =>
+        {
+            index.With(x => x.Category)
+                 .With(x => x.Supplier);
+        });
+});
 ```
 
-This is useful for organizing projections when you have many indexed properties.
+This is useful for organizing projections when you have many projected properties.
 
 ## Advanced Scenarios
 
@@ -413,25 +469,31 @@ design.Table.Add(column);
 Only create projections for properties you query on:
 
 ```csharp
-// Good: Only index what you query
-store.Configuration.Document<Product>()
-    .With(x => x.CategoryId)  // Frequently queried
-    .With(x => x.Price);       // Frequently queried
+var store = DocumentStore.Create(config =>
+{
+    // Good: Only project what you query
+    config.Document<Product>()
+        .With(x => x.CategoryId)  // Frequently queried
+        .With(x => x.Price);       // Frequently queried
 
-// Avoid: Indexing everything
-store.Configuration.Document<Product>()
-    .With(x => x.CategoryId)
-    .With(x => x.Price)
-    .With(x => x.Description)  // Rarely queried, waste of space
-    .With(x => x.Notes);       // Rarely queried
+    // Avoid: Projecting everything
+    config.Document<Product>()
+        .With(x => x.CategoryId)
+        .With(x => x.Price)
+        .With(x => x.Description)  // Rarely queried, waste of space
+        .With(x => x.Notes);       // Rarely queried
+});
 ```
 
 ### 2. Use Appropriate String Lengths
 
 ```csharp
-store.Configuration.Document<Product>()
-    .With(x => x.Name, new MaxLength(200))      // Short names
-    .With(x => x.Description, new MaxLength(4000)); // Longer descriptions
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Name, new MaxLength(200))      // Short names
+        .With(x => x.Description, new MaxLength(4000)); // Longer descriptions
+});
 ```
 
 ### 3. Consider Column Types
@@ -454,10 +516,13 @@ HybridDb automatically maps types, but be aware:
 ### 4. Name Columns Clearly
 
 ```csharp
-store.Configuration.Document<Order>()
-    .With("CustomerId", x => x.Customer.Id)
-    .With("CustomerName", x => x.Customer.Name)
-    .With("ShippingCity", x => x.ShippingAddress.City);
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Order>()
+        .With("CustomerId", x => x.Customer.Id)
+        .With("CustomerName", x => x.Customer.Name)
+        .With("ShippingCity", x => x.ShippingAddress.City);
+});
 ```
 
 ### 5. Design for Queries
@@ -465,13 +530,16 @@ store.Configuration.Document<Order>()
 Think about your query patterns when designing projections:
 
 ```csharp
-// If you query by date range and status
-store.Configuration.Document<Order>()
-    .With(x => x.OrderDate)
-    .With(x => x.Status);
+var store = DocumentStore.Create(config =>
+{
+    // If you query by date range and status
+    config.Document<Order>()
+        .With(x => x.OrderDate)
+        .With(x => x.Status);
 
-// Consider adding a composite index in a migration
-// CREATE INDEX IX_Orders_Date_Status ON Orders (OrderDate, Status)
+    // Consider adding a composite index in a migration
+    // CREATE INDEX IX_Orders_Date_Status ON Orders (OrderDate, Status)
+});
 ```
 
 ### 6. Use Discriminators Wisely
@@ -479,9 +547,12 @@ store.Configuration.Document<Order>()
 For polymorphic hierarchies, use clear discriminators:
 
 ```csharp
-store.Configuration.Document<PaymentMethod>(discriminator: "Payment");
-store.Configuration.Document<CreditCard>(discriminator: "Payment.CreditCard");
-store.Configuration.Document<BankTransfer>(discriminator: "Payment.BankTransfer");
+var store = DocumentStore.Create(config =>
+{
+    config.Document<PaymentMethod>(discriminator: "Payment");
+    config.Document<CreditCard>(discriminator: "Payment.CreditCard");
+    config.Document<BankTransfer>(discriminator: "Payment.BankTransfer");
+});
 ```
 
 ## Troubleshooting

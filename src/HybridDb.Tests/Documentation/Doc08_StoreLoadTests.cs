@@ -20,13 +20,13 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region BasicSession
+            #region BasicSession
             using var session = store.OpenSession();
 
             // Work with documents
             session.Store(new Product { Id = "p1", Name = "Widget" });
             session.SaveChanges();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -34,7 +34,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region SessionWithTransaction
+            #region SessionWithTransaction
             using var tx = store.BeginTransaction();
 
             using var session = store.OpenSession(tx);
@@ -44,7 +44,7 @@ namespace HybridDb.Tests.Documentation
             session.SaveChanges();
 
             tx.Complete();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -52,7 +52,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region StoreNewDocument
+            #region StoreNewDocument
             using var session = store.OpenSession();
 
             // Auto-generated ID (from Id property)
@@ -65,7 +65,7 @@ namespace HybridDb.Tests.Documentation
 
             session.Store(product);
             session.SaveChanges();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -73,7 +73,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region StoreWithExplicitKey
+            #region StoreWithExplicitKey
             using var session = store.OpenSession();
 
             var product = new Product 
@@ -85,7 +85,7 @@ namespace HybridDb.Tests.Documentation
             // Specify the key explicitly
             session.Store("product-123", product);
             session.SaveChanges();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -100,7 +100,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region StoreWithEtag
+            #region StoreWithEtag
             using var session = store.OpenSession();
             var product = session.Load<Product>("product-123");
             var etag = session.Advanced.GetEtagFor(product);
@@ -119,7 +119,7 @@ namespace HybridDb.Tests.Documentation
                 // Document was modified by another process
                 // Handle the conflict
             }
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -127,7 +127,7 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region StoreMultipleDocuments
+            #region StoreMultipleDocuments
             using var session = store.OpenSession();
 
             var products = new[]
@@ -143,7 +143,7 @@ namespace HybridDb.Tests.Documentation
             }
 
             session.SaveChanges();
-            // #endregion
+            #endregion
         }
 
         [Fact]
@@ -158,7 +158,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region LoadSingleDocument
+            #region LoadSingleDocument
             using var session = store.OpenSession();
 
             var product = session.Load<Product>("product-123");
@@ -167,7 +167,7 @@ namespace HybridDb.Tests.Documentation
             {
                 output.WriteLine($"Found: {product.Name}");
             }
-            // #endregion
+            #endregion
             
             product.ShouldNotBeNull();
         }
@@ -186,14 +186,14 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region LoadMultipleDocuments
+            #region LoadMultipleDocuments
             using var session = store.OpenSession();
 
             var ids = new[] { "product-1", "product-2", "product-3" };
             var products = session.Load<Product>(ids);
 
             output.WriteLine($"Loaded {products.Count} products");
-            // #endregion
+            #endregion
             
             products.Count.ShouldBe(3);
         }
@@ -210,13 +210,13 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region LoadAsReadOnly
+            #region LoadAsReadOnly
             using var session = store.OpenSession();
             var product = session.Load<Product>("product-123", readOnly: true);
                 
             // product can be read but not modified
             output.WriteLine(product.Name);
-            // #endregion
+            #endregion
             
             product.ShouldNotBeNull();
         }
@@ -235,7 +235,7 @@ namespace HybridDb.Tests.Documentation
                 setup.SaveChanges();
             });
 
-            // #region LoadMultipleAsReadOnly
+            #region LoadMultipleAsReadOnly
             using var session = store.OpenSession();
 
             var ids = new[] { "p1", "p2", "p3" };
@@ -245,7 +245,7 @@ namespace HybridDb.Tests.Documentation
             {
                 output.WriteLine(product.Name);
             }
-            // #endregion
+            #endregion
             
             products.Count.ShouldBe(3);
         }
@@ -255,14 +255,14 @@ namespace HybridDb.Tests.Documentation
         {
             Document<Product>();
 
-            // #region BasicSave
+            #region BasicSave
             using var session = store.OpenSession();
 
             session.Store(new Product { Id = "p1", Name = "Widget" });
 
             var commitId = session.SaveChanges();
             output.WriteLine($"Saved with commit ID: {commitId}");
-            // #endregion
+            #endregion
             
             commitId.ShouldNotBe(Guid.Empty);
         }

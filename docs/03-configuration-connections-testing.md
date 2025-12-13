@@ -6,84 +6,56 @@ HybridDb uses standard SQL Server connection strings. The connection string is c
 
 ### Production Configuration
 
-```csharp
-var store = DocumentStore.Create(config =>
+<!-- snippet: ProductionConfiguration -->
+<a id='snippet-ProductionConfiguration'></a>
+
+```cs
+var newStore = DocumentStore.Create(config =>
 {
     config.UseConnectionString(
-        "Server=myserver;Database=MyAppDb;User Id=myuser;Password=mypass;Encrypt=False;");
+        "Server=(LocalDb)\\MSSQLLocalDB;Database=MyAppDb;Integrated Security=True;Encrypt=False;");
 });
-
-store.Initialize();
 ```
-
-### Connection String Components
-
-**Server/Data Source**:
-```csharp
-// Local instance
-"Server=localhost;..."
-"Server=.;..."
-"Data Source=(local);..."
-
-// Named instance
-"Server=localhost\\SQLEXPRESS;..."
-
-// Remote server
-"Server=myserver.domain.com;..."
-```
-
-**Authentication**:
-```csharp
-// Windows Authentication (Integrated Security)
-"Server=.;Database=MyDb;Integrated Security=True;Encrypt=False;"
-
-// SQL Server Authentication
-"Server=.;Database=MyDb;User Id=sa;Password=mypass;Encrypt=False;"
-
-// Azure SQL Database
-"Server=myserver.database.windows.net;Database=MyDb;User Id=myuser;Password=mypass;Encrypt=True;"
-```
-
-**Additional Options**:
-```csharp
-// Connection timeout
-"Server=.;Database=MyDb;Integrated Security=True;Connection Timeout=30;Encrypt=False;"
-
-// Application name (useful for monitoring)
-"Server=.;Database=MyDb;Integrated Security=True;Application Name=MyApp;Encrypt=False;"
-
-// Multiple Active Result Sets
-"Server=.;Database=MyDb;Integrated Security=True;MultipleActiveResultSets=True;Encrypt=False;"
-```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L22-L28' title='Snippet source file'>snippet source</a> | <a href='#snippet-ProductionConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Configuration Object
 
 You can also configure settings using the Configuration object:
 
-```csharp
-var configuration = new Configuration();
-configuration.UseConnectionString("Server=.;Database=MyDb;Integrated Security=True;Encrypt=False;");
+<!-- snippet: ConfigurationObject -->
+<a id='snippet-ConfigurationObject'></a>
 
-var store = DocumentStore.Create(configuration);
+```cs
+var configuration = new Configuration();
+configuration.UseConnectionString("Server=(LocalDb)\\MSSQLLocalDB;Database=MyDb;Integrated Security=True;Encrypt=False;");
+
+var newStore = DocumentStore.Create(configuration);
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L36-L41' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConfigurationObject' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Deferred Initialization
 
 If you need to configure the store from multiple places before initializing:
 
-```csharp
-var store = DocumentStore.Create(config =>
+<!-- snippet: DeferredInitialization -->
+<a id='snippet-DeferredInitialization'></a>
+
+```cs
+var newStore = DocumentStore.Create(config =>
 {
-    config.UseConnectionString("Server=.;Database=MyDb;Integrated Security=True;Encrypt=False;");
+    config.UseConnectionString("Server=(LocalDb)\\MSSQLLocalDB;Database=MyDb;Integrated Security=True;Encrypt=False;");
 }, initialize: false);
 
 // Configure from multiple places
-store.Configuration.Document<Product>().With(x => x.Name);
-SomeOtherConfigurationMethod(store.Configuration);
+newStore.Configuration.Document<Product>().With(x => x.Name);
 
 // Manually initialize when ready
-store.Initialize();
+newStore.Initialize();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L49-L60' title='Snippet source file'>snippet source</a> | <a href='#snippet-DeferredInitialization' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Testing Configurations
 
@@ -97,17 +69,20 @@ HybridDb supports two table modes for testing:
 
 Uses global temporary tables in TempDb. Best for test isolation:
 
-```csharp
-var store = DocumentStore.ForTesting(
+<!-- snippet: GlobalTempTablesMode -->
+<a id='snippet-GlobalTempTablesMode'></a>
+
+```cs
+var newStore = DocumentStore.ForTesting(
     TableMode.GlobalTempTables,
     config =>
     {
         config.UseConnectionString(
-            "Server=.;Integrated Security=True;Encrypt=False;");
+            "Server=(LocalDb)\\MSSQLLocalDB;Integrated Security=True;Encrypt=False;");
     });
-
-store.Initialize();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L68-L76' title='Snippet source file'>snippet source</a> | <a href='#snippet-GlobalTempTablesMode' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 **Characteristics**:
 - Tables are created in TempDb
@@ -120,132 +95,32 @@ store.Initialize();
 
 Uses real tables with a prefix for isolation:
 
-```csharp
-var store = DocumentStore.ForTesting(
+<!-- snippet: RealTablesMode -->
+<a id='snippet-RealTablesMode'></a>
+
+```cs
+var newStore = DocumentStore.ForTesting(
     TableMode.RealTables,
     config =>
     {
         config.UseConnectionString(
-            "Server=.;Database=TestDb;Integrated Security=True;Encrypt=False;");
+            "Server=(LocalDb)\\MSSQLLocalDB;Database=HybridDb;Integrated Security=True;Encrypt=False;");
         
         // Add a unique prefix to avoid conflicts
+        // If not set a default randomized prefix is used
         config.UseTableNamePrefix($"Test_{Guid.NewGuid():N}_");
     });
 
-store.Initialize();
-
 // Remember to clean up
-store.Dispose();
+newStore.Dispose();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L84-L99' title='Snippet source file'>snippet source</a> | <a href='#snippet-RealTablesMode' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 **Characteristics**:
 - Tables persist in the database
-- Requires manual cleanup
+- It will try to clean up, but may require manual cleanup if it fails
 - Can be useful for debugging
-- Allows inspection of data after tests
-
-### Test Base Class Pattern
-
-Create a base class for your tests:
-
-```csharp
-public abstract class HybridDbTestBase : IDisposable
-{
-    protected DocumentStore Store { get; }
-    
-    protected HybridDbTestBase()
-    {
-        Store = DocumentStore.ForTesting(
-            TableMode.GlobalTempTables,
-            config =>
-            {
-                config.UseConnectionString(
-                    "Server=.;Integrated Security=True;Encrypt=False;");
-                
-                // Configure documents
-                Configure(config);
-            });
-        
-        Store.Initialize();
-    }
-    
-    protected virtual void Configure(Configuration config)
-    {
-        // Override in derived classes
-    }
-    
-    protected DocumentDesigner<T> Document<T>(string tablename = null) 
-        => Store.Configuration.Document<T>(tablename);
-    
-    public void Dispose()
-    {
-        Store?.Dispose();
-
-// Usage in tests
-public class MyTests : HybridDbTestBase
-{
-    protected override void Configure(Configuration config)
-    {
-        config.Document<MyEntity>()
-            .With(x => x.Name);
-    }
-    
-    [Fact]
-    public void MyTest()
-    {
-        using var session = Store.OpenSession();
-        // ... test code
-```
-
-### In-Memory Testing Alternative
-
-For true in-memory testing, consider using a separate test database that you can quickly reset:
-
-```csharp
-public class TestDatabaseFixture : IDisposable
-{
-    public DocumentStore Store { get; }
-    
-    public TestDatabaseFixture()
-    {
-        // Create a unique test database
-        var dbName = $"HybridDbTests_{Guid.NewGuid():N}";
-        var masterConnection = "Server=.;Database=master;Integrated Security=True;Encrypt=False;";
-        
-        using (var connection = new SqlConnection(masterConnection))
-        {
-            connection.Open();
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"CREATE DATABASE [{dbName}]";
-            cmd.ExecuteNonQuery();
-        }
-        
-        Store = DocumentStore.Create(config =>
-        {
-            config.UseConnectionString(
-                $"Server=.;Database={dbName};Integrated Security=True;Encrypt=False;");
-        });
-        
-        Store.Initialize();
-    }
-    
-    public void Dispose()
-    {
-        var dbName = Store.Database.ConnectionString
-            .Split(';')
-            .First(x => x.StartsWith("Database="))
-            .Split('=')[1];
-        
-        Store.Dispose();
-        
-        // Drop the test database
-        var masterConnection = "Server=.;Database=master;Integrated Security=True;Encrypt=False;";
-        using var connection = new SqlConnection(masterConnection);
-        connection.Open();
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = $"DROP DATABASE [{dbName}]";
-        cmd.ExecuteNonQuery();
-```
 
 ## Configuration Options
 
@@ -253,17 +128,22 @@ public class TestDatabaseFixture : IDisposable
 
 Configure logging to track what HybridDb is doing:
 
-```csharp
-using Microsoft.Extensions.Logging;
+<!-- snippet: LoggerConfiguration -->
+<a id='snippet-LoggerConfiguration'></a>
 
+```cs
 var loggerFactory = LoggerFactory.Create(builder =>
 {
-    builder.AddConsole();
     builder.SetMinimumLevel(LogLevel.Debug);
 });
 
-config.UseLogger(loggerFactory.CreateLogger("HybridDb"));
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
+{
+    config.UseLogger(loggerFactory.CreateLogger("HybridDb"));
+});
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L105-L115' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoggerConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Serializer
 
@@ -279,13 +159,104 @@ The `DefaultSerializer` is specifically designed for document storage with the f
 - **Deterministic property order**: Orders properties in a specific, consistent manner.
 - **Constructor bypass**: Bypasses constructors during deserialization to not run any logic at all.
 
-**Using the Default Serializer:**
+**Configuring the Default Serializer:**
+
+<!-- snippet: DefaultSerializerConfiguration -->
+<a id='snippet-DefaultSerializerConfiguration'></a>
+
+```cs
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
+{
+    // Create and configure a custom serializer
+    var serializer = new DefaultSerializer();
+    serializer.EnableAutomaticBackReferences();
+    
+    config.UseSerializer(serializer);
+});
+```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L123-L132' title='Snippet source file'>snippet source</a> | <a href='#snippet-DefaultSerializerConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
+
+**Serializer Configuration Options:**
+
+#### EnableAutomaticBackReferences()
+
+Automatically handles parent/root references in your object graphs without duplicating data in the JSON:
 
 ```csharp
-// Configure the default serializer with options
-var serializer = config.UseDefaultSerializer();
+var serializer = new DefaultSerializer();
 serializer.EnableAutomaticBackReferences();
 ```
+
+When enabled:
+- **Parent references** are serialized as simple string markers (`"parent"`, `"root"`) instead of duplicating entire objects
+- **Automatic rehydration** during deserialization restores references to actual object instances
+- **Significantly reduced document size** for object graphs with parent relationships
+- **Clean, readable JSON** that is much easier to migrate than Json.NET's PreserveReferenceHandling (which adds `$ref` and `$id` metadata throughout the document, and places object definitions unpredictably - often not where you'd expect)
+
+Example:
+```csharp
+public class Order
+{
+    public string Id { get; set; }
+    public List<OrderLine> Lines { get; set; }
+}
+
+public class OrderLine
+{
+    public Order Order { get; set; }  // Back reference to parent
+    public string ProductId { get; set; }
+}
+
+// With EnableAutomaticBackReferences:
+// The OrderLine.Order property is stored as "parent" in JSON
+// After deserialization, each OrderLine.Order points to the actual Order instance
+```
+
+You can also specify value types that should be duplicated instead of referenced:
+```csharp
+serializer.EnableAutomaticBackReferences(typeof(Product));
+// Product instances will be duplicated even if referenced multiple times
+```
+
+#### EnableDiscriminators()
+
+Adds type discriminators for polymorphic document storage:
+
+```csharp
+var serializer = new DefaultSerializer();
+serializer.EnableDiscriminators(
+    new Discriminator<PaymentMethod>("Payment"),
+    new Discriminator<CreditCard>("Payment.CreditCard"),
+    new Discriminator<BankTransfer>("Payment.BankTransfer")
+);
+```
+
+When enabled:
+- **Discriminator field** is added to JSON for polymorphic types
+- **Type information** is preserved for correct deserialization of derived types
+- **Explicit control** over discriminator values, unlike Json.NET's TypeNameHandling which:
+  - Uses full namespace-qualified type names by default, making it difficult to refactor and move types around in your solution without migrations
+  - Adds wrapper objects (e.g., `$type` and `$values` for lists), making JSON less readable and harder to migrate
+- **Clean field placement** - Discriminator is always serialized first in the JSON, maintaining predictable structure
+
+Example:
+```csharp
+// JSON output with discriminators:
+{
+    "Discriminator": "Payment.CreditCard",
+    "CardNumber": "****-1234",
+    "ExpiryDate": "12/25"
+}
+
+// Deserializes correctly to CreditCard type instead of base PaymentMethod
+```
+
+**Important:** Currently, HybridDb uses two separate discriminator systems:
+- **Root documents** (configured via `config.Document<T>()`) use discriminators managed by the TypeMapper and stored in the database's Discriminator column
+- **Child objects and lists** within the JSON document require `EnableDiscriminators()` to be called manually with explicit discriminator mappings
+
+This means you need to call `EnableDiscriminators()` if your documents contain polymorphic child objects or collections. A future version may unify these systems to use the TypeMapper for all types.
 
 **Custom Serializer:**
 
@@ -319,147 +290,93 @@ config.UseTypeMapper(new CustomTypeMapper());
 
 Add a prefix to all table names:
 
-```csharp
-config.UseTableNamePrefix("MyApp_");
-// Results in tables like: MyApp_Products, MyApp_Orders, etc.
+<!-- snippet: TableNamePrefix -->
+<a id='snippet-TableNamePrefix'></a>
+
+```cs
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
+{
+    config.UseTableNamePrefix("MyApp_");
+    // Results in tables like: MyApp_Products, MyApp_Orders, etc.
+});
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L140-L146' title='Snippet source file'>snippet source</a> | <a href='#snippet-TableNamePrefix' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Key Resolver
 
 Customize how entity keys are resolved:
 
-```csharp
-config.UseKeyResolver(entity =>
+<!-- snippet: CustomKeyResolver -->
+<a id='snippet-CustomKeyResolver'></a>
+
+```cs
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
-    // Custom logic to get the key from an entity
-    if (entity is IHasCustomKey custom)
-        return custom.GetKey();
-    
-    // Fallback to default
-    return entity.GetType()
-        .GetProperty("Id")
-        ?.GetValue(entity)
-        ?.ToString();
+    config.UseKeyResolver(entity =>
+    {
+        // Custom logic to get the key from an entity
+        return entity.GetType()
+            .GetProperty("Id")
+            ?.GetValue(entity)
+            ?.ToString();
+    });
 });
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L154-L166' title='Snippet source file'>snippet source</a> | <a href='#snippet-CustomKeyResolver' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
+
+Defaults to the Id property.
 
 ### Soft Delete
 
 Enable soft deletes instead of hard deletes:
 
-```csharp
-config.UseSoftDelete();
+<!-- snippet: SoftDeleteConfiguration -->
+<a id='snippet-SoftDeleteConfiguration'></a>
 
-// Deleted documents will have a metadata flag instead of being removed
+```cs
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
+{
+    config.UseSoftDelete();
+    // Deleted documents will have a metadata flag instead of being removed
+});
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L174-L180' title='Snippet source file'>snippet source</a> | <a href='#snippet-SoftDeleteConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Background Migrations
 
 Control background migration behavior:
 
-```csharp
-// Disable background migrations (migrations only run on document load)
-config.DisableBackgroundMigrations();
+<!-- snippet: BackgroundMigrationsConfiguration -->
+<a id='snippet-BackgroundMigrationsConfiguration'></a>
 
-// Set migration batch size
-config.UseMigrationBatchSize(1000);
+```cs
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
+{
+    // Disable background migrations (migrations only run on document load)
+    config.DisableBackgroundMigrations();
+
+    // Set migration batch size
+    config.UseMigrationBatchSize(1000);
+});
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L188-L197' title='Snippet source file'>snippet source</a> | <a href='#snippet-BackgroundMigrationsConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Event Store
 
 Enable the event store feature:
 
-```csharp
-config.UseEventStore();
-```
+<!-- snippet: EventStoreConfiguration -->
+<a id='snippet-EventStoreConfiguration'></a>
 
-## Environment-Specific Configuration
-
-### Development
-
-```csharp
-var store = DocumentStore.Create(config =>
+```cs
+var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
-    config.UseConnectionString(
-        "Server=localhost;Database=MyApp_Dev;Integrated Security=True;Encrypt=False;");
-    
-    var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
-    config.UseLogger(loggerFactory.CreateLogger("HybridDb"));
+    config.UseEventStore();
 });
 ```
-
-### Staging
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    config.UseConnectionString(
-        Environment.GetEnvironmentVariable("HYBRIDDB_CONNECTION_STRING"));
-    
-    config.UseTableNamePrefix("Staging_");
-});
-```
-
-### Production
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    config.UseConnectionString(
-        Environment.GetEnvironmentVariable("HYBRIDDB_CONNECTION_STRING"));
-    
-    // Production-specific settings
-    config.UseMigrationBatchSize(100);
-    
-    var loggerFactory = LoggerFactory.Create(b => 
-    {
-        b.AddApplicationInsights();
-        b.SetMinimumLevel(LogLevel.Warning);
-    });
-    config.UseLogger(loggerFactory.CreateLogger("HybridDb"));
-});
-```
-
-## Connection Pooling
-
-HybridDb relies on SQL Server's built-in connection pooling. To configure pool settings:
-
-```csharp
-config.UseConnectionString(
-    "Server=.;Database=MyDb;Integrated Security=True;" +
-    "Min Pool Size=5;Max Pool Size=100;" +
-    "Connection Lifetime=300;Encrypt=False;");
-```
-
-## Troubleshooting
-
-### Connection Failures
-
-If connections fail, check:
-
-1. SQL Server is running
-2. Server name is correct
-3. Database exists (for real tables)
-4. User has appropriate permissions
-5. Firewall allows connections
-6. `Encrypt=False` is set for local development
-
-### Permission Issues
-
-Ensure the database user has these permissions:
-- CREATE TABLE
-- ALTER TABLE
-- SELECT, INSERT, UPDATE, DELETE
-- CREATE INDEX
-
-For TempDb mode:
-- CREATE TABLE in TempDb
-
-### TempDb Limitations
-
-Global temp tables have some limitations:
-- Name length restrictions
-- Can't use certain SQL features
-- May have performance implications for large datasets
-
-Consider using real tables with a prefix for complex testing scenarios.
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L205-L210' title='Snippet source file'>snippet source</a> | <a href='#snippet-EventStoreConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->

@@ -7,8 +7,8 @@ HybridDb is a lightweight document database library built on top of SQL Server. 
 ### Key Features
 
 - **Simple API**: Store and query semi-structured data with minimal configuration
-- **Schema-less Storage**: Persist .NET objects without complex mappings
-- **Queryable Indexes**: Index document properties for efficient querying
+- **Schema-less Storage**: Persist .NET objects as JSON without complex mappings
+- **Projected Columns**: Project document properties into columns for efficient querying
 - **LINQ Support**: Query documents using familiar LINQ syntax
 - **ACID Transactions**: Full consistency and transactionality of SQL Server
 - **Schema Migrations**: Built-in tools for handling document and schema changes
@@ -31,13 +31,17 @@ HybridDb includes Newtonsoft.Json for JSON serialization by default.
 
 Here's a simple example to get started with HybridDb:
 
-<!-- embed:Doc01_GettingStartedTests#QuickStart_BasicExample -->
-```csharp
-// Create a document store for testing (uses temp tables)
-Document<Entity>();
-Document<Entity>().With(x => x.Property);
+<!-- snippet: QuickStart_BasicExample -->
+<a id='snippet-QuickStart_BasicExample'></a>
 
-// Use the store
+```cs
+// Create a document store for testing (uses temp tables)
+var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, configuration => 
+{
+    configuration.Document<Entity>().With(x => x.Property);
+});
+
+// Open a session
 using var session = store.OpenSession();
 
 // Store a document
@@ -48,48 +52,52 @@ session.Store(new Entity
     Number = 2001 
 });
 
+// Save changes to the database
 session.SaveChanges();
-//
 ```
-<!-- /embed -->
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc01_GettingStartedTests.cs#L22-L43' title='Snippet source file'>snippet source</a> | <a href='#snippet-QuickStart_BasicExample' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Production Setup
 
 For production use, create a store with real tables:
 
-<!-- embed:Doc01_GettingStartedTests#ProductionSetup -->
-```csharp
+<!-- snippet: ProductionSetup -->
+<a id='snippet-ProductionSetup'></a>
+
+```cs
 var store = DocumentStore.Create(configuration =>
 {
     configuration.UseConnectionString(
         "Server=localhost;Database=MyApp;Integrated Security=True;Encrypt=False;");
-
+    
     // Configure documents
     configuration.Document<Product>()
         .With(x => x.Name)
         .With(x => x.Price);
-
+    
     configuration.Document<Order>()
         .With(x => x.CustomerId)
         .With(x => x.OrderDate);
-}, initialize: false);
-//
+});
 ```
-<!-- /embed -->
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc01_GettingStartedTests.cs#L61-L76' title='Snippet source file'>snippet source</a> | <a href='#snippet-ProductionSetup' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Core Concepts
 
 ### DocumentStore
 
 The `DocumentStore` is the entry point for HybridDb. It:
-- Manages the database connection
+- Manages the database connection and transactions
 - Holds configuration for documents and tables
 - Creates sessions for working with documents
 - Manages schema and document migrations
+- This should live for the lifetime of the application (e.g. registered as a singleton)
 
 There are two factory methods:
 - `DocumentStore.Create()`: Creates a store with real database tables (for production)
-- `DocumentStore.ForTesting()`: Creates a store with temp tables or global temp tables (for testing)
+- `DocumentStore.ForTesting()`: Creates a store with global temp tables or real tables (for testing)
 
 ### DocumentSession
 
@@ -98,27 +106,31 @@ The `DocumentSession` represents a unit of work and acts as a first-level cache.
 - Manages entity changes
 - Provides LINQ query capabilities
 - Batches all changes until `SaveChanges()` is called
+- This should live for the lifetime of the operation (e.g. registered per request or command execution)
 
 ### Document Configuration
 
-Documents must be registered with the store and can have indexed properties:
+Documents must be registered with the store and can have projected properties:
 
-<!-- embed:Doc01_GettingStartedTests#DocumentConfiguration -->
-```csharp
-Document<Product>()
-    .With(x => x.Name)           // Index the Name property
-    .With(x => x.Price)          // Index the Price property
-    .With(x => x.CategoryId);    // Index the CategoryId property
-//
+<!-- snippet: DocumentConfiguration -->
+<a id='snippet-DocumentConfiguration'></a>
+
+```cs
+// Create a table named Products and add a database column for the Name, Price and CategoryId properties and keep the values up-to-date on each call to Session.SaveChanges()
+configuration.Document<Product>()
+    .With(x => x.Name)
+    .With(x => x.Price)
+    .With(x => x.CategoryId);
 ```
-<!-- /embed -->
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc01_GettingStartedTests.cs#L84-L90' title='Snippet source file'>snippet source</a> | <a href='#snippet-DocumentConfiguration' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Table Modes
 
 HybridDb supports different table modes for different scenarios:
 
-- **TableMode.RealTables**: Creates real database tables (production use)
-- **TableMode.GlobalTempTables**: Uses global temp tables in TempDb (testing/isolation)
+- **TableMode.RealTables**: Creates real database tables (production use and advanced testing scenarios)
+- **TableMode.GlobalTempTables**: Uses global temp tables in TempDb (for testing only)
 
 ## Next Steps
 
@@ -131,72 +143,6 @@ Now that you understand the basics, explore these topics:
 5. **[Advanced Scenarios](10-documentsession-advanced.md)**: Explore advanced features like transactions, eviction, and metadata
 
 ## Common Patterns
-
-### Repository Pattern
-
-```csharp
-public class ProductRepository
-{
-    private readonly IDocumentStore store;
-    
-    public ProductRepository(IDocumentStore store)
-    {
-        this.store = store;
-    }
-    
-    public Product GetById(string id)
-    {
-        using var session = store.OpenSession();
-        return session.Load<Product>(id);
-    }
-    
-    public void Save(Product product)
-    {
-        using var session = store.OpenSession();
-        session.Store(product);
-        session.SaveChanges();
-    }
-    
-    public IList<Product> FindByCategory(string category)
-    {
-        using var session = store.OpenSession();
-        return session.Query<Product>()
-            .Where(x => x.Category == category)
-            .ToList();
-```
-
-### Using Transactions
-
-<!-- embed:Doc01_GettingStartedTests#UsingTransactions -->
-```csharp
-// Begin a transaction
-using var tx = store.BeginTransaction();
-
-try
-{
-    using var session1 = store.OpenSession(tx);
-    var entity = session1.Load<Entity>("some-id");
-    if (entity != null)
-    {
-        entity.Property = "Updated";
-        session1.SaveChanges();
-    }
-
-    using var session2 = store.OpenSession(tx);
-    session2.Store(new Entity { Id = Guid.NewGuid().ToString(), Property = "New" });
-    session2.SaveChanges();
-
-    // Commit the transaction
-    tx.Complete();
-}
-catch
-{
-    // Transaction rolls back automatically
-    throw;
-}
-//
-```
-<!-- /embed -->
 
 ## Troubleshooting
 
@@ -214,20 +160,3 @@ You must manually initialize it before use:
 store.Initialize();
 ```
 
-### Connection String Issues
-
-Ensure your connection string is valid and includes `Encrypt=False` for local SQL Server:
-
-```csharp
-configuration.UseConnectionString(
-    "Server=localhost;Database=MyDb;Integrated Security=True;Encrypt=False;");
-```
-
-### Missing Projections
-
-If queries on properties don't work, ensure you've configured them:
-
-```csharp
-store.Document<Entity>()
-    .With(x => x.PropertyToQuery);  // Required for querying
-```

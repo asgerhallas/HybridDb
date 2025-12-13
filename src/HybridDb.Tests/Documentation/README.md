@@ -64,7 +64,6 @@ session.Store(new Entity { Id = Guid.NewGuid(), Property = "Hello" });
 session.SaveChanges();
 \```
 <!-- /embed -->
-```
 
 ### 3. Extract and Embed
 

@@ -8,55 +8,85 @@ HybridDb provides powerful querying capabilities through LINQ and SQL. You can q
 
 ### Basic LINQ Query
 
-```csharp
+<!-- snippet: BasicLINQQuery -->
+<a id='snippet-BasicLINQQuery'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var products = session.Query<Product>()
-        .Where(x => x.Price > 100)
-        .ToList();
+    .Where(x => x.Price > 100)
+    .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L42-L48' title='Snippet source file'>snippet source</a> | <a href='#snippet-BasicLINQQuery' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Query All Documents
 
-```csharp
+<!-- snippet: QueryAllDocuments -->
+<a id='snippet-QueryAllDocuments'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var allProducts = session.Query<Product>().ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L58-L62' title='Snippet source file'>snippet source</a> | <a href='#snippet-QueryAllDocuments' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Query with Single Result
 
-```csharp
+<!-- snippet: QueryWithSingleResult -->
+<a id='snippet-QueryWithSingleResult'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var product = session.Query<Product>()
-        .Where(x => x.Name == "Widget")
-        .SingleOrDefault();
+    .Where(x => x.Name == "Widget")
+    .SingleOrDefault();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L72-L78' title='Snippet source file'>snippet source</a> | <a href='#snippet-QueryWithSingleResult' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Query with First
 
-```csharp
+<!-- snippet: QueryWithFirst -->
+<a id='snippet-QueryWithFirst'></a>
+
+```cs
 using var session = store.OpenSession();
 
 var product = session.Query<Product>()
-        .Where(x => x.Price > 50)
-        .FirstOrDefault();
+    .Where(x => x.Price > 50)
+    .FirstOrDefault();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L88-L94' title='Snippet source file'>snippet source</a> | <a href='#snippet-QueryWithFirst' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Where Clauses
 
 ### Equality
 
-```csharp
+<!-- snippet: WhereEquality -->
+<a id='snippet-WhereEquality'></a>
+
+```cs
+var session = store.OpenSession();
+
 var products = session.Query<Product>()
     .Where(x => x.CategoryId == "electronics")
     .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L104-L110' title='Snippet source file'>snippet source</a> | <a href='#snippet-WhereEquality' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Comparison Operators
 
-```csharp
+<!-- snippet: ComparisonOperators -->
+<a id='snippet-ComparisonOperators'></a>
+
+```cs
 // Greater than
 var expensive = session.Query<Product>()
     .Where(x => x.Price > 1000)
@@ -66,12 +96,9 @@ var expensive = session.Query<Product>()
 var affordable = session.Query<Product>()
     .Where(x => x.Price <= 50)
     .ToList();
-
-// Not equals
-var active = session.Query<Product>()
-    .Where(x => x.Status != "Discontinued")
-    .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L122-L132' title='Snippet source file'>snippet source</a> | <a href='#snippet-ComparisonOperators' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Null Checks
 
@@ -85,11 +112,13 @@ var noCategory = session.Query<Product>()
 var hasCategory = session.Query<Product>()
     .Where(x => x.CategoryId != null)
     .ToList();
-```
 
 ### Logical Operators
 
-```csharp
+<!-- snippet: LogicalOperators -->
+<a id='snippet-LogicalOperators'></a>
+
+```cs
 // AND
 var filtered = session.Query<Product>()
     .Where(x => x.Price > 100 && x.CategoryId == "electronics")
@@ -99,53 +128,48 @@ var filtered = session.Query<Product>()
 var multiple = session.Query<Product>()
     .Where(x => x.CategoryId == "electronics" || x.CategoryId == "computers")
     .ToList();
-
-// Complex expressions
-var complex = session.Query<Product>()
-    .Where(x => (x.Price > 100 && x.Stock > 0) || x.Featured == true)
-    .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L145-L155' title='Snippet source file'>snippet source</a> | <a href='#snippet-LogicalOperators' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Multiple Where Clauses
 
-```csharp
+<!-- snippet: MultipleWhereClauses -->
+<a id='snippet-MultipleWhereClauses'></a>
+
+```cs
 var products = session.Query<Product>()
     .Where(x => x.Price > 50)
     .Where(x => x.CategoryId == "electronics")
     .Where(x => x.Stock > 0)
     .ToList();
-
-// Equivalent to:
-var products = session.Query<Product>()
-    .Where(x => x.Price > 50 && x.CategoryId == "electronics" && x.Stock > 0)
-    .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L168-L174' title='Snippet source file'>snippet source</a> | <a href='#snippet-MultipleWhereClauses' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## String Operations
 
-### StartsWith
+<!-- snippet: StringOperations -->
+<a id='snippet-StringOperations'></a>
 
-```csharp
-var products = session.Query<Product>()
+```cs
+// StartsWith
+var startsWithPro = session.Query<Product>()
     .Where(x => x.Name.StartsWith("Pro"))
     .ToList();
-```
 
-### Contains
-
-```csharp
-var products = session.Query<Product>()
+// Contains
+var containsWidget = session.Query<Product>()
     .Where(x => x.Name.Contains("Widget"))
     .ToList();
-```
 
-### EndsWith
-
-```csharp
-var products = session.Query<Product>()
+// EndsWith
+var endsWith2000 = session.Query<Product>()
     .Where(x => x.Name.EndsWith("2000"))
     .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L186-L201' title='Snippet source file'>snippet source</a> | <a href='#snippet-StringOperations' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Query with Variables
 
@@ -172,57 +196,75 @@ var products = session.Query<Product>()
 
 ## Ordering
 
-### Order By
+<!-- snippet: OrderingResults -->
+<a id='snippet-OrderingResults'></a>
 
-```csharp
-var products = session.Query<Product>()
+```cs
+// Order by ascending
+var byPrice = session.Query<Product>()
     .OrderBy(x => x.Price)
     .ToList();
-```
 
-### Order By Descending
-
-```csharp
-var products = session.Query<Product>()
-    .OrderByDescending(x => x.CreatedDate)
+// Order by descending
+var byPriceDesc = session.Query<Product>()
+    .OrderByDescending(x => x.Price)
     .ToList();
-```
 
-### Multiple Order By
-
-```csharp
-var products = session.Query<Product>()
+// Multiple orderings
+var multiOrder = session.Query<Product>()
     .OrderBy(x => x.CategoryId)
-    .ThenBy(x => x.Price)
+    .ThenByDescending(x => x.Price)
     .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L213-L229' title='Snippet source file'>snippet source</a> | <a href='#snippet-OrderingResults' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Pagination
 
-### Skip and Take
+<!-- snippet: TakeAndSkip -->
+<a id='snippet-TakeAndSkip'></a>
 
-```csharp
-var pageSize = 20;
-var pageNumber = 2;
-
-var products = session.Query<Product>()
+```cs
+// Take first 10
+var firstPage = session.Query<Product>()
     .OrderBy(x => x.Name)
-    .Skip(pageNumber * pageSize)
-    .Take(pageSize)
+    .Take(10)
+    .ToList();
+
+// Skip and take (pagination)
+var secondPage = session.Query<Product>()
+    .OrderBy(x => x.Name)
+    .Skip(10)
+    .Take(10)
     .ToList();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L242-L255' title='Snippet source file'>snippet source</a> | <a href='#snippet-TakeAndSkip' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Getting Total Count
 
-```csharp
-var query = session.Query<Product>()
-    .Where(x => x.Price > 100);
+<!-- snippet: CountQueries -->
+<a id='snippet-CountQueries'></a>
 
-var total = query.Count();
-var page = query.Skip(20).Take(10).ToList();
+```cs
+// Count all
+var totalCount = session.Query<Product>().Count();
 
-Console.WriteLine($"Showing {page.Count} of {total} products");
+// Count with filter
+var expensiveCount = session.Query<Product>()
+    .Where(x => x.Price > 100)
+    .Count();
+
+// Any
+var hasProducts = session.Query<Product>().Any();
+
+// Any with filter
+var hasExpensive = session.Query<Product>()
+    .Where(x => x.Price > 1000)
+    .Any();
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc09_QueryTests.cs#L267-L283' title='Snippet source file'>snippet source</a> | <a href='#snippet-CountQueries' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Projections in Queries
 
@@ -358,7 +400,7 @@ store.Configuration.Document<Product>()
     .With(x => x.Price)
     .With(x => x.CategoryId);
 
-// Query uses indexed columns
+// Query uses projected columns
 var products = session.Query<Product>()
     .Where(x => x.Price > 100 && x.CategoryId == "electronics")
     .ToList();
@@ -390,12 +432,12 @@ var products = session.Query<Product>()
 
 ## Query Performance
 
-### Use Indexed Columns
+### Use Projected Columns
 
 ```csharp
-// Fast: Uses indexed column
+// Fast: Uses projected column
 var products = session.Query<Product>()
-    .Where(x => x.CategoryId == "electronics")  // CategoryId is indexed
+    .Where(x => x.CategoryId == "electronics")  // CategoryId is projected
     .ToList();
 
 // Slow: Scans document JSON

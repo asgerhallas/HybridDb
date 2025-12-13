@@ -10,6 +10,7 @@
     <PackageReference Include="BoyBoy" Version="1.0.5" />
     <PackageReference Include="FakeItEasy" Version="7.4.0" />
     <PackageReference Include="Halt" Version="1.5.0" />
+    <PackageReference Include="MarkdownSnippets.MsBuild" Version="28.0.0-beta.8" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageReference Include="Microsoft.SqlServer.SqlManagementObjects" Version="170.8.0" />
@@ -70,10 +71,8 @@
     </None>
   </ItemGroup>
 
-  <Target Name="EmbedCodeSamples" AfterTargets="Build">
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\embed-code-samples.ps1&quot;" 
-          IgnoreExitCode="true" 
-          ContinueOnError="true" />
+  <Target Name="FixSnippetAnchors" AfterTargets="MarkdownSnippetsTarget">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\fix-snippet-anchors.ps1&quot;" />
   </Target>
 
 </Project>

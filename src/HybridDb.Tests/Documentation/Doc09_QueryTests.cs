@@ -39,13 +39,13 @@ namespace HybridDb.Tests.Documentation
         {
             SetupTestData();
 
-            // #region BasicLINQQuery
+            #region BasicLINQQuery
             using var session = store.OpenSession();
 
             var products = session.Query<Product>()
                 .Where(x => x.Price > 100)
                 .ToList();
-            // #endregion
+            #endregion
 
             products.Count.ShouldBeGreaterThan(0);
         }
@@ -55,11 +55,11 @@ namespace HybridDb.Tests.Documentation
         {
             SetupTestData();
 
-            // #region QueryAllDocuments
+            #region QueryAllDocuments
             using var session = store.OpenSession();
 
             var allProducts = session.Query<Product>().ToList();
-            // #endregion
+            #endregion
 
             allProducts.Count.ShouldBe(4);
         }
@@ -69,13 +69,13 @@ namespace HybridDb.Tests.Documentation
         {
             SetupTestData();
 
-            // #region QueryWithSingleResult
+            #region QueryWithSingleResult
             using var session = store.OpenSession();
 
             var product = session.Query<Product>()
                 .Where(x => x.Name == "Widget")
                 .SingleOrDefault();
-            // #endregion
+            #endregion
 
             product.ShouldNotBeNull();
         }
@@ -85,13 +85,13 @@ namespace HybridDb.Tests.Documentation
         {
             SetupTestData();
 
-            // #region QueryWithFirst
+            #region QueryWithFirst
             using var session = store.OpenSession();
 
             var product = session.Query<Product>()
                 .Where(x => x.Price > 50)
                 .FirstOrDefault();
-            // #endregion
+            #endregion
 
             product.ShouldNotBeNull();
         }
@@ -101,13 +101,13 @@ namespace HybridDb.Tests.Documentation
         {
             SetupTestData();
 
-            // #region WhereEquality
+            #region WhereEquality
             var session = store.OpenSession();
             
             var products = session.Query<Product>()
                 .Where(x => x.CategoryId == "electronics")
                 .ToList();
-            // #endregion
+            #endregion
 
             products.Count.ShouldBeGreaterThan(0);
         }
@@ -119,7 +119,7 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region ComparisonOperators
+            #region ComparisonOperators
             // Greater than
             var expensive = session.Query<Product>()
                 .Where(x => x.Price > 1000)
@@ -129,7 +129,7 @@ namespace HybridDb.Tests.Documentation
             var affordable = session.Query<Product>()
                 .Where(x => x.Price <= 50)
                 .ToList();
-            // #endregion
+            #endregion
 
             expensive.Count.ShouldBeGreaterThan(0);
             affordable.Count.ShouldBeGreaterThan(0);
@@ -142,7 +142,7 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region LogicalOperators
+            #region LogicalOperators
             // AND
             var filtered = session.Query<Product>()
                 .Where(x => x.Price > 100 && x.CategoryId == "electronics")
@@ -152,7 +152,7 @@ namespace HybridDb.Tests.Documentation
             var multiple = session.Query<Product>()
                 .Where(x => x.CategoryId == "electronics" || x.CategoryId == "computers")
                 .ToList();
-            // #endregion
+            #endregion
 
             filtered.Count.ShouldBeGreaterThan(0);
             multiple.Count.ShouldBeGreaterThan(0);
@@ -165,13 +165,13 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region MultipleWhereClauses
+            #region MultipleWhereClauses
             var products = session.Query<Product>()
                 .Where(x => x.Price > 50)
                 .Where(x => x.CategoryId == "electronics")
                 .Where(x => x.Stock > 0)
                 .ToList();
-            // #endregion
+            #endregion
 
             products.Count.ShouldBeGreaterThan(0);
         }
@@ -183,7 +183,7 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region StringOperations
+            #region StringOperations
             // StartsWith
             var startsWithPro = session.Query<Product>()
                 .Where(x => x.Name.StartsWith("Pro"))
@@ -198,7 +198,7 @@ namespace HybridDb.Tests.Documentation
             var endsWith2000 = session.Query<Product>()
                 .Where(x => x.Name.EndsWith("2000"))
                 .ToList();
-            // #endregion
+            #endregion
 
             containsWidget.Count.ShouldBeGreaterThan(0);
         }
@@ -210,7 +210,7 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region OrderingResults
+            #region OrderingResults
             // Order by ascending
             var byPrice = session.Query<Product>()
                 .OrderBy(x => x.Price)
@@ -226,7 +226,7 @@ namespace HybridDb.Tests.Documentation
                 .OrderBy(x => x.CategoryId)
                 .ThenByDescending(x => x.Price)
                 .ToList();
-            // #endregion
+            #endregion
 
             byPrice.Count.ShouldBeGreaterThan(0);
             byPrice.First().Price.ShouldBeLessThanOrEqualTo(byPrice.Last().Price);
@@ -239,7 +239,7 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region TakeAndSkip
+            #region TakeAndSkip
             // Take first 10
             var firstPage = session.Query<Product>()
                 .OrderBy(x => x.Name)
@@ -252,7 +252,7 @@ namespace HybridDb.Tests.Documentation
                 .Skip(10)
                 .Take(10)
                 .ToList();
-            // #endregion
+            #endregion
 
             firstPage.Count.ShouldBeLessThanOrEqualTo(10);
         }
@@ -264,7 +264,7 @@ namespace HybridDb.Tests.Documentation
 
             using var session = store.OpenSession();
 
-            // #region CountQueries
+            #region CountQueries
             // Count all
             var totalCount = session.Query<Product>().Count();
 
@@ -280,7 +280,7 @@ namespace HybridDb.Tests.Documentation
             var hasExpensive = session.Query<Product>()
                 .Where(x => x.Price > 1000)
                 .Any();
-            // #endregion
+            #endregion
 
             totalCount.ShouldBe(4);
             hasProducts.ShouldBeTrue();
