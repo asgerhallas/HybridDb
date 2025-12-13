@@ -17,11 +17,14 @@ var store = DocumentStore.Create(config =>
 
 This creates a table named "Products" (pluralized by convention) with:
 - An `Id` column (primary key)
+- An `Etag` column (for optimistic concurrency)
 - A `Discriminator` column (for polymorphism)
-- An `AwaitsReprojection` column (for migrations)
-- An `Version` column (for optimistic concurrency)
+- A `CreatedAt` column (creation timestamp)
+- A `ModifiedAt` column (last modification timestamp)
+- An `AwaitsReprojection` column (for schema migrations)
+- A `Version` column (for document migrations)
 - A `Document` column (stores the JSON)
-- An `Metadata` column (for metadata storage)
+- A `Metadata` column (for metadata storage)
 
 ### Custom Table Names
 
@@ -52,11 +55,11 @@ Discriminators are used for:
 
 ## Projections (Projected Properties)
 
-Projections extract properties from documents into indexed columns for efficient querying.
+Projections extract properties from documents into database columns for efficient querying.
 
 ### Simple Projections
 
-Project a property:
+Project a property using its name:
 
 ```csharp
 var store = DocumentStore.Create(config =>
@@ -68,36 +71,26 @@ var store = DocumentStore.Create(config =>
 });
 ```
 
-This creates columns for `Name`, `Price`, and `CategoryId` that can be queried efficiently.
+This creates columns named `Name`, `Price`, and `CategoryId` that can be queried efficiently.
 
-### Named Projections
+### Custom Column Names
 
-Specify a custom column name:
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    config.Document<Product>()
-        .With("ProductName", x => x.Name);
-});
-```
-
-### Projections with Converters
-
-Transform the value before storing:
+You can specify a different name for the column:
 
 ```csharp
 var store = DocumentStore.Create(config =>
 {
     config.Document<Product>()
-        .With(x => x.Price, price => Math.Round(price, 2))
-        .With(x => x.Name, name => name?.ToUpperInvariant());
+        .With("ProductName", x => x.Name)
+        .With("ProductPrice", x => x.Price);
 });
 ```
 
-### Complex Property Projections
+This creates columns `ProductName` and `ProductPrice` in the database.
 
-Project nested properties:
+### Nested Properties
+
+Project properties from nested objects:
 
 ```csharp
 public class Order
@@ -124,16 +117,33 @@ var store = DocumentStore.Create(config =>
 
 **Important**: HybridDb automatically injects null checks, so `x.ShippingAddress.City` won't throw if `ShippingAddress` is null.
 
+### Transforming Values
+
+Transform or convert property values before storing them in columns:
+
+```csharp
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Product>()
+        .With(x => x.Price, price => Math.Round(price, 2))
+        .With(x => x.Name, name => name.ToUpperInvariant())
+        .With("ShippingCity", x => x.ShippingAddress.City, city => city.ToLowerInvariant());
+});
+```
+
+The second parameter is a converter function that transforms the value. This works with both default and custom column names.
+
 ### Calculated Projections
 
-Project computed values:
+Project computed values derived from multiple properties:
 
 ```csharp
 var store = DocumentStore.Create(config =>
 {
     config.Document<Product>()
         .With("FullName", x => $"{x.Brand} {x.Name}")
-        .With("IsExpensive", x => x.Price > 1000);
+        .With("IsExpensive", x => x.Price > 1000)
+        .With("PriceWithTax", x => x.Price * 1.25m);
 });
 ```
 
@@ -268,6 +278,12 @@ var store = DocumentStore.Create(config =>
 
 All animals are stored in the "Animals" table with different discriminators.
 
+**Important considerations:**
+- **Automatic table assignment**: HybridDb automatically detects inheritance relationships. When you configure a type, HybridDb checks if it's a subtype of any previously registered type. If it is, it uses the same table as the base type's hierarchy. You can override this by explicitly specifying a different table name for the derived type.
+- **Configuration order matters**: You must configure the base type before derived types. HybridDb detects inheritance by checking if a newly configured type is a subtype of an already-registered type. If you configure a derived type first, HybridDb won't find the base type and will create a separate table for it.
+- **Nullable columns**: Projected properties from derived types create nullable columns. For example, the `Breed` column will be null for Cat documents, and the `Lives` column will be null for Dog and base Animal documents
+- **Discriminator values**: By default, HybridDb uses the type's short name as the discriminator (e.g., "Animal", "Dog", "Cat")
+
 ### Querying Polymorphic Types
 
 ```csharp
@@ -375,6 +391,8 @@ public class MyMigration : Migration
 
 ## Extended Projections
 
+> **⚠️ Deprecation Notice**: This feature will be removed in the next release. Use direct projections with `.With()` instead.
+
 Use the `Extend` method to add projections from related types:
 
 ```csharp
@@ -399,26 +417,6 @@ This is useful for organizing projections when you have many projected propertie
 
 ## Advanced Scenarios
 
-### Multi-tenant Tables
-
-Use table prefixes for multi-tenancy:
-
-```csharp
-public class TenantStore
-{
-    public static DocumentStore CreateForTenant(string tenantId)
-    {
-        return DocumentStore.Create(config =>
-        {
-            config.UseConnectionString(connectionString);
-            config.UseTableNamePrefix($"{tenantId}_");
-        });
-
-// Each tenant gets isolated tables:
-// Tenant1_Products, Tenant1_Orders
-// Tenant2_Products, Tenant2_Orders
-```
-
 ### Projection with Metadata
 
 Access document metadata in projections:
@@ -435,153 +433,4 @@ var projection = Projection.From<string>((document, metadata) =>
 });
 ```
 
-### Nullable Columns
-
-Control nullability explicitly:
-
-```csharp
-// Create a nullable column for a value type
-var column = new Column("Score", typeof(int?));
-
-// Or configure in projection
-design.Table.Add(new Column<int?>("Score", nullable: true));
-```
-
-### Default Values
-
-Set default values for columns:
-
-```csharp
-var column = new Column(
-    name: "Status", 
-    type: typeof(string),
-    defaultValue: "Pending",
-    nullable: false
-);
-
-design.Table.Add(column);
-```
-
-## Best Practices
-
-### 1. Index Selectively
-
-Only create projections for properties you query on:
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    // Good: Only project what you query
-    config.Document<Product>()
-        .With(x => x.CategoryId)  // Frequently queried
-        .With(x => x.Price);       // Frequently queried
-
-    // Avoid: Projecting everything
-    config.Document<Product>()
-        .With(x => x.CategoryId)
-        .With(x => x.Price)
-        .With(x => x.Description)  // Rarely queried, waste of space
-        .With(x => x.Notes);       // Rarely queried
-});
-```
-
-### 2. Use Appropriate String Lengths
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    config.Document<Product>()
-        .With(x => x.Name, new MaxLength(200))      // Short names
-        .With(x => x.Description, new MaxLength(4000)); // Longer descriptions
-});
-```
-
-### 3. Consider Column Types
-
-HybridDb automatically maps types, but be aware:
-
-```csharp
-// These are efficiently stored
-.With(x => x.Price)        // decimal -> decimal
-.With(x => x.IsActive)     // bool -> bit
-.With(x => x.CreatedAt)    // DateTime -> datetime2
-.With(x => x.Count)        // int -> int
-.With(x => x.Id)           // Guid -> uniqueidentifier
-
-// These require JSON serialization
-.With(x => x.Tags, new AsJson())         // List<string>
-.With(x => x.Settings, new AsJson())     // Complex object
-```
-
-### 4. Name Columns Clearly
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    config.Document<Order>()
-        .With("CustomerId", x => x.Customer.Id)
-        .With("CustomerName", x => x.Customer.Name)
-        .With("ShippingCity", x => x.ShippingAddress.City);
-});
-```
-
-### 5. Design for Queries
-
-Think about your query patterns when designing projections:
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    // If you query by date range and status
-    config.Document<Order>()
-        .With(x => x.OrderDate)
-        .With(x => x.Status);
-
-    // Consider adding a composite index in a migration
-    // CREATE INDEX IX_Orders_Date_Status ON Orders (OrderDate, Status)
-});
-```
-
-### 6. Use Discriminators Wisely
-
-For polymorphic hierarchies, use clear discriminators:
-
-```csharp
-var store = DocumentStore.Create(config =>
-{
-    config.Document<PaymentMethod>(discriminator: "Payment");
-    config.Document<CreditCard>(discriminator: "Payment.CreditCard");
-    config.Document<BankTransfer>(discriminator: "Payment.BankTransfer");
-});
-```
-
-## Troubleshooting
-
-### Projection Not Working
-
-If a projection doesn't create a column:
-1. Ensure the store is initialized after configuration
-2. Check that the projection path is valid
-3. Verify the return type is supported
-
-### Null Reference in Projection
-
-If you get null reference errors:
-- HybridDb should auto-inject null checks
-- If not, ensure you're not using `DisableNullCheckInjection`
-- Check that the projection expression is a simple property path
-
-### Type Mismatch Errors
-
-If you get type mismatch errors:
-- Ensure converter return type matches column type
-- Check that nullable types are handled correctly
-- Verify enum types are projected correctly
-
-### Performance Issues
-
-If projections are slow:
-- Add database indexes on frequently queried columns
-- Reduce the number of projections
-- Use simpler projection expressions
-- Consider batching document migrations
+> **Note on Column Creation**: You should almost never create columns manually using `new Column()` or `design.Table.Add()`. HybridDb automatically handles column creation, nullability, and types when you use projections with `.With()`. Manual column manipulation is only needed in very rare advanced scenarios involving custom migrations or non-standard table structures.
