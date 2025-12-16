@@ -136,10 +136,10 @@ HybridDb supports different table modes for different scenarios:
 
 Now that you understand the basics, explore these topics:
 
-1. **[Configuration](Configuration-Connections-and-Testing.md)**: Learn about connection strings, testing setup, and advanced configuration
-2. **[Documents and Projections](Configuration-Documents-Tables-and-Projections.md)**: Deep dive into document configuration and indexing
-3. **[Migrations](Migrations.md)**: Understand how to handle schema and data changes
-4. **[DocumentSession](DocumentSession-Store-and-Load.md)**: Master storing, loading, and querying documents
+1. **[Configuration](../configuration/Configuration-Connections-and-Testing.md)**: Learn about connection strings, testing setup, and advanced configuration
+2. **[Documents and Projections](../configuration/Configuration-Documents-Tables-and-Projections.md)**: Deep dive into document configuration and indexing
+3. **[Migrations](../migrations/Migrations.md)**: Understand how to handle schema and data changes
+4. **[DocumentSession](../working-with-documents/DocumentSession-Store-and-Load.md)**: Master storing, loading, and querying documents
 5. **[Advanced Scenarios](10-documentsession-advanced.md)**: Explore advanced features like transactions, eviction, and metadata
 
 ## Common Patterns
