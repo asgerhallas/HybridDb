@@ -5,24 +5,24 @@ Welcome to the HybridDb documentation! This documentation provides comprehensive
 ## Table of Contents
 
 ### Getting Started
-1. **[Getting Started](getting-started/Getting-Started.md)** - Introduction, installation, quick start, and core concepts
-2. **[How to Build and Contribute](getting-started/How-to-Build-and-Contribute.md)** - Development setup, building, testing, and contribution guidelines
+1. **[Getting Started](Getting-Started.md)** - Introduction, installation, quick start, and core concepts
+2. **[How to Build and Contribute](How-to-Build-and-Contribute.md)** - Development setup, building, testing, and contribution guidelines
 
 ### Configuration
-3. **[Connections and Testing](configuration/Configuration-Connections-and-Testing.md)** - Connection strings, testing strategies, and environment-specific configuration
-4. **[Documents, Tables and Projections](configuration/Configuration-Documents-Tables-and-Projections.md)** - Document configuration, table design, and property projections
-5. **[Events](configuration/Configuration-Events.md)** - Event store configuration and event sourcing patterns
+3. **[Connections and Testing](Configuration-Connections-and-Testing.md)** - Connection strings, testing strategies, and environment-specific configuration
+4. **[Documents, Tables and Projections](Configuration-Documents-Tables-and-Projections.md)** - Document configuration, table design, and property projections
+5. **[Events](Configuration-Events.md)** - Event store configuration and event sourcing patterns
 
 ### Migrations
-6. **[Migrations](migrations/Migrations.md)** - Schema migrations, document migrations, and migration patterns
+6. **[Migrations](Migrations.md)** - Schema migrations, document migrations, and migration patterns
 
 ### Core Components
-7. **[DocumentStore and DocumentTransaction](core-components/DocumentStore-and-Transaction.md)** - Store lifecycle, transaction management, and isolation levels
+7. **[DocumentStore and DocumentTransaction](DocumentStore-and-Transaction.md)** - Store lifecycle, transaction management, and isolation levels
 
 ### Working with Documents
-8. **[DocumentSession - Store and Load](working-with-documents/DocumentSession-Store-and-Load.md)** - Basic CRUD operations, entity states, and session lifecycle
-9. **[DocumentSession - Query](working-with-documents/DocumentSession-Query.md)** - LINQ queries, raw SQL queries, and query optimization
-10. **[DocumentSession - Advanced Scenarios](working-with-documents/DocumentSession-Advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
+8. **[DocumentSession - Store and Load](DocumentSession-Store-and-Load.md)** - Basic CRUD operations, entity states, and session lifecycle
+9. **[DocumentSession - Query](DocumentSession-Query.md)** - LINQ queries, raw SQL queries, and query optimization
+10. **[DocumentSession - Advanced Scenarios](DocumentSession-Advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
 
 ## Quick Links
 
@@ -68,22 +68,22 @@ var products = session.Query<Product>()
 ## Learning Path
 
 ### Beginners
-1. Start with [Getting Started](getting-started/Getting-Started.md)
-2. Learn about [Connections and Testing](configuration/Configuration-Connections-and-Testing.md)
-3. Understand [Documents and Projections](configuration/Configuration-Documents-Tables-and-Projections.md)
-4. Practice [Store and Load](working-with-documents/DocumentSession-Store-and-Load.md) operations
+1. Start with [Getting Started](Getting-Started.md)
+2. Learn about [Connections and Testing](Configuration-Connections-and-Testing.md)
+3. Understand [Documents and Projections](Configuration-Documents-Tables-and-Projections.md)
+4. Practice [Store and Load](DocumentSession-Store-and-Load.md) operations
 
 ### Intermediate
-1. Master [Query](working-with-documents/DocumentSession-Query.md) capabilities
-2. Learn [Migrations](migrations/Migrations.md) for schema evolution
-3. Understand [Transactions](core-components/DocumentStore-and-Transaction.md)
+1. Master [Query](DocumentSession-Query.md) capabilities
+2. Learn [Migrations](Migrations.md) for schema evolution
+3. Understand [Transactions](DocumentStore-and-Transaction.md)
 4. Explore [Advanced Scenarios](10-documentsession-advanced.md)
 
 ### Advanced
-1. Implement [Event Store](configuration/Configuration-Events.md) patterns
+1. Implement [Event Store](Configuration-Events.md) patterns
 2. Build complex migration strategies
 3. Optimize query performance
-4. Contribute to the project with [How to Build and Contribute](getting-started/How-to-Build-and-Contribute.md)
+4. Contribute to the project with [How to Build and Contribute](How-to-Build-and-Contribute.md)
 
 ## Architecture Overview
 
@@ -120,9 +120,9 @@ var products = session.Query<Product>()
 
 ## What's Next?
 
-- Read [Getting Started](getting-started/Getting-Started.md) to begin using HybridDb
-- Explore [Configuration](configuration/Configuration-Connections-and-Testing.md) options for your environment
-- Learn about [Migrations](migrations/Migrations.md) for evolving your schema
+- Read [Getting Started](Getting-Started.md) to begin using HybridDb
+- Explore [Configuration](Configuration-Connections-and-Testing.md) options for your environment
+- Learn about [Migrations](Migrations.md) for evolving your schema
 - Dive into [Advanced Scenarios](10-documentsession-advanced.md) for complex use cases
 
 ---

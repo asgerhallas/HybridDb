@@ -20,16 +20,13 @@ jobs:
         run: |
           mkdir -p wiki-temp
           # Copy all markdown files from docs to wiki-temp, removing first H1 heading
-          find docs -name "*.md" -type f | while read file; do
-            # Get relative path from docs/
-            rel_path="${file#docs/}"
-            # Create directory structure in wiki-temp
-            mkdir -p "wiki-temp/$(dirname "$rel_path")"
-            # Remove first H1 heading and copy
-            sed '1{/^# /d;}' "$file" > "wiki-temp/$rel_path"
+          for file in docs/*.md; do
+            if [ -f "$file" ]; then
+              sed '1{/^# /d;}' "$file" > "wiki-temp/$(basename "$file")"
+            fi
           done
           # Show what we're syncing
-          find wiki-temp -name "*.md"
+          ls -la wiki-temp/
         shell: bash
       
       - name: Sync to Wiki
