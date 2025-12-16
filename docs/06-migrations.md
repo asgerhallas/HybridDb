@@ -19,20 +19,25 @@ When you migrate documents, you might be tempted to deserialize them to your cur
 
 **Problems with Object-Based Migrations:**
 
-1. **Incompatible Model Evolution**: Your C# classes may have changed in ways that make old JSON impossible to deserialize
-   - Added required properties that old documents don't have
-   - Changed property types (e.g., `int` → `string`, `DateTime` → `DateTimeOffset`)
-   - Removed properties that old JSON still contains
-   
-2. **Future-Proofing**: Code that works today may break tomorrow
-   - Next year's model changes could make this migration fail retroactively
-   - You can't re-run failed migrations if the models have evolved
-   
-3. **Serialization Dependencies**: Deserialization requires compatible types
-   - Missing assemblies or type renames cause failures
-   - Custom converters may not handle old data
-   
-4. **Version Skew**: A document from version 1 being migrated to version 5 may not deserialize with version 5's model
+Your current C# model may not match the old serialized JSON:
+- Added/removed/renamed properties won't deserialize
+- Changed property types cause runtime errors
+- Model changes break previously-working migrations
+- Missing assemblies or renamed types cause failures
+- You'll waste time fixing compilation errors in old migrations whenever models change
+
+**The Multi-Developer Team Problem:**
+
+In a single-developer environment, it may be okay to use model-based migrations for convenience and delete them after they have run. This works since you control all the code and all the databases.
+
+**However, in a multi-developer team this approach breaks down:**
+
+1. **Databases are in different states**: Developer A might be on migration version 5, while Developer B is on version 3, and the CI/CD pipeline might be on version 7
+2. **Temporal coupling**: When you commit a model-based migration that references `Product.NewField`, it works for you because you just added that field. But Developer B pulls your code while their database is still on an older migration state - the model has evolved further and the migration no longer compiles, or worse, it compiles but fails at runtime when their old data doesn't match the new model expectations
+3. **You can't safely delete**: Even if you plan to delete the migration after running it locally, other developers haven't run it yet. Deleting it breaks their ability to migrate their databases forward
+4. **Continuous breakage**: Every time the model evolves, old model-based migrations break. The team constantly fixes compilation errors in code that should be "write once, never touch"
+
+**The real problem isn't just compilation errors** - it's that model-based migrations create an implicit dependency between your migration code and the current state of your models, which varies across team members and environments. JSON-based migrations eliminate this coupling entirely.
 
 **Solution: JSON String Manipulation**
 
@@ -63,17 +68,14 @@ This approach is:
 - **Version-agnostic**: Works regardless of current model definition
 - **Type-safe**: No deserialization failures
 - **Future-proof**: Won't break when models evolve
-- **Reliable**: Handles any JSON structure
 
 ## Migration Basics
 
 Migrations are defined by implementing the `Migration` class:
 
 ```csharp
-public class MyMigration : Migration
+public class MyMigration(int version) : Migration(version)
 {
-    public MyMigration() : base(version: 1) { }
-    
     public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
     {
         // Commands run BEFORE automatic schema migrations
@@ -114,9 +116,9 @@ var store = DocumentStore.Create(config =>
     config.UseConnectionString(connectionString);
     
     config.UseMigrations(
-        new Migration001_AddIndexes(),
-        new Migration002_UpdateProductSchema(),
-        new Migration003_RenameField()
+        new AddIndexes(1),
+        new UpdateProductSchema(2),
+        new RenameField(3)
     );
 });
 
@@ -125,23 +127,29 @@ store.Initialize();
 
 ### Migration Versioning
 
-Migrations are versioned and run in order:
+Migrations are versioned and run in order. Use descriptive class names and pass the version when instantiating:
 
 ```csharp
-public class Migration001_AddIndexes : Migration
+public class AddIndexes(int version) : Migration(version)
 {
-    public Migration001_AddIndexes() : base(1) { }
     // ...
 }
 
-public class Migration002_UpdateSchema : Migration
+public class UpdateProductSchema(int version) : Migration(version)
 {
-    public Migration002_UpdateSchema() : base(2) { }
     // ...
 }
+
+// Usage:
+config.UseMigrations(
+    new AddIndexes(1),
+    new UpdateProductSchema(2)
+);
 ```
 
 HybridDb tracks which migrations have been run in the metadata table and only runs new ones.
+
+**Team Tip**: When multiple developers create migrations simultaneously, merge conflicts are easier to resolve if you only need to adjust the version number when instantiating (`new AddIndexes(5)`) rather than renaming the entire class.
 
 ## Schema Migrations
 
@@ -159,15 +167,18 @@ var store = DocumentStore.Create(config =>
     config.UseConnectionString(connectionString);
     config.Document<Product>()
         .With(x => x.Name);
-}, initialize: false);
+});
 
-store.Initialize();
+// Later: Add Price column - HybridDb will automatically add it when initialized.
+var store = DocumentStore.Create(config =>
+{
+    config.UseConnectionString(connectionString);
+    config.Document<Product>()
+        .With(x => x.Name)
+        .With(x => x.Price);  // New column
+});
 
-// Later: Add Price column - HybridDb will automatically add it
-store.Configuration.Document<Product>()
-    .With(x => x.Price);  // New column
 
-store.Initialize();  // Run again to apply schema changes
 ```
 
 HybridDb detects the difference and creates the `Price` column automatically.
@@ -177,17 +188,13 @@ HybridDb detects the difference and creates the `Price` column automatically.
 Run commands before automatic schema migrations:
 
 ```csharp
-public class AddDefaultPriceColumn : Migration
+public class AddDefaultPriceColumn(int version) : Migration(version)
 {
-    public AddDefaultPriceColumn() : base(1) { }
-    
     public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
     {
-        var table = configuration.GetDesignFor<Product>().Table;
-        
         // Add column with default value before auto-migration
         yield return new AddColumn(
-            table.Name, 
+            "Products", 
             new Column("Price", typeof(decimal), defaultValue: 0m)
         );
 ```
@@ -199,23 +206,19 @@ public class AddDefaultPriceColumn : Migration
 Run commands after automatic schema migrations:
 
 ```csharp
-public class AddIndexes : Migration
+public class AddIndexes(int version) : Migration(version)
 {
-    public AddIndexes() : base(1) { }
-    
     public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
     {
-        var table = configuration.GetDesignFor<Product>().Table;
-        
         // Add indexes after columns are created
-        yield return new RawSqlCommand($@"
+        yield return new RawSqlCommand(@"
             CREATE INDEX IX_Products_CategoryId 
-            ON {table.Name} (CategoryId)
+            ON Products (CategoryId)
         ");
         
-        yield return new RawSqlCommand($@"
+        yield return new RawSqlCommand(@"
             CREATE INDEX IX_Products_Price 
-            ON {table.Name} (Price) 
+            ON Products (Price) 
             WHERE Price > 0
         ");
 ```
@@ -244,8 +247,7 @@ yield return new AddColumn("MyTable",
 yield return new RemoveColumn("MyTable", "OldColumn");
 
 // Rename column
-var table = configuration.GetDesignFor<Product>().Table;
-yield return new RenameColumn(table, "OldName", "NewName");
+yield return new RenameColumn("Products", "OldName", "NewName");
 
 // Rename table
 yield return new RenameTable("OldTableName", "NewTableName");
@@ -263,10 +265,8 @@ Document migrations transform document data as it's loaded or in the background.
 Background migrations run asynchronously on all documents:
 
 ```csharp
-public class UpdateProductSchema : Migration
+public class UpdateProductSchema(int version) : Migration(version)
 {
-    public UpdateProductSchema() : base(2) { }
-    
     public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
     {
         yield return new ChangeDocument<Product>((serializer, json) =>
@@ -276,13 +276,13 @@ public class UpdateProductSchema : Migration
             var doc = JObject.Parse(json);
             
             // Add missing category
-            if (doc["Category"] == null || string.IsNullOrEmpty((string)doc["Category"]))
+            if (doc["Category"] == null || string.IsNullOrEmpty(doc.Value<string>("Category")))
             {
                 doc["Category"] = "Uncategorized";
             }
             
             // Fix negative prices
-            if (doc["Price"] != null && (decimal)doc["Price"] < 0)
+            if (doc["Price"] != null && doc.Value<decimal>("Price") < 0)
             {
                 doc["Price"] = 0;
             }
@@ -293,29 +293,21 @@ public class UpdateProductSchema : Migration
 
 ### ChangeDocument - JSON-Based Migrations
 
-**CRITICAL: Always migrate JSON directly, not deserialized C# objects.**
-
 The `ChangeDocument<T>` class is the primary way to migrate documents. It works with JSON strings directly:
 
 ```csharp
+// Product class is used here _only_ to fetch the correct documents from the correct tables. This is a convenience, but actually goes against the principles about not using models in migrations. It's rarely a problem in reality though - and if it is, implement and use RowMigrationCommand directly instead.
 yield return new ChangeDocument<Product>((serializer, json) =>
 {
     // Migrate JSON directly - models may have changed incompatibly
     var doc = JObject.Parse(json);
     
     // Transform the JSON structure
-    doc["UpdatedField"] = ((string)doc["OldField"])?.ToUpper();
+    doc["UpdatedField"] = doc.Value<string>("OldField")?.ToUpper();
     
     return doc.ToString();
 });
 ```
-
-**Why JSON-Based Migrations?**
-
-1. **Model Evolution**: Your C# classes may have changed in ways that make old serialized data impossible to deserialize
-2. **Future Safety**: Models that migrate successfully today may fail when classes evolve in the future
-3. **Serialization Independence**: JSON manipulation doesn't depend on current class structure
-4. **Type Safety**: Avoid runtime errors from incompatible type conversions
 
 **Advanced Usage with Session Access:**
 
@@ -324,12 +316,18 @@ yield return new ChangeDocument<Product>((session, serializer, row, json) =>
 {
     var doc = JObject.Parse(json);
     
-    // Access metadata from row dictionary
-    var id = row["Id"];
-    var etag = row["Etag"];
+    // Load related documents for cross-document operations
+    var categoryId = doc.Value<string>("CategoryId");
+
+    // This is also a violation of the principle not to use models directly in 
+    // migrations, category might itself be migrated when loaded and that might in turn lead to very slow migrations, so use with care. 
+    var category = session.Load<Category>(categoryId);
     
-    // Use session for complex operations
-    doc["MigratedAt"] = DateTime.UtcNow;
+    // Use loaded data in migration
+    if (category != null)
+    {
+        doc["CategoryName"] = category.Name;
+    }
     
     return doc.ToString();
 });
@@ -366,7 +364,7 @@ Document migrations execute in two ways:
 - Can be monitored via events but has no completion guarantee
 - Documents are also migrated on-demand when loaded, so your application continues to work correctly even while background migrations are running
 
-### Controlling Background Migrations
+### Controlling Migrations
 
 ```csharp
 // Disable background migrations
@@ -389,280 +387,51 @@ var awaitsReprojection = row["AwaitsReprojection"];
 var version = row["Version"];
 ```
 
-## Advanced Migration Scenarios
-
-### Conditional Migrations
-
-Migrate only specific documents by checking JSON content:
-
-```csharp
-public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
-{
-    yield return new ChangeDocument<Product>((serializer, json) =>
-    {
-        var doc = JObject.Parse(json);
-        
-        // Only migrate products without a category
-        if (doc["Category"] == null || string.IsNullOrEmpty((string)doc["Category"]))
-        {
-            doc["Category"] = DetermineCategory(doc);
-        }
-        
-        return doc.ToString();
-    });
-}
-```
-
-### Multi-Step Migrations
-
-Break complex migrations into steps. Note that `BeforeAutoMigrations` and `AfterAutoMigrations` run synchronously during store initialization, while `Background` migrations run asynchronously and you cannot know when they complete:
-
-```csharp
-public class Migration003_RestructureProducts : Migration
-{
-    public Migration003_RestructureProducts() : base(3) { }
-    
-    public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
-    {
-        // Runs first during store initialization
-        // Add new columns with defaults
-        yield return new AddColumn("Products", 
-            new Column("Category", typeof(string), defaultValue: "General"));
-    }
-    
-    public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
-    {
-        // Runs second during store initialization (after auto migrations)
-        // Add constraints/indexes
-        yield return new RawSqlCommand(@"
-            CREATE INDEX IX_Products_Category 
-            ON Products (Category)
-        ");
-    }
-    
-    public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
-    {
-        // Runs ASYNCHRONOUSLY in the background after store initialization
-        // May take hours/days to complete on large datasets
-        // Documents are also migrated on-load if not yet migrated
-        yield return new ChangeDocument<Product>((serializer, json) =>
-        {
-            var doc = JObject.Parse(json);
-            doc["Category"] = MapOldCategoryToNew((string)doc["OldCategory"]);
-            return doc.ToString();
-        });
-```
-
-### Renaming Document Properties
-
-When renaming properties, migrate the JSON structure:
-
-```csharp
-public class Product
-{
-    public string Id { get; set; }
-    public string ProductName { get; set; }  // Was "Name"
-}
-
-public class RenameProductName : Migration
-{
-    public RenameProductName() : base(4) { }
-    
-    public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
-    {
-        yield return new ChangeDocument<Product>((serializer, json) =>
-        {
-            var doc = JObject.Parse(json);
-            
-            // Rename "Name" to "ProductName" in JSON
-            if (doc["Name"] != null)
-            {
-                doc["ProductName"] = doc["Name"];
-                doc.Remove("Name");
-            }
-            
-            return doc.ToString();
-        });
-```
-
-### Splitting Documents
-
-Split one document type into multiple by working with JSON:
-
-```csharp
-public class SplitOrdersAndInvoices : Migration
-{
-    public SplitOrdersAndInvoices() : base(5) { }
-    
-    public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
-    {
-        yield return new ChangeDocument<OldOrder>((session, serializer, row, json) =>
-        {
-            var oldDoc = JObject.Parse(json);
-            
-            // Create new Order JSON structure
-            var orderDoc = new JObject
-            {
-                ["Id"] = oldDoc["Id"],
-                ["CustomerId"] = oldDoc["CustomerId"],
-                ["Items"] = oldDoc["Items"]
-            };
-            
-            var order = serializer.Deserialize<Order>(orderDoc.ToString());
-            session.Store(order);
-            
-            // Create separate Invoice from embedded data
-            if (oldDoc["InvoiceData"] != null)
-            {
-                var invoiceDoc = new JObject
-                {
-                    ["Id"] = Guid.NewGuid().ToString(),
-                    ["OrderId"] = oldDoc["Id"],
-                    ["Amount"] = oldDoc["InvoiceData"]["Amount"],
-                    ["DueDate"] = oldDoc["InvoiceData"]["DueDate"]
-                };
-                
-                var invoice = serializer.Deserialize<Invoice>(invoiceDoc.ToString());
-                session.Store(invoice);
-            }
-            
-            return orderDoc.ToString();
-        });
-```
-
-### Merging Documents
-
-Merge multiple documents into one using JSON:
-
-```csharp
-public class MergeUserAndProfile : Migration
-{
-    public MergeUserAndProfile() : base(6) { }
-    
-    public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
-    {
-        yield return new ChangeDocument<User>((session, serializer, row, json) =>
-        {
-            var userDoc = JObject.Parse(json);
-            
-            // Load related profile
-            var profileId = $"profile-{userDoc["Id"]}";
-            var profile = session.Load<OldProfile>(profileId);
-            
-            if (profile != null)
-            {
-                // Merge profile data into user JSON
-                var profileJson = serializer.Serialize(profile);
-                var profileDoc = JObject.Parse(profileJson);
-                
-                userDoc["Bio"] = profileDoc["Bio"];
-                userDoc["Avatar"] = profileDoc["Avatar"];
-                userDoc["Preferences"] = profileDoc["Preferences"];
-                
-                // Delete old profile
-                session.Delete(profile);
-            }
-            
-            return userDoc.ToString();
-        });
-```
-
-## Migration Patterns
-
-### 1. Add Column with Default Value
-
-```csharp
-public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
-{
-    yield return new AddColumn("Products", 
-        new Column("Status", typeof(string), defaultValue: "Active"));
-}
-```
-
-### 2. Backfill Data
-
-```csharp
-public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
-{
-    yield return new RawSqlCommand(@"
-        UPDATE Products 
-        SET Category = 'General' 
-        WHERE Category IS NULL OR Category = ''
-    ");
-}
-```
-
-### 3. Remove Obsolete Column
-
-```csharp
-public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
-{
-    // First ensure no code references the column
-    // Then remove it in a migration
-    yield return new RemoveColumn("Products", "ObsoleteField");
-}
-```
-
-### 4. Change Column Type
-
-```csharp
-public class ChangePriceToDecimal : Migration
-{
-    public ChangePriceToDecimal() : base(7) { }
-    
-    public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
-    {
-        // Add new column
-        yield return new AddColumn("Products", 
-            new Column("PriceDecimal", typeof(decimal)));
-        
-        // Copy data
-        yield return new RawSqlCommand(@"
-            UPDATE Products 
-            SET PriceDecimal = CAST(Price AS decimal(18,2))
-        ");
-    }
-    
-    public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration configuration)
-    {
-        // Remove old column
-        yield return new RemoveColumn("Products", "Price");
-        
-        // Rename new column
-        var table = configuration.GetDesignFor<Product>().Table;
-        yield return new RenameColumn(table, "PriceDecimal", "Price");
-```
-
 ## Testing Migrations
 
-### Test Migration Execution
+### Test Migration Logic Directly
 
 ```csharp
 [Fact]
 public void MigrationAddsCategory()
 {
-    // Arrange: Create store with version 1
-    var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
+    // Arrange: Create configuration and migration
+    var configuration = new Configuration();
+    var migration = new AddCategoryMigration();
+    
+    // Get the migration command
+    var command = (ChangeDocument<Product>)migration.Background(configuration).Single();
+    
+    // Input JSON without Category field
+    var inputJson = @"{""Id"":""prod-1"",""Name"":""Widget"",""Price"":19.99}";
+    
+    // Act: Execute the migration command
+    var outputJson = command.Execute(new DefaultSerializer(), inputJson);
+    
+    // Assert: Category was added
+    var doc = JObject.Parse(outputJson);
+    doc.Value<string>("Category").ShouldBe("Uncategorized");
+    doc.Value<string>("Name").ShouldBe("Widget");  // Other fields preserved
+}
+
+// The migration class
+public class AddCategoryMigration(int version) : Migration(version)
+{
+    public override IEnumerable<RowMigrationCommand> Background(Configuration configuration)
     {
-        config.Document<Product>()
-            .With(x => x.Name);
-        
-        config.UseMigrations(new AddCategoryMigration());
-    });
-    
-    store.Initialize();
-    
-    // Act: Store a product
-     using var session = store.OpenSession();
-
-    session.Store(new Product { Id = "prod-1", Name = "Widget" });
-    session.SaveChanges();
-    
-    // Assert: Category was added by migration
-     using var session = store.OpenSession();
-
-    var product = session.Load<Product>("prod-1");
-    product.Category.ShouldBe("Uncategorized");
+        yield return new ChangeDocument<Product>((serializer, json) =>
+        {
+            var doc = JObject.Parse(json);
+            
+            if (doc["Category"] == null || string.IsNullOrEmpty(doc.Value<string>("Category")))
+            {
+                doc["Category"] = "Uncategorized";
+            }
+            
+            return doc.ToString();
+        });
+    }
+}
 ```
 
 ### Test Schema Changes
@@ -696,127 +465,21 @@ public void MigrationAddsIndex()
 
 ### 1. Version Migrations Sequentially
 
+Use descriptive class names and pass the version number when instantiating. This makes merge conflicts easier to resolve in team environments - when two developers create migrations simultaneously, you only need to change the version number in the instantiation rather than renaming the entire class.
+
 ```csharp
-public class Migration001 : Migration { public Migration001() : base(1) { } }
-public class Migration002 : Migration { public Migration002() : base(2) { } }
-public class Migration003 : Migration { public Migration003() : base(3) { } }
+public class AddIndexes(int version) : Migration(version);
+public class UpdateSchema(int version) : Migration(version);
+public class RenameField(int version) : Migration(version);
+
+// Usage:
+config.UseMigrations(
+    new AddIndexes(1),
+    new UpdateSchema(2),
+    new RenameField(3)
+);
 ```
 
 ### 2. Never Modify Existing Migrations
 
 Once deployed, don't change migration code. Create a new migration instead.
-
-### 3. Test Migrations Thoroughly
-
-Test both upgrade paths and rollback scenarios.
-
-### 4. Use Descriptive Migration Names
-
-```csharp
-public class Migration005_AddProductCategories : Migration { }
-public class Migration006_SplitOrdersAndInvoices : Migration { }
-```
-
-### 5. Document Breaking Changes
-
-```csharp
-/// <summary>
-/// BREAKING: Renames Product.Name to Product.ProductName
-/// Requires code changes before deployment
-/// </summary>
-public class Migration010_RenameProductName : Migration { }
-```
-
-### 6. Handle Large Data Sets
-
-For large migrations, use batching:
-
-```csharp
-config.UseMigrationBatchSize(100);  // Process 100 documents at a time
-```
-
-### 7. Monitor Background Migrations
-
-```csharp
-config.AddEventHandler(@event =>
-{
-    if (@event is MigrationStarted started)
-    {
-    logger.LogInformation("Background migration started");
-    }
-    
-    if (@event is MigrationEnded ended)
-    {
-    logger.LogInformation("Background migration completed"););
-```
-
-## Troubleshooting
-
-### Migration Not Running
-
-Check that:
-1. Store is initialized: `store.Initialize()`
-2. Migration is registered: `config.UseMigrations(migration)`
-3. Version number is higher than current schema version
-4. Background migrations are enabled
-
-### Migration Fails Partway
-
-Migrations run in transactions. If a migration fails:
-- Schema migrations: Transaction is rolled back
-- Document migrations: Failed batch is skipped, continues with next batch
-
-### Performance Issues
-
-For large migrations:
-- Increase batch size: `config.UseMigrationBatchSize(1000)`
-- Run during off-peak hours
-- Consider disabling background migrations and running manually
-- Add indexes to speed up queries
-
-### Concurrency Issues
-
-Background migrations use `ROWLOCK, UPDLOCK, READPAST`:
-- Documents being migrated are locked
-- Other processes skip locked documents
-- No blocking on reads
-
-## Migration Timeline Example
-
-```csharp
-// Version 1: Initial release
-public class Migration001_Initial : Migration
-{
-    public Migration001_Initial() : base(1) { }
-    
-    public override IEnumerable<DdlCommand> AfterAutoMigrations(Configuration config)
-    {
-    yield return new RawSqlCommand("CREATE INDEX IX_Products_Name ON Products (Name)");
-
-// Version 2: Add categories
-public class Migration002_AddCategories : Migration
-{
-    public Migration002_AddCategories() : base(2) { }
-    
-    public override IEnumerable<RowMigrationCommand> Background(Configuration config)
-    {
-    yield return new ChangeDocument<Product>((serializer, json) =>
-    {
-        var doc = JObject.Parse(json);
-        if (doc["Category"] == null)
-        {
-            doc["Category"] = "General";
-        }
-        return doc.ToString();
-    });
-
-// Version 3: Split into subcategories
-public class Migration003_AddSubcategories : Migration
-{
-    public Migration003_AddSubcategories() : base(3) { }
-    
-    public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration config)
-    {
-    yield return new AddColumn("Products", 
-        new Column("Subcategory", typeof(string), defaultValue: ""));
-```

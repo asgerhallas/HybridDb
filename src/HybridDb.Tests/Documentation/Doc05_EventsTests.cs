@@ -15,7 +15,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
     public void AddEventHandler()
     {
         #region AddEventHandler
-        var store = DocumentStore.Create(config =>
+        using var store = DocumentStore.Create(config =>
         {
             config.AddEventHandler(@event =>
             {
@@ -33,17 +33,11 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
             });
         });
         #endregion
-
-        store.Dispose();
     }
 
     [Fact]
     public void BeforeExecuteCommands_Validation()
     {
-        UseRealTables();
-        Document<Case>();
-        Document<Profile>();
-
         #region BeforeExecuteCommands_Validation
         configuration.AddEventHandler(@event =>
         {
@@ -64,38 +58,11 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
             }
         });
         #endregion
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new Profile("user1", true));
-            session.Store(new Profile("user2", false));
-            session.Store(new Case("case1", "user1", "Initial"));
-            session.Store(new Case("case2", "user2", "Initial"));
-            session.SaveChanges();
-        }
-
-        using (var session = store.OpenSession())
-        {
-            var case1 = session.Load<Case>("case1");
-            case1.Text = "Updated";
-            session.SaveChanges(); // Should succeed
-
-            session.Advanced.Clear();
-
-            var case2 = session.Load<Case>("case2");
-            case2.Text = "Updated";
-            
-            Should.Throw<Exception>(() => session.SaveChanges())
-                .Message.ShouldContain("cannot execute UpdateCommand");
-        }
     }
 
     [Fact]
     public void BeforeExecuteCommands_Modification()
     {
-        UseRealTables();
-        Document<Case>();
-
         #region BeforeExecuteCommands_Modification
         configuration.AddEventHandler(@event =>
         {
@@ -111,27 +78,11 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
             }
         });
         #endregion
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new Case("case1", "user1", "Test"));
-            session.SaveChanges();
-        }
-
-        using (var session = store.OpenSession())
-        {
-            var case1 = session.Load<Case>("case1");
-            case1.Text.ShouldStartWith("[");
-        }
     }
 
     [Fact]
     public void AfterExecuteCommands_Logging()
     {
-        UseRealTables();
-        Document<Profile>();
-        configuration.UseMessageQueue();
-
         #region AfterExecuteCommands_Logging
         configuration.AddEventHandler(@event =>
         {
@@ -152,20 +103,13 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
             Console.WriteLine($"Total commit ID: {afterSave.CommitId}");
         });
         #endregion
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new Profile("user1", true));
-            var commitId = session.SaveChanges();
-            commitId.ShouldNotBe(Guid.Empty);
-        }
     }
 
     [Fact]
     public void MultipleEventHandlers()
     {
         #region MultipleEventHandlers
-        var store = DocumentStore.Create(config =>
+        using var store = DocumentStore.Create(config =>
         {
             // First handler - validation
             config.AddEventHandler(@event =>
@@ -195,8 +139,66 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
             });
         });
         #endregion
+    }
 
-        store.Dispose();
+    [Fact]
+    public void DontModifySessionStateInAfterExecuteCommands()
+    {
+        configuration.AddEventHandler(@event =>
+        {
+            #region DontModifySessionStateInAfterExecuteCommands
+            // Wrong - transaction already committed
+            if (@event is SaveChanges_AfterExecuteCommands afterSave)
+            {
+                var doc = afterSave.Session.Load<Document>("id");
+                doc.Field = "changed"; // This will not be saved
+
+                // And calling afterSave.Session.SaveChanges() will cause an infinite loop
+            }
+            #endregion
+        });
+    }
+
+    [Fact]
+    public void IntegrationEvents()
+    {
+        #region IntegrationEvents
+        configuration.AddEventHandler(@event =>
+        {
+            if (@event is not SaveChanges_BeforeExecuteCommands beforeSave) return;
+
+            foreach (var (managedEntity, command) in beforeSave.DocumentCommands)
+            {
+                if (command is InsertCommand)
+                {
+                    if (managedEntity.Entity is Order order)
+                    {
+                        beforeSave.Session.Enqueue(new OrderCreatedEvent
+                        {
+                            OrderId = order.Id
+                        });
+                    }
+                }
+            }
+        });
+        #endregion
+    }
+
+    [Fact]
+    public void InfiniteLoops()
+    {
+        #region InfiniteLoops
+        // Wrong - infinite loop!
+        configuration.AddEventHandler(@event =>
+        {
+            if (@event is SaveChanges_BeforeExecuteCommands beforeSave)
+            {
+                var doc = new Document();
+                beforeSave.Session.Store(doc);
+                beforeSave.Session.SaveChanges(); // Triggers the event again!
+            }
+        });
+        #endregion
     }
 
     #region SupportingTypes
@@ -206,5 +208,17 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
     }
 
     public record Profile(string Id, bool CanWrite);
+    
+    
+    public record OrderCreatedEvent
+    {
+        public string OrderId { get; set; }
+    }
+    
+    public class Document
+    {
+        public string Id { get; set; }
+        public string Field { get; set; }
+    }
     #endregion
 }

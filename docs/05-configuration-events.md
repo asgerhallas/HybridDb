@@ -124,7 +124,7 @@ Register an event handler during store configuration:
 <a id='snippet-AddEventHandler'></a>
 
 ```cs
-var store = DocumentStore.Create(config =>
+using var store = DocumentStore.Create(config =>
 {
     config.AddEventHandler(@event =>
     {
@@ -153,7 +153,7 @@ You can register multiple event handlers - they will be called in the order they
 <a id='snippet-MultipleEventHandlers'></a>
 
 ```cs
-var store = DocumentStore.Create(config =>
+using var store = DocumentStore.Create(config =>
 {
     // First handler - validation
     config.AddEventHandler(@event =>
@@ -183,7 +183,7 @@ var store = DocumentStore.Create(config =>
     });
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L167-L197' title='Snippet source file'>snippet source</a> | <a href='#snippet-MultipleEventHandlers' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L111-L141' title='Snippet source file'>snippet source</a> | <a href='#snippet-MultipleEventHandlers' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ## Common Use Cases
@@ -215,7 +215,7 @@ configuration.AddEventHandler(@event =>
     }
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L47-L66' title='Snippet source file'>snippet source</a> | <a href='#snippet-BeforeExecuteCommands_Validation' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L41-L60' title='Snippet source file'>snippet source</a> | <a href='#snippet-BeforeExecuteCommands_Validation' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 This example:
@@ -246,7 +246,7 @@ configuration.AddEventHandler(@event =>
     }
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L99-L113' title='Snippet source file'>snippet source</a> | <a href='#snippet-BeforeExecuteCommands_Modification' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L66-L80' title='Snippet source file'>snippet source</a> | <a href='#snippet-BeforeExecuteCommands_Modification' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Common automatic modifications:
@@ -283,7 +283,7 @@ configuration.AddEventHandler(@event =>
     Console.WriteLine($"Total commit ID: {afterSave.CommitId}");
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L135-L154' title='Snippet source file'>snippet source</a> | <a href='#snippet-AfterExecuteCommands_Logging' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L86-L105' title='Snippet source file'>snippet source</a> | <a href='#snippet-AfterExecuteCommands_Logging' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ## Advanced Scenarios
@@ -292,7 +292,10 @@ configuration.AddEventHandler(@event =>
 
 The `AfterExecuteCommands` event fires after the transaction is committed. Don't try to modify documents:
 
-```csharp
+<!-- snippet: DontModifySessionStateInAfterExecuteCommands -->
+<a id='snippet-DontModifySessionStateInAfterExecuteCommands'></a>
+
+```cs
 // Wrong - transaction already committed
 if (@event is SaveChanges_AfterExecuteCommands afterSave)
 {
@@ -302,6 +305,8 @@ if (@event is SaveChanges_AfterExecuteCommands afterSave)
     // And calling afterSave.Session.SaveChanges() will cause an infinite loop
 }
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L149-L158' title='Snippet source file'>snippet source</a> | <a href='#snippet-DontModifySessionStateInAfterExecuteCommands' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 If you need to change the documents before save, use SaveChanges_BEforeExecuteCommands. And if you need to spawn new work in a new session, Enqueue a message instead.
 
@@ -309,7 +314,10 @@ If you need to change the documents before save, use SaveChanges_BEforeExecuteCo
 
 Publish integration events before save:
 
-```csharp
+<!-- snippet: IntegrationEvents -->
+<a id='snippet-IntegrationEvents'></a>
+
+```cs
 configuration.AddEventHandler(@event =>
 {
     if (@event is not SaveChanges_BeforeExecuteCommands beforeSave) return;
@@ -329,6 +337,8 @@ configuration.AddEventHandler(@event =>
     }
 });
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L165-L184' title='Snippet source file'>snippet source</a> | <a href='#snippet-IntegrationEvents' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ## Troubleshooting
 
@@ -336,7 +346,10 @@ configuration.AddEventHandler(@event =>
 
 Avoid triggering saves within event handlers:
 
-```csharp
+<!-- snippet: InfiniteLoops -->
+<a id='snippet-InfiniteLoops'></a>
+
+```cs
 // Wrong - infinite loop!
 configuration.AddEventHandler(@event =>
 {
@@ -348,6 +361,8 @@ configuration.AddEventHandler(@event =>
     }
 });
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L190-L201' title='Snippet source file'>snippet source</a> | <a href='#snippet-InfiniteLoops' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 ### Performance Issues
 
