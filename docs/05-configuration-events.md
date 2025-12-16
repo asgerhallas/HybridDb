@@ -1,605 +1,364 @@
 # Configuration - Events
 
-## Event Store Overview
+## Event Handlers Overview
 
-HybridDb includes an optional event store feature that allows you to store and retrieve events in a durable, ordered manner. This is useful for:
+HybridDb allows you to hook into the document lifecycle by registering event handlers. These handlers are called during session operations, allowing you to:
 
-- Event sourcing architectures
-- Audit trails
-- Event-driven systems
-- Cross-aggregate coordination
-- CQRS implementations
+- Validate documents before they're saved
+- Modify documents automatically (e.g., add timestamps, audit fields)
+- Log operations for auditing
+- Enforce business rules
+- Send notifications after changes
+- Implement cross-document validations
 
-## Enabling the Event Store
+## Available Events
 
-Enable the event store in your configuration:
+### SaveChanges_BeforePrepareCommands
 
-```csharp
+Fires at the very beginning of `SaveChanges()`, before commands are prepared.
+
+**Properties:**
+- `Session`: The current document session
+
+**Use cases:**
+- Early validation
+- Pre-processing before command preparation
+
+### SaveChanges_BeforeExecuteCommands
+
+Fires before any commands are executed during `SaveChanges()`. This is the right place to:
+- Validate entities
+- Modify entities before saving
+- Perform cross-document checks
+- Enforce business rules
+
+**Properties:**
+- `Session`: The current document session
+- `DocumentCommands`: Dictionary of `(ManagedEntity, Command)` pairs about to be executed
+- `OtherCommands`: List of other commands to be executed
+
+### SaveChanges_AfterExecuteCommands
+
+Fires after all commands have been successfully executed. This is the right place to:
+- Log completed operations
+- Send notifications
+- Trigger side effects
+- Record audit trails
+
+**Properties:**
+- `Session`: The current document session
+- `ExecutedCommands`: Dictionary of `(Command, Result)` pairs that were executed
+- `CommitId`: The unique identifier for this save operation
+
+### EntityLoaded
+
+Fires when an entity is loaded from the database.
+
+**Properties:**
+- `Session`: The current document session
+- `RequestedType`: The type that was requested to be loaded
+- `ManagedEntity`: The loaded entity
+
+**Use cases:**
+- Post-load processing
+- Lazy loading related data
+- Tracking entity access
+
+### AddedToSession
+
+Fires when an entity is added to the session (via `Store()` or `Load()`).
+
+**Properties:**
+- `Session`: The current document session
+- `ManagedEntity`: The entity that was added
+
+**Use cases:**
+- Tracking new entities
+- Setting default values
+- Initializing relationships
+
+### RemovedFromSession
+
+Fires when an entity is removed from the session (via `Delete()` or `Evict()`).
+
+**Properties:**
+- `Session`: The current document session
+- `ManagedEntity`: The entity that was removed
+
+**Use cases:**
+- Cleanup operations
+- Cascade delete handling
+- Tracking deletions
+
+### MigrationStarted
+
+Fires when a migration begins.
+
+**Properties:**
+- `Store`: The document store
+
+**Use cases:**
+- Pre-migration validation
+- Logging migration start
+- Taking backups
+
+### MigrationEnded
+
+Fires when a migration completes.
+
+**Properties:**
+- `Store`: The document store
+
+**Use cases:**
+- Post-migration validation
+- Logging migration completion
+- Cleanup operations
+
+## Registering Event Handlers
+
+### Basic Event Handler
+
+Register an event handler during store configuration:
+
+<!-- snippet: AddEventHandler -->
+<a id='snippet-AddEventHandler'></a>
+
+```cs
 var store = DocumentStore.Create(config =>
 {
-    config.UseConnectionString(connectionString);
-    config.UseEventStore();
-});
-```
-
-This creates an event table in your database with the following structure:
-- **Id**: Unique commit ID
-- **Generation**: Version number for the commit
-- **StreamId**: Identifier for the event stream
-- **SequenceNumber**: Position within the stream
-- **EventId**: Unique identifier for the event
-- **Name**: Event type name
-- **Data**: Serialized event data (binary)
-- **Metadata**: Event metadata (JSON)
-- **Position**: Global position in the event store
-
-## Event Data
-
-Events are represented by the `EventData<T>` class:
-
-```csharp
-public class EventData<T>
-{
-    public string StreamId { get; }
-    public Guid EventId { get; }
-    public string Name { get; }
-    public long SequenceNumber { get; }
-    public IReadOnlyMetadata Metadata { get; }
-    public T Data { get; }
-}
-```
-
-## Appending Events
-
-### Basic Event Append
-
-Append events to a stream using the session:
-
-```csharp
-using var session = store.OpenSession();
-
-    var eventData = new EventData<byte[]>(
-        streamId: "order-123",
-        eventId: Guid.NewGuid(),
-        name: "OrderCreated",
-        sequenceNumber: 0,
-        metadata: new Metadata(),
-        data: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { OrderId = "123" }))
-    );
-    
-    session.Append(generation: 0, eventData);
-    session.SaveChanges();
-}
-```
-
-### Appending Multiple Events
-
-Append multiple events in the same commit:
-
-```csharp
-using var session = store.OpenSession();
-
-    var event1 = new EventData<byte[]>(
-        streamId: "order-123",
-        eventId: Guid.NewGuid(),
-        name: "OrderCreated",
-        sequenceNumber: 0,
-        metadata: new Metadata(),
-        data: SerializeEvent(new OrderCreatedEvent())
-    );
-    
-    var event2 = new EventData<byte[]>(
-        streamId: "order-123",
-        eventId: Guid.NewGuid(),
-        name: "ItemAdded",
-        sequenceNumber: 1,
-        metadata: new Metadata(),
-        data: SerializeEvent(new ItemAddedEvent())
-    );
-    
-    session.Append(0, event1);
-    session.Append(0, event2);
-    
-    session.SaveChanges();
-}
-```
-
-### Automatic Sequence Numbers
-
-Use `SequenceNumber.Any` to let HybridDb assign sequence numbers automatically:
-
-```csharp
-using var session = store.OpenSession();
-
-    var event1 = new EventData<byte[]>(
-        streamId: "order-123",
-        eventId: Guid.NewGuid(),
-        name: "OrderCreated",
-        sequenceNumber: SequenceNumber.Any,  // Automatically assigned
-        metadata: new Metadata(),
-        data: eventData
-    );
-    
-    session.Append(0, event1);
-    session.SaveChanges();
-}
-```
-
-HybridDb will automatically assign the next available sequence number in the stream.
-
-## Reading Events
-
-### Read from Stream
-
-Read all events from a specific stream:
-
-```csharp
-var commits = store.Transactionally(tx =>
-{
-    var table = store.Configuration.Tables.Values.OfType<EventTable>().Single();
-    return tx.Execute(new ReadStream(table, "order-123", fromSequenceNumber: 0))
-        .ToList();
-});
-
-foreach (var commit in commits)
-{
-    foreach (var eventData in commit.Events)
+    config.AddEventHandler(@event =>
     {
-        Console.WriteLine($"Event: {eventData.Name}, Seq: {eventData.SequenceNumber}");
-```
-
-### Read All Events
-
-Read all events from a specific position:
-
-```csharp
-var commits = store.Transactionally(IsolationLevel.Snapshot, tx =>
-{
-    var table = store.Configuration.Tables.Values.OfType<EventTable>().Single();
-    return tx.Execute(new ReadEvents(table, fromPosition: 0, readPastActiveTransactions: false))
-        .ToList();
-});
-
-foreach (var commit in commits)
-{
-    Console.WriteLine($"Commit {commit.Id} with {commit.Events.Count} events");
-    
-    foreach (var eventData in commit.Events)
-    {
-        Console.WriteLine($"  {eventData.Name} at position {eventData.SequenceNumber}");
-```
-
-### Read by Commit IDs
-
-Read specific commits by their IDs:
-
-```csharp
-var commitIds = new[] { commitId1, commitId2, commitId3 };
-
-var commits = store.Transactionally(tx =>
-{
-    var table = store.Configuration.Tables.Values.OfType<EventTable>().Single();
-    return tx.Execute(new ReadEventsByCommitIds(table, commitIds))
-        .ToList();
-});
-```
-
-## Event Metadata
-
-Events can include metadata for additional context:
-
-```csharp
-var metadata = new Metadata
-{
-    ["UserId"] = "user-123",
-    ["CorrelationId"] = correlationId.ToString(),
-    ["CausationId"] = causationId.ToString(),
-    ["Timestamp"] = DateTime.UtcNow.ToString("o")
-};
-
-var eventData = new EventData<byte[]>(
-    streamId: "order-123",
-    eventId: Guid.NewGuid(),
-    name: "OrderCreated",
-    sequenceNumber: 0,
-    metadata: metadata,
-    data: serializedData
-);
-```
-
-### Reading Metadata
-
-```csharp
-foreach (var commit in commits)
-{
-    foreach (var eventData in commit.Events)
-    {
-        if (eventData.Metadata.TryGetValue("UserId", out var userId))
+        if (@event is SaveChanges_BeforeExecuteCommands beforeSave)
         {
-            Console.WriteLine($"Event created by user: {userId}");
-        }
-```
-
-## Commits and Generations
-
-### Commit Structure
-
-A commit represents a group of events saved together:
-
-```csharp
-public class Commit<T>
-{
-    public Guid Id { get; }
-    public int Generation { get; }
-    public long Begin { get; }     // First event position
-    public long End { get; }       // Last event position
-    public IReadOnlyList<EventData<T>> Events { get; }
-}
-```
-
-### Generations
-
-Generations allow for versioning of the event store schema:
-
-```csharp
-// Generation 0: Initial version
-session.Append(generation: 0, eventData);
-
-// Generation 1: After a migration
-session.Append(generation: 1, eventData);
-```
-
-This is useful when you need to migrate event schemas.
-
-## Concurrency Control
-
-### Stream Concurrency
-
-Prevent concurrent writes to the same stream:
-
-```csharp
-try
-{
-     using var session = store.OpenSession();
-
-    var event = new EventData<byte[]>(
-        streamId: "order-123",
-        eventId: Guid.NewGuid(),
-        name: "OrderUpdated",
-        sequenceNumber: 5,  // Expecting this to be the next sequence
-        metadata: new Metadata(),
-        data: eventData
-    );
-    
-    session.Append(0, event);
-    session.SaveChanges();
-catch (ConcurrencyException)
-{
-    // Another process already appended event with sequence number 5
-    // Handle the conflict
-}
-```
-
-### Event ID Uniqueness
-
-Each event must have a unique EventId across all streams:
-
-```csharp
-var eventId = Guid.NewGuid();
-
-// First append succeeds
-session.Append(0, new EventData<byte[]>("stream-1", eventId, "Event", 0, new Metadata(), data));
-session.SaveChanges();
-
-// Second append with same EventId fails
-session.Append(0, new EventData<byte[]>("stream-2", eventId, "Event", 0, new Metadata(), data));
-session.SaveChanges(); // Throws ConcurrencyException
-```
-
-## Event Projections
-
-Build read models from events:
-
-```csharp
-public class OrderProjection
-{
-    private readonly IDocumentStore store;
-    private long lastProcessedPosition = 0;
-    
-    public async Task ProjectEvents()
-    {
-    var commits = store.Transactionally(IsolationLevel.Snapshot, tx =>
-    {
-        var table = store.Configuration.Tables.Values.OfType<EventTable>().Single();
-        return tx.Execute(new ReadEvents(table, lastProcessedPosition, false))
-            .ToList();
-    });
-    
-    foreach (var commit in commits)
-    {
-        foreach (var eventData in commit.Events)
-        {
-            await HandleEvent(eventData);
+            // Handle before save event
+            Console.WriteLine($"About to execute {beforeSave.DocumentCommands.Count()} commands");
         }
         
-        lastProcessedPosition = commit.End + 1;
-    }
-    }
-    
-    private async Task HandleEvent(EventData<byte[]> eventData)
-    {
-    switch (eventData.Name)
-    {
-        case "OrderCreated":
-            // Create order document
-            break;
-        case "ItemAdded":
-            // Update order document
-            break;
-        case "OrderShipped":
-            // Update order status
-            break;
-    }
-```
-
-## Event Store Patterns
-
-### Event Sourced Aggregate
-
-```csharp
-public class Order
-{
-    private readonly List<EventData<byte[]>> uncommittedEvents = new();
-    
-    public string Id { get; private set; }
-    public string Status { get; private set; }
-    public List<OrderItem> Items { get; } = new();
-    
-    // Apply events to rebuild state
-    public void Apply(EventData<byte[]> eventData)
-    {
-    switch (eventData.Name)
-    {
-        case "OrderCreated":
-            var created = Deserialize<OrderCreatedEvent>(eventData.Data);
-            Id = created.OrderId;
-            Status = "Created";
-            break;
-            
-        case "ItemAdded":
-            var itemAdded = Deserialize<ItemAddedEvent>(eventData.Data);
-            Items.Add(new OrderItem { ProductId = itemAdded.ProductId, Quantity = itemAdded.Quantity });
-            break;
-    }
-    }
-    
-    // Command: Create order
-    public static Order Create(string orderId)
-    {
-    var order = new Order();
-    order.RaiseEvent("OrderCreated", new OrderCreatedEvent { OrderId = orderId });
-    return order;
-    }
-    
-    // Command: Add item
-    public void AddItem(string productId, int quantity)
-    {
-    RaiseEvent("ItemAdded", new ItemAddedEvent { ProductId = productId, Quantity = quantity });
-    }
-    
-    private void RaiseEvent(string name, object @event)
-    {
-    var eventData = new EventData<byte[]>(
-        streamId: Id,
-        eventId: Guid.NewGuid(),
-        name: name,
-        sequenceNumber: uncommittedEvents.Count,
-        metadata: new Metadata(),
-        data: Serialize(@event)
-    );
-    
-    Apply(eventData);
-    uncommittedEvents.Add(eventData);
-    }
-    
-    public IEnumerable<EventData<byte[]>> GetUncommittedEvents() => uncommittedEvents;
-    
-    public void MarkEventsAsCommitted() => uncommittedEvents.Clear();
-}
-
-// Usage
-var order = Order.Create("order-123");
-order.AddItem("product-1", 2);
-
-using var session = store.OpenSession();
-
-    foreach (var eventData in order.GetUncommittedEvents())
-    {
-    session.Append(0, eventData);
-    }
-    
-    session.SaveChanges();
-    order.MarkEventsAsCommitted();
-}
-```
-
-### Event Position Tracking
-
-Track the last processed position for projections:
-
-```csharp
-public class ProjectionCheckpoint
-{
-    public string Id { get; set; }
-    public long Position { get; set; }
-    public DateTime LastUpdated { get; set; }
-}
-
-// Save checkpoint
-using var session = store.OpenSession();
-
-    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection") 
-    ?? new ProjectionCheckpoint { Id = "order-projection" };
-    
-    checkpoint.Position = lastProcessedPosition;
-    checkpoint.LastUpdated = DateTime.UtcNow;
-    
-    session.Store(checkpoint);
-    session.SaveChanges();
-}
-
-// Load checkpoint
-using var session = store.OpenSession();
-
-    var checkpoint = session.Load<ProjectionCheckpoint>("order-projection");
-    var fromPosition = checkpoint?.Position ?? 0;
-    
-    // Process events from this position
-}
-```
-
-## Best Practices
-
-### 1. Use Meaningful Event Names
-
-```csharp
-// Good
-name: "OrderCreated"
-name: "PaymentProcessed"
-name: "ItemShipped"
-
-// Avoid
-name: "Event1"
-name: "Update"
-```
-
-### 2. Include Correlation IDs
-
-```csharp
-var metadata = new Metadata
-{
-    ["CorrelationId"] = correlationId.ToString(),
-    ["CausationId"] = causationId.ToString()
-};
-```
-
-This helps track event chains across aggregates.
-
-### 3. Store Events as Bytes
-
-While HybridDb uses `EventData<byte[]>`, you handle serialization:
-
-```csharp
-public static byte[] SerializeEvent<T>(T @event)
-{
-    var json = JsonConvert.SerializeObject(@event);
-    return Encoding.UTF8.GetBytes(json);
-}
-
-public static T DeserializeEvent<T>(byte[] data)
-{
-    var json = Encoding.UTF8.GetString(data);
-    return JsonConvert.DeserializeObject<T>(json);
-}
-```
-
-### 4. Use Snapshots for Long Streams
-
-For aggregates with many events, store periodic snapshots:
-
-```csharp
-public class OrderSnapshot
-{
-    public string Id { get; set; }
-    public long EventVersion { get; set; }
-    public string Status { get; set; }
-    public List<OrderItem> Items { get; set; }
-}
-
-// Save snapshot every 100 events
-if (eventCount % 100 == 0)
-{
-    using (var session = store.OpenSession())
-    {
-    session.Store(new OrderSnapshot 
-    { 
-        Id = order.Id,
-        EventVersion = eventCount,
-        Status = order.Status,
-        Items = order.Items.ToList()
+        if (@event is SaveChanges_AfterExecuteCommands afterSave)
+        {
+            // Handle after save event
+            Console.WriteLine($"Executed {afterSave.ExecutedCommands.Count()} commands");
+        }
     });
-    session.SaveChanges();
+});
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L17-L35' title='Snippet source file'>snippet source</a> | <a href='#snippet-AddEventHandler' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
-### 5. Handle Event Versioning
+### Multiple Event Handlers
 
-When event schemas change, handle multiple versions:
+You can register multiple event handlers - they will be called in the order they were registered:
 
-```csharp
-private void HandleOrderCreated(EventData<byte[]> eventData)
+<!-- snippet: MultipleEventHandlers -->
+<a id='snippet-MultipleEventHandlers'></a>
+
+```cs
+var store = DocumentStore.Create(config =>
 {
-    // Check metadata for version
-    var version = eventData.Metadata.TryGetValue("Version", out var v) ? v : "1";
-    
-    switch (version)
+    // First handler - validation
+    config.AddEventHandler(@event =>
     {
-    case "1":
-        var v1 = DeserializeEvent<OrderCreatedV1>(eventData.Data);
-        // Handle V1
-        break;
-    case "2":
-        var v2 = DeserializeEvent<OrderCreatedV2>(eventData.Data);
-        // Handle V2
-        break;
+        if (@event is SaveChanges_BeforeExecuteCommands beforeSave)
+        {
+            // Validate documents
+        }
+    });
+
+    // Second handler - auditing
+    config.AddEventHandler(@event =>
+    {
+        if (@event is SaveChanges_AfterExecuteCommands afterSave)
+        {
+            // Log to audit trail
+        }
+    });
+
+    // Third handler - notifications
+    config.AddEventHandler(@event =>
+    {
+        if (@event is SaveChanges_AfterExecuteCommands afterSave)
+        {
+            // Send notifications
+        }
+    });
+});
 ```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L167-L197' title='Snippet source file'>snippet source</a> | <a href='#snippet-MultipleEventHandlers' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
-### 6. Use Transactions for Consistency
+## Common Use Cases
 
-Ensure events and documents are saved together:
+### Validation Before Save
 
-```csharp
-using (var tx = store.BeginTransaction())
+Validate documents or enforce business rules before they're saved:
+
+<!-- snippet: BeforeExecuteCommands_Validation -->
+<a id='snippet-BeforeExecuteCommands_Validation'></a>
+
+```cs
+configuration.AddEventHandler(@event =>
 {
-    using var session = store.OpenSession(tx);
+    if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
 
-        // Append events
-    session.Append(0, eventData);
-    
-    // Update read model
-    var order = session.Load<Order>(orderId);
-    order.Status = "Shipped";
-    session.Store(order);
-    
-    session.SaveChanges();
+    foreach (var (managedEntity, command) in savingChanges.DocumentCommands)
+    {
+        if (managedEntity.Design.DocumentType != typeof(Case)) continue;
+        if (command is not UpdateCommand && command is not DeleteCommand) continue;
+
+        var caseDoc = (Case)managedEntity.Entity;
+        var profile = savingChanges.Session.Load<Profile>(caseDoc.ProfileId);
+
+        if (!profile.CanWrite)
+        {
+            throw new Exception($"User {profile.Id} cannot execute {command.GetType().Name}");
+        }
+    }
+});
+```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L47-L66' title='Snippet source file'>snippet source</a> | <a href='#snippet-BeforeExecuteCommands_Validation' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
+
+This example:
+1. Checks every document being updated or deleted
+2. Loads related data (Profile) to check permissions
+3. Throws an exception if the operation is not allowed
+4. The exception prevents the entire `SaveChanges()` from committing
+
+### Automatic Document Modification
+
+Modify documents automatically before they're saved:
+
+<!-- snippet: BeforeExecuteCommands_Modification -->
+<a id='snippet-BeforeExecuteCommands_Modification'></a>
+
+```cs
+configuration.AddEventHandler(@event =>
+{
+    if (@event is not SaveChanges_BeforeExecuteCommands savingChanges) return;
+
+    foreach (var (managedEntity, _) in savingChanges.DocumentCommands)
+    {
+        if (managedEntity.Entity is Case caseDoc)
+        {
+            // Automatically add timestamp
+            caseDoc.Text = $"[{DateTime.UtcNow:yyyy-MM-dd}] {caseDoc.Text}";
+        }
+    }
+});
+```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L99-L113' title='Snippet source file'>snippet source</a> | <a href='#snippet-BeforeExecuteCommands_Modification' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
+
+Common automatic modifications:
+- Adding timestamps (`CreatedAt`, `ModifiedAt`)
+- Setting audit fields (`CreatedBy`, `ModifiedBy`)
+- Calculating derived values
+- Normalizing data
+- Adding default values
+
+### Logging and Auditing
+
+Log operations after they're successfully saved:
+
+<!-- snippet: AfterExecuteCommands_Logging -->
+<a id='snippet-AfterExecuteCommands_Logging'></a>
+
+```cs
+configuration.AddEventHandler(@event =>
+{
+    if (@event is not SaveChanges_AfterExecuteCommands afterSave) return;
+
+    foreach (var (command, result) in afterSave.ExecutedCommands)
+    {
+        if (command is InsertCommand insert)
+        {
+            Console.WriteLine($"Inserted document with commit ID: {result}");
+        }
+        else if (command is UpdateCommand update)
+        {
+            Console.WriteLine($"Updated document with commit ID: {result}");
+        }
     }
     
-    tx.Commit();
+    Console.WriteLine($"Total commit ID: {afterSave.CommitId}");
+});
+```
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc05_EventsTests.cs#L135-L154' title='Snippet source file'>snippet source</a> | <a href='#snippet-AfterExecuteCommands_Logging' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
+
+## Advanced Scenarios
+
+### Don't Modify Session State in AfterExecuteCommands
+
+The `AfterExecuteCommands` event fires after the transaction is committed. Don't try to modify documents:
+
+```csharp
+// Wrong - transaction already committed
+if (@event is SaveChanges_AfterExecuteCommands afterSave)
+{
+    var doc = afterSave.Session.Load<Document>("id");
+    doc.Field = "changed"; // This will not be saved
+
+    // And calling afterSave.Session.SaveChanges() will cause an infinite loop
 }
+```
+
+If you need to change the documents before save, use SaveChanges_BEforeExecuteCommands. And if you need to spawn new work in a new session, Enqueue a message instead.
+
+### Integration Events
+
+Publish integration events before save:
+
+```csharp
+configuration.AddEventHandler(@event =>
+{
+    if (@event is not SaveChanges_BeforeExecuteCommands beforeSave) return;
+
+    foreach (var (managedEntity, command) in beforeSave.DocumentCommands)
+    {
+        if (command is InsertCommand)
+        {
+            if (managedEntity.Entity is Order order)
+            {
+                beforeSave.Session.Enqueue(new OrderCreatedEvent
+                {
+                    OrderId = order.Id
+                });
+            }
+        }
+    }
+});
 ```
 
 ## Troubleshooting
 
-### Concurrency Exceptions
+### Infinite Loops
 
-If you get frequent concurrency exceptions:
-- Use `SequenceNumber.Any` for automatic sequencing
-- Implement retry logic with exponential backoff
-- Consider using optimistic locking strategies
+Avoid triggering saves within event handlers:
+
+```csharp
+// Wrong - infinite loop!
+configuration.AddEventHandler(@event =>
+{
+    if (@event is SaveChanges_BeforeExecuteCommands beforeSave)
+    {
+        var doc = new Document();
+        beforeSave.Session.Store(doc);
+        beforeSave.Session.SaveChanges(); // Triggers the event again!
+    }
+});
+```
 
 ### Performance Issues
 
-For large event stores:
-- Add indexes on StreamId and Position columns
-- Use snapshots for aggregates with many events
-- Process events in batches
-- Consider archiving old events
+If SaveChanges is slow, check your event handlers:
+- Avoid loading too many documents
+- Don't perform expensive operations in BeforeExecuteCommands
+- Consider batching or queueing work for background processing
+- Use AfterExecuteCommands for non-critical operations
 
-### Reading Past Active Transactions
+### Transaction Scope
 
-Set `readPastActiveTransactions: true` to read events even if there are uncommitted transactions:
-
-```csharp
-tx.Execute(new ReadEvents(table, position, readPastActiveTransactions: true))
-```
-
-Use with caution as it may read uncommitted data in distributed scenarios.
+Remember the transaction boundaries:
+- `BeforeExecuteCommands`: Transaction not yet started - safe to throw exceptions
+- `AfterExecuteCommands`: Transaction committed - exceptions won't rollback the save
