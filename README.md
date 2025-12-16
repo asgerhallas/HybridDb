@@ -5,7 +5,7 @@ HybridDb
 
 HybridDb makes it easy to store and query semi-structured data and documents in SQL Server.
 
-**[📚 Read the Documentation](docs/README.md)** to get started quickly.
+**[📚 Read the Documentation](docs/Home.md)** to get started quickly.
 
 HybridDb gives you:
 
@@ -44,7 +44,7 @@ Like this:
 
     session.SaveChanges();
 
-For more information, see the [documentation](docs/README.md).
+For more information, see the [documentation](docs/Home.md).
 
 Acknowledgements
 ================

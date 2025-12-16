@@ -18,9 +18,20 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: Prepare docs for wiki (remove first H1 heading)
+        run: |
+          mkdir -p wiki-temp
+          for file in docs/*.md; do
+            if [ -f "$file" ]; then
+              # Remove the first line if it starts with "# "
+              sed '1{/^# /d;}' "$file" > "wiki-temp/$(basename "$file")"
+            fi
+          done
+        shell: bash
+      
       - name: Sync to Wiki
         uses: SwiftDocOrg/github-wiki-publish-action@v1
         with:
-          path: docs
+          path: wiki-temp
         env:
           GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PAT }}

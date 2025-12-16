@@ -5,24 +5,24 @@ Welcome to the HybridDb documentation! This documentation provides comprehensive
 ## Table of Contents
 
 ### Getting Started
-1. **[Getting Started](01-getting-started.md)** - Introduction, installation, quick start, and core concepts
-2. **[How to Build and Contribute](02-how-to-build-and-contribute.md)** - Development setup, building, testing, and contribution guidelines
+1. **[Getting Started](Getting-Started.md)** - Introduction, installation, quick start, and core concepts
+2. **[How to Build and Contribute](How-to-Build-and-Contribute.md)** - Development setup, building, testing, and contribution guidelines
 
 ### Configuration
-3. **[Connections and Testing](03-configuration-connections-testing.md)** - Connection strings, testing strategies, and environment-specific configuration
-4. **[Documents, Tables and Projections](04-configuration-documents-tables-projections.md)** - Document configuration, table design, and property projections
-5. **[Events](05-configuration-events.md)** - Event store configuration and event sourcing patterns
+3. **[Connections and Testing](Configuration-Connections-and-Testing.md)** - Connection strings, testing strategies, and environment-specific configuration
+4. **[Documents, Tables and Projections](Configuration-Documents-Tables-and-Projections.md)** - Document configuration, table design, and property projections
+5. **[Events](Configuration-Events.md)** - Event store configuration and event sourcing patterns
 
 ### Migrations
-6. **[Migrations](06-migrations.md)** - Schema migrations, document migrations, and migration patterns
+6. **[Migrations](Migrations.md)** - Schema migrations, document migrations, and migration patterns
 
 ### Core Components
-7. **[DocumentStore and DocumentTransaction](07-documentstore-transaction.md)** - Store lifecycle, transaction management, and isolation levels
+7. **[DocumentStore and DocumentTransaction](DocumentStore-and-Transaction.md)** - Store lifecycle, transaction management, and isolation levels
 
 ### Working with Documents
-8. **[DocumentSession - Store and Load](08-documentsession-store-load.md)** - Basic CRUD operations, entity states, and session lifecycle
-9. **[DocumentSession - Query](09-documentsession-query.md)** - LINQ queries, raw SQL queries, and query optimization
-10. **[DocumentSession - Advanced Scenarios](10-documentsession-advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
+8. **[DocumentSession - Store and Load](DocumentSession-Store-and-Load.md)** - Basic CRUD operations, entity states, and session lifecycle
+9. **[DocumentSession - Query](DocumentSession-Query.md)** - LINQ queries, raw SQL queries, and query optimization
+10. **[DocumentSession - Advanced Scenarios](DocumentSession-Advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
 
 ## Quick Links
 
