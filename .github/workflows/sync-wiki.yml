@@ -1,0 +1,26 @@
+name: Sync Docs to Wiki
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Sync to Wiki
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
+        with:
+          path: docs
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PAT }}
