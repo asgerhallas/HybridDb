@@ -33,10 +33,8 @@ namespace HybridDb.Tests.Documentation
                 config.Document<Order>()
                     .With(x => x.CustomerId)
                     .With(x => x.OrderDate);
-            }, initialize: false);
+            });
             #endregion
-
-            newStore.ShouldNotBeNull();
         }
 
         [Fact]
@@ -52,9 +50,6 @@ namespace HybridDb.Tests.Documentation
                 }
             );
             #endregion
-
-            newStore.ShouldNotBeNull();
-            newStore.Dispose();
         }
 
         [Fact]
@@ -94,14 +89,13 @@ namespace HybridDb.Tests.Documentation
             });
 
             #region TransactionWithIsolationLevel
-            using var tx = store.BeginTransaction(IsolationLevel.Serializable);
+            using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
 
-            // Critical section with serializable isolation
             using var session = store.OpenSession(tx);
 
-            var product = session.Load<Product>("product-1");
-            product.Stock--;
-            session.SaveChanges();
+            // both loaded in the same snapshot time
+            var product1 = session.Load<Product>("product-1"); 
+            var product2 = session.Load<Product>("product-2");
 
             tx.Complete();
             #endregion
@@ -229,40 +223,33 @@ namespace HybridDb.Tests.Documentation
         public void IdempotentOperations()
         {
             Document<Order>();
-            Document<ProcessedOrder>();
+            Document<Product>().With(x => x.Stock);
 
-            var orderId = Guid.NewGuid();
+            var messageId = Guid.NewGuid();
             
             store.Transactionally(tx =>
             {
                 using var setup = store.OpenSession(tx);
-                setup.Store(new Order { Id = orderId.ToString(), ProductId = "p1" });
+                setup.Store(new Product { Id = "p1", Name = "Widget", Stock = 100 });
                 setup.SaveChanges();
             });
 
             #region IdempotentOperations
-            // Use orderId as commitId for idempotency
-            using (var tx = store.BeginTransaction(orderId))
-            {
-                using (var session = store.OpenSession(tx))
-                {
-                    // Check if already processed
-                    if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
-                    {
-                        return; // Already processed
-                    }
-                    
-                    // Process order
-                    var order = session.Load<Order>(orderId.ToString());
-                    
-                    // Mark as processed
-                    session.Store(new ProcessedOrder { Id = orderId.ToString() });
-                    
-                    session.SaveChanges();
-                }
-                
-                tx.Complete();
-            }
+            // Use message ID from external system as commitId
+            using var tx = store.BeginTransaction(messageId);
+            using var session = store.OpenSession(tx);
+
+            // Process the message
+            var order = new Order { Id = "order-1", ProductId = "p1", Quantity = 5 };
+            session.Store(order);
+
+            var inventory = session.Load<Product>(order.ProductId);
+            inventory.Stock -= order.Quantity;
+
+            session.SaveChanges();
+            tx.Complete();
+
+            // All documents modified will have Etag == messageId (if they are not changed again later)
             #endregion
         }
 

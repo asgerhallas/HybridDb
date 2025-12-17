@@ -1,173 +1,85 @@
-# The DocumentStore and DocumentTransaction
+# DocumentStore and DocumentTransaction
+
+## Overview
+
+The `DocumentStore` is the central class in HybridDb - a long-lived object that manages configuration, database schema, and provides access to sessions and transactions. The `DocumentTransaction` handles Sql Server transactions for either single commmands, a single session or across multiple session.
 
 ## DocumentStore
 
-The `DocumentStore` is the central component of HybridDb. It manages database connections, configuration, schema, and provides access to sessions and transactions.
+### Role and Lifecycle
 
-### Creating a DocumentStore
+The `DocumentStore`:
+- **Holds configuration**
+- **Manages migrations**
+- **Provides access to instances of `DocumentSession`**
+- **Provides access to instances of `DocumentTransaction`**
+- **Lives application-wide**
 
-#### For Production
+**Typical lifecycle**:
+1. Create and configure at application startup
+2. Initialize database schema (automatic by default)
+3. Use throughout application lifetime via `OpenSession()`
+4. Dispose on application shutdown
 
-<!-- snippet: CreateDocumentStore_ForProduction -->
-<a id='snippet-CreateDocumentStore_ForProduction'></a>
 
-```cs
-var newStore = DocumentStore.Create(config =>
-{
-    config.UseConnectionString(
-        "Server=localhost;Database=MyApp;Integrated Security=True;Encrypt=False;");
-    
-    // Configure documents
-    config.Document<Product>()
-        .With(x => x.Name)
-        .With(x => x.Price);
-    
-    config.Document<Order>()
-        .With(x => x.CustomerId)
-        .With(x => x.OrderDate);
-}, initialize: false);
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L22-L37' title='Snippet source file'>snippet source</a> | <a href='#snippet-CreateDocumentStore_ForProduction' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
 
-#### For Testing
-
-<!-- snippet: CreateDocumentStore_ForTesting -->
-<a id='snippet-CreateDocumentStore_ForTesting'></a>
-
-```cs
-var newStore = DocumentStore.ForTesting(
-    TableMode.GlobalTempTables,
-    config =>
-    {
-        config.Document<Product>()
-            .With(x => x.Name);
-    }
-);
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L45-L54' title='Snippet source file'>snippet source</a> | <a href='#snippet-CreateDocumentStore_ForTesting' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
-
-### DocumentStore Properties
+### Store Properties
 
 ```csharp
-// Configuration object
-Configuration configuration = store.Configuration;
+// Configuration access
+Configuration config = store.Configuration;
 
-// Database interface
+// Database interface (for advanced scenarios)
 IDatabase database = store.Database;
 
-// Statistics
+// Usage statistics
 StoreStats stats = store.Stats;
 Console.WriteLine($"Requests: {stats.NumberOfRequests}");
-Console.WriteLine($"Commands: {stats.NumberOfCommands}");
+Console.WriteLine($"Loaded: {stats.NumberOfLoadedDocuments}");
 
-// Table mode (RealTables or GlobalTempTables)
-TableMode tableMode = store.TableMode;
+// Table mode
+TableMode mode = store.TableMode;  // RealTables or GlobalTempTables
 
 // Initialization state
-bool isInitialized = store.IsInitialized;
-```
-
-### Opening Sessions
-
-Sessions represent a unit of work:
-
-```csharp
-using var session = store.OpenSession();
-
-var product = session.Load<Product>("product-1");
-product.Price = 99.99m;
-session.SaveChanges();
-```
-
-### Executing Commands
-
-Direct command execution:
-
-```csharp
-// Execute a command
-var table = store.Configuration.GetDesignFor<Product>().Table;
-var result = store.Execute(
-transaction, 
-new GetCommand(table, new[] { "product-1" })
-);
-
-// Execute a command with result
-var exists = store.Execute(
-transaction,
-new ExistsCommand(table, "product-1")
-);
-```
-
-### Store Lifecycle
-
-```csharp
-// Create store (automatically initializes by default)
-var store = DocumentStore.Create(config => { /* ... */ });
-
-// Use the store
-using var session = store.OpenSession();
-
-// ...
-
-// Dispose when done (important for temp tables)
-store.Dispose();
-```
-
-**Manual Initialization**: If you need to configure the store from multiple places before initializing:
-
-```csharp
-// Disable automatic initialization
-var store = DocumentStore.Create(config => { /* ... */ }, initialize: false);
-
-// Configure from multiple places
-store.Configuration.Document<Product>().With(x => x.Name);
-store.Configuration.Document<Order>().With(x => x.OrderDate);
-
-// Manually initialize when ready
-store.Initialize();
-```
-
-### Store Statistics
-
-Track usage with built-in statistics:
-
-```csharp
-Console.WriteLine($"Requests: {store.Stats.NumberOfRequests}");
-Console.WriteLine($"Queries: {store.Stats.NumberOfQueries}");
-Console.WriteLine($"Commands: {store.Stats.NumberOfCommands}");
-Console.WriteLine($"Loaded: {store.Stats.NumberOfLoadedDocuments}");
-Console.WriteLine($"Saved: {store.Stats.NumberOfSavedDocuments}");
-```
-
-### Events and Notifications
-
-Subscribe to store events:
-
-```csharp
-store.Configuration.AddEventHandler(@event =>
-{
-switch (@event)
-{
-        case MigrationStarted started:
-            Console.WriteLine("Migration started");
-            break;
-            
-        case MigrationEnded ended:
-            Console.WriteLine("Migration completed");
-            break;
-            
-        case SqlCommandExecuted executed:
-            Console.WriteLine($"SQL: {executed.Sql}");
-            break;
-}
-});
+bool ready = store.IsInitialized;
 ```
 
 ## DocumentTransaction
 
-`DocumentTransaction` provides explicit transaction management for operations that span multiple sessions.
+### Understanding Transactions in HybridDb
+
+**All operations in HybridDb run in a transaction** - there is no such thing as a non-transactional operation.
+
+**By default**, each session operation (`Load()`, `SaveChanges()`, etc.) creates its own short-lived transaction:
+```csharp
+using var session = store.OpenSession();
+
+var product = session.Load<Product>("p1");  // Transaction 1
+product.Price = 99.99m;
+session.SaveChanges();                       // Transaction 2
+```
+
+**When you provide a `DocumentTransaction`** to `OpenSession()`, all operations in that session use the same transaction:
+```csharp
+using var tx = store.BeginTransaction();
+using var session = store.OpenSession(tx);
+
+var product = session.Load<Product>("p1");  // Uses tx
+product.Price = 99.99m;
+session.SaveChanges();                       // Uses tx
+
+tx.Complete();  // Commits the SaveChanges operations
+```
+
+### Why Use DocumentTransaction?
+
+Providing a `DocumentTransaction` serves following key purposes:
+
+**1. Session Consistency**: All loads within the session see a consistent snapshot (according the isolation level). Be aware that this is not the default by design, as it can result in more locking than actually needed for most sessions. HybridDb uses optimistic concurrency checks for writes and often this is adequate and keeps performance up. See the [Concurrency Model](DocumentSession-Concurrency-Model.md) documentation for details.
+
+**2. Cross-Session/Cross-Operation Consistency**: Coordinate changes across multiple sessions and integrate HybridDb operations with other SQL operations. 
+
+**3.  Use specific isolation levels**: And other more advanced transaction options.
 
 ### Creating Transactions
 
@@ -192,46 +104,17 @@ session2.SaveChanges();
 // Commit the transaction
 tx.Complete();
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L66-L81' title='Snippet source file'>snippet source</a> | <a href='#snippet-BasicTransaction' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L61-L76' title='Snippet source file'>snippet source</a> | <a href='#snippet-BasicTransaction' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
-#### Multiple Sessions in One Transaction
+**Key points**:
+- Create with `store.BeginTransaction()`
+- Pass to `OpenSession(tx)` - all operations in this session now use this transaction
+- Multiple sessions can share the same transaction
+- Call `tx.Complete()` to commit all operations across all sessions
+- Transaction rolls back automatically if not completed or exception occurs
 
-A more realistic example showing how to coordinate multiple operations across different sessions:
-
-<!-- snippet: MultiSessionTransaction -->
-<a id='snippet-MultiSessionTransaction'></a>
-
-```cs
-using (var tx = store.BeginTransaction())
-{
-    // Session 1: Update product
-    using (var session1 = store.OpenSession(tx))
-    {
-        var product = session1.Load<Product>("product-1");
-        product.Stock--;
-        session1.SaveChanges();
-    }
-
-    // Session 2: Create order
-    using (var session2 = store.OpenSession(tx))
-    {
-        var order = new Order 
-        { 
-            Id = Guid.NewGuid().ToString(),
-            ProductId = "product-1",
-            Quantity = 1
-        };
-        session2.Store(order);
-        session2.SaveChanges();
-    }
-
-    // Both operations committed together
-    tx.Complete();
-}
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L198-L225' title='Snippet source file'>snippet source</a> | <a href='#snippet-MultiSessionTransaction' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
+### Transaction Options
 
 #### With Isolation Level
 
@@ -239,19 +122,20 @@ using (var tx = store.BeginTransaction())
 <a id='snippet-TransactionWithIsolationLevel'></a>
 
 ```cs
-using var tx = store.BeginTransaction(IsolationLevel.Serializable);
+using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
 
-// Critical section with serializable isolation
 using var session = store.OpenSession(tx);
 
-var product = session.Load<Product>("product-1");
-product.Stock--;
-session.SaveChanges();
+// both loaded in the same snapshot time
+var product1 = session.Load<Product>("product-1"); 
+var product2 = session.Load<Product>("product-2");
 
 tx.Complete();
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L96-L107' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithIsolationLevel' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L91-L101' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithIsolationLevel' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
+
+See [SQL Server Transaction Isolation Levels](https://learn.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql) for details on available isolation levels.
 
 #### With Commit ID
 
@@ -274,68 +158,28 @@ session.SaveChanges();
 
 tx.Complete();
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L115-L130' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithCommitId' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L109-L124' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithCommitId' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
-### Transaction Properties
+**About CommitId:**
+- Every `SaveChanges()` operation gets a `CommitId` (auto-generated if not provided)
+- The `CommitId` becomes the `Etag` for all documents modified in that operation
+- `SaveChanges()` returns the `CommitId` used
+- Used to relate operations together (e.g., correlate a message ID with resulting database changes)
+- Can be set via `DocumentTransaction` (as shown above)
 
 ```csharp
-// Commit ID
-Guid commitId = tx.CommitId;
+using var session = store.OpenSession();
 
-// SQL connection and transaction
-SqlConnection connection = tx.SqlConnection;
-SqlTransaction sqlTransaction = tx.SqlTransaction;
+// Enqueue a message using session's CommitId as part of the message ID
+// If this code is called multiple times in the same session (e.g., from event handlers),
+// only one message with this ID will be enqueued (idempotent within the session)
+session.Enqueue("my-message/" + session.CommitId, new Message { Payload = "..." });
 
-// Store reference
-IDocumentStore store = tx.Store;
+var commitId = session.SaveChanges();  // Returns the session's CommitId
 ```
 
-### Transaction Isolation Levels
-
-```csharp
-// Read Committed (default)
-using var tx = store.BeginTransaction(IsolationLevel.ReadCommitted);
-
-// Read Uncommitted
-using var tx = store.BeginTransaction(IsolationLevel.ReadUncommitted);
-
-// Repeatable Read
-using var tx = store.BeginTransaction(IsolationLevel.RepeatableRead);
-
-// Serializable (highest isolation, may impact performance)
-using var tx = store.BeginTransaction(IsolationLevel.Serializable);
-
-// Snapshot (uses row versioning)
-using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
-```
-
-### Executing Commands in Transactions
-
-```csharp
- using var tx = store.BeginTransaction();
-
-var table = store.Configuration.GetDesignFor<Product>().Table;
-
-// Get document
-var doc = tx.Get(table, "product-1");
-
-// Get multiple documents
-var docs = tx.Get(table, new[] { "product-1", "product-2" });
-
-// Query
-var (stats, results) = tx.Query<Product>(
-table,
-join: "",
-where: "Price > 100"
-);
-
-tx.Complete();
-```
-
-### Transaction Timeout
-
-Set a timeout for acquiring the database connection:
+#### With Connection Timeout
 
 <!-- snippet: TransactionWithConnectionTimeout -->
 <a id='snippet-TransactionWithConnectionTimeout'></a>
@@ -354,289 +198,207 @@ using (var tx = store.BeginTransaction(
     tx.Complete();
 }
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L138-L151' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithConnectionTimeout' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L132-L145' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionWithConnectionTimeout' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
-### Rollback
+### Transaction Properties
 
-Transactions automatically roll back if not completed:
+The transaction and session share a `CommitId`. This relationship can work in three ways:
 
-<!-- snippet: TransactionRollback -->
-<a id='snippet-TransactionRollback'></a>
+**1. Transaction provides CommitId to Session**:
+```csharp
+var commitId = Guid.NewGuid();
+using var tx = store.BeginTransaction(commitId);
+using var session = store.OpenSession(tx);  // session.CommitId == commitId
+```
 
-```cs
+**2. Session provides CommitId to Transaction** (enlist after opening):
+```csharp
+using var session = store.OpenSession();  // session.CommitId auto-generated
+
+using var tx = store.BeginTransaction(session.CommitId);
+session.Advanced.Enlist(tx);  // transaction must have same CommitId
+```
+
+**3. Session auto-enlists on SaveChanges()** (most common for single operations):
+```csharp
+using var session = store.OpenSession();  // session.CommitId auto-generated
+
+// On SaveChanges(), session automatically creates and enlists in a new transaction
+// with the session's CommitId, executes commands, and completes the transaction
+var commitId = session.SaveChanges();  // Returns session.CommitId
+```
+
+**Other properties:**
+```csharp
+// Store reference
+IDocumentStore store = tx.Store;
+
+// SQL connection and transaction (for advanced scenarios)
+SqlConnection connection = tx.SqlConnection;
+SqlTransaction sqlTx = tx.SqlTransaction;
+```
+
+### Executing Commands and Queries
+
+The `DocumentTransaction` provides methods for executing custom SQL commands and queries directly against the database. This is useful when you need to integrate HybridDb operations with custom SQL logic, perform bulk operations, or execute queries that go beyond what DocumentSession provides.
+
+#### Execute Method
+
+The `Execute<T>()` method executes a `HybridDbCommand<T>` and returns a result of type `T`. This is the extensibility point for custom database operations.
+
+**Using built-in commands:**
+
+```csharp
 using var tx = store.BeginTransaction();
 
-try
-{
-    using (var session = store.OpenSession(tx))
-    {
-        var product = new Product { Id = "p1", Name = "Widget" };
-        session.Store(product);
-        session.SaveChanges();
-    }
-    
-    // Some operation that might fail
-    ProcessPayment();
-    
-    tx.Complete();  // Only commits if we reach here
-}
-catch (Exception)
-{
-    // Transaction automatically rolls back on dispose
-    throw;
-}
+var table = store.Configuration.GetDesignFor<Product>().Table;
+
+// Get documents by IDs
+var rows = tx.Execute(new GetCommand(table, new[] { "p1", "p2" }));
+
+// Execute custom SQL
+var sql = new SqlBuilder()
+    .Append("update Products set Price = Price * 1.1 where CategoryId = @categoryId", 
+            new SqlParameter("categoryId", "electronics"));
+var commitId = tx.Execute(new SqlCommand(sql, expectedRowCount: 0));
+
+tx.Complete();
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L160-L182' title='Snippet source file'>snippet source</a> | <a href='#snippet-TransactionRollback' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
 
-### Distributed Transaction
+**Built-in commands:**
+- `GetCommand` - Retrieve documents by IDs
+- `InsertCommand` - Insert a document
+- `UpdateCommand` - Update a document
+- `DeleteCommand` - Delete a document
+- `ExistsCommand` - Check if a document exists
+- `SqlCommand` - Execute custom SQL with expected row count validation
 
-Use with TransactionScope for distributed transactions:
+**Custom commands:**
+
+You can create custom commands by implementing `HybridDbCommand<T>` and registering a handler in your store configuration:
 
 ```csharp
-using (var scope = new TransactionScope())
+// Define custom command
+public class ArchiveOldOrdersCommand : HybridDbCommand<int>
 {
-    // HybridDb transaction
-    using (var session = store.OpenSession())
+    public DateTime CutoffDate { get; init; }
+    
+    public static int Execute(DocumentTransaction tx, ArchiveOldOrdersCommand command)
     {
-        session.Store(new Product { Id = "product-1" });
-        session.SaveChanges();
+        var sql = new SqlBuilder()
+            .Append("update Orders set Archived = 1")
+            .Append("where OrderDate < @cutoff", new SqlParameter("cutoff", command.CutoffDate));
+        
+        // Execute and return number of affected rows
+        return tx.SqlConnection.Execute(sql.ToString(), sql.Parameters, tx.SqlTransaction);
     }
-
-    // Another database operation
-    using (var otherConnection = new SqlConnection(otherConnectionString))
-    {
-        otherConnection.Open();
-        // ...
-    }
-
-    scope.Complete();
 }
+
+// Register handler in configuration
+var store = DocumentStore.Create(config =>
+{
+    config.Document<Order>();
+    
+    // Register custom command handler
+    config.Decorate<HybridDbCommandExecutor>((container, inner) => (tx, command) =>
+        command is ArchiveOldOrdersCommand archiveCommand
+            ? ArchiveOldOrdersCommand.Execute(tx, archiveCommand)
+            : inner(tx, command));
+});
+
+// Use the custom command
+using var tx = store.BeginTransaction();
+var archivedCount = tx.Execute(new ArchiveOldOrdersCommand 
+{ 
+    CutoffDate = DateTime.Now.AddYears(-1) 
+});
+tx.Complete();
 ```
 
-### Optimistic Concurrency
+#### Query Methods
 
-Use ETags for optimistic locking:
+The transaction provides two `Query<T>()` methods for executing custom SQL queries:
+
+**1. Query with SqlBuilder** - Execute arbitrary SQL queries:
 
 ```csharp
-using var session = store.OpenSession();
+using var tx = store.BeginTransaction();
 
-var product = session.Load<Product>("product-1");
-var etag = session.Advanced.GetEtagFor(product);
+var sql = new SqlBuilder()
+    .Append("select * from Products")
+    .Append("where Price > @minPrice", new SqlParameter("minPrice", 100));
 
-// ... do work ...
+var products = tx.Query<Product>(sql);
 
-product.Price = 99.99m;
-
-// Store with the original etag
-session.Store("product-1", product, etag);
-
-try
-{
-session.SaveChanges();
-}
-catch (ConcurrencyException)
-{
-// Document was modified by another process
-// Handle conflict
+tx.Complete();
 ```
 
-### Idempotent Operations
+**2. Query with HybridDb query syntax** - Query document tables with advanced options:
 
-Use consistent commit IDs for idempotent operations:
+```csharp
+using var tx = store.BeginTransaction();
+using var session = store.OpenSession(tx);
+
+var table = store.Configuration.GetDesignFor<Product>().Table;
+
+// Complex query with window, ordering, and filtering
+var (stats, results) = tx.Query<Product>(
+    table: table,
+    join: "inner join Categories c on Products.CategoryId = c.Id",
+    where: "Price > @minPrice and c.Name = @category",
+    orderby: "Price desc",
+    window: new SkipTake(skip: 0, take: 10),
+    parameters: new { minPrice = 100, category = "Electronics" }
+);
+
+foreach (var result in results)
+{
+    Console.WriteLine($"{result.Document.Name}: ${result.Document.Price}");
+}
+
+tx.Complete();
+```
+
+**Query parameters:**
+- `table`: The DocumentTable to query from
+- `join`: SQL JOIN clause for joining with other tables
+- `select`: Custom SELECT clause (defaults to all columns)
+- `where`: SQL WHERE condition
+- `orderby`: SQL ORDER BY clause
+- `window`: Pagination window (`SkipTake` or `SkipToId`)
+- `top1`: Return only first result
+- `includeDeleted`: Include soft-deleted documents
+- `parameters`: Query parameters as anonymous object
+
+### Relating Operations with CommitId
+
+Use CommitId to correlate external events with database changes:
 
 <!-- snippet: IdempotentOperations -->
 <a id='snippet-IdempotentOperations'></a>
 
 ```cs
-// Use orderId as commitId for idempotency
-using (var tx = store.BeginTransaction(orderId))
-{
-    using (var session = store.OpenSession(tx))
-    {
-        // Check if already processed
-        if (session.Advanced.Exists<ProcessedOrder>(orderId.ToString(), out _))
-        {
-            return; // Already processed
-        }
-        
-        // Process order
-        var order = session.Load<Order>(orderId.ToString());
-        
-        // Mark as processed
-        session.Store(new ProcessedOrder { Id = orderId.ToString() });
-        
-        session.SaveChanges();
-    }
-    
-    tx.Complete();
-}
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L243-L266' title='Snippet source file'>snippet source</a> | <a href='#snippet-IdempotentOperations' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
+// Use message ID from external system as commitId
+using var tx = store.BeginTransaction(messageId);
+using var session = store.OpenSession(tx);
 
-## Best Practices
+// Process the message
+var order = new Order { Id = "order-1", ProductId = "p1", Quantity = 5 };
+session.Store(order);
 
-### 1. Keep Transactions Short
+var inventory = session.Load<Product>(order.ProductId);
+inventory.Stock -= order.Quantity;
 
-<!-- snippet: ShortTransaction_Good -->
-<a id='snippet-ShortTransaction_Good'></a>
-
-```cs
-// Good: Quick transaction
-using (var tx = store.BeginTransaction())
-{
-    using var session = store.OpenSession(tx);
-
-    var product = session.Load<Product>("product-1");
-    product.Price = 99.99m;
-    session.SaveChanges();
-    
-    tx.Complete();
-}
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L281-L293' title='Snippet source file'>snippet source</a> | <a href='#snippet-ShortTransaction_Good' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
-
-// Avoid: Long-running transaction
-using (var tx = store.BeginTransaction())
-{
-    // Don't do expensive I/O or external API calls in transaction
-    var data = await DownloadFromExternalApi();  // Bad!
-
-    using var session = store.OpenSession(tx);
-
-    session.Store(ConvertToProduct(data));
-    session.SaveChanges();
-    
-    tx.Complete();
-}
-```
-
-### 2. Use Appropriate Isolation Levels
-
-```csharp
-// For most operations: ReadCommitted (default)
-using var tx = store.BeginTransaction();
-
-// For critical inventory: Serializable
-using var tx = store.BeginTransaction(IsolationLevel.Serializable);
-
-// For read-heavy operations: Snapshot
-using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
-```
-
-### 3. Always Dispose Transactions
-
-```csharp
-// Good: Using statement ensures disposal
-using (var tx = store.BeginTransaction())
-{
-// ...
+session.SaveChanges();
 tx.Complete();
-}
 
-// Or with explicit disposal
-var tx = store.BeginTransaction();
-try
-{
-// ...
-tx.Complete();
-}
-finally
-{
-tx.Dispose();
-}
+// All documents modified will have Etag == messageId (if they are not changed again later)
 ```
-
-### 4. Handle Concurrency Exceptions
-
-<!-- snippet: ConcurrencyExceptionRetry -->
-<a id='snippet-ConcurrencyExceptionRetry'></a>
-
-```cs
-int retries = 3;
-while (retries-- > 0)
-{
-    try
-    {
-        using (var session = store.OpenSession())
-        {
-            var product = session.Load<Product>(id);
-            var etag = session.Advanced.GetEtagFor(product);
-            
-            product.Stock--;
-            session.Store(id, product, etag);
-            session.SaveChanges();
-            break;
-        }
-    }
-    catch (ConcurrencyException) when (retries > 0)
-    {
-        // Retry with exponential backoff
-        await Task.Delay(100 * (3 - retries));
-    }
-}
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L309-L332' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConcurrencyExceptionRetry' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L237-L253' title='Snippet source file'>snippet source</a> | <a href='#snippet-IdempotentOperations' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
-### 5. Use Transactions for Related Changes
-
-<!-- snippet: RelatedChangesTransaction -->
-<a id='snippet-RelatedChangesTransaction'></a>
-
-```cs
-// Good: Transaction ensures both updates succeed or fail together
-using (var tx = store.BeginTransaction())
-{
-    using var session = store.OpenSession(tx);
-
-    var product = session.Load<Product>(productId);
-    product.Stock--;
-    
-    var order = new Order { ProductId = productId, Quantity = 1 };
-    session.Store(order);
-    
-    session.SaveChanges();
-    
-    tx.Complete();
-}
-```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc07_TransactionTests.cs#L349-L365' title='Snippet source file'>snippet source</a> | <a href='#snippet-RelatedChangesTransaction' title='Start of snippet'>anchor</a></sup>
-<!-- endSnippet -->
-
-## Troubleshooting
-
-### Transaction Deadlocks
-
-If you encounter deadlocks:
-- Keep transactions short
-- Access tables in consistent order
-- Use lower isolation levels when appropriate
-- Consider using Snapshot isolation
-
-### Transaction Timeout
-
-If transactions timeout:
-- Reduce transaction duration
-- Increase connection timeout
-- Check for blocking queries
-- Optimize database indexes
-
-### Connection Pool Exhaustion
-
-If you run out of connections:
-- Ensure transactions are disposed
-- Use `using` statements
-- Check for connection leaks
-- Increase connection pool size in connection string
-
-### Memory Issues
-
-For large transactions:
-- Batch operations
-- Don't load too many documents at once
-- Use queries with filtering
-- Consider pagination
+This allows you to:
+- Track which database changes came from which external event/message
+- Query documents by their CommitId (Etag) to find all changes from a specific operation
+- Correlate database state with external system events for debugging and auditing

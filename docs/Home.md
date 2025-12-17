@@ -11,18 +11,18 @@ Welcome to the HybridDb documentation! This documentation provides comprehensive
 ### Configuration
 3. **[Connections and Testing](Configuration-Connections-and-Testing.md)** - Connection strings, testing strategies, and environment-specific configuration
 4. **[Documents, Tables and Projections](Configuration-Documents-Tables-and-Projections.md)** - Document configuration, table design, and property projections
-5. **[Events](Configuration-Events.md)** - Event store configuration and event sourcing patterns
+5. **[Events](Configuration-Events.md)** - Internal event handlers
 
-### Migrations
-6. **[Migrations](Migrations.md)** - Schema migrations, document migrations, and migration patterns
-
-### Core Components
+### Store and Transactions
 7. **[DocumentStore and DocumentTransaction](DocumentStore-and-Transaction.md)** - Store lifecycle, transaction management, and isolation levels
 
 ### Working with Documents
 8. **[DocumentSession - Store and Load](DocumentSession-Store-and-Load.md)** - Basic CRUD operations, entity states, and session lifecycle
 9. **[DocumentSession - Query](DocumentSession-Query.md)** - LINQ queries, raw SQL queries, and query optimization
 10. **[DocumentSession - Advanced Scenarios](DocumentSession-Advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
+
+### Migrations
+6. **[Migrations](Migrations.md)** - Schema migrations, document migrations, and migration patterns
 
 ## Quick Links
 
