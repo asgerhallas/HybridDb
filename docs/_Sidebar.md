@@ -9,10 +9,7 @@
 - [Documents, Tables and Projections](Configuration-Documents-Tables-and-Projections)
 - [Events](Configuration-Events)
 
-### Migrations
-- [Migrations](Migrations)
-
-### Core Components
+### Store and Transactions
 - [DocumentStore and Transaction](DocumentStore-and-Transaction)
 
 ### Working with Documents
@@ -20,6 +17,9 @@
 - [Query](DocumentSession-Query)
 - [Advanced](DocumentSession-Advanced)
 - [Concurrency Model](DocumentSession-Concurrency-Model)
+
+### Migrations
+- [Migrations](Migrations)
 
 ---
 
