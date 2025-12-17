@@ -22,7 +22,8 @@ jobs:
           # Copy all markdown files from docs to wiki-temp, removing first H1 heading
           for file in docs/*.md; do
             if [ -f "$file" ]; then
-              sed '1{/^# /d;}' "$file" > "wiki-temp/$(basename "$file")"
+              # Remove first H1 heading and fix wiki links (remove .md extension)
+              sed '1{/^# /d;}' "$file" | sed 's/(\([^)]*\)\.md)/(\1)/g' > "wiki-temp/$(basename "$file")"
             fi
           done
           # Show what we're syncing
