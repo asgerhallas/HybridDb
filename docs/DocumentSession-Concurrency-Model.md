@@ -32,7 +32,7 @@ product.Price = 99.99m;
 // Throws ConcurrencyException if another process modified the document
 session.SaveChanges();
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L13-L25' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_AutomaticChecking' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L21-L33' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_AutomaticChecking' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **What happens internally:**
@@ -57,7 +57,7 @@ product.Price = 99.99m;
 // Override any concurrent changes - no ConcurrencyException
 session.SaveChanges(lastWriteWins: true, forceWriteUnchangedDocument: false);
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L31-L39' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_DisablingChecks' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L39-L47' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_DisablingChecks' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Manual Etag Management
@@ -81,7 +81,7 @@ product.Price = 99.99m;
 session.Store("product-1", product, etag);
 session.SaveChanges();  // Uses the explicitly provided Etag
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L45-L58' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_ManualEtagManagement' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L53-L66' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_ManualEtagManagement' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **Etag parameter behavior:**
@@ -106,7 +106,7 @@ session.Store(new Product { Id = "product-1", Name = "Widget" });
 // SaveChanges() performs INSERT - no Etag check needed
 session.SaveChanges();
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L64-L72' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_NewDocuments' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L72-L80' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_NewDocuments' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Note that `lastWriteWins = true` will still fail, if documents with same Id, are inserted concurrently. 
@@ -128,7 +128,7 @@ var product = session.Load<Product>("p1");  // Transaction 1: Read at time T1
 product.Price = 99.99m;
 session.SaveChanges();                       // Transaction 2: Write at time T2, checks Etag from T1
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L78-L85' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_PerOperationTransactions' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L86-L93' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_PerOperationTransactions' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **Key point**: Even though Load and SaveChanges run in separate transactions, HybridDb **still checks the Etag** captured during Load. If another process modified the document between T1 and T2, you'll get a `ConcurrencyException`.
@@ -178,7 +178,7 @@ session.SaveChanges();                       // Transaction 2: Write at time T2,
        // Product changed since order was created - handle appropriately
    }
    ```
-   <sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L91-L104' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_VerifyCommitIds' title='Start of snippet'>anchor</a></sup>
+   <sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L99-L112' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_VerifyCommitIds' title='Start of snippet'>anchor</a></sup>
    <!-- endSnippet -->
 
 3. **Use DocumentTransaction** (when you need guaranteed consistency):
@@ -206,7 +206,7 @@ product.Price = 99.99m;
 session.SaveChanges();                       // Uses same tx, Etag check still performed
 tx.Complete();
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L110-L118' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_DocumentTransaction' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L118-L126' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_DocumentTransaction' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **Benefits:**
@@ -261,15 +261,15 @@ var product = session.Load<Product>("p1");
 var inventory = session.Load<Inventory>("inv-1");
 
 // Calculate based on both
-if (inventory.Stock >= product.MinimumStock)
+if (inventory.Stock >= product.Stock)
 {
-    inventory.Stock -= product.MinimumStock;
+    inventory.Stock -= product.Stock;
     // SaveChanges() will check Etags - but if another process modified inventory,
     // we'll get ConcurrencyException and need to retry
     session.SaveChanges();
 }
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L124-L138' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_ReadCalculateWrite' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L132-L146' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_ReadCalculateWrite' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **This pattern works with optimistic concurrency** - the Etag check ensures consistency. However, under high contention, you may experience many retries.
@@ -286,15 +286,15 @@ using var session = store.OpenSession(tx);
 var product = session.Load<Product>("p1");  // Acquires read lock
 var inventory = session.Load<Inventory>("inv-1");  // Acquires read lock
 
-if (inventory.Stock >= product.MinimumStock)
+if (inventory.Stock >= product.Stock)
 {
-    inventory.Stock -= product.MinimumStock;
+    inventory.Stock -= product.Stock;
     session.SaveChanges();  // Etag check still performed, plus transaction guarantees
 }
 
 tx.Complete();  // No other process could have modified these documents during the transaction
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L144-L158' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_ReadCalculateWriteWithTransaction' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L152-L166' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_ReadCalculateWriteWithTransaction' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Session-Level Caching
@@ -317,5 +317,5 @@ Console.WriteLine(product.Price);  // 100
 var productAgain = session.Load<Product>("p1");  
 Console.WriteLine(productAgain.Price);  // Still 100 (from session cache)
 ```
-<sup><a href='/src/HybridDb.Tests/DocumentSession_ConcurrencyTests.cs#L164-L174' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_SessionCaching' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc06_ConcurrencyModelTests.cs#L172-L182' title='Snippet source file'>snippet source</a> | <a href='#snippet-Concurrency_SessionCaching' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->

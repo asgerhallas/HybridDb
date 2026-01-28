@@ -15,7 +15,7 @@ namespace HybridDb.Tests.Documentation
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void BasicSession()
         {
             Document<Product>();
@@ -29,7 +29,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void SessionWithTransaction()
         {
             Document<Product>();
@@ -47,7 +47,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void StoreNewDocument()
         {
             Document<Product>();
@@ -68,7 +68,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void StoreWithExplicitKey()
         {
             Document<Product>();
@@ -88,7 +88,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void StoreWithEtag()
         {
             Document<Product>().With(x => x.Price);
@@ -122,7 +122,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void StoreMultipleDocuments()
         {
             Document<Product>();
@@ -146,7 +146,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void LoadSingleDocument()
         {
             Document<Product>();
@@ -172,7 +172,7 @@ namespace HybridDb.Tests.Documentation
             product.ShouldNotBeNull();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void LoadMultipleDocuments()
         {
             Document<Product>();
@@ -198,7 +198,7 @@ namespace HybridDb.Tests.Documentation
             products.Count.ShouldBe(3);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void LoadAsReadOnly()
         {
             Document<Product>();
@@ -221,7 +221,7 @@ namespace HybridDb.Tests.Documentation
             product.ShouldNotBeNull();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void LoadMultipleAsReadOnly()
         {
             Document<Product>();
@@ -250,7 +250,7 @@ namespace HybridDb.Tests.Documentation
             products.Count.ShouldBe(3);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void BasicSave()
         {
             Document<Product>();

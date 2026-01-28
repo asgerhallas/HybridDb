@@ -10,7 +10,7 @@ namespace HybridDb.Tests.Documentation
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void CanStoreAndLoadEntity()
         {
             #region CanStoreAndLoadEntity

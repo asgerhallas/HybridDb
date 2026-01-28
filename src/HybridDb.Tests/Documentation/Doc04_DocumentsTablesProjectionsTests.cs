@@ -13,7 +13,7 @@ namespace HybridDb.Tests.Documentation;
 
 public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : DocumentationTestBase(output)
 {
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void BasicDocumentRegistration()
     {
         #region BasicDocumentRegistration
@@ -26,7 +26,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void CustomTableNames()
     {
         #region CustomTableNames
@@ -39,7 +39,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void CustomDiscriminators()
     {
         #region CustomDiscriminators
@@ -52,7 +52,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void SimpleProjections()
     {
         #region SimpleProjections
@@ -68,7 +68,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void CustomColumnNames()
     {
         #region CustomColumnNames
@@ -83,7 +83,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void NestedProperties()
     {
         #region NestedProperties
@@ -99,7 +99,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void TransformingValues()
     {
         #region TransformingValues
@@ -115,7 +115,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void CalculatedProjections()
     {
         #region CalculatedProjections
@@ -131,7 +131,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void JsonProjections()
     {
         #region JsonProjections
@@ -149,7 +149,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void MaxLengthOption()
     {
         #region MaxLengthOption
@@ -165,7 +165,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void AsJsonOption()
     {
         #region AsJsonOption
@@ -179,7 +179,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void DisableNullCheckInjectionOption()
     {
         #region DisableNullCheckInjectionOption
@@ -193,7 +193,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void CustomKeyMethod()
     {
         #region CustomKeyMethod
@@ -207,7 +207,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void GlobalKeyResolver()
     {
         #region GlobalKeyResolver
@@ -228,7 +228,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void BasicPolymorphism()
     {
         #region BasicPolymorphism
@@ -250,7 +250,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void QueryingPolymorphicTypes()
     {
         using var session = store.OpenSession();
@@ -278,7 +278,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         bigDogs.Count.ShouldBe(1);
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void SeparateTablesForDerivedTypes()
     {
         #region SeparateTablesForDerivedTypes
@@ -293,7 +293,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void AccessingTableConfiguration()
     {
         #region AccessingTableConfiguration
@@ -310,7 +310,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         table.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void ProjectionsAndIndexes()
     {
         #region ProjectionsAndIndexes
@@ -326,7 +326,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void CompositeIndexes()
     {
         #region CompositeIndexes
@@ -342,7 +342,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void ExtendedProjections()
     {
         #region ExtendedProjections
@@ -360,7 +360,7 @@ public class Doc04_DocumentsTablesProjectionsTests(ITestOutputHelper output) : D
         store.Dispose();
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void ProjectionWithMetadata()
     {
         #region ProjectionWithMetadata

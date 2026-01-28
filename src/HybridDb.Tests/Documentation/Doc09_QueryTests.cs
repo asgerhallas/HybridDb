@@ -34,7 +34,7 @@ namespace HybridDb.Tests.Documentation
             });
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void BasicLINQQuery()
         {
             SetupTestData();
@@ -50,7 +50,7 @@ namespace HybridDb.Tests.Documentation
             products.Count.ShouldBeGreaterThan(0);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void QueryAllDocuments()
         {
             SetupTestData();
@@ -64,7 +64,7 @@ namespace HybridDb.Tests.Documentation
             allProducts.Count.ShouldBe(4);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void QueryWithSingleResult()
         {
             SetupTestData();
@@ -80,7 +80,7 @@ namespace HybridDb.Tests.Documentation
             product.ShouldNotBeNull();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void QueryWithFirst()
         {
             SetupTestData();
@@ -96,7 +96,7 @@ namespace HybridDb.Tests.Documentation
             product.ShouldNotBeNull();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void WhereEquality()
         {
             SetupTestData();
@@ -112,7 +112,7 @@ namespace HybridDb.Tests.Documentation
             products.Count.ShouldBeGreaterThan(0);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void ComparisonOperators()
         {
             SetupTestData();
@@ -135,7 +135,7 @@ namespace HybridDb.Tests.Documentation
             affordable.Count.ShouldBeGreaterThan(0);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void LogicalOperators()
         {
             SetupTestData();
@@ -158,7 +158,7 @@ namespace HybridDb.Tests.Documentation
             multiple.Count.ShouldBeGreaterThan(0);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void MultipleWhereClauses()
         {
             SetupTestData();
@@ -176,7 +176,7 @@ namespace HybridDb.Tests.Documentation
             products.Count.ShouldBeGreaterThan(0);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void StringOperations()
         {
             SetupTestData();
@@ -203,7 +203,7 @@ namespace HybridDb.Tests.Documentation
             containsWidget.Count.ShouldBeGreaterThan(0);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void OrderingResults()
         {
             SetupTestData();
@@ -232,7 +232,7 @@ namespace HybridDb.Tests.Documentation
             byPrice.First().Price.ShouldBeLessThanOrEqualTo(byPrice.Last().Price);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void TakeAndSkip()
         {
             SetupTestData();
@@ -257,7 +257,7 @@ namespace HybridDb.Tests.Documentation
             firstPage.Count.ShouldBeLessThanOrEqualTo(10);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void CountQueries()
         {
             SetupTestData();

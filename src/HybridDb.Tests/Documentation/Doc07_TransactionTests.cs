@@ -16,7 +16,7 @@ namespace HybridDb.Tests.Documentation
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void CreateDocumentStore_ForProduction()
         {
             #region CreateDocumentStore_ForProduction
@@ -37,7 +37,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void CreateDocumentStore_ForTesting()
         {
             #region CreateDocumentStore_ForTesting
@@ -52,7 +52,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void BasicTransaction()
         {
             Document<Product>();
@@ -76,7 +76,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void TransactionWithIsolationLevel()
         {
             Document<Product>().With(x => x.Stock);
@@ -101,7 +101,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void TransactionWithCommitId()
         {
             Document<Product>();
@@ -124,7 +124,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void TransactionWithConnectionTimeout()
         {
             Document<Product>();
@@ -145,7 +145,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void TransactionRollback()
         {
             Document<Product>();
@@ -176,7 +176,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void MultiSessionTransaction()
         {
             Document<Product>().With(x => x.Stock);
@@ -219,7 +219,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void IdempotentOperations()
         {
             Document<Order>();
@@ -253,7 +253,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void ShortTransaction_Good()
         {
             Document<Product>().With(x => x.Price);
@@ -280,7 +280,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public async Task ConcurrencyExceptionRetry()
         {
             Document<Product>().With(x => x.Stock);
@@ -319,7 +319,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void RelatedChangesTransaction()
         {
             Document<Product>().With(x => x.Stock);

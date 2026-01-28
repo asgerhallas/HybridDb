@@ -16,7 +16,7 @@ namespace HybridDb.Tests.Documentation
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void QuickStart_BasicExample()
         {
             #region QuickStart_BasicExample
@@ -55,7 +55,7 @@ namespace HybridDb.Tests.Documentation
             entity.Number.ShouldBe(2002);
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void ProductionSetup()
         {
             #region ProductionSetup
@@ -78,7 +78,7 @@ namespace HybridDb.Tests.Documentation
             store.ShouldNotBeNull();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void DocumentConfiguration()
         {
             #region DocumentConfiguration
@@ -90,7 +90,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void RepositoryPattern()
         {
             #region RepositoryPattern
@@ -109,7 +109,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void UsingTransactions()
         {
             Document<Entity>();

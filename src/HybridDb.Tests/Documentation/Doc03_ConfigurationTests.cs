@@ -16,7 +16,7 @@ namespace HybridDb.Tests.Documentation
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void ProductionConfiguration()
         {
             #region ProductionConfiguration
@@ -30,7 +30,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void ConfigurationObject()
         {
             #region ConfigurationObject
@@ -43,7 +43,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void DeferredInitialization()
         {
             #region DeferredInitialization
@@ -62,7 +62,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void GlobalTempTablesMode()
         {
             #region GlobalTempTablesMode
@@ -78,7 +78,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void RealTablesMode()
         {
             #region RealTablesMode
@@ -99,7 +99,7 @@ namespace HybridDb.Tests.Documentation
             #endregion
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void LoggerConfiguration()
         {
             #region LoggerConfiguration
@@ -117,7 +117,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void DefaultSerializerConfiguration()
         {
             #region DefaultSerializerConfiguration
@@ -134,7 +134,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void TableNamePrefix()
         {
             #region TableNamePrefix
@@ -148,7 +148,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void CustomKeyResolver()
         {
             #region CustomKeyResolver
@@ -168,7 +168,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void SoftDeleteConfiguration()
         {
             #region SoftDeleteConfiguration
@@ -182,7 +182,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void BackgroundMigrationsConfiguration()
         {
             #region BackgroundMigrationsConfiguration
@@ -199,7 +199,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void EventStoreConfiguration()
         {
             #region EventStoreConfiguration
@@ -212,7 +212,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void DevelopmentEnvironment()
         {
             #region DevelopmentEnvironment
@@ -229,7 +229,7 @@ namespace HybridDb.Tests.Documentation
             newStore.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Code example - not meant for execution")]
         public void ConnectionPooling()
         {
             #region ConnectionPooling

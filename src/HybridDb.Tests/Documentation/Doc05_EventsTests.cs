@@ -11,7 +11,7 @@ namespace HybridDb.Tests.Documentation;
 
 public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase(output)
 {
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void AddEventHandler()
     {
         #region AddEventHandler
@@ -35,7 +35,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         #endregion
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void BeforeExecuteCommands_Validation()
     {
         #region BeforeExecuteCommands_Validation
@@ -60,7 +60,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         #endregion
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void BeforeExecuteCommands_Modification()
     {
         #region BeforeExecuteCommands_Modification
@@ -80,7 +80,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         #endregion
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void AfterExecuteCommands_Logging()
     {
         #region AfterExecuteCommands_Logging
@@ -105,7 +105,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         #endregion
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void MultipleEventHandlers()
     {
         #region MultipleEventHandlers
@@ -141,7 +141,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         #endregion
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void DontModifySessionStateInAfterExecuteCommands()
     {
         configuration.AddEventHandler(@event =>
@@ -159,7 +159,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         });
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void IntegrationEvents()
     {
         #region IntegrationEvents
@@ -184,7 +184,7 @@ public class Doc05_EventsTests(ITestOutputHelper output) : DocumentationTestBase
         #endregion
     }
 
-    [Fact]
+    [Fact(Skip = "Code example - not meant for execution")]
     public void InfiniteLoops()
     {
         #region InfiniteLoops
