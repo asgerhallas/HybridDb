@@ -15,8 +15,8 @@
 ### Working with Documents
 - [Store and Load](DocumentSession-Store-and-Load)
 - [Query](DocumentSession-Query)
-- [Advanced](DocumentSession-Advanced)
 - [Concurrency Model](DocumentSession-Concurrency-Model)
+- [Advanced](DocumentSession-Advanced)
 
 ### Migrations
 - [Migrations](Migrations)

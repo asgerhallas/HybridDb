@@ -19,7 +19,8 @@ Welcome to the HybridDb documentation! This documentation provides comprehensive
 ### Working with Documents
 8. **[DocumentSession - Store and Load](DocumentSession-Store-and-Load.md)** - Basic CRUD operations, entity states, and session lifecycle
 9. **[DocumentSession - Query](DocumentSession-Query.md)** - LINQ queries, raw SQL queries, and query optimization
-10. **[DocumentSession - Advanced Scenarios](DocumentSession-Advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
+10. **[DocumentSession - Concurrency Model](DocumentSession-Concurrency-Model.md)** - Optimistic concurrency, ETags, and conflict detection
+11. **[DocumentSession - Advanced Scenarios](DocumentSession-Advanced.md)** - Metadata, ETags, deferred commands, and advanced patterns
 
 ### Migrations
 6. **[Migrations](Migrations.md)** - Schema migrations, document migrations, and migration patterns
@@ -83,7 +84,8 @@ var products = session.Query<Product>()
 1. Implement [Event Store](Configuration-Events.md) patterns
 2. Build complex migration strategies
 3. Optimize query performance
-4. Contribute to the project with [How to Build and Contribute](How-to-Build-and-Contribute.md)
+4. Understand [Concurrency Model](DocumentSession-Concurrency-Model.md) for production systems
+5. Contribute to the project with [How to Build and Contribute](How-to-Build-and-Contribute.md)
 
 ## Architecture Overview
 
