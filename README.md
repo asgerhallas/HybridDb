@@ -1,4 +1,5 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/ud71up5svo5mhcas/branch/master?svg=true)](https://ci.appveyor.com/project/asgerhallas/hybriddb/branch/master)
+[![Build](https://github.com/asgerhallas/HybridDb/actions/workflows/dotnet.yml/badge.svg?branch=master)](https://github.com/asgerhallas/HybridDb/actions/workflows/dotnet.yml)
+[![NuGet](https://img.shields.io/nuget/v/HybridDb.svg)](https://www.nuget.org/packages/HybridDb)
 
 HybridDb
 ========
@@ -30,19 +31,25 @@ Like this:
 
     store.Document<Entity>().With(x => x.Property);
 
-    using var session = store.OpenSession();
-    
-    session.Store(new Entity { 
-        Id = Guid.NewGuid(), 
-        Property = 2001, 
-        Field = "New document" 
-    });
+    using (var session = store.OpenSession())
+    {
+        session.Store(new Entity { 
+            Id = Guid.NewGuid(), 
+            Property = 1999, 
+            Field = "New document" 
+        });
 
-    var existingEntity = session.Query<Entity>().Single(x => x.Property < 2000);
+        session.SaveChanges();
+    }
 
-    existingEntity.Property++;
+    using (var session = store.OpenSession())
+    {
+        var existingEntity = session.Query<Entity>().Single(x => x.Property < 2000);
 
-    session.SaveChanges();
+        existingEntity.Property++;
+
+        session.SaveChanges();
+    }
 
 For more information, see the [documentation](docs/Home.md).
 
