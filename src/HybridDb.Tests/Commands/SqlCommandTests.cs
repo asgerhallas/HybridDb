@@ -6,10 +6,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Commands
 {
-    public class SqlCommandTests : HybridDbTests
+    public class SqlCommandTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public SqlCommandTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void SqlCommand_Success()
         {
@@ -59,9 +57,12 @@ namespace HybridDb.Tests.Commands
             sql.Parameters.Add("@Document", null, SqlDbType.NVarChar);
 
             Should.Throw<ConcurrencyException>(() => updateSession.Advanced.DocumentStore.Execute(new SqlCommand(sql, expectedRowCount: 1)))
-                .Message
-                .ShouldBe(
-                    "Someone beat you to it. Expected 1 changes, but got 2. The transaction is rolled back now, so no changes were actually made.");
+                .Message.ShouldBe(
+                    """
+                    Someone beat you to it. Expected 1 changes, but got 2.
+                    
+                    The transaction is rolled back now.
+                    """);
         }
     }
 }

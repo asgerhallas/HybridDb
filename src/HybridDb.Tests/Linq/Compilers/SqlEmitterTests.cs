@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using HybridDb.Linq;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Linq.Compilers;
@@ -9,9 +9,7 @@ namespace HybridDb.Tests.Linq.Compilers
 {
     public class SqlEmitterTests
     {
-        readonly Emitter emitSql;
-
-        public SqlEmitterTests() => emitSql = CompilerBuilder.Compose(SqlEmitter.Emit);
+        readonly Emitter emitSql = CompilerBuilder.Compose(SqlEmitter.Emit);
 
         [Theory]
         [InlineData(ComparisonOperator.Equal, "Text = 'Asger'")]

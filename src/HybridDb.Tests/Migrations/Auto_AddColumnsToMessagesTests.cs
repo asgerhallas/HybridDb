@@ -7,12 +7,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Migrations
 {
-    public class Auto_AddColumnsToMessagesTests : HybridDbTests
+    public class Auto_AddColumnsToMessagesTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public Auto_AddColumnsToMessagesTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void AddVersion()
         {
@@ -55,7 +51,7 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] {"default"}));
+            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), ["default"]));
 
             oldMessage.ShouldNotBe(null);
         }
@@ -102,7 +98,7 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] {"default"}));
+            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), ["default"]));
             oldMessage.Metadata.ShouldNotBe(null);
 
             store.Execute(new EnqueueCommand(new QueueTable(tablename), new HybridDbMessage("a", "payload")
@@ -110,7 +106,7 @@ namespace HybridDb.Tests.Migrations
                 Metadata = { ["meta"] = "facebook" }
             }));
 
-            var newMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), new[] { "default" }));
+            var newMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), ["default"]));
             newMessage.Metadata.ShouldContainKeyAndValue("meta", "facebook");
         }
 

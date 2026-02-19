@@ -9,10 +9,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Queue
 {
-    public class DequeueCommandTests : HybridDbTests
+    public class DequeueCommandTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DequeueCommandTests(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void IdAndTopic_RowDataHasPrecedeceOverDocument()
         {

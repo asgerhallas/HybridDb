@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using BoyBoy;
 using FakeItEasy;
+using Halt;
 using HybridDb.Config;
 using HybridDb.Queue;
 using HybridDb.SqlBuilder;
@@ -26,12 +27,11 @@ using Task = System.Threading.Tasks.Task;
 
 namespace HybridDb.Tests.Queue
 {
-    public class HybridDbMessageQueueTests : HybridDbTests
+    public class HybridDbMessageQueueTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        readonly Func<IDocumentSession, HybridDbMessage, Task> handler;
+        readonly TimeSpan timeout = IsGithubActions ? TimeSpan.FromSeconds(20) : TimeSpan.FromSeconds(10);
 
-        public HybridDbMessageQueueTests(ITestOutputHelper output) : base(output) =>
-            handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
+        readonly Func<IDocumentSession, HybridDbMessage, Task> handler = A.Fake<Func<IDocumentSession, HybridDbMessage, Task>>();
 
         HybridDbMessageQueue StartQueue(MessageQueueOptions options = null)
         {
@@ -293,8 +293,10 @@ namespace HybridDb.Tests.Queue
             var messageHandlings = messages.OfType<MessageHandling>().ToList();
             messageHandlings.Count.ShouldBe(5);
             messageHandlings
-                .Select(x => x.Message).OfType<MyMessage>()
-                .Select(x => x.Text).ShouldAllBe(x => x == "Some command");
+                .Select(x => x.Message.Payload)
+                .OfType<MyMessage>()
+                .Select(x => x.Text)
+                .ShouldBeLike(["Some command", "Some command", "Some command", "Some command", "Some command"]);
 
             messages.OfType<MessageFailed>()
                 .Select(x => x.Message).ShouldBe(messageHandlings
@@ -304,6 +306,8 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task Poison_GoesToErrorTopic()
         {
+            var now = DateTimeOffset.Now;
+
             var queue = StartQueue();
 
             A.CallTo(handler).WithReturnType<Task>()
@@ -327,6 +331,9 @@ namespace HybridDb.Tests.Queue
             var message = store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "errors/default" }));
 
             ((MyMessage)message.Payload).Text.ShouldBe("Failing command");
+
+            DateTimeOffset.Parse(message.Metadata["ExceptionAt"]).ShouldBeInRange(now, now.AddSeconds(2));
+            message.Metadata["ExceptionDetails"].ShouldStartWith("System.ArgumentException: Value does not fall within the expected range.\r\n");
 
             // Original message is removed
             store.Execute(new DequeueCommand(store.Configuration.Tables.Values.OfType<QueueTable>().Single(), new List<string> { "default" })).ShouldBe(null);
@@ -1024,20 +1031,20 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task LocalTriggering()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o)
                 });
 
             Using(new HybridDbMessageQueue(store,
                 (_, message) => Task.CompletedTask));
 
-            await observer.AdvanceUntil<QueueEmpty>();
+            await o.PauseWhen<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1046,28 +1053,30 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
-            await observer.AdvanceBy1ThenNextShouldBe<MessageReceived>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<MessageReceived>();
+
+            o.Continue();
         }
 
         [Fact]
         public async Task LocalTriggering_Many()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o)
                 });
 
             Using(new HybridDbMessageQueue(store,
                 (_, message) => Task.CompletedTask));
 
-            await observer.AdvanceUntil<QueueEmpty>();
+            await o.PauseWhen<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1078,40 +1087,40 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
-            await observer.AdvanceUntil<MessageCommitted>();
-            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseWhen<MessageCommitted>();
+            await o.PauseNext<SessionEnded>();
 
-            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
-            await observer.AdvanceUntil<MessageCommitted>();
-            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseWhen<MessageCommitted>();
+            await o.PauseNext<SessionEnded>();
 
-            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
-            await observer.AdvanceUntil<MessageCommitted>();
-            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseWhen<MessageCommitted>();
+            await o.PauseNext<SessionEnded>();
 
-            await observer.AdvanceBy1ThenNextShouldBe<SessionBeginning>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueuePolling>();
-            await observer.AdvanceBy1ThenNextShouldBe<SessionEnded>();
-            await observer.AdvanceBy1ThenNextShouldBe<QueueEmpty>();
-            await observer.AdvanceBy1();
-            await observer.WaitForNothingToHappen();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<QueueEmpty>();
+
+            await o.WaitForNothingToHappen(timeout);
         }
 
         [Fact]
         public async Task LocalTriggering_EnqueuedJustAfterQueueEmpty()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
                 {
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o),
                 });
 
             Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
@@ -1123,18 +1132,18 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.NextShouldBeThenAdvanceBy1<QueueStarting>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
-            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
-            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
-            await observer.NextShouldBe<QueueEmpty>();
+            await o.PauseNext<QueueStarting>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<MessageReceived>();
+            await o.PauseNext<MessageHandling>();
+            await o.PauseNext<MessageHandled>();
+            await o.PauseNext<MessageCommitted>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1143,27 +1152,25 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<MessageReceived>();
+            await o.PauseNext<MessageHandling>();
+            await o.PauseNext<MessageHandled>();
+            await o.PauseNext<MessageCommitted>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<QueueEmpty>();
 
-            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
-            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
-            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
-            await observer.NextShouldBeThenAdvanceBy1<QueueEmpty>();
-
-            await observer.WaitForNothingToHappen();
+            await o.WaitForNothingToHappen(timeout);
         }
 
         [Fact]
         public async Task LocalTriggering_Topics()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1171,12 +1178,12 @@ namespace HybridDb.Tests.Queue
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
                     InboxTopics = { "topic1" },
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o)
                 });
 
             Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            await observer.AdvanceUntil<QueueEmpty>();
+            await o.PauseWhen<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1185,24 +1192,25 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1();
-            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
-            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageReceived>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageHandling>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageHandled>();
-            await observer.NextShouldBeThenAdvanceBy1<MessageCommitted>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionBeginning>();
-            await observer.NextShouldBeThenAdvanceBy1<QueuePolling>();
-            await observer.NextShouldBeThenAdvanceBy1<SessionEnded>();
-            await observer.NextShouldBe<QueueEmpty>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<MessageReceived>();
+            await o.PauseNext<MessageHandling>();
+            await o.PauseNext<MessageHandled>();
+            await o.PauseNext<MessageCommitted>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<SessionBeginning>();
+            await o.PauseNext<QueuePolling>();
+            await o.PauseNext<SessionEnded>();
+            await o.PauseNext<QueueEmpty>();
+
+            o.Continue();
         }
 
         [Fact]
         public async Task LocalTriggering_NotOtherTopics()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             configuration.UseMessageQueue(
                 new MessageQueueOptions
@@ -1210,12 +1218,12 @@ namespace HybridDb.Tests.Queue
                     IdleDelay = TimeSpan.FromMilliseconds(int.MaxValue), // never retry without trigger,
                     MaxConcurrency = 1,
                     InboxTopics = { "topic1" },
-                    Subscribe = observer.Subscribe
+                    Subscribe = x => x.Subscribe(o)
                 }.ReplayEvents(TimeSpan.FromSeconds(60)));
 
             Using(new HybridDbMessageQueue(store, (_, message) => Task.CompletedTask));
 
-            await observer.AdvanceUntil<QueueEmpty>();
+            await o.PauseWhen<QueueEmpty>();
 
             using (var session = store.OpenSession())
             {
@@ -1224,8 +1232,7 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceBy1();
-            await observer.WaitForNothingToHappen();
+            await o.WaitForNothingToHappen(timeout);
         }
 
         public class TheScope : IDisposable
@@ -1244,7 +1251,7 @@ namespace HybridDb.Tests.Queue
         [Fact]
         public async Task CanUseEventsForGettingASessionFromIoCContainerWithScope()
         {
-            var observer = new BlockingTestObserver(TimeSpan.FromSeconds(10));
+            using var o = new BlockingObserver<IHybridDbQueueEvent>(timeout, output.WriteLine);
 
             bool scopeWasThereWhenSessionWasCreated = false;
             bool scopeWasThereWhenMessageWasHandled = false;
@@ -1266,7 +1273,7 @@ namespace HybridDb.Tests.Queue
                         .Match<MessageHandling>(m => scopeWasThereWhenMessageWasHandled = TheScope.Current != null)
                         .Match<SessionEnded>(m => ((IDisposable)m.Context.Data["scope"]).Dispose()));
 
-                    connect.Subscribe(observer);
+                    connect.Subscribe(o);
 
                     return connect.Connect();
                 },
@@ -1279,11 +1286,13 @@ namespace HybridDb.Tests.Queue
                 session.SaveChanges();
             }
 
-            await observer.AdvanceUntil<SessionEnded>();
+            await o.PauseWhen<SessionEnded>();
 
             scopeWasThereWhenSessionWasCreated.ShouldBe(true);
             scopeWasThereWhenMessageWasHandled.ShouldBe(true);
             TheScope.Current.ShouldBe(null);
+
+            o.Continue();
         }
 
         [Fact]

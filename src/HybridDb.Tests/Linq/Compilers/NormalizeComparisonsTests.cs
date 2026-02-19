@@ -1,4 +1,4 @@
-﻿using HybridDb.Linq;
+using HybridDb.Linq;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Linq.Compilers;
 using ShouldBeLike;
@@ -8,9 +8,7 @@ namespace HybridDb.Tests.Linq.Compilers
 {
     public class NormalizeComparisonsTests
     {
-        readonly PostProcessor compile;
-
-        public NormalizeComparisonsTests() => compile = CompilerBuilder.Compose(new NormalizeComparisons().PostProcess, new LinqCompilerRoot().PostProcess);
+        readonly PostProcessor compile = CompilerBuilder.Compose(new NormalizeComparisons().PostProcess, new LinqCompilerRoot().PostProcess);
 
         [Fact]
         public void RightColumnIsMovedLeft() => compile(

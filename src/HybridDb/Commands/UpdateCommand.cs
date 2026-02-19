@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class UpdateCommand : Command<Guid>
+    public class UpdateCommand : HybridDbCommand<Guid>
     {
         public DocumentTable Table { get; }
         public string Id { get; }
@@ -50,7 +50,9 @@ namespace HybridDb.Commands
             {
                 Sql = sql,
                 Parameters = parameters,
-                ExpectedRowCount = 1
+                ExpectedRowCount = 1,
+                Table = command.Table,
+                DocumentId = command.Id
             });
 
             return tx.CommitId;

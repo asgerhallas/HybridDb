@@ -4,7 +4,7 @@ using Dapper;
 
 namespace HybridDb.Events.Commands
 {
-    public class LoadParentCommit : Command<Commit<byte[]>>
+    public class LoadParentCommit : HybridDbCommand<Commit<byte[]>>
     {
         public LoadParentCommit(EventTable table, Guid? commitId)
         {

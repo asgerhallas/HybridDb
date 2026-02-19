@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using HybridDb.Linq;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Linq.Plugins;
@@ -10,9 +10,7 @@ namespace HybridDb.Tests.Linq.Plugins
 {
     public class CastEnumsTests : CompilerTests
     {
-        readonly PostProcessor compile;
-
-        public CastEnumsTests() => compile = CompilerBuilder.Compose(new CastEnums().PostProcess, new LinqCompilerRoot().PostProcess);
+        readonly PostProcessor compile = CompilerBuilder.Compose(new CastEnums().PostProcess, new LinqCompilerRoot().PostProcess);
 
         [Fact]
         public void CastIntsToEnumsInEnumComparisons()
@@ -43,7 +41,7 @@ namespace HybridDb.Tests.Linq.Plugins
         [Fact]
         public void CastIntsToEnumsInEnumLists() => 
             compile(
-                new List(Helpers.ListOf(new Constant(1, typeof(int)), new Constant(1, typeof(int))), typeof(MyEnum), typeof(IEnumerable<MyEnum>)))
+                new List([new Constant(1, typeof(int)), new Constant(1, typeof(int))], typeof(MyEnum), typeof(IEnumerable<MyEnum>)))
             .ShouldBeLike(
                 new List(Helpers.ListOf(new Constant(1, typeof(MyEnum)), new Constant(1, typeof(MyEnum))), typeof(MyEnum), typeof(IEnumerable<MyEnum>)));
 

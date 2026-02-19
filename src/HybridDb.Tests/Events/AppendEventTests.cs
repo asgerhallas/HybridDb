@@ -26,7 +26,7 @@ namespace HybridDb.Tests.Events
             @event.StreamId.ShouldBe("stream-1");
             @event.SequenceNumber.ShouldBe(0);
             @event.Name.ShouldBe("myevent");
-            @event.Data.ShouldBe(new byte[] {0});
+            @event.Data.ShouldBe([0]);
         }
 
         [Fact]

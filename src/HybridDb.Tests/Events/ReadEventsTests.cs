@@ -32,7 +32,7 @@ namespace HybridDb.Tests.Events
 
             commits
                 .SelectMany(x => x.Events.Select(e => e.Name))
-                .ShouldBe(new[] {"a", "b", "c", "d"});
+                .ShouldBe(["a", "b", "c", "d"]);
         }
 
         [Fact]

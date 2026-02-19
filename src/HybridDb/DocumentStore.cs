@@ -131,18 +131,18 @@ namespace HybridDb
             Configuration.Resolve<DdlCommandExecutor>()(this, command);
         }
 
-        public object Execute(DocumentTransaction tx, DmlCommand command)
+        public object Execute(DocumentTransaction tx, HybridDbCommand command)
         {
             AssertInitialized();
 
-            return Configuration.Resolve<DmlCommandExecutor>()(tx, command);
+            return Configuration.Resolve<HybridDbCommandExecutor>()(tx, command);
         }
 
-        public T Execute<T>(DocumentTransaction tx, Command<T> command)
+        public T Execute<T>(DocumentTransaction tx, HybridDbCommand<T> command)
         {
             AssertInitialized();
 
-            return (T) Configuration.Resolve<DmlCommandExecutor>()(tx, command);
+            return (T) Configuration.Resolve<HybridDbCommandExecutor>()(tx, command);
         }
 
         void AssertInitialized()

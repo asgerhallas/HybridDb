@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Dapper;
 
 namespace HybridDb.Commands
@@ -11,7 +11,7 @@ namespace HybridDb.Commands
             tx.Store.Stats.NumberOfCommands++;
 
             // NOTE: Sql parameter threshold is actually lower than the stated 2100 (or maybe extra 
-            // params are added some where in the stack) so we cut it some slack and say 2000.
+            // params are added somewhere in the stack) so we cut it some slack and say 2000.
             if (preparedCommand.Parameters.Count >= 2000)
             {
                 throw new InvalidOperationException("Cannot execute a single command with more than 2000 parameters.");
@@ -21,9 +21,16 @@ namespace HybridDb.Commands
 
             if (rowcount != preparedCommand.ExpectedRowCount)
             {
+                var documentDetails = preparedCommand is { Table: not null, DocumentId: not null }
+                        ? $" Document in table '{preparedCommand.Table.Name}' with Id '{preparedCommand.DocumentId}' was not saved."
+                        : "";
+
                 throw new ConcurrencyException(
-                    $"Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}. " +
-                    $"The transaction is rolled back now, so no changes were actually made.");
+                    $"""
+                     Someone beat you to it. Expected {preparedCommand.ExpectedRowCount} changes, but got {rowcount}.
+                     
+                     The transaction is rolled back now.{documentDetails}
+                     """);
             }
 
             tx.Store.Stats.LastWrittenEtag = tx.CommitId;

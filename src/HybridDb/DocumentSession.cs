@@ -22,7 +22,7 @@ namespace HybridDb
 
         readonly ManagedEntities entities;
         readonly List<(int Generation, EventData<byte[]> Data)> events;
-        readonly List<DmlCommand> deferredCommands;
+        readonly List<HybridDbCommand> deferredCommands;
         readonly DocumentMigrator migrator;
 
         DocumentTransaction enlistedTx;
@@ -33,7 +33,7 @@ namespace HybridDb
         {
             entities = new ManagedEntities(this);
             events = new List<(int Generation, EventData<byte[]> Data)>();
-            deferredCommands = new List<DmlCommand>();
+            deferredCommands = new List<HybridDbCommand>();
 
             this.migrator = migrator;
             this.store = store;
@@ -65,7 +65,7 @@ namespace HybridDb
         public IDocumentStore DocumentStore => store;
         public DocumentTransaction DocumentTransaction => enlistedTx;
 
-        public IReadOnlyList<DmlCommand> DeferredCommands => deferredCommands;
+        public IReadOnlyList<HybridDbCommand> DeferredCommands => deferredCommands;
         public ManagedEntities ManagedEntities => entities;
         public IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events => events;
 
@@ -154,7 +154,7 @@ namespace HybridDb
 
         public IEnumerable<T> Query<T>(Sql sql) => Transactionally(x => x.Query<T>(sql));
 
-        public void Defer(DmlCommand command) => deferredCommands.Add(command);
+        public void Defer(HybridDbCommand command) => deferredCommands.Add(command);
 
         public void Evict(object entity)
         {
@@ -293,7 +293,7 @@ namespace HybridDb
 
             store.Configuration.Notify(new SaveChanges_BeforePrepareCommands(this));
 
-            var commands = new Dictionary<ManagedEntity, DmlCommand>();
+            var commands = new Dictionary<ManagedEntity, HybridDbCommand>();
             foreach (var managedEntity in entities.Values.ToList())
             {
                 if (managedEntity.ReadOnly) continue;

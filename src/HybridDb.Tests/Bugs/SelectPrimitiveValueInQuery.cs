@@ -8,10 +8,8 @@ using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class SelectPrimitiveValueInQuery : HybridDbTests
+    public class SelectPrimitiveValueInQuery(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public SelectPrimitiveValueInQuery(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void ShouldBeAble()
         {

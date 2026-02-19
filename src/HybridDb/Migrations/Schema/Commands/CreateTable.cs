@@ -36,7 +36,7 @@ namespace HybridDb.Migrations.Schema.Commands
 
             sql.Append(") end;");
 
-            store.Database.RawExecute(sql, schema: true);
+                store.Database.RawExecute(sql, schema: true);
         }
 
         public override string ToString() => $"Create table {Table} with columns {string.Join(", ", Table.Columns.Select(x => x.ToString()))}";

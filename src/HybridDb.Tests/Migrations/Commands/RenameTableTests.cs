@@ -19,23 +19,22 @@ namespace HybridDb.Tests.Migrations.Commands
             UseTableNamePrefix(Guid.NewGuid().ToString());
             store.Execute(new CreateTable(new Table("Entities", new Column("col1", typeof(int)))));
 
-            store.Execute(new RenameTable("Entities", "OtherEntities"));
+            store.Execute(new RenameTable(new Table("Entities"), new Table("OtherEntities")));
 
             store.Database.QuerySchema().ShouldNotContainKey("Entities");
             store.Database.QuerySchema().ShouldContainKey("OtherEntities");
         }
 
-
         [Fact]
         public void DoesNotRequireReprojection()
         {
-            new RenameTable("Entities", "OtherEntities").RequiresReprojectionOf.ShouldBe(null);
+            new RenameTable(new Table("Entities"), new Table("OtherEntities")).RequiresReprojectionOf.ShouldBe(null);
         }
 
         [Fact]
         public void IsSafe()
         {
-            new RenameTable("Entities", "OtherEntities").Safe.ShouldBe(true);
+            new RenameTable(new Table("Entities"), new Table("OtherEntities")).Safe.ShouldBe(true);
         }
     }
 }

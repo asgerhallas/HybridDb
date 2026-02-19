@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using HybridDb.Migrations.Documents;
 using Shouldly;
 using Xunit;
@@ -7,12 +7,8 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_ReadOnlyTests : HybridDbTests
+    public class DocumentSession_ReadOnlyTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_ReadOnlyTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void ReadOnly_Modify()
         {

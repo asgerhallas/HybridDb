@@ -2,14 +2,8 @@ namespace HybridDb.Migrations.Schema
 {
     public abstract class DdlCommand
     {
-        protected DdlCommand()
-        {
-            Safe = false;
-            RequiresReprojectionOf = null;
-        }
-
-        public bool Safe { get; protected set; }
-        public string RequiresReprojectionOf { get; protected set; }
+        public bool Safe { get; protected set; } = false;
+        public string RequiresReprojectionOf { get; protected set; } = null;
 
         public abstract void Execute(DocumentStore store);
 

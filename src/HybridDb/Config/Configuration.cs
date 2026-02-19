@@ -45,6 +45,7 @@ namespace HybridDb.Config
             Migrations = new List<Migration>();
             BackupWriter = new NullBackupWriter();
             RunBackgroundMigrations = true;
+            MigrationBatchSize = 500;
             RunUpfrontMigrationsOnTempTables = false;
             TableNamePrefix = "";
             DefaultKeyResolver = KeyResolver;
@@ -53,7 +54,7 @@ namespace HybridDb.Config
 
             Register<DdlCommandExecutor>(container => (store, command) => command.Execute(store));
 
-            Register<DmlCommandExecutor>(container => (tx, command) => 
+            Register<HybridDbCommandExecutor>(container => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<InsertCommand>(insertCommand => InsertCommand.Execute(tx, insertCommand))
                     .Match<UpdateCommand>(updateCommand => UpdateCommand.Execute(tx, updateCommand))
@@ -76,6 +77,7 @@ namespace HybridDb.Config
         public IReadOnlyList<Migration> Migrations { get; private set; }
         public IBackupWriter BackupWriter { get; private set; }
         public bool RunBackgroundMigrations { get; private set; }
+        public int MigrationBatchSize { get; private set; }
         public bool RunUpfrontMigrationsOnTempTables { get; private set; }
         public int ConfiguredVersion { get; private set; }
         public string TableNamePrefix { get; private set; }
@@ -278,7 +280,7 @@ namespace HybridDb.Config
 
             tables.TryAdd(tableName, new EventTable(tableName));
 
-            Decorate<DmlCommandExecutor>((container, decoratee) => (tx, command) => 
+            Decorate<HybridDbCommandExecutor>((container, decoratee) => (tx, command) => 
                 Switch<object>.On(command)
                     .Match<AppendEvent>(appendEvent => AppendEvent.Execute(tx, appendEvent))
                     .Match<ReadStream>(readStream => ReadStream.Execute(tx, readStream))
@@ -296,6 +298,8 @@ namespace HybridDb.Config
         /// but a document will still be migrated when it is loaded into a session.
         /// </summary>
         public void DisableBackgroundMigrations() => RunBackgroundMigrations = false;
+
+        public void UseMigrationBatchSize(int migrationBatchSize) => MigrationBatchSize = migrationBatchSize;
 
         public void EnableUpfrontMigrationsOnTempTables() => RunUpfrontMigrationsOnTempTables = true;
 

@@ -22,7 +22,7 @@ namespace HybridDb
         //void Execute(Sql sql);
         //void Execute(DocumentTransaction tx, Sql sql);
         void Execute(DdlCommand command);
-        object Execute(DocumentTransaction tx, DmlCommand command);
-        T Execute<T>(DocumentTransaction tx, Command<T> command);
+        object Execute(DocumentTransaction tx, HybridDbCommand command);
+        T Execute<T>(DocumentTransaction tx, HybridDbCommand<T> command);
     }
 }

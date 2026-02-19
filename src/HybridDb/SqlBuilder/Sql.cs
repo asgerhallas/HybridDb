@@ -72,6 +72,8 @@ namespace HybridDb.SqlBuilder
                 if (value == ' ') return TokenType.NoneOrSpace;
                 if (value == ',') return TokenType.Comma;
                 if (value == '.') return TokenType.Dot;
+                if (value == '_') return TokenType.Underscore;
+                if (value == '\'') return TokenType.SingleQuote;
                 if (value is '(' or '[') return TokenType.StartParenthesis;
                 if (value is ')' or ']') return TokenType.EndParenthesis;
 
@@ -108,6 +110,8 @@ namespace HybridDb.SqlBuilder
             Word,
             Comma,
             Dot,
+            Underscore,
+            SingleQuote,
             StartParenthesis,
             EndParenthesis
         }

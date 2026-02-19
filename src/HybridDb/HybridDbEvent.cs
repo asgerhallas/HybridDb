@@ -9,13 +9,13 @@ namespace HybridDb
 
     public record SaveChanges_BeforeExecuteCommands(
         IDocumentSession Session, 
-        IDictionary<ManagedEntity, DmlCommand> DocumentCommands,
-        IList<DmlCommand> OtherCommands) : IHybridDbEvent;
+        IDictionary<ManagedEntity, HybridDbCommand> DocumentCommands,
+        IList<HybridDbCommand> OtherCommands) : IHybridDbEvent;
 
     public record SaveChanges_AfterExecuteCommands(
         IDocumentSession Session, 
         Guid CommitId,
-        IDictionary<DmlCommand, object> ExecutedCommands) : IHybridDbEvent;
+        IDictionary<HybridDbCommand, object> ExecutedCommands) : IHybridDbEvent;
 
     public record EntityLoaded(IDocumentSession Session, Type RequestedType, ManagedEntity ManagedEntity) : IHybridDbEvent;
 

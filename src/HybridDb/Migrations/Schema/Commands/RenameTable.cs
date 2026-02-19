@@ -1,10 +1,11 @@
+using HybridDb.Config;
 using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
     public class RenameTable : DdlCommand
     {
-        public RenameTable(string oldTableName, string newTableName)
+        public RenameTable(Table oldTableName, Table newTableName)
         {
             Safe = true;
 
@@ -12,16 +13,14 @@ namespace HybridDb.Migrations.Schema.Commands
             NewTableName = newTableName;
         }
 
-        public string OldTableName { get; }
-        public string NewTableName { get; }
+        public Table OldTableName { get; }
+        public Table NewTableName { get; }
 
         public override string ToString() => $"Rename table {OldTableName} to {NewTableName}";
 
-        public override void Execute(DocumentStore store)
-        {
+        public override void Execute(DocumentStore store) =>
             store.Database.RawExecute(Sql.Empty
                 .Append(store.Database is SqlServerUsingRealTables, "", "tempdb..")
-                .Append($"sp_rename {store.Database.FormatTableNameAndEscape(OldTableName)}, {store.Database.FormatTableNameAndEscape(NewTableName)};"));
-        }
+                .Append($"sp_rename {OldTableName}, {NewTableName};"));
     }
 }

@@ -1,14 +1,12 @@
-﻿using System;
+using System;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace HybridDb.Tests.Bugs
 {
-    public class NotGeneratingNullableColumnsForNullableTypes : HybridDbTests
+    public class NotGeneratingNullableColumnsForNullableTypes(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public NotGeneratingNullableColumnsForNullableTypes(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void NullableGuidGetsNullableColumnType()
         {

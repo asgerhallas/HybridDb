@@ -24,7 +24,7 @@ namespace HybridDb.Migrations.Schema.Commands
         {
             store.Database.RawExecute(Sql.Empty
                 .Append(store.Database is SqlServerUsingRealTables, "", "tempdb..")
-                .Append($"sp_rename '{store.Database.FormatTableNameAndEscape(Table.Name)}.{OldColumnName}', '{NewColumnName}', 'COLUMN'"));
+                .Append($"sp_rename '{Table}.{OldColumnName:@}', '{NewColumnName:@}', 'COLUMN'"));
         }
     }
 }

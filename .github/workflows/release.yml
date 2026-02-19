@@ -1,0 +1,35 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+      
+jobs:
+  build:
+
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+    - name: Test
+      run: dotnet test --verbosity normal
+    - name: Version
+      run: |
+        tag=${{ github.ref_name }}
+        echo "version=${tag#v}" >> $GITHUB_ENV
+    - name: Pack
+      run: dotnet pack -p:PackageVersion=${version} --verbosity normal
+    - name: Push
+      run: dotnet nuget push ./src/HybridDb/bin/Release/*.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+    

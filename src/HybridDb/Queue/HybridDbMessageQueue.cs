@@ -8,8 +8,8 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Indentional;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using static System.Collections.Specialized.BitVector32;
 
 namespace HybridDb.Queue
 {
@@ -84,11 +84,11 @@ namespace HybridDb.Queue
                         events.OnNext(new QueueStarting(cts.Token));
 
                         logger.LogInformation($"""
-                            Queue started. 
-                            Reading messages with version {options.Version} or older, 
-                            from topics '{string.Join("', '", options.InboxTopics)}'.
-                            """.Indent());
-    
+                                               Queue started. 
+                                               Reading messages with version {options.Version} or older, 
+                                               from topics '{string.Join("', '", options.InboxTopics)}'.
+                                               """.Indent());
+
                         using var semaphore = new SemaphoreSlim(options.MaxConcurrency);
 
                         while (!cts.IsCancellationRequested)
@@ -99,7 +99,7 @@ namespace HybridDb.Queue
 
                                 try
                                 {
-                                    while(!cts.IsCancellationRequested)
+                                    while (!cts.IsCancellationRequested)
                                     {
                                         var session = BeginSession();
 
@@ -163,11 +163,21 @@ namespace HybridDb.Queue
                             {
                                 break;
                             }
+                            catch (SqlException exception) when (exception.Number == -2)
+                            {
+                                // Timouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
+
+                                logger.LogInformation(exception, $"{nameof(HybridDbMessageQueue)} failed with timeout. Will retry.");
+
+                                await Task.Delay(options.ExceptionBackoff, cts.Token);
+                            }
                             catch (Exception exception)
                             {
                                 events.OnNext(new QueueFailed(exception, cts.Token));
 
-                                logger.LogError(exception, $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                logger.LogWarning(
+                                    exception,
+                                    $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
 
                                 await Task.Delay(options.ExceptionBackoff, cts.Token);
                             }
@@ -316,15 +326,15 @@ namespace HybridDb.Queue
             }
 
             return null;
-        }   
+        }
 
         async Task WaitOnEmptyQueue()
         {
             events.OnNext(new QueueEmpty(cts.Token));
-          
+
             // Wait for any local enqueue OR for the timeout (IdleDelay) to check for remote enqueues at an interval.
             await localEnqueues.WaitAsync(options.IdleDelay, cts.Token).ConfigureAwait(false);
-        }   
+        }
 
         async Task HandleMessage(IDocumentSession session, HybridDbMessage message)
         {
@@ -335,7 +345,7 @@ namespace HybridDb.Queue
             try
             {
                 events.OnNext(new MessageReceived(context, message, cts.Token));
-                
+
                 tx.SqlTransaction.Save("MessageReceived");
 
                 session.Advanced.SessionData.Add(MessageContext.Key, context);
@@ -347,7 +357,7 @@ namespace HybridDb.Queue
                 events.OnNext(new MessageHandled(session, context, message, cts.Token));
 
                 session.SaveChanges();
-                
+
                 tx.Complete();
 
                 events.OnNext(new MessageCommitted(session, context, message, cts.Token));
@@ -372,6 +382,9 @@ namespace HybridDb.Queue
                 tx.SqlTransaction.Rollback("MessageReceived");
 
                 logger.LogError(exception, "Dispatch of command {commandId} failed 5 times. Marks command as failed. Will not retry.", message.Id);
+
+                message.Metadata["ExceptionAt"] = DateTimeOffset.Now.ToString("O");
+                message.Metadata["ExceptionDetails"] = exception.ToString();
 
                 tx.Execute(new EnqueueCommand(table, message with { Topic = $"errors/{message.Topic}" }));
 

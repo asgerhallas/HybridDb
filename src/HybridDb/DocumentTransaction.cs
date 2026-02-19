@@ -59,7 +59,7 @@ namespace HybridDb
         public SqlConnection SqlConnection { get; }
         public SqlTransaction SqlTransaction { get; }
 
-        public T Execute<T>(Command<T> command) => Store.Execute(this, command);
+        public T Execute<T>(HybridDbCommand<T> command) => Store.Execute(this, command);
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {
@@ -324,5 +324,7 @@ namespace HybridDb
         public string Sql { get; set; }
         public HybridDbParameters Parameters { get; set; }
         public int ExpectedRowCount { get; set; }
+        public Table Table { get; set; }
+        public string DocumentId { get; set; }
     }
 }

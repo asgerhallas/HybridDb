@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
 
 namespace HybridDb.Serialization
 {
     public class Discriminator
     {
-        Dictionary<Type, string> tags = new(); 
-
         public Discriminator(Type basetype, string name)
         {
             if (!IsDiscriminatable(basetype))
@@ -30,11 +27,6 @@ namespace HybridDb.Serialization
 
         public Type Basetype { get; private set; }
         public string Name { get; private set; }
-
-        public void As<T>(string name)
-        {
-            tags.Add(typeof(T), name);
-        }
 
         public static bool IsDiscriminatable(Type type)
         {

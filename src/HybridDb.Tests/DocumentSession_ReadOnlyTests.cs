@@ -1,15 +1,11 @@
-﻿using Shouldly;
+using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace HybridDb.Tests
 {
-    public class DocumentSession_ExistsTests : HybridDbTests
+    public class DocumentSession_ExistsTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        public DocumentSession_ExistsTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public void Exists_NotInDb_NotInSession()
         {

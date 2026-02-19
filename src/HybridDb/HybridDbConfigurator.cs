@@ -11,9 +11,7 @@ namespace HybridDb
 {
     public abstract class HybridDbConfigurator
     {
-        internal Configuration configuration;
-
-        protected HybridDbConfigurator() => configuration = new Configuration();
+        internal Configuration configuration = new();
 
         protected DocumentDesigner<TEntity> Document<TEntity>(string tablename = null, string discriminator = null) => configuration.Document<TEntity>(tablename, discriminator);
 
@@ -21,7 +19,7 @@ namespace HybridDb
 
         protected void UseTypeMapper(ITypeMapper typeMapper) => configuration.UseTypeMapper(typeMapper);
 
-        protected IDefaultSerializerConfigurator UseDefaultSerializer()
+        protected DefaultSerializer UseDefaultSerializer()
         {
             var serializer = new DefaultSerializer();
             configuration.UseSerializer(serializer);
@@ -45,6 +43,8 @@ namespace HybridDb
         protected void UseEventStore() => configuration.UseEventStore();
 
         protected void DisableBackgroundMigrations() => configuration.DisableBackgroundMigrations();
+
+        protected void UseMigrationBatchSize(int migrationBatchSize) => configuration.UseMigrationBatchSize(migrationBatchSize);
 
         protected void EnableUpfrontMigrationsOnTempTables() => configuration.EnableUpfrontMigrationsOnTempTables();
     }

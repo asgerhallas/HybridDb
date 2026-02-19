@@ -1,4 +1,4 @@
-﻿using HybridDb.Linq;
+using HybridDb.Linq;
 using HybridDb.Linq.Bonsai;
 using HybridDb.Linq.Compilers;
 using HybridDb.Tests.Linq.Compilers;
@@ -9,9 +9,7 @@ namespace HybridDb.Tests.Linq
 {
     public class RootCompilerTests : CompilerTests
     {
-        readonly Compiler compile;
-
-        public RootCompilerTests() => compile = CompilerBuilder.Compose(RootCompiler.Compile);
+        readonly Compiler compile = CompilerBuilder.Compose(RootCompiler.Compile);
 
         [Fact]
         public void ComparisonEqual() =>

@@ -35,13 +35,26 @@ namespace HybridDb.Config
         public DocumentDesigner<TEntity> With<TMember, TReturn>(Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options) =>
             With(configuration.ColumnNameConvention(projector), projector, converter, options);
 
-        public DocumentDesigner<TEntity> With<TMember, TReturn>(string name, Expression<Func<TEntity, TMember>> projector, Func<TMember, TReturn> converter, params Option[] options)
+        public DocumentDesigner<TEntity> With<TMember, TReturn>(
+            string name, Expression<Func<TEntity, TMember>> projector,
+            Func<TMember, TReturn> converter,
+            params Option[] options)
         {
             if (SqlTypeMap.ForNetType(Nullable.GetUnderlyingType(typeof(TReturn)) ?? typeof(TReturn)) == null)
             {
-                SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration.Serializer));
+                if (options.OfType<AsJson>().Any())
+                {
+                    SqlMapper.AddTypeHandler(new JsonTypeHandler<TReturn>(configuration.Serializer));
 
-                return With(projector, (x) => configuration.Serializer.Serialize(x), options.Concat(new MaxLength()).ToArray());
+                    return With(projector, (x) => configuration.Serializer.Serialize(x), options.Concat(new MaxLength()).ToArray());
+                }
+
+                throw new HybridDbException(
+                    $"""
+                    Invalid configuration. No matching SQL type for '{typeof(TReturn).Name}'.
+                    Use option new AsJson() if you want to serialize the projection to JSON in a nvarchar(max) column.
+                    """);
+
             }
 
             if (typeof (TReturn) == typeof (string))

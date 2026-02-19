@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
 {
-    public class AppendEvent : Command<(long Position, EventData<byte[]> Event)>
+    public class AppendEvent : HybridDbCommand<(long Position, EventData<byte[]> Event)>
     {
         public AppendEvent(Table table, int generation, EventData<byte[]> @event)
         {

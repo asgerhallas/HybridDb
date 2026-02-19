@@ -121,7 +121,7 @@ namespace HybridDb.Tests.Performance
                         .With(x => x.SomeNumber);
                 }))
                 {
-                    var commands = new List<DmlCommand>();
+                    var commands = new List<HybridDbCommand>();
                     for (var i = 0; i < 10; i++)
                     {
                         commands.Add(new InsertCommand(

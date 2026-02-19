@@ -23,11 +23,11 @@ namespace HybridDb.SqlBuilder
             fragments.AddRange(value switch
             {
                 Sql sql => sql.Fragments,
-                string str when format is "verbatim" or "@" => [new StringFragment(str)],
                 Table table => [new TableFragment(table.Name)],
                 string tableName when format is "table" => [new TableFragment(tableName)],
                 Column column => [new ColumnFragment(column)],
-                string columnName when format is "column" or "@" => [new ColumnFragment(columnName)],
+                string columnName when format is "column" => [new ColumnFragment(columnName)],
+                object obj when format is "verbatim" or "@" => obj.ToString() is {} str ? [new StringFragment(str)] : [],
                 _ when name != null && Regex.Match(name, @"^nameof\((?<ColumnName>.*?)\)$") is { Success: true } match =>
                     [new ColumnFragment(match.Groups[1].Value.Split('.').Last())],
                 _ => [new ParameterFragment(HybridDbParameters.CreateSqlParameter(name, value, null))]

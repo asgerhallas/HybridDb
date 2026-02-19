@@ -22,7 +22,7 @@ namespace HybridDb.Queue
 
             config.GetOrAddTable(new QueueTable(options.TableName));
 
-            config.Decorate<DmlCommandExecutor>((_, decoratee) => (tx, command) =>
+            config.Decorate<HybridDbCommandExecutor>((_, decoratee) => (tx, command) =>
                 Switch<object>.On(command)
                     .Match<EnqueueCommand>(enqueueCommand => EnqueueCommand.Execute(config.Serializer.Serialize, tx, enqueueCommand))
                     .Match<DequeueCommand>(dequeueCommand => DequeueCommand.Execute(config.Serializer.Deserialize, tx, dequeueCommand))

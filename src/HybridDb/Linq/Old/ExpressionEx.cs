@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace HybridDb.Linq.Old
@@ -34,12 +34,7 @@ namespace HybridDb.Linq.Old
 
         public class MemberExpressionInfo
         {
-            public MemberExpressionInfo()
-            {
-                FullName = "";
-            }
-
-            public string FullName { get; set; }
+            public string FullName { get; set; } = "";
             public MemberInfo ResultingType { get; set; }
         }
     }

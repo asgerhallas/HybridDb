@@ -1,14 +1,15 @@
+using Dapper;
+using HybridDb.Config;
+using HybridDb.Linq.Old;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using HybridDb.Config;
-using HybridDb.Linq.Old;
-using HybridDb.Queue;
 using HybridDb.SqlBuilder;
-using Microsoft.Extensions.Logging;
 using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
@@ -42,8 +43,6 @@ namespace HybridDb.Migrations.Documents
                 {
                     configuration.Notify(new MigrationStarted(store));
 
-                    const int batchSize = 500;
-
                     var random = new Random();
 
                     foreach (var table in configuration.Tables.Values.OfType<DocumentTable>())
@@ -65,35 +64,47 @@ namespace HybridDb.Migrations.Documents
                             {
                                 try
                                 {
-                                    var where = command.Matches(store, migration?.Version);
-
-                                    using var tx = store.BeginTransaction();
-
                                     var formattedTableName = store.Database.FormatTableNameAndEscape(table.Name);
+                                    var where = command.Matches(store, migration?.Version);
+                                    var ids = GetIds(formattedTableName, where, configuration.MigrationBatchSize);
 
-                                    var totalResults = tx
-                                        .Query<int>(Sql.From($"select count(*) from {formattedTableName} where {where}"))
-                                        .First();
-
-                                    if (totalResults == 0) break;
-
-                                    var rows = tx
-                                        .Query<object>(Sql.From($"select top {batchSize} * from {formattedTableName} with (xlock, readpast) where {where}"))
-                                        .Select(x => (IDictionary<string, object>)x)
-                                        .ToList();
+                                    if (ids.Count == 0) break;
 
                                     logger.LogInformation(Indent(@"
-                                        Migrating {NumberOfDocumentsInBatch} documents from {Table}. 
-                                        {NumberOfPendingDocuments} documents left."
-                                    ), rows.Count, table.Name, totalResults);
+                                        Migrating {NumberOfDocumentsInBatch} documents from {Table}."
+                                    ), ids.Count, table.Name);
 
-                                    foreach (var row in rows)
+                                    foreach (var id in ids)
                                     {
-                                        if (!await MigrateAndSave(store, tx, baseDesign, row))
-                                            goto nextTable;
-                                    }
+                                        using var tx = store.BeginTransaction();
 
-                                    tx.Complete();
+                                        var sql = $"select * from {formattedTableName} with (updlock, rowlock, readpast) where Id = @Id";
+
+                                        var idParameter = new DbString {Value = id, IsAnsi = false, IsFixedLength = false, Length = 850};
+
+                                        var row = tx.SqlConnection
+                                            .Query<object>(sql, new {Id = idParameter}, tx.SqlTransaction, buffered: false)
+                                            .Cast<IDictionary<string, object>>()
+                                            .FirstOrDefault();
+
+                                        // Continue if row is skipped by readpast
+                                        if (row == null)
+                                        {
+                                            continue;
+                                        }
+
+                                        if ((int)row[DocumentTable.VersionColumn] >= migration?.Version)
+                                        {
+                                            continue;
+                                        }
+
+                                        if (!await MigrateAndSave(store, tx, baseDesign, row))
+                                        {
+                                            goto nextTable;
+                                        }
+
+                                        tx.Complete();
+                                    }
                                 }
                                 catch (SqlException exception)
                                 {
@@ -135,6 +146,25 @@ namespace HybridDb.Migrations.Documents
             loop.ContinueWith(x => x).Wait();
         }
 
+        IReadOnlyList<string> GetIds(string tableName, Sql where, int batchSize)
+        {
+            using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
+
+            var ids = tx
+                .Query<string>(Sql.From(
+                    $"""
+                     select top {batchSize:@} Id 
+                     from {tableName:@} 
+                     where {where} 
+                     order by {DocumentTable.VersionColumn} desc
+                     """))
+                .ToList();
+
+            tx.Complete();
+
+            return ids;
+        }
+
         static async Task<bool> MigrateAndSave(DocumentStore store, DocumentTransaction tx, DocumentDesign baseDesign, IDictionary<string, object> row)
         {
             var key = (string) row[DocumentTable.IdColumn];
@@ -166,7 +196,8 @@ namespace HybridDb.Migrations.Documents
             {
                 store.Logger.LogError(exception,
                     "Unrecoverable exception while migrating document of type '{type}' with id '{id}'. Stopping migrator for table '{table}'.",
-                    concreteDesign.DocumentType.FullName, key,
+                    concreteDesign.DocumentType.FullName,
+                    key,
                     concreteDesign.Table.Name);
 
                 return false;

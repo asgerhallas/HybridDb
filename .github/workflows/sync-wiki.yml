@@ -1,0 +1,37 @@
+name: Sync Docs to Wiki
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Prepare docs for wiki (remove first H1 heading)
+        run: |
+          mkdir -p wiki-temp
+          # Copy all markdown files from docs to wiki-temp, removing first H1 heading
+          for file in docs/*.md; do
+            if [ -f "$file" ]; then
+              # Remove first H1 heading and fix wiki links (remove .md extension)
+              sed '1{/^# /d;}' "$file" | sed 's/(\([^)]*\)\.md)/(\1)/g' > "wiki-temp/$(basename "$file")"
+            fi
+          done
+          # Show what we're syncing
+          ls -la wiki-temp/
+        shell: bash
+      
+      - name: Sync to Wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        with:
+          path: wiki-temp/
+          token: ${{ secrets.GH_PAT }}

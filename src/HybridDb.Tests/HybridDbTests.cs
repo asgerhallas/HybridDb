@@ -23,7 +23,7 @@ namespace HybridDb.Tests
         readonly ConcurrentStack<Action> disposables;
 
         protected readonly ITestOutputHelper output;
-        protected readonly List<LogEvent> log = new List<LogEvent>();
+        protected readonly List<LogEvent> log = [];
         protected readonly ILogger logger;
         
         protected string connectionString;
@@ -67,12 +67,9 @@ namespace HybridDb.Tests
             }
         }
 
-        protected static string GetConnectionString() =>
-            IsAppveyor
-                ? "Server=(local)\\SQL2019;Database=master;User ID=sa;Password=Password12!;Encrypt=False"
-                : "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True";
+        protected static string GetConnectionString() => "Data Source=(LocalDb)\\MSSQLLocalDB;Integrated Security=True;Max Pool Size=200;";
 
-        public static bool IsAppveyor => Environment.GetEnvironmentVariable("APPVEYOR") != null;
+        public static bool IsGithubActions => Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != null;
 
         protected void NoInitialize() => autoInitialize = false;
 
@@ -186,7 +183,7 @@ namespace HybridDb.Tests
                 : Path.Combine(
                     type.Namespace
                         .Replace($"{assemblyName}.", "")
-                        .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries));
+                        .Split(['.'], StringSplitOptions.RemoveEmptyEntries));
 
             var basePath = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory!;
 
@@ -195,7 +192,7 @@ namespace HybridDb.Tests
 
         protected void Setup(string path)
         {
-            var commands = File.ReadAllText(path).Split(new[] { "GO" }, StringSplitOptions.RemoveEmptyEntries);
+            var commands = File.ReadAllText(path).Split(["GO"], StringSplitOptions.RemoveEmptyEntries);
 
             using var cnn = new SqlConnection(connectionString);
 
@@ -211,7 +208,7 @@ namespace HybridDb.Tests
             return disposable;
         }
 
-        List<string> Ids = new List<string>();
+        List<string> Ids = [];
 
         protected string Id(int index = 1) => Ids[index - 1];
         protected string NewId()
@@ -252,21 +249,15 @@ namespace HybridDb.Tests
 
         public class Entity : ISomeInterface
         {
-            public Entity()
-            {
-                TheChild = new Child();
-                Children = new List<Child>();
-            }
-
             public string Id { get; set; }
             public string ProjectedProperty { get; set; }
-            public List<Child> Children { get; set; }
+            public List<Child> Children { get; set; } = [];
             public string Field;
             public string Property { get; set; }
             public int Number { get; set; }
             public DateTime DateTimeProp { get; set; }
             public SomeFreakingEnum EnumProp { get; set; }
-            public Child TheChild { get; set; }
+            public Child TheChild { get; set; } = new();
             public ComplexType Complex { get; set; }
 
             public class Child
@@ -317,20 +308,14 @@ namespace HybridDb.Tests
             Two
         }
 
-        public class ChangeDocumentAsJObject<T> : ChangeDocument<T>
+        public class ChangeDocumentAsJObject<T>(Action<JObject> change) : ChangeDocument<T>((session, serializer, row) =>
         {
-            public ChangeDocumentAsJObject(Action<JObject> change)
-                : base((session, serializer, row) =>
-                {
-                    var jObject = (JObject)serializer.Deserialize(row.Get(DocumentTable.DocumentColumn), typeof(JObject));
-                    
-                    change(jObject);
-                    
-                    return serializer.Serialize(jObject);
-                })
-            {
-            }
-        }
+            var jObject = (JObject)serializer.Deserialize(row.Get(DocumentTable.DocumentColumn), typeof(JObject));
+
+            change(jObject);
+
+            return serializer.Serialize(jObject);
+        });
     }
 
     namespace Namespace1

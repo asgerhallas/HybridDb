@@ -58,7 +58,7 @@ namespace HybridDb.Migrations.Schema
         {
             var sw = Stopwatch.StartNew();
 
-            store.Database.RawExecute(Sql.From($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT")} SET ALLOW_SNAPSHOT_ISOLATION ON;"));
+            store.Database.RawExecute(Sql.From($"ALTER DATABASE {(store.TableMode == TableMode.GlobalTempTables ? "TempDb" : "CURRENT"):@} SET ALLOW_SNAPSHOT_ISOLATION ON;"));
 
             if (isTempTables)
             {
@@ -125,18 +125,18 @@ namespace HybridDb.Migrations.Schema
 
             store.Execute(new CreateTable(metadata));
 
-            var hybridDbTableName = store.Database.FormatTableNameAndEscape(metadata.Name);
-
             store.Database.RawExecute(Sql.From($@"
-                if not exists (select * from {hybridDbTableName})
-                    insert into {hybridDbTableName} (SchemaVersion) values (-1);"), 
+                if not exists (select * from {metadata})
+                    insert into {metadata} (SchemaVersion) values (-1);"), 
                 schema: true);
         }
 
         int GetAndUpdateSchemaVersion(int nextSchemaVersion)
         {
+            var metadata = store.Configuration.GetMetadataTable();
+
             var currentSchemaVersion = store.Database.RawQuery<int>(Sql.From($@"
-                update {store.Database.FormatTableNameAndEscape("HybridDb")}
+                update {metadata}
                 set [SchemaVersion] = {nextSchemaVersion}
                 output DELETED.SchemaVersion"), 
                 schema: true
@@ -228,9 +228,10 @@ namespace HybridDb.Migrations.Schema
             foreach (var tablename in requiresReprojection.Distinct())
             {
                 var design = store.Configuration.TryGetDesignByTablename(tablename);
+
                 if (design == null) continue;
 
-                store.Database.RawExecute(Sql.From($"update {store.Database.FormatTableNameAndEscape(tablename)} set AwaitsReprojection={true}"),
+                store.Database.RawExecute(Sql.From($"update {design.Table} set AwaitsReprojection={true}"),
                     schema: true,
                     commandTimeout: 300);
             }

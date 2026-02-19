@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using HybridDb.Config;
 
 namespace HybridDb.Commands
 {
-    public class DeleteCommand : Command<Guid>
+    public class DeleteCommand : HybridDbCommand<Guid>
     {
         public DocumentTable Table { get; }
         public string Key { get; }
@@ -56,7 +56,9 @@ namespace HybridDb.Commands
             {
                 Sql = sql.ToString(),
                 Parameters = parameters,
-                ExpectedRowCount = 1
+                ExpectedRowCount = 1,
+                Table = command.Table,
+                DocumentId = command.Key
             });
 
             return tx.CommitId;

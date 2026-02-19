@@ -1,32 +1,26 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/ud71up5svo5mhcas/branch/master?svg=true)](https://ci.appveyor.com/project/asgerhallas/hybriddb/branch/master)
+[![Build](https://github.com/asgerhallas/HybridDb/actions/workflows/dotnet.yml/badge.svg?branch=master)](https://github.com/asgerhallas/HybridDb/actions/workflows/dotnet.yml)
+[![NuGet](https://img.shields.io/nuget/v/HybridDb.svg)](https://www.nuget.org/packages/HybridDb)
 
 HybridDb
 ========
 
 HybridDb makes it easy to store and query semi-structured data and documents in SQL Server.
 
+**[📚 Read the Documentation](docs/Home.md)** to get started quickly.
+
 HybridDb gives you:
 
-- A unit of work API similar to NHibernate or RavenDB
-- Easy schemaless and mostly mappingless persistance of any .NET object
+- An opinionated and very easy to use Unit of Work API
+- Easy schemaless - and mostly mappingless - persistance of any .NET object
 - A few simple indexing features that enables querying on document properties
-- A LINQ provider for mentioned queries
-- All the consistency and transactionality of a relational database
-- Migration tools for document changes and index changes
+- A LINQ provider for mentioned queries and an SqlBuilder for the advanced stuff 
+- All the consistency, transactionality and performance of Sql Server
+- Migration tools for document and index changes
+- A message queue that integrates seamlessly (and consistently) with the rest
 
 HybridDb aims to be a small and focused library with no magic and no surprises.
 
 So if all you need is to put some JSON to rest - on a single server, in simple manner - HybridDb might be the tool for you.
-
-Why?
-====
-
-We have been happy users of the [awesome RavenDB](http://ravendb.net/) for a quite a while,
-but we ran into some performance issues that we were not able to dodge ([read more here](https://groups.google.com/d/topic/ravendb/6NjiJpzYxyI/discussion)).
-
-With no solution to the problem in sight - and in the lucky situation that we did not rely on any of RavenDB's more advanced features - we decided to write a drop-in replacement to run on top of SQL Server.
-
-HybridDb is the result of this effort and fulfills our modest requirements - and we hope it can be useful for others too.
 
 How?
 ====
@@ -34,21 +28,30 @@ How?
 Like this:
 
     var store = DocumentStore.ForTesting(TableMode.TempTables);
+
     store.Document<Entity>().With(x => x.Property);
 
     using (var session = store.OpenSession())
     {
-        session.Store(new Entity { Id = Guid.NewGuid(), Property = 2001, Field = "Hello" });
+        session.Store(new Entity { 
+            Id = Guid.NewGuid(), 
+            Property = 1999, 
+            Field = "New document" 
+        });
+
         session.SaveChanges();
     }
 
     using (var session = store.OpenSession())
     {
-        var entity = session.Query<Entity>().Single(x => x.Property > 2000);
-        entity.Property++;
+        var existingEntity = session.Query<Entity>().Single(x => x.Property < 2000);
+
+        existingEntity.Property++;
+
         session.SaveChanges();
     }
 
+For more information, see the [documentation](docs/Home.md).
 
 Acknowledgements
 ================

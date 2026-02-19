@@ -4,7 +4,7 @@ using HybridDb.Commands;
 
 namespace HybridDb.Events.Commands
 {
-    public class GetPositionOf : Command<Position>
+    public class GetPositionOf : HybridDbCommand<Position>
     {
         public GetPositionOf(EventTable table, Guid commitId)
         {

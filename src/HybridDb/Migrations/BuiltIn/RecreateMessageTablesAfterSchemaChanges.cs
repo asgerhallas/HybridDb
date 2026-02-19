@@ -25,19 +25,17 @@ namespace HybridDb.Migrations.BuiltIn
             {
                 foreach (var table in store.Configuration.Tables.Values.OfType<QueueTable>())
                 {
-                    var tableNameEscaped = store.Database.FormatTableNameAndEscape(table.Name);
-                    var tableNameOld = $"{table.Name}_old";
-                    var oldTableNameEscaped = store.Database.FormatTableNameAndEscape(tableNameOld);
+                    var oldTable = new Table($"{table.Name}_old");
 
                     // Rename the old table and the primary key
-                    store.Execute(new RenameTable(table.Name, $"{table.Name}_old"));
-                    store.Database.RawExecute(Sql.From($"sp_rename [PK_{table.Name}], [PK_{table.Name}_old]"));
+                    store.Execute(new RenameTable(table, oldTable));
+                    store.Database.RawExecute(Sql.From($"sp_rename [PK_{table.Name:@}], [PK_{oldTable.Name:@}]"));
 
                     // Create the new table as it should be, with correct ordering of columns
                     store.Execute(table.GetCreateCommand());
 
                     var columns = GetColumns(store.Database, table.Name);
-                    var columnsOld = GetColumns(store.Database, tableNameOld);
+                    var columnsOld = GetColumns(store.Database, oldTable.Name);
                     var columnNamesOldEscaped = string.Join(", ", columnsOld.Select(x => store.Database.Escape(x.Name)));
 
                     // Adding a new identity field when the old table already has one or more identity fields
@@ -45,15 +43,16 @@ namespace HybridDb.Migrations.BuiltIn
                     var identityInsertOn = columns.Count(x => x.IsIdentity == 1) == columnsOld.Count(x => x.IsIdentity == 1);
 
                     // Move the data from the old to the new table
-                    store.Database.RawExecute(Sql.From(
-                        $"""
-                             {(identityInsertOn ? $"set identity_insert {tableNameEscaped} on;" : "")}
-                             insert into {tableNameEscaped} ({columnNamesOldEscaped})
-                             select {columnNamesOldEscaped} from {oldTableNameEscaped};
-                             {(identityInsertOn ? $"set identity_insert {tableNameEscaped} off;" : "")}
-                         """));
+                    store.Database.RawExecute(Sql
+                        .From(identityInsertOn, $"set identity_insert {table} on;")
+                        .Append(
+                            $"""
+                             insert into {table} ({columnNamesOldEscaped:@})
+                             select {columnNamesOldEscaped:@} from {oldTable};
+                             """)
+                        .Append(identityInsertOn, $"set identity_insert {table} off;"));
 
-                    store.Database.RawExecute(Sql.From($"drop table {oldTableNameEscaped};"));
+                    store.Database.RawExecute(Sql.From($"drop table {oldTable};"));
                 }
             }
 

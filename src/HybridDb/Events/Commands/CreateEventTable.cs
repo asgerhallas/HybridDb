@@ -21,9 +21,9 @@ namespace HybridDb.Events.Commands
             var tableName = store.Database.FormatTableName(EventTable.Name);
 
             store.Database.RawExecute(Sql.From($@"
-                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName}')
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '{tableName:@}')
                 BEGIN                       
-                    CREATE TABLE [dbo].[{tableName}] (
+                    CREATE TABLE [dbo].{EventTable} (
 	                    [Position] [bigint] NOT NULL IDENTITY(0,1),
                         [RowVersion] [rowversion] NOT NULL,
                         [EventId] [uniqueidentifier] NOT NULL,
@@ -35,14 +35,14 @@ namespace HybridDb.Events.Commands
 	                    [Metadata] [nvarchar](max) NULL,
 	                    [Data] [varbinary](max) NULL,
 
-                        CONSTRAINT [PK_{tableName}] PRIMARY KEY CLUSTERED ([Position] ASC)
+                        CONSTRAINT [PK_{tableName:@}] PRIMARY KEY CLUSTERED ([Position] ASC)
                     )
 
-                    CREATE UNIQUE NONCLUSTERED INDEX [{tableName}_StreamId_SequenceNumber] ON [dbo].[{tableName}] ([StreamId] ASC, [SequenceNumber] ASC)
+                    CREATE UNIQUE NONCLUSTERED INDEX [{tableName:@}_StreamId_SequenceNumber] ON [dbo].[{tableName:@}] ([StreamId] ASC, [SequenceNumber] ASC)
 
-                    CREATE UNIQUE NONCLUSTERED INDEX [{tableName}_EventId] ON [dbo].[{tableName}] ([EventId])  
+                    CREATE UNIQUE NONCLUSTERED INDEX [{tableName:@}_EventId] ON [dbo].[{tableName:@}] ([EventId])  
 
-                    CREATE NONCLUSTERED INDEX [{tableName}_CommitId] ON [dbo].[{tableName}] ([CommitId])  
+                    CREATE NONCLUSTERED INDEX [{tableName:@}_CommitId] ON [dbo].[{tableName:@}] ([CommitId])  
 
                 END"), schema: true);
         }

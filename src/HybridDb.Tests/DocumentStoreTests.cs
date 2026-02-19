@@ -6,6 +6,7 @@ using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
 using HybridDb.SqlBuilder;
+using Microsoft.Data.SqlClient;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
@@ -14,10 +15,9 @@ using static HybridDb.Helpers;
 
 namespace HybridDb.Tests
 {
-    public class DocumentStoreTests : HybridDbTests
+    public class DocumentStoreTests(ITestOutputHelper output) : HybridDbTests(output)
     {
-        readonly string documentAsByteArray = "asger";
-        public DocumentStoreTests(ITestOutputHelper output) : base(output) { }
+        const string document = "asger";
 
         [Fact]
         public void CanInsert()
@@ -26,15 +26,15 @@ namespace HybridDb.Tests
 
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            store.Insert(table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table, id, new { Field = "Asger", Document = document });
 
             var row = store.Query(table, out _).Single();
 
             //var row = store.Database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((string)row["Id"]).ShouldBe(id);
-            ((Guid)row["Etag"]).ShouldNotBe(Guid.Empty);
-            ((string)row["Document"]).ShouldBe("asger");
-            ((string)row["Field"]).ShouldBe("Asger");
+            row.Get<string>("Id").ShouldBe(id);
+            row.Get<Guid>("Etag").ShouldNotBe(Guid.Empty);
+            row.Get<string>("Document").ShouldBe("asger");
+            row.Get<string>("Field").ShouldBe("Asger");
         }
 
         [Fact]
@@ -49,8 +49,8 @@ namespace HybridDb.Tests
             store.Update(table, id, etag, new { Field = "Lars" });
 
             var row = store.Query(table, out _).Single();
-            ((Guid)row["Etag"]).ShouldNotBe(etag);
-            ((string)row["Field"]).ShouldBe("Lars");
+            row.Get<Guid>("Etag").ShouldNotBe(etag);
+            row.Get<string>("Field").ShouldBe("Lars");
         }
 
         [Fact]
@@ -72,9 +72,16 @@ namespace HybridDb.Tests
 
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, id, Guid.NewGuid(), new { Field = "Lars" }));
+            Should.Throw<ConcurrencyException>(() =>
+                store.Update(table.Table, id, etag: Guid.NewGuid(), new { Field = "Lars" })
+            ).Message.ShouldBe(
+               $"""
+                Someone beat you to it. Expected 1 changes, but got 0.
+                
+                The transaction is rolled back now. Document in table 'Entities' with Id '{id}' was not saved.
+                """);
         }
 
         [Fact]
@@ -83,11 +90,19 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var etag = Guid.NewGuid();
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
-            Should.Throw<ConcurrencyException>(() => store.Update(table.Table, NewId(), etag, new { Field = "Lars" }));
+            var newId = NewId();
+
+            Should.Throw<ConcurrencyException>(() =>
+                store.Update(table.Table, newId, etag, new { Field = "Lars" })
+            ).Message.ShouldBe(
+                $"""
+                 Someone beat you to it. Expected 1 changes, but got 0.
+
+                 The transaction is rolled back now. Document in table 'Entities' with Id '{newId}' was not saved.
+                 """); ;
         }
 
         [Fact]
@@ -97,14 +112,14 @@ namespace HybridDb.Tests
 
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new { Field = "Asger", ComplexToString = "AB", Document = documentAsByteArray });
+            var etag = store.Insert(table.Table, id, new { Field = "Asger", ComplexToString = "AB", Document = document });
 
             var row = store.Get(table.Table, id);
-            row[DocumentTable.IdColumn].ShouldBe(id);
-            row[DocumentTable.EtagColumn].ShouldBe(etag);
-            row[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
-            row[table.Table["Field"]].ShouldBe("Asger");
-            row[table.Table["ComplexToString"]].ShouldBe("AB");
+            row.Get(DocumentTable.IdColumn).ShouldBe(id);
+            row.Get(DocumentTable.EtagColumn).ShouldBe(etag);
+            row.Get(DocumentTable.DocumentColumn).ShouldBe(document);
+            row.Get<string>("Field").ShouldBe("Asger");
+            row.Get<string>("ComplexToString").ShouldBe("AB");
         }
 
         [Fact]
@@ -114,13 +129,13 @@ namespace HybridDb.Tests
 
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            var etag = store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
             var row = store.Get(new DocumentTable("Entities"), id);
-            row[DocumentTable.IdColumn].ShouldBe(id);
-            row[DocumentTable.EtagColumn].ShouldBe(etag);
-            row[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
-            row[table.Table["Field"]].ShouldBe("Asger");
+            row.Get(DocumentTable.IdColumn).ShouldBe(id);
+            row.Get(DocumentTable.EtagColumn).ShouldBe(etag);
+            row.Get(DocumentTable.DocumentColumn).ShouldBe(document);
+            row.Get<string>("Field").ShouldBe("Asger");
         }
 
         [Fact]
@@ -164,24 +179,24 @@ namespace HybridDb.Tests
             var id2 = NewId();
             var id3 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
-            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
-            store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
+            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = document });
+            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = document });
+            store.Insert(table.Table, id3, new { Field = "Bjarne", Document = document });
 
             QueryStats stats;
             var rows = store.Query(table.Table, out stats, where: "Field != @name", parameters: new { name = "Bjarne" }).ToList();
 
             rows.Count().ShouldBe(2);
-            var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
-            first[DocumentTable.EtagColumn].ShouldBe(etag1);
-            first[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
-            first[table.Table["Field"]].ShouldBe("Asger");
+            var first = rows.Single(x => x.Get(DocumentTable.IdColumn) == id1);
+            first.Get(DocumentTable.EtagColumn).ShouldBe(etag1);
+            first.Get(DocumentTable.DocumentColumn).ShouldBe(document);
+            first.Get<string>("Field").ShouldBe("Asger");
 
-            var second = rows.Single(x => (string)x[DocumentTable.IdColumn] == id2);
-            second[DocumentTable.IdColumn].ShouldBe(id2);
-            second[DocumentTable.EtagColumn].ShouldBe(etag2);
-            second[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
-            second[table.Table["Field"]].ShouldBe("Hans");
+            var second = rows.Single(x => x.Get(DocumentTable.IdColumn) == id2);
+            second.Get(DocumentTable.IdColumn).ShouldBe(id2);
+            second.Get(DocumentTable.EtagColumn).ShouldBe(etag2);
+            second.Get(DocumentTable.DocumentColumn).ShouldBe(document);
+            second.Get<string>("Field").ShouldBe("Hans");
         }
 
         [Fact]
@@ -192,29 +207,27 @@ namespace HybridDb.Tests
             var id1 = NewId();
             var id2 = NewId();
             var id3 = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = documentAsByteArray });
-            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = documentAsByteArray });
-            store.Insert(table.Table, id3, new { Field = "Bjarne", Document = documentAsByteArray });
-
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
+            var design = store.Configuration.GetDesignFor<Entity>();
+            var etag1 = store.Insert(design.Table, id1, new { Field = "Asger", Document = document });
+            var etag2 = store.Insert(design.Table, id2, new { Field = "Hans", Document = document });
+            store.Insert(design.Table, id3, new { Field = "Bjarne", Document = document });
 
             var name = "Bjarne";
-            var sql = Sql.Empty.Append($"select * from {tableName} where Field != {name}");
+            var sql = Sql.Empty.Append($"select * from {design.Table} where Field != {name}");
 
             var rows = store.Query(sql).ToList();
 
             rows.Count().ShouldBe(2);
-            var first = rows.Single(x => (string)x[DocumentTable.IdColumn] == id1);
-            first[DocumentTable.EtagColumn].ShouldBe(etag1);
-            first[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
-            first[table.Table["Field"]].ShouldBe("Asger");
+            var first = rows.Single(x => x.Get(DocumentTable.IdColumn) == id1);
+            first.Get(DocumentTable.EtagColumn).ShouldBe(etag1);
+            first.Get(DocumentTable.DocumentColumn).ShouldBe(document);
+            first.Get<string>("Field").ShouldBe("Asger");
 
-            var second = rows.Single(x => (string)x[DocumentTable.IdColumn] == id2);
-            second[DocumentTable.IdColumn].ShouldBe(id2);
-            second[DocumentTable.EtagColumn].ShouldBe(etag2);
-            second[DocumentTable.DocumentColumn].ShouldBe(documentAsByteArray);
-            second[table.Table["Field"]].ShouldBe("Hans");
+            var second = rows.Single(x => x.Get(DocumentTable.IdColumn) == id2);
+            second.Get(DocumentTable.IdColumn).ShouldBe(id2);
+            second.Get(DocumentTable.EtagColumn).ShouldBe(etag2);
+            second.Get(DocumentTable.DocumentColumn).ShouldBe(document);
+            second.Get<string>("Field").ShouldBe("Hans");
         }
 
         [Fact]
@@ -225,7 +238,7 @@ namespace HybridDb.Tests
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
-            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
             var t = new { Field = "" };
 
@@ -244,15 +257,14 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var design = store.Configuration.GetDesignFor<Entity>();
 
-            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(design.Table, id, new { Field = "Asger", Document = document });
 
             var t = new { Field = "" };
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
             var name = "Asger";
-            var sql = Sql.Empty.Append($"select Field from {tableName} where Field = {name}");
+            var sql = Sql.Empty.Append($"select Field from {design.Table} where Field = {name}");
 
             IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql).Cast<dynamic>();
 
@@ -270,7 +282,7 @@ namespace HybridDb.Tests
             var id = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
 
-            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(table.Table, id, new { Field = "Asger", Document = document });
 
             QueryStats stats;
             var rows = store.Query<string>(table.Table, out stats, select: "Field").Select(x => x.Data).ToList();
@@ -284,12 +296,11 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var design = store.Configuration.GetDesignFor<Entity>();
 
-            store.Insert(table.Table, id, new { Field = "Asger", Document = documentAsByteArray });
+            store.Insert(design.Table, id, new { Field = "Asger", Document = document });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = Sql.Empty.Append($"select Field from {tableName}");
+            var sql = Sql.Empty.Append($"select Field from {design.Table}");
 
             var rows = store.Query<string>(sql).ToList();
 
@@ -304,16 +315,16 @@ namespace HybridDb.Tests
             var id1 = NewId();
             var id2 = NewId();
             var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = documentAsByteArray });
-            store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
+            store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = document });
+            store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = document });
 
             QueryStats stats;
             var rows = store.Query(new DocumentTable("Entities"), out stats, where: "Field = @name", parameters: new { name = "Asger" }).ToList();
 
             rows.Count().ShouldBe(1);
             var row = rows.Single();
-            row[table.Table["Field"]].ShouldBe("Asger");
-            row[table.Table["Property"]].ShouldBe("A");
+            row.Get<string>("Field").ShouldBe("Asger");
+            row.Get<string>("Property").ShouldBe("A");
         }
 
         [Fact]
@@ -323,21 +334,19 @@ namespace HybridDb.Tests
 
             var id1 = NewId();
             var id2 = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = documentAsByteArray });
-            store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = documentAsByteArray });
+            var design = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(design.Table, id1, new { Field = "Asger", Property = "A", Document = document });
+            store.Insert(design.Table, id2, new { Field = "Hans", Property = "B", Document = document });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var column = table.Table.Columns.Single(x => x.Name == "Field");
             var name = "Asger";
-            var sql = Sql.Empty.Append($"select * from {tableName} where Field = {name}");
+            var sql = Sql.Empty.Append($"select * from {design.Table} where Field = {name}");
 
             var rows = store.Query(sql).ToList();
 
             rows.Count.ShouldBe(1);
             var row = rows.Single();
-            row[table.Table["Field"]].ShouldBe("Asger");
-            row[table.Table["Property"]].ShouldBe("A");
+            row.Get<string>("Field").ShouldBe("Asger");
+            row.Get<string>("Property").ShouldBe("A");
         }
 
         [Fact]
@@ -375,7 +384,27 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, id, Guid.NewGuid()));
+            Should.Throw<ConcurrencyException>(() =>
+                store.Delete(table.Table, id, Guid.NewGuid())
+            ).Message.ShouldBe(
+                $"""
+                 Someone beat you to it. Expected 1 changes, but got 0.
+
+                 The transaction is rolled back now. Document in table 'Entities' with Id '{id}' was not saved.
+                 """);
+        }
+
+        [Fact]
+        public void InsertDuplicateKeys()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(table.Table, id, new { });
+
+            Should.Throw<SqlException>(() => store.Insert(table.Table, id, new { }))
+                .Number.ShouldBe(2627);
         }
 
         [Fact]
@@ -387,7 +416,16 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             var etag = store.Insert(table.Table, id, new { });
 
-            Should.Throw<ConcurrencyException>(() => store.Delete(table.Table, NewId(), etag));
+            var newId = NewId();
+
+            Should.Throw<ConcurrencyException>(() =>
+                store.Delete(table.Table, newId, etag)
+            ).Message.ShouldBe(
+                $"""
+                 Someone beat you to it. Expected 1 changes, but got 0.
+
+                 The transaction is rolled back now. Document in table 'Entities' with Id '{newId}' was not saved.
+                 """);
         }
 
         [Fact]
@@ -446,7 +484,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { EnumProp = SomeFreakingEnum.Two });
 
             var result = store.Get(table.Table, id);
-            result[table.Table["EnumProp"]].ShouldBe(SomeFreakingEnum.Two.ToString());
+            result.Get<string>("EnumProp").ShouldBe(SomeFreakingEnum.Two.ToString());
         }
 
         [Fact]
@@ -473,7 +511,7 @@ namespace HybridDb.Tests
             store.Insert(table.Table, id, new { Property = "Hest" });
 
             var result = store.Get(table.Table, id);
-            result[table.Table["Property"]].ShouldBe("Hest");
+            result.Get<string>("Property").ShouldBe("Hest");
         }
 
         [Fact]
@@ -501,7 +539,7 @@ namespace HybridDb.Tests
 
             QueryStats stats;
             var result = store.Query(table.Table, out stats, where: "DateTimeProp = @dtp", parameters: new { dtp = new DateTime(2001, 12, 24, 1, 1, 1) });
-            result.First()[table.Table["DateTimeProp"]].ShouldBe(new DateTime(2001, 12, 24, 1, 1, 1));
+            result.First().Get<DateTime>("DateTimeProp").ShouldBe(new DateTime(2001, 12, 24, 1, 1, 1));
         }
 
         [Fact]
@@ -517,7 +555,7 @@ namespace HybridDb.Tests
             var result = store.Query(table.Table, out stats, window: new SkipTake(2, 5), orderby: "Number").ToList();
 
             result.Count.ShouldBe(5);
-            var props = result.Select(x => x[table.Table["Number"]]).ToList();
+            var props = result.Select(x => x.Get<int>("Number")).ToList();
             props.ShouldContain(2);
             props.ShouldContain(3);
             props.ShouldContain(4);
@@ -539,7 +577,7 @@ namespace HybridDb.Tests
             var result = store.Query(table.Table, out stats, window: new SkipTake(0, 2), orderby: "Number").ToList();
 
             result.Count.ShouldBe(2);
-            var props = result.Select(x => x[table.Table["Number"]]).ToList();
+            var props = result.Select(x => x.Get<int>("Number")).ToList();
             props.ShouldContain(0);
             props.ShouldContain(1);
             stats.TotalResults.ShouldBe(10);
@@ -558,7 +596,7 @@ namespace HybridDb.Tests
             var result = store.Query(table.Table, out stats, window: new SkipTake(7, 0), orderby: "Number").ToList();
 
             result.Count.ShouldBe(3);
-            var props = result.Select(x => x[table.Table["Number"]]).ToList();
+            var props = result.Select(x => x.Get<int>("Number")).ToList();
             props.ShouldContain(7);
             props.ShouldContain(8);
             props.ShouldContain(9);
@@ -700,7 +738,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, orderby: "Field").ToList();
 
-            var props = result.Select(x => x[table.Table["Field"]]).ToList();
+            var props = result.Select(x => x.Get<string>("Field")).ToList();
             props[0].ShouldBe("1");
             props[1].ShouldBe("2");
             props[2].ShouldBe("3");
@@ -720,7 +758,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id").ToList();
 
-            var props = result.Select(x => x[table.Table["Field"]]).ToList();
+            var props = result.Select(x => x.Get<string>("Field")).ToList();
             props[0].ShouldBe("1");
             props[1].ShouldBe("2");
             props[2].ShouldBe("3");
@@ -740,7 +778,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, select: "Field", orderby: "Id", window: new SkipTake(1, 1)).Single();
 
-            result[table.Table["Field"]].ShouldBe("2");
+            result.Get<string>("Field").ShouldBe("2");
         }
 
         [Fact]
@@ -755,7 +793,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, window: new SkipTake(2, 2), orderby: "Field desc").ToList();
 
-            var props = result.Select(x => x[table.Table["Field"]]).ToList();
+            var props = result.Select(x => x.Get<string>("Field")).ToList();
             props[0].ShouldBe("3");
             props[1].ShouldBe("2");
         }
@@ -879,7 +917,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, window: new SkipToId(ids[index], 5), orderby: "Number").ToList();
 
-            result.Select(x => (int)x[table.Table["Number"]])
+            result.Select(x => x.Get<int>("Number"))
                 .ShouldBe(expected);
 
             stats.TotalResults.ShouldBe(17);
@@ -909,7 +947,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, where: "Number % 2 = 0", window: new SkipToId(ids[index], 5), orderby: "Number").ToList();
 
-            result.Select(x => (int)x[table.Table["Number"]])
+            result.Select(x => x.Get<int>("Number"))
                 .ShouldBe(expected);
 
             stats.TotalResults.ShouldBe(9);
@@ -934,7 +972,7 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query(table.Table, out stats, where: "Number = -1", window: new SkipToId(ids[0], 5), orderby: "Number").ToList();
 
-            result.Select(x => (int)x[table.Table["Number"]])
+            result.Select(x => x.Get<int>("Number"))
                 .ShouldBeEmpty();
 
             stats.TotalResults.ShouldBe(0);
@@ -1050,7 +1088,7 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryWithPropertyOfComplexType()
         {
-            Document<Entity>().With(x => x.Complex).With(x => x.Number);
+            Document<Entity>().With(x => x.Complex, new AsJson()).With(x => x.Number);
 
             using var session = store.OpenSession();
 
@@ -1065,8 +1103,9 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryWithPropertyOfComplexTypes()
         {
-            Document<Entity>().With(x => x.Complex)
-                .With(x => x.TheChild)
+            Document<Entity>()
+                .With(x => x.Complex, new AsJson())
+                .With(x => x.TheChild, new AsJson())
                 .With(x => x.Property);
 
             var entity = new Entity
@@ -1088,8 +1127,8 @@ namespace HybridDb.Tests
         public void QueryWithListsOfComplexType()
         {
             Document<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>()
-                .With(x => x.Things)
-                .With(x => x.OtherThings);
+                .With(x => x.Things, new AsJson())
+                .With(x => x.OtherThings, new AsJson());
 
             using var session = store.OpenSession();
 

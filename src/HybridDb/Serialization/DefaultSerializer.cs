@@ -16,7 +16,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace HybridDb.Serialization
 {
-    internal class DefaultSerializer : ISerializer, IDefaultSerializerConfigurator
+    public class DefaultSerializer : ISerializer
     {
         Action<JsonSerializerSettings> setup = x => { };
 
@@ -39,7 +39,7 @@ namespace HybridDb.Serialization
             contractResolver = new HybridDbContractResolver(this);
         }
 
-        public IDefaultSerializerConfigurator EnableAutomaticBackReferences(params Type[] valueTypes)
+        public DefaultSerializer EnableAutomaticBackReferences(params Type[] valueTypes)
         {
             AddContractMutator(new AutomaticBackReferencesContractMutator());
 
@@ -52,7 +52,7 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public IDefaultSerializerConfigurator EnableDiscriminators(params Discriminator[] discriminators)
+        public DefaultSerializer EnableDiscriminators(params Discriminator[] discriminators)
         {
             var collection = new Discriminators(discriminators);
 
@@ -65,7 +65,7 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public IDefaultSerializerConfigurator Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
+        public DefaultSerializer Hide<T, TReturn>(Expression<Func<T, TReturn>> selector, Func<TReturn> @default)
         {
             if (selector.Body is not MemberExpression memberExpression)
             {
@@ -77,21 +77,40 @@ namespace HybridDb.Serialization
             return this;
         }
 
-        public IDefaultSerializerConfigurator Hide<T>(string name, Func<object> @default)
+        public DefaultSerializer Hide<T>(string name, Func<object> @default)
         {
             AddContractMutator(new HidePropertyContractMutatator<T>(name, @default));
 
             return this;
         }
 
-        public void AddConverters(params JsonConverter[] converters) =>
-            this.converters = this.converters.Concat(converters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
+        public DefaultSerializer AddConverters(params JsonConverter[] newConverters)
+        {
+            converters = converters.Concat(newConverters).OrderBy(x => x is DiscriminatedTypeConverter).ToList();
 
-        public void AddContractMutator(IContractMutator mutator) => contractFilters.Add(mutator);
+            return this;
+        }
 
-        public void Order(int index, Func<JsonProperty, bool> predicate) => ordering.Insert(index, predicate);
+        public DefaultSerializer AddContractMutator(IContractMutator mutator)
+        {
+            contractFilters.Add(mutator);
 
-        public void Setup(Action<JsonSerializerSettings> action) => setup += action;
+            return this;
+        }
+
+        public DefaultSerializer Order(int index, Func<JsonProperty, bool> predicate)
+        {
+            ordering.Insert(index, predicate);
+
+            return this;
+        }
+
+        public DefaultSerializer Setup(Action<JsonSerializerSettings> action)
+        {
+            setup += action;
+
+            return this;
+        }
 
         /// <summary>
         /// The reference ids of a JsonSerializer used multiple times will continue to increase on each serialization.
@@ -115,33 +134,29 @@ namespace HybridDb.Serialization
             return JsonSerializer.Create(settings);
         }
 
-
         public virtual string Serialize(object obj)
         {
-            using (var stream = new StringWriter())
-            using (var writer = new JsonTextWriter(stream))
-            {
-                CreateSerializer().Serialize(writer, obj);
+            using var stream = new StringWriter();
+            using var writer = new JsonTextWriter(stream);
 
-                writer.Flush();
+            CreateSerializer().Serialize(writer, obj);
 
-                return stream.ToString();
-            }
+            writer.Flush();
+
+            return stream.ToString();
         }
 
         public virtual object Deserialize(string data, Type type)
         {
-            using (var stream = new StringReader(data))
-            using (var reader = new JsonTextReader(stream))
-            {
-                return CreateSerializer().Deserialize(reader, type);
-            }
+            using var stream = new StringReader(data);
+            using var reader = new JsonTextReader(stream);
+
+            return CreateSerializer().Deserialize(reader, type);
         }
 
         public class HybridDbContractResolver : DefaultContractResolver
         {
-            static readonly Regex matchesBackingFieldForAutoProperty = new(@"\<(?<name>.*?)\>k__BackingField");
-            static readonly Regex matchesFieldNameForAnonymousType = new(@"\<(?<name>.*?)\>i__Field");
+            static readonly Regex matchesCompilerGeneratedBackingField = new(@"\<(?<name>.*?)\>");
 
             readonly ConcurrentDictionary<Type, JsonContract> contracts = new();
             readonly DefaultSerializer serializer;
@@ -191,10 +206,31 @@ namespace HybridDb.Serialization
                 return members;
             }
 
-            protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) =>
-                base.CreateProperties(type, memberSerialization)
+            protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
+            {
+                var members = GetSerializableMembers(type);
+
+                return members
+                    // First we eliminate duplicates which have the exact same name before we normalize them,
+                    // see NormalizeCompilerGeneratedBackingFieldName. This would be virtual and overridden auto properties.
+                    // Members are ordered by most derived first, and we keep the most derived member, see GetSerializableMembers.
+                    // GroupBy keeps the original ordering: https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.groupby?view=net-9.0
+                    .GroupBy(x => x.Name, x => x, (_, group) => group.First())
+                    .Select(member => CreateProperty(member, memberSerialization))
+                    .GroupBy(x => x.PropertyName)
+                    .Select(x =>
+                    {
+                        if (x.Count() == 1) return x.Single();
+
+                        // If we, after NormalizeCompilerGeneratedBackingFieldName, have members with the same name, we must fail
+                        // to avoid losing data on serialization. This would be automatic parameter fields captured by readonly properties
+                        // or properties declared with the new keyword.
+
+                        throw new JsonSerializationException($"Duplicate property name '{x.Key}'. Counted {x.Count()}.");
+                    })
                     .OrderBy(Ordering).ThenBy(x => x.PropertyName)
                     .ToList();
+            }
 
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {
@@ -203,8 +239,7 @@ namespace HybridDb.Serialization
                 property.Writable = member.MemberType == MemberTypes.Field;
                 property.Readable = member.MemberType == MemberTypes.Field;
 
-                NormalizeAutoPropertyBackingFieldName(property);
-                NormalizeAnonymousTypeFieldName(property);
+                NormalizeCompilerGeneratedBackingFieldName(property);
                 UppercaseFirstLetterOfFieldName(property);
 
                 return property;
@@ -221,16 +256,13 @@ namespace HybridDb.Serialization
                 return int.MaxValue;
             }
 
-            static void NormalizeAutoPropertyBackingFieldName(JsonProperty property)
+            static void NormalizeCompilerGeneratedBackingFieldName(JsonProperty property)
             {
-                var match = matchesBackingFieldForAutoProperty.Match(property.PropertyName);
-                property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
-            }
+                var match = matchesCompilerGeneratedBackingField.Match(property.PropertyName);
 
-            static void NormalizeAnonymousTypeFieldName(JsonProperty property)
-            {
-                var match = matchesFieldNameForAnonymousType.Match(property.PropertyName);
-                property.PropertyName = match.Success ? match.Groups["name"].Value : property.PropertyName;
+                property.PropertyName = match.Success
+                    ? match.Groups["name"].Value
+                    : property.PropertyName;
             }
 
             static void UppercaseFirstLetterOfFieldName(JsonProperty property) =>
