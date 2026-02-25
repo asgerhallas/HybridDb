@@ -154,7 +154,7 @@ public class DocumentSession : IDocumentSession, IAdvancedDocumentSession
 
     public Guid CommitId { get; private set; }
 
-    public void SetDirty(object entity)
+    public void ForceWriteUnchangedDocument(object entity)
     {
         if (Advanced.ManagedEntities.TryGetValue(entity, out var managedEntity))
         {
