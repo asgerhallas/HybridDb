@@ -30,6 +30,11 @@ namespace HybridDb
         
         IAdvancedDocumentSession Advanced { get; }
         Guid CommitId { get; }
+
+        /// <summary>
+        /// Force the session to treat the entity as dirty, so it will be updated in the database when SaveChanges is called.
+        /// </summary>
+        void SetDirty(object entity);
     }
 
     public interface IAdvancedDocumentSession
