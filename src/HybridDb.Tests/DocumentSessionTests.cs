@@ -1656,7 +1656,6 @@ namespace HybridDb.Tests
             session.Query<Entity>().ToList().Count.ShouldBe(1);
         }
 
-
         [Fact]
         public void NotDirty_NotUpdated()
         {
