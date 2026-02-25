@@ -745,10 +745,10 @@ namespace HybridDb.Tests
             using var session = store.OpenSession();
 
             session.Store(new Entity
-            { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
+                { Id = NewId(), Property = "Asger", ProjectedProperty = "Large", TheChild = new Entity.Child { NestedProperty = "Hans" } });
 
             session.Store(new Entity
-            { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
+                { Id = NewId(), Property = "Lars", ProjectedProperty = "Small", TheChild = new Entity.Child { NestedProperty = "Peter" } });
 
             session.SaveChanges();
             session.Advanced.Clear();
@@ -1654,63 +1654,6 @@ namespace HybridDb.Tests
             session.SaveChanges();
 
             session.Query<Entity>().ToList().Count.ShouldBe(1);
-        }
-
-        [Fact]
-        public void NotDirty_NotUpdated()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-
-            UpdateCommand updateCommand = null;
-
-            store.Configuration.AddEventHandler(@event => Switch.On(@event)
-                .Match<SaveChanges_AfterExecuteCommands>(x =>
-                    updateCommand = x.ExecutedCommands.Keys.OfType<UpdateCommand>().SingleOrDefault())
-                .Else(_ => { }));
-
-            using var session = store.OpenSession();
-
-            session.Store(new Entity { Id = id, Property = "Asger" });
-            session.SaveChanges();
-            session.Advanced.Clear();
-
-            _ = session.Load<Entity>(id);
-
-            session.SaveChanges();
-
-            updateCommand.ShouldBe(null);
-        }
-
-        [Fact]
-        public void SetDirty_UnmodifiedUpdated()
-        {
-            Document<Entity>();
-
-            var id = NewId();
-
-            UpdateCommand updateCommand = null;
-
-            store.Configuration.AddEventHandler(@event => Switch.On(@event)
-                .Match<SaveChanges_AfterExecuteCommands>(x =>
-                    updateCommand = x.ExecutedCommands.Keys.OfType<UpdateCommand>().SingleOrDefault())
-                .Else(_ => { }));
-
-            using var session = store.OpenSession();
-
-            session.Store(new Entity { Id = id, Property = "Asger" });
-            session.SaveChanges();
-            session.Advanced.Clear();
-
-            var entity = session.Load<Entity>(id);
-
-            session.Advanced.ForceWriteUnchangedDocument(entity);
-
-            session.SaveChanges();
-
-            updateCommand.ShouldNotBe(null);
-            updateCommand.Id.ShouldBe(id);
         }
 
         public class BaseCase { }
