@@ -325,7 +325,7 @@ namespace HybridDb
                         var document = (string)projections[DocumentTable.DocumentColumn];
                         var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
-                        if (!forceWriteUnchangedDocument &&
+                        if (!forceWriteUnchangedDocument && !managedEntity.ForceWriteUnchangedDocument &&
                             SafeSequenceEqual(managedEntity.Document, document) &&
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
