@@ -1,6 +1,4 @@
 using System;
-using System.Data;
-using Microsoft.Data.SqlClient;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema.Commands;
 using Shouldly;
@@ -21,23 +19,26 @@ namespace HybridDb.Tests.Migrations.Commands
         {
             Use(mode);
             UseTableNamePrefix(Guid.NewGuid().ToString());
-            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
-            store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
+            var table = new Table("Entities", new Column<int>("Col1"));
+            store.Execute(new CreateTable(table));
+            store.Execute(new AddColumn(table.Name, new Column<int>("Col2")));
 
             store.Execute(new SqlCommand("add some index", (sql, db) => sql
-                .Append($"alter table {db.FormatTableNameAndEscape("Entities")} add {db.Escape("Col3")} int")));
+                .Append($"alter table {table} add {new Column<int>("Col3")} int")));
         }
 
         [Fact]
         public void CanUseParameters()
         {
-            store.Execute(new CreateTable(new Table("Entities", new Column("Col1", typeof(int)))));
-            store.Execute(new AddColumn("Entities", new Column("Col2", typeof(int))));
+            var table = new Table("Entities", new Column<int>("Col1"));
+            store.Execute(new CreateTable(table));
+            store.Execute(new AddColumn(table.Name, new Column<int>("Col2")));
+
+            var value = 1;
 
             store.Execute(new SqlCommand("add some data", (sql, db) => sql
                 .Append(
-                    $"insert into {db.FormatTableNameAndEscape("Entities")} ({db.Escape("Col1")}) values (@value)", 
-                    new SqlParameter("@value", SqlDbType.Int) { Value = 1 })));
+                    $"insert into {table} ({new Column<int>("Col1")}) values ({value})")));
         }
 
         [Fact]

@@ -83,7 +83,7 @@ namespace HybridDb.Tests.Migrations.Commands
         List<(object Name, object Keys)> GetIndexesFor(Table table)
         {
             var rawQuery = store.Database
-                .RawQuery<object>(Sql.From($"sp_helpindex '{store.Database.FormatTableName(table.Name)}'"))
+                .RawQuery<object>(Sql.From($"sp_helpindex '{store.Database.FormatTableName(table.Name):@}'"))
                 .Cast<IDictionary<string, object>>();
 
             var indices = rawQuery

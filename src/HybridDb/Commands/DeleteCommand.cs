@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Commands
 {
@@ -23,38 +24,30 @@ namespace HybridDb.Commands
             // Note that last write wins can actually still produce a ConcurrencyException if the 
             // row was already deleted, which would result in 0 resulting rows changed
 
-            var sql = new SqlBuilderOld();
-            var parameters = new HybridDbParameters();
+            var sql = Sql.Empty;
 
             if (tx.Store.Configuration.SoftDelete)
             {
                 sql
-                    .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                    .Append($"set {DocumentTable.IdColumn.Name} = @NewId")
-                    .Append($", {DocumentTable.LastOperationColumn.Name} = {(byte) Operation.Deleted}")
-                    .Append($"where {DocumentTable.IdColumn.Name} = @Id")
-                    .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name} = @ExpectedEtag");
-
-                parameters.Add("@NewId", $"{command.Key}/{Guid.NewGuid()}", DocumentTable.IdColumn);
+                    .Append($"update {command.Table}")
+                    .Append($"set {DocumentTable.IdColumn} = {$"{command.Key}/{Guid.NewGuid()}"}")
+                    .Append($", {DocumentTable.LastOperationColumn} = {(byte)Operation.Deleted}")
+                    .Append($"where {DocumentTable.IdColumn} = {command.Key}")
+                    .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn} = {command.ExpectedEtag}");
             }
             else
             {
                 sql
-                    .Append($"delete from {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                    .Append($"where {DocumentTable.IdColumn.Name} = @Id")
-                    .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name} = @ExpectedEtag");
+                    .Append($"delete from {command.Table}")
+                    .Append($"where {DocumentTable.IdColumn} = {command.Key}")
+                    .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn} = {command.ExpectedEtag}");
             }
 
-            parameters.Add("@Id", command.Key, DocumentTable.IdColumn);
-
-            if (!command.LastWriteWins)
-            {
-                parameters.Add("@ExpectedEtag", command.ExpectedEtag, DocumentTable.EtagColumn);
-            }
+            var sqlString = sql.Build(tx.Store, out var parameters);
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
-                Sql = sql.ToString(),
+                Sql = sqlString,
                 Parameters = parameters,
                 ExpectedRowCount = 1,
                 Table = command.Table,

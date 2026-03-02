@@ -24,18 +24,21 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
+            var formattedTableName = store.Database.FormatTableName(Table.Name);
+            var columnName = Name.Replace("'", "''");
+
             // TODO: sletter kun den første ser det ud til?
             var dropConstraints = Sql.Empty
                 .Append("DECLARE @ConstraintName nvarchar(200)")
                 .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
-                .Append($"WHERE PARENT_OBJECT_ID = OBJECT_ID('{Table.Name}') ")
-                .Append($"AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'{Name}' AND object_id = OBJECT_ID(N'{Table.Name}'))")
+                .Append("WHERE PARENT_OBJECT_ID = OBJECT_ID('" + formattedTableName + "') ")
+                .Append("AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'" + columnName + "' AND object_id = OBJECT_ID(N'" + formattedTableName + "'))")
                 .Append($"IF @ConstraintName IS NOT NULL ")
-                .Append($"EXEC('ALTER TABLE {Table.Name} DROP CONSTRAINT ' + @ConstraintName)");
+                .Append("EXEC('ALTER TABLE " + formattedTableName + " DROP CONSTRAINT ' + @ConstraintName)");
 
             store.Database.RawExecute(dropConstraints);
 
-            store.Database.RawExecute(Sql.From($"alter table {store.Database.FormatTableNameAndEscape(Table.Name)} drop column {store.Database.Escape(Name)};"));
+            store.Database.RawExecute(Sql.From($"alter table {Table} drop column {new Column<string>(Name)};"));
         }
     }
 }

@@ -21,7 +21,7 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store) =>
             store.Database.RawExecute(Sql
-                    .From($"alter table {store.Database.FormatTableNameAndEscape(Tablename):@} add {Column}")
+                    .From($"alter table {new Table(Tablename)} add {Column}")
                     .Append(DdlCommandEx.BuildColumnSql(Column)),
                 schema: true,
                 commandTimeout: 300);

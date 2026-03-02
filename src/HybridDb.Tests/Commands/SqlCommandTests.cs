@@ -1,5 +1,6 @@
-using System.Data;
 using HybridDb.Commands;
+using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,8 +13,7 @@ namespace HybridDb.Tests.Commands
         public void SqlCommand_Success()
         {
             Document<Entity>();
-
-            var tableName = store.Database.FormatTableNameAndEscape(store.Configuration.GetDesignFor<Entity>().Table.Name);
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             using var updateSession = store.OpenSession();
 
@@ -24,11 +24,7 @@ namespace HybridDb.Tests.Commands
 
             updateSession.SaveChanges();
 
-            var sql = new SqlBuilderOld();
-
-            sql.Append($"update {tableName} set Document = @Document where Id = @Id");
-            sql.Parameters.Add("@Document", "{\"Field\":\"Updated Value\"}", SqlDbType.NVarChar);
-            sql.Parameters.Add("@Id", entityId, SqlDbType.NVarChar);
+            var sql = Sql.From($"update {table} set {DocumentTable.DocumentColumn} = {"{\"Field\":\"Updated Value\"}"} where {DocumentTable.IdColumn} = {entityId}");
 
             updateSession.Advanced.DocumentStore.Execute(new SqlCommand(sql, expectedRowCount: 1));
 
@@ -41,8 +37,7 @@ namespace HybridDb.Tests.Commands
         public void SqlCommand_Fail_IncorrectExpectedRowCount()
         {
             Document<Entity>();
-
-            var tableName = store.Database.FormatTableNameAndEscape(store.Configuration.GetDesignFor<Entity>().Table.Name);
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
 
             using var updateSession = store.OpenSession();
 
@@ -51,10 +46,7 @@ namespace HybridDb.Tests.Commands
 
             updateSession.SaveChanges();
 
-            var sql = new SqlBuilderOld();
-
-            sql.Append($"update {tableName} set Document = @Document");
-            sql.Parameters.Add("@Document", null, SqlDbType.NVarChar);
+            var sql = Sql.From($"update {table} set {DocumentTable.DocumentColumn} = {(string)null}");
 
             Should.Throw<ConcurrencyException>(() => updateSession.Advanced.DocumentStore.Execute(new SqlCommand(sql, expectedRowCount: 1)))
                 .Message.ShouldBe(

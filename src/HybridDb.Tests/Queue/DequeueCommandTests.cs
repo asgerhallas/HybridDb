@@ -24,7 +24,7 @@ namespace HybridDb.Tests.Queue
 
             // Manipulate the topic directly in database - like returning errors to queue
             var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
-            store.Database.RawExecute(Sql.From($"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Id] = 'OtherId', [Topic] = 'OtherTopic'"));
+            store.Database.RawExecute(Sql.From($"update {queueTable} set [Id] = 'OtherId', [Topic] = 'OtherTopic'"));
 
             var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),

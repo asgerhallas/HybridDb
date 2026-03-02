@@ -1640,11 +1640,9 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Name);
-
             using var session = store.OpenSession();
 
-            session.Advanced.Defer(new SqlCommand(new SqlBuilderOld($"truncate table {tableName}"), -1));
+            session.Advanced.Defer(new SqlCommand(Sql.From($"truncate table {table}"), -1));
 
             session.Store(new Entity());
 

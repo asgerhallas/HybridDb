@@ -17,10 +17,12 @@ namespace HybridDb.Migrations.BuiltIn
                     "Update correlation ID",
                     (sql, db) =>
                     {
-                        sql.Append(@$"
-                            update {table}
+                        var breadcrumbsPath = "$.\"" + HybridDbMessage.Breadcrumbs + "\"";
+
+                        sql.Append($"update {table}");
+                        sql.Append($@"
                             set CorrelationId = coalesce((select top 1 CorrelationId.value
-	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""{HybridDbMessage.Breadcrumbs:@}""') X
+	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '{breadcrumbsPath:@}') X
 	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId), 'N/A')");
                     });
             }

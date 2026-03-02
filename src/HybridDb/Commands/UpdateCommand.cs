@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Commands
 {
@@ -30,25 +31,17 @@ namespace HybridDb.Commands
             projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
             projections[DocumentTable.LastOperationColumn] = Operation.Updated;
 
-            var sql = new SqlBuilderOld()
-                .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")
-                .Append($"set {string.Join(", ", from column in projections.Keys select $"[{column.Name}] = @{column.Name}")}")
-                .Append($"where {DocumentTable.IdColumn.Name}=@Id")
-                .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn.Name}=@ExpectedEtag")
-                .ToString();
+            var sql = Sql.Empty
+                .Append($"update {command.Table}")
+                .Append("set", Sql.Join(", ", projections.Select(x => Sql.From($"{x.Key} = {x.Value}"))))
+                .Append($"where {DocumentTable.IdColumn} = {command.Id}")
+                .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn} = {command.ExpectedEtag}");
 
-            var parameters = projections.ToHybridDbParameters();
-
-            parameters.Add("@Id", command.Id, DocumentTable.IdColumn);
-
-            if (!command.LastWriteWins)
-            {
-                parameters.Add("@ExpectedEtag", command.ExpectedEtag, DocumentTable.EtagColumn);
-            }
+            var sqlString = sql.Build(tx.Store, out var parameters);
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
-                Sql = sql,
+                Sql = sqlString,
                 Parameters = parameters,
                 ExpectedRowCount = 1,
                 Table = command.Table,

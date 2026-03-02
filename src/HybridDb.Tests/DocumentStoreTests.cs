@@ -162,8 +162,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = Sql.Empty.Append($"select * from {tableName}");
+            var sql = Sql.Empty.Append($"select * from {table.Table}");
 
             var rows = store.Query<ProjectionWithNestedProperty>(sql).ToList();
 
