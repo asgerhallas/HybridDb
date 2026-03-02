@@ -175,9 +175,9 @@ namespace HybridDb.Tests
             var etag1 = store.Insert(table, id1, new {Property = "first"});
             var etag2 = store.Insert(table, id2, new {Property = "second"});
 
-            // get the initial row version after insert
-            var results1 = store.Query<string>(table, new byte[8], "Property").ToList();
-            var lastSeenRowVersion = results1[0].RowVersion;
+            // establish baseline row version from committed rows without using QueryChanges filter
+            var baselineRows = store.Query<string>(table, out _, select: "Property", orderby: "Timestamp ASC", includeDeleted: true).ToList();
+            var lastSeenRowVersion = baselineRows[1].RowVersion;
 
             using (var tx1 = new TransactionScope(TransactionScopeOption.RequiresNew, readCommitted, TransactionScopeAsyncFlowOption.Enabled))
             {
