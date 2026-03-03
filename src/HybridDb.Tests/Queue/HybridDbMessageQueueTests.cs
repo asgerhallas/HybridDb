@@ -1296,6 +1296,53 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task ScopeFromOneMessageDoesNotLeakIntoNextSession()
+        {
+            // Regression test for https://github.com/asgerhallas/HybridDb/issues/91
+            // When a scope (e.g. for an IoC container) is created in the SessionBeginning event handler,
+            // it must NOT be visible in the next message's SessionBeginning — scopes must not leak between messages.
+
+            var scopeAtStartOfSession = new ConcurrentQueue<TheScope>();
+
+            var queue = StartQueue(new MessageQueueOptions
+            {
+                MaxConcurrency = 1,
+                UseLocalEnqueueTrigger = false,
+                Subscribe = events => events.Subscribe(@event => Switch.On(@event)
+                    .Match<SessionBeginning>(m =>
+                    {
+                        // Capture the scope BEFORE creating a new one — it should always be null
+                        scopeAtStartOfSession.Enqueue(TheScope.Current);
+                        m.Context.Data.Add("scope", TheScope.Begin());
+                    })
+                    .Match<SessionEnded>(m => ((IDisposable)m.Context.Data["scope"]).Dispose())),
+            }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Message 1"));
+                session.Enqueue(new MyMessage("Message 2"));
+
+                session.SaveChanges();
+            }
+
+            // Wait until both messages have been committed — at that point both SessionBeginning events
+            // have already fired and recorded the scope state into scopeAtStartOfSession.
+            await queue.ReplayedEvents
+                .OfType<MessageCommitted>()
+                .Take(2)
+                .ToList()
+                .FirstAsync()
+                .Timeout(timeout);
+
+            // Every session (including any empty-poll sessions) should start with no existing scope.
+            // If a scope leaks from one message's session into the next, this assertion will catch it.
+            scopeAtStartOfSession.ToArray().ShouldAllBe(
+                s => s == null,
+                "A scope leaked from a previous message into a new session's SessionBeginning.");
+        }
+
+        [Fact]
         public async Task FastAndFurious()
         {
             // This test is to asses parallel runs of many queues, as we often do this in application testing.
