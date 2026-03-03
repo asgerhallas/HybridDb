@@ -97,10 +97,10 @@ namespace HybridDb.Queue
                             {
                                 var release = await WaitAsync(semaphore);
 
-                                // BeginSession and HandleMessage are started on a new thread so that any
-                                // AsyncLocal values set during BeginSession (e.g. IoC scopes) are confined
-                                // to that thread's ExecutionContext and do not leak into the outer loop's
-                                // ExecutionContext on subsequent iterations.
+                                // BeginSession and HandleMessage are scheduled as a separate task so that any
+                                // AsyncLocal values set during BeginSession (e.g. IoC scopes) are confined to
+                                // the ExecutionContext captured for that task and do not leak into the outer
+                                // loop's ExecutionContext on subsequent iterations.
                                 await Task.Factory.StartNew(
                                     () => HandleNextMessage(release),
                                     cts.Token,
