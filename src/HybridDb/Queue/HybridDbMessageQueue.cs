@@ -93,94 +93,92 @@ namespace HybridDb.Queue
 
                         while (!cts.IsCancellationRequested)
                         {
+                            Action release;
                             try
                             {
-                                var release = await WaitAsync(semaphore);
-
-                                try
-                                {
-                                    while (!cts.IsCancellationRequested)
-                                    {
-                                        var session = BeginSession();
-
-                                        try
-                                        {
-                                            var message = TryGetNextMessage(session);
-
-                                            if (message == null)
-                                            {
-                                                DisposeSession(session);
-
-                                                await WaitOnEmptyQueue();
-
-                                                // No message was found, so after some wait
-                                                // we try polling again in the same loop.
-                                                continue;
-                                            }
-
-                                            await Task.Factory.StartNew(async () =>
-                                                {
-                                                    try
-                                                    {
-                                                        using var _ = Time("HandleMessage");
-
-                                                        await HandleMessage(session, message);
-                                                    }
-                                                    finally
-                                                    {
-                                                        DisposeSession(session);
-
-                                                        // open the gate for the next message, when this message is handled.
-                                                        release();
-                                                    }
-                                                },
-                                                cts.Token,
-                                                TaskCreationOptions.DenyChildAttach,
-                                                TaskScheduler.Default);
-
-                                            // Message was retrieved and handling is started on a new thread,
-                                            // so we break out of the to start polling for the next message.
-                                            break;
-                                        }
-                                        catch
-                                        {
-                                            DisposeSession(session);
-
-                                            release();
-
-                                            throw;
-                                        }
-                                    }
-                                }
-                                catch
-                                {
-                                    release();
-
-                                    throw;
-                                }
+                                release = await WaitAsync(semaphore);
                             }
                             catch (OperationCanceledException)
                             {
                                 break;
                             }
-                            catch (SqlException exception) when (exception.Number == -2)
-                            {
-                                // Timouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
 
-                                logger.LogInformation(exception, $"{nameof(HybridDbMessageQueue)} failed with timeout. Will retry.");
+                            // BeginSession and HandleMessage are started on a new thread so that any
+                            // AsyncLocal values set during BeginSession (e.g. IoC scopes) are confined
+                            // to that thread's ExecutionContext and do not leak into the outer loop's
+                            // ExecutionContext on subsequent iterations.
+                            await Task.Factory.StartNew(async () =>
+                                {
+                                    try
+                                    {
+                                        while (!cts.IsCancellationRequested)
+                                        {
+                                            var session = BeginSession();
 
-                                await Task.Delay(options.ExceptionBackoff, cts.Token);
-                            }
-                            catch (Exception exception)
-                            {
-                                events.OnNext(new QueueFailed(exception, cts.Token));
+                                            try
+                                            {
+                                                var message = TryGetNextMessage(session);
 
-                                logger.LogWarning(
-                                    exception,
-                                    $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+                                                if (message == null)
+                                                {
+                                                    DisposeSession(session);
 
-                                await Task.Delay(options.ExceptionBackoff, cts.Token);
-                            }
+                                                    await WaitOnEmptyQueue();
+
+                                                    // No message was found, so after some wait
+                                                    // we try polling again in the same loop.
+                                                    continue;
+                                                }
+
+                                                using var _ = Time("HandleMessage");
+
+                                                await HandleMessage(session, message);
+
+                                                DisposeSession(session);
+
+                                                // Message was retrieved and handled,
+                                                // so we break out to start polling for the next message.
+                                                break;
+                                            }
+                                            catch
+                                            {
+                                                DisposeSession(session);
+
+                                                throw;
+                                            }
+                                        }
+                                    }
+                                    catch (OperationCanceledException)
+                                    {
+                                        // exit
+                                    }
+                                    catch (SqlException exception) when (exception.Number == -2)
+                                    {
+                                        // Timouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
+
+                                        logger.LogInformation(exception, $"{nameof(HybridDbMessageQueue)} failed with timeout. Will retry.");
+
+                                        await Task.Delay(options.ExceptionBackoff, cts.Token);
+                                    }
+                                    catch (Exception exception)
+                                    {
+                                        events.OnNext(new QueueFailed(exception, cts.Token));
+
+                                        logger.LogWarning(
+                                            exception,
+                                            $"{nameof(HybridDbMessageQueue)} failed. Will retry.");
+
+                                        await Task.Delay(options.ExceptionBackoff, cts.Token);
+                                    }
+                                    finally
+                                    {
+                                        // open the gate for the next message, when this message is handled.
+                                        release();
+                                    }
+                                },
+                                cts.Token,
+                                TaskCreationOptions.DenyChildAttach,
+                                TaskScheduler.Default);
                         }
 
                         DisposeAllSessions();
