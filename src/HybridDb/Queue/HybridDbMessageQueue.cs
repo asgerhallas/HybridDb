@@ -313,7 +313,7 @@ namespace HybridDb.Queue
             }
             catch (SqlException exception) when (exception.Number == -2)
             {
-                // Timouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
+                // Timeouts, see https://stackoverflow.com/questions/29664/how-to-catch-sqlserver-timeout-exceptions
 
                 logger.LogInformation(exception, $"{nameof(HybridDbMessageQueue)} failed with timeout. Will retry.");
 
