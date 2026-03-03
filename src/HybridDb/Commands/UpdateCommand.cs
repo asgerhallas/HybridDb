@@ -32,8 +32,8 @@ namespace HybridDb.Commands
             projections[DocumentTable.LastOperationColumn] = Operation.Updated;
 
             var sql = Sql.Empty
-                .Append($"update {command.Table}")
-                .Append("set", Sql.Join(", ", projections.Select(x => Sql.From($"{x.Key} = {x.Value}"))))
+                .Append($"update {command.Table} set")
+                .Append(Sql.Join(", ", projections.Select(x => Sql.From($"{x.Key}=").Append(x.Value, x.Key))))
                 .Append($"where {DocumentTable.IdColumn} = {command.Id}")
                 .Append(!command.LastWriteWins, $"and {DocumentTable.EtagColumn} = {command.ExpectedEtag}");
 

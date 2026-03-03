@@ -24,17 +24,16 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            var formattedTableName = store.Database.FormatTableName(Table.Name);
-            var columnName = Name.Replace("'", "''");
+            var tableName = store.Database.FormatTableName(Table.Name);
+            var escapedTableName = store.Database.FormatTableNameAndEscape(Table.Name);
 
-            // TODO: sletter kun den første ser det ud til?
-            var dropConstraints = Sql.Empty
-                .Append("DECLARE @ConstraintName nvarchar(200)")
-                .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
-                .Append("WHERE PARENT_OBJECT_ID = OBJECT_ID('" + formattedTableName + "') ")
-                .Append("AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'" + columnName + "' AND object_id = OBJECT_ID(N'" + formattedTableName + "'))")
-                .Append($"IF @ConstraintName IS NOT NULL ")
-                .Append("EXEC('ALTER TABLE " + formattedTableName + " DROP CONSTRAINT ' + @ConstraintName)");
+            var dropConstraints = Sql.From($@"
+                DECLARE @ConstraintName nvarchar(200)
+                SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS
+                WHERE PARENT_OBJECT_ID = OBJECT_ID({tableName})
+                AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = {Name} AND object_id = OBJECT_ID({tableName}))
+                IF @ConstraintName IS NOT NULL
+                EXEC('ALTER TABLE {escapedTableName:verbatim} DROP CONSTRAINT ' + @ConstraintName)");
 
             store.Database.RawExecute(dropConstraints);
 

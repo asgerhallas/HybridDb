@@ -182,5 +182,28 @@ namespace HybridDb.Tests.SqlBuilder
                 .Append($"{"othertext":verbatim}")
                 .Build(store, out _)
                 .ShouldBe($"select 1, X.Y from {store.Database.FormatTableNameAndEscape("table")}.[column] where text and othertext");
+
+        // Issue 1: Sql.From(bool, handler, elseHandler) silently drops elseHandler
+        [Fact]
+        public void From_PredicateFalse_UsesElseHandler()
+        {
+            var sql = Sql.From(false, $"if_branch", $"else_branch");
+
+            sql.Build(store, out _).ShouldBe("else_branch");
+        }
+
+        // Issue 2: Build mutates SqlParameter.ParameterName, corrupting the Sql instance on reuse
+        [Fact]
+        public void Build_CanBeCalledMultipleTimes()
+        {
+            var myParam = "asger";
+            var sql = Sql.From($"select {myParam}");
+
+            sql.Build(store, out var parameters1).ShouldBe("select @MyParam_1");
+            parameters1.Parameters[0].ParameterName.ShouldBe("MyParam_1");
+
+            sql.Build(store, out var parameters2).ShouldBe("select @MyParam_1");
+            parameters2.Parameters[0].ParameterName.ShouldBe("MyParam_1");
+        }
     }
 }

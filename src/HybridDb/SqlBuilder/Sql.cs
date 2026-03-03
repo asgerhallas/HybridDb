@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using HybridDb.Config;
+using Microsoft.Data.SqlClient;
 
 namespace HybridDb.SqlBuilder
 {
@@ -50,7 +52,7 @@ namespace HybridDb.SqlBuilder
                     return AppendSql(stringFragment.Value);
 
                 case ParameterFragment parameterFragment:
-                    var parameter = parameterFragment.Parameter;
+                    var parameter = (SqlParameter)((ICloneable)parameterFragment.Parameter).Clone();
 
                     parameter.ParameterName = NormalizeParameterName(parameters.Count, parameter.ParameterName);
 
@@ -173,7 +175,7 @@ namespace HybridDb.SqlBuilder
             return sql.Sql2;
         }
 
-        public static Sql From(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) => Empty.Append(predicate, handler);
+        public static Sql From(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) => Empty.Append(predicate, handler, elseHandler);
         public Sql Append(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) =>
             predicate
                 ? Append(handler)
@@ -183,6 +185,13 @@ namespace HybridDb.SqlBuilder
 
         public static Sql From(bool predicate, Func<SqlStringHandler> handler) => Empty.Append(predicate, handler);
         public Sql Append(bool predicate, Func<SqlStringHandler> handler) => predicate ? Append(handler()) : this;
+
+        public Sql Append(object? value, Column column)
+        {
+            var sqlCol = SqlTypeMap.Convert(column);
+            fragments.Add(new ParameterFragment(HybridDbParameters.CreateSqlParameter(column.Name, value, sqlCol.DbType)));
+            return this;
+        }
 
         public static Sql From(string infix, SqlStringHandler handler) => Empty.Append(infix, Empty.Append(handler));
         public Sql Append(string infix, SqlStringHandler handler) => Append(infix, Empty.Append(handler));

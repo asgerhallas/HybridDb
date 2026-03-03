@@ -500,6 +500,23 @@ namespace HybridDb.Tests
             result.Data.EnumProp.ShouldBe(SomeFreakingEnum.Two);
         }
 
+        // Issue 3: UpdateCommand uses Sql.From without column metadata, causing enum values
+        // to be stored as their numeric representation (int) instead of their name (string)
+        [Fact]
+        public void CanUpdateEnumProjectionAsString()
+        {
+            Document<Entity>().With(x => x.EnumProp);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var id = NewId();
+            store.Insert(table, id, new { EnumProp = SomeFreakingEnum.One });
+
+            var etag = store.Get(table, id).Get<Guid>("Etag");
+            store.Update(table, id, etag, new { EnumProp = SomeFreakingEnum.Two });
+
+            store.Get(table, id).Get<string>("EnumProp").ShouldBe(SomeFreakingEnum.Two.ToString());
+        }
+
         [Fact]
         public void CanStoreAndQueryStringProjection()
         {
