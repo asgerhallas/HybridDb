@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using FakeItEasy;
 using HybridDb.Queue;
@@ -9,6 +10,12 @@ namespace HybridDb.Tests.Queue
     public class MessageHandlerDispatcherTests
     {
         public record MyMessage(string Text);
+
+        [Fact]
+        public void NullResolveHandlers_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() => MessageHandlerDispatcher.For(null));
+        }
 
         [Fact]
         public async Task DispatchesToCorrectHandler()

@@ -10,8 +10,10 @@ namespace HybridDb.Queue
         static readonly ConcurrentDictionary<Type, Type> cache = new();
 
         public static Func<IDocumentSession, HybridDbMessage, Task> For(
-            Func<Type, IEnumerable<object>> resolveHandlers) =>
-            async (session, message) =>
+            Func<Type, IEnumerable<object>> resolveHandlers)
+        {
+            if (resolveHandlers == null) throw new ArgumentNullException(nameof(resolveHandlers));
+            return async (session, message) =>
             {
                 var handlerType = cache.GetOrAdd(message.Payload.GetType(),
                     t => typeof(IMessageHandler<>).MakeGenericType(t));
@@ -20,5 +22,6 @@ namespace HybridDb.Queue
                     await ((dynamic)handler).Handle(session, message.Payload);
                 }
             };
+        }
     }
 }
