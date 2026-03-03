@@ -11,10 +11,38 @@ namespace HybridDb.Tests.Queue
     {
         public record MyMessage(string Text);
 
+        class ExplicitHandler : IMessageHandler<MyMessage>
+        {
+            public IDocumentSession CapturedSession;
+            public MyMessage CapturedMessage;
+
+            Task IMessageHandler<MyMessage>.Handle(IDocumentSession session, MyMessage message)
+            {
+                CapturedSession = session;
+                CapturedMessage = message;
+                return Task.CompletedTask;
+            }
+        }
+
         [Fact]
         public void NullResolveHandlers_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() => MessageHandlerDispatcher.For(null));
+        }
+
+        [Fact]
+        public async Task DispatchesToExplicitInterfaceImplementation()
+        {
+            var handler = new ExplicitHandler();
+            var session = A.Fake<IDocumentSession>();
+            var message = new HybridDbMessage("id-explicit", new MyMessage("explicit"));
+
+            var dispatch = MessageHandlerDispatcher.For(_ => new object[] { handler });
+
+            await dispatch(session, message);
+
+            handler.CapturedSession.ShouldBeSameAs(session);
+            handler.CapturedMessage.ShouldBe(new MyMessage("explicit"));
         }
 
         [Fact]

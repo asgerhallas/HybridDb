@@ -19,7 +19,7 @@ namespace HybridDb.Queue
                     t => typeof(IMessageHandler<>).MakeGenericType(t));
                 foreach (var handler in resolveHandlers(handlerType))
                 {
-                    await ((dynamic)handler).Handle(session, message.Payload);
+                    await ((IMessageHandler<dynamic>)handler).Handle(session, message.Payload);
                 }
             };
         }
