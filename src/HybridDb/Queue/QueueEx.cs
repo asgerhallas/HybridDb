@@ -123,7 +123,7 @@ namespace HybridDb.Queue
             if (topics.Count == 0) throw new ArgumentException("Topics must not be empty.", nameof(topics));
             if (topics.Any(string.IsNullOrEmpty)) throw new ArgumentException("Topics must not contain null or empty strings.", nameof(topics));
 
-            return topics.Select(topic => Enqueue(session, message, topic, order, metadata, resetCorrelationIds)).ToList();
+            return topics.Select(topic => Enqueue(session, message, topic, order, metadata == null ? null : new Dictionary<string, string>(metadata), resetCorrelationIds)).ToList();
         }
 
         public static IReadOnlyList<HybridDbMessage> Enqueue(
@@ -141,7 +141,7 @@ namespace HybridDb.Queue
             if (topics.Count == 0) throw new ArgumentException("Topics must not be empty.", nameof(topics));
             if (topics.Any(string.IsNullOrEmpty)) throw new ArgumentException("Topics must not contain null or empty strings.", nameof(topics));
 
-            return topics.Select(topic => Enqueue(session, id, message, topic, order, metadata, resetCorrelationIds)).ToList();
+            return topics.Select(topic => Enqueue(session, id, message, topic, order, metadata == null ? null : new Dictionary<string, string>(metadata), resetCorrelationIds)).ToList();
         }
 
         public static IReadOnlyList<HybridDbMessage> Enqueue<T>(
@@ -158,7 +158,7 @@ namespace HybridDb.Queue
             if (topics.Count == 0) throw new ArgumentException("Topics must not be empty.", nameof(topics));
             if (topics.Any(string.IsNullOrEmpty)) throw new ArgumentException("Topics must not contain null or empty strings.", nameof(topics));
 
-            return topics.Select(topic => Enqueue(session, message, topic, order, metadata, resetCorrelationIds)).ToList();
+            return topics.Select(topic => Enqueue(session, message, topic, order, metadata == null ? null : new Dictionary<string, string>(metadata), resetCorrelationIds)).ToList();
         }
 
         public static HybridDbMessage Enqueue(this IDocumentSession session, HybridDbMessage message)
