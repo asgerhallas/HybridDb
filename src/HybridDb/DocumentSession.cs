@@ -325,12 +325,16 @@ namespace HybridDb
                         var document = (string)projections[DocumentTable.DocumentColumn];
                         var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
-                        if (!forceWriteUnchangedDocument && !managedEntity.ForceWriteUnchangedDocument &&
-                            SafeSequenceEqual(managedEntity.Document, document) &&
-                            SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
+                        var forceWrite = forceWriteUnchangedDocument || managedEntity.ForceWriteUnchangedDocument;
+                        var documentChanged = !SafeSequenceEqual(managedEntity.Document, document);
+                        var metadataChanged = !SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument);
+
+                        if (!forceWrite && !documentChanged && !metadataChanged)
                             break;
 
-                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections));
+                        commands.Add(managedEntity, new UpdateCommand(design.Table, key, expectedEtag, projections,
+                            ignoreDocument: forceWrite && !documentChanged,
+                            ignoreMetadata: forceWrite && !metadataChanged));
 
                         if (configuredVersion != managedEntity.Version && !string.IsNullOrEmpty(managedEntity.Document))
                         {

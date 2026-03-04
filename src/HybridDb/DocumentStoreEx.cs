@@ -14,7 +14,7 @@ namespace HybridDb
             store.Transactionally(tx => tx.Execute(new InsertCommand(table, key, projections)));
 
         public static Guid Update(this IDocumentStore store, DocumentTable table, string key, Guid? etag, object projections) =>
-            store.Transactionally(tx => tx.Execute(new UpdateCommand(table, key, etag, projections)));
+            store.Transactionally(tx => tx.Execute(new UpdateCommand(table, key, etag, projections, ignoreDocument: false, ignoreMetadata: false)));
 
         public static Guid Delete(this IDocumentStore store, DocumentTable table, string key, Guid? etag) =>
             store.Transactionally(tx => tx.Execute(new DeleteCommand(table, key, etag)));

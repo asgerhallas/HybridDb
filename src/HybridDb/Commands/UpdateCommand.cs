@@ -7,24 +7,32 @@ namespace HybridDb.Commands
 {
     public class UpdateCommand : HybridDbCommand<Guid>
     {
+        readonly bool ignoreDocument;
+        readonly bool ignoreMetadata;
+
         public DocumentTable Table { get; }
         public string Id { get; }
         public Guid? ExpectedEtag { get; }
         public IDictionary<Column, object> Projections { get; }
         public bool LastWriteWins { get; }
 
-        public UpdateCommand(DocumentTable table, string id, Guid? etag, object projections)
+        public UpdateCommand(DocumentTable table, string id, Guid? etag, object projections, bool ignoreDocument, bool ignoreMetadata)
         {
             Table = table;
             Id = id;
             ExpectedEtag = etag;
             LastWriteWins = etag == null;
             Projections = ConvertAnonymousToProjections(table, projections);
+            this.ignoreDocument = ignoreDocument;
+            this.ignoreMetadata = ignoreMetadata;
         }
 
         public static Guid Execute(DocumentTransaction tx, UpdateCommand command)
         {
             var projections = command.Projections.ToDictionary();
+
+            if (command.ignoreDocument) projections.Remove(DocumentTable.DocumentColumn);
+            if (command.ignoreMetadata) projections.Remove(DocumentTable.MetadataColumn);
 
             projections[DocumentTable.EtagColumn] = tx.CommitId;
             projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;

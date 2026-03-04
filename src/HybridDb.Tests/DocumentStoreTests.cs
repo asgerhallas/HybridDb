@@ -476,7 +476,7 @@ namespace HybridDb.Tests
                 store.Transactionally(tx =>
                 {
                     tx.Execute(new InsertCommand(table, id1, new { Field = "A" }));
-                    return tx.Execute(new UpdateCommand(table, id1, etagThatMakesItFail, new { Field = "B" }));
+                    return tx.Execute(new UpdateCommand(table, id1, etagThatMakesItFail, new { Field = "B" }, ignoreDocument: false, ignoreMetadata: false));
                 });
             }
             catch (ConcurrencyException)
