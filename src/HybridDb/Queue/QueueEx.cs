@@ -120,10 +120,10 @@ namespace HybridDb.Queue
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
             if (topics == null) throw new ArgumentNullException(nameof(topics));
-            if (topics.Count == 0) throw new ArgumentException("Topics must not be empty.", nameof(topics));
             if (topics.Any(string.IsNullOrEmpty)) throw new ArgumentException("Topics must not contain null or empty strings.", nameof(topics));
 
-            return topics.Select(topic => Enqueue(session, message, topic, order, metadata == null ? null : new Dictionary<string, string>(metadata), resetCorrelationIds)).ToList();
+            var effectiveTopics = topics.Count == 0 ? new string[] { null } : topics;
+            return effectiveTopics.Select(topic => Enqueue(session, message, topic, order, metadata != null ? new Dictionary<string, string>(metadata) : null, resetCorrelationIds)).ToList();
         }
 
         public static IReadOnlyList<HybridDbMessage> Enqueue(
@@ -138,10 +138,10 @@ namespace HybridDb.Queue
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
             if (topics == null) throw new ArgumentNullException(nameof(topics));
-            if (topics.Count == 0) throw new ArgumentException("Topics must not be empty.", nameof(topics));
             if (topics.Any(string.IsNullOrEmpty)) throw new ArgumentException("Topics must not contain null or empty strings.", nameof(topics));
 
-            return topics.Select(topic => Enqueue(session, id, message, topic, order, metadata == null ? null : new Dictionary<string, string>(metadata), resetCorrelationIds)).ToList();
+            var effectiveTopics = topics.Count == 0 ? new string[] { null } : topics;
+            return effectiveTopics.Select(topic => Enqueue(session, id, message, topic, order, metadata != null ? new Dictionary<string, string>(metadata) : null, resetCorrelationIds)).ToList();
         }
 
         public static IReadOnlyList<HybridDbMessage> Enqueue<T>(
@@ -155,10 +155,10 @@ namespace HybridDb.Queue
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
             if (topics == null) throw new ArgumentNullException(nameof(topics));
-            if (topics.Count == 0) throw new ArgumentException("Topics must not be empty.", nameof(topics));
             if (topics.Any(string.IsNullOrEmpty)) throw new ArgumentException("Topics must not contain null or empty strings.", nameof(topics));
 
-            return topics.Select(topic => Enqueue(session, message, topic, order, metadata == null ? null : new Dictionary<string, string>(metadata), resetCorrelationIds)).ToList();
+            var effectiveTopics = topics.Count == 0 ? new string[] { null } : topics;
+            return effectiveTopics.Select(topic => Enqueue(session, message, topic, order, metadata != null ? new Dictionary<string, string>(metadata) : null, resetCorrelationIds)).ToList();
         }
 
         public static HybridDbMessage Enqueue(this IDocumentSession session, HybridDbMessage message)

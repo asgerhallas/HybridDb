@@ -107,11 +107,29 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
-        public void Enqueue_MultipleTopics_EmptyTopics_Throws()
+        public void Enqueue_MultipleTopics_EmptyTopics_EnqueuesToDefaultTopic()
         {
             using var session = store.OpenSession();
 
-            Should.Throw<ArgumentException>(() => session.Enqueue(new MyMessage("hello"), new List<string>()));
+            var results = session.Enqueue(new MyMessage("hello"), new List<string>());
+
+            results.Count.ShouldBe(1);
+            results[0].Topic.ShouldBeNull();
+        }
+
+        [Fact]
+        public void Enqueue_MultipleTopics_MetadataIsIsolatedPerTopic()
+        {
+            using var session = store.OpenSession();
+
+            var metadata = new Dictionary<string, string> { ["key"] = "value" };
+
+            var results = session.Enqueue(new MyMessage("hello"), new List<string> { "topic-a", "topic-b" }, metadata: metadata);
+
+            results.Count.ShouldBe(2);
+            results[0].Metadata.ShouldNotBeSameAs(results[1].Metadata);
+            results[0].Metadata["key"].ShouldBe("value");
+            results[1].Metadata["key"].ShouldBe("value");
         }
     }
 }
