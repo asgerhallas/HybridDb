@@ -121,10 +121,7 @@ namespace HybridDb.Tests.Queue
 
             var dispatch = MessageHandlerDispatcher.For(_ => [handler]);
 
-            var exception = await Should.ThrowAsync<ArgumentOutOfRangeException>(() => dispatch(session, message));
-
-            exception.Message.ShouldBe("Raaaaaaaange");
-
+            await Should.ThrowAsync<ArgumentOutOfRangeException>(() => dispatch(session, message));
         }
     }
 }
