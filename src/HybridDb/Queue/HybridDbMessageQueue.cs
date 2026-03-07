@@ -99,58 +99,69 @@ namespace HybridDb.Queue
 
                                 try
                                 {
-                                    while (!cts.IsCancellationRequested)
+                                    // The inner polling loop runs in a separate task so that
+                                    // AsyncLocal values set during BeginSession (e.g. IoC scopes)
+                                    // are confined to that task's ExecutionContext copy and don't
+                                    // leak into the outer loop's ExecutionContext on subsequent iterations.
+                                    await Task.Factory.StartNew(async () =>
                                     {
-                                        var session = BeginSession();
-
-                                        try
+                                        while (!cts.IsCancellationRequested)
                                         {
-                                            var message = TryGetNextMessage(session);
+                                            var session = BeginSession();
 
-                                            if (message == null)
+                                            try
+                                            {
+                                                var message = TryGetNextMessage(session);
+
+                                                if (message == null)
+                                                {
+                                                    DisposeSession(session);
+
+                                                    await WaitOnEmptyQueue();
+
+                                                    // No message was found, so after some wait
+                                                    // we try polling again in the same loop.
+                                                    continue;
+                                                }
+
+                                                await Task.Factory.StartNew(async () =>
+                                                    {
+                                                        try
+                                                        {
+                                                            using var _ = Time("HandleMessage");
+
+                                                            await HandleMessage(session, message);
+                                                        }
+                                                        finally
+                                                        {
+                                                            DisposeSession(session);
+
+                                                            // open the gate for the next message, when this message is handled.
+                                                            release();
+                                                        }
+                                                    },
+                                                    cts.Token,
+                                                    TaskCreationOptions.DenyChildAttach,
+                                                    TaskScheduler.Default);
+
+                                                // Message was retrieved and handling is started on a new thread,
+                                                // so we break out of the to start polling for the next message.
+                                                break;
+                                            }
+                                            catch
                                             {
                                                 DisposeSession(session);
 
-                                                await WaitOnEmptyQueue();
+                                                release();
 
-                                                // No message was found, so after some wait
-                                                // we try polling again in the same loop.
-                                                continue;
+                                                throw;
                                             }
-
-                                            await Task.Factory.StartNew(async () =>
-                                                {
-                                                    try
-                                                    {
-                                                        using var _ = Time("HandleMessage");
-
-                                                        await HandleMessage(session, message);
-                                                    }
-                                                    finally
-                                                    {
-                                                        DisposeSession(session);
-
-                                                        // open the gate for the next message, when this message is handled.
-                                                        release();
-                                                    }
-                                                },
-                                                cts.Token,
-                                                TaskCreationOptions.DenyChildAttach,
-                                                TaskScheduler.Default);
-
-                                            // Message was retrieved and handling is started on a new thread,
-                                            // so we break out of the to start polling for the next message.
-                                            break;
                                         }
-                                        catch
-                                        {
-                                            DisposeSession(session);
-
-                                            release();
-
-                                            throw;
-                                        }
-                                    }
+                                    },
+                                    cts.Token,
+                                    TaskCreationOptions.DenyChildAttach,
+                                    TaskScheduler.Default)
+                                    .Unwrap();
                                 }
                                 catch
                                 {

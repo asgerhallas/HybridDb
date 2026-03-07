@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using HybridDb.Queue;
 using Shouldly;
 using Xunit;
@@ -68,6 +70,66 @@ namespace HybridDb.Tests.Queue
             session.SetDefaultMessageOrder(123);
 
             session.GetDefaultMessageOrder().ShouldBe(123);
+        }
+
+        [Fact]
+        public void Enqueue_MultipleTopics_ReturnsOneMessagePerTopic()
+        {
+            using var session = store.OpenSession();
+
+            var results = session.Enqueue(new MyMessage("hello"), new List<string> { "topic-a", "topic-b" });
+
+            results.Count.ShouldBe(2);
+            results[0].Topic.ShouldBe("topic-a");
+            results[1].Topic.ShouldBe("topic-b");
+        }
+
+        [Fact]
+        public void Enqueue_MultipleTopics_WithId_ReusesSameId()
+        {
+            using var session = store.OpenSession();
+
+            var results = session.Enqueue("my-id", new MyMessage("hello"), new List<string> { "topic-a", "topic-b" });
+
+            results.Count.ShouldBe(2);
+            results[0].Id.ShouldBe("my-id");
+            results[1].Id.ShouldBe("my-id");
+            results[0].Topic.ShouldBe("topic-a");
+            results[1].Topic.ShouldBe("topic-b");
+        }
+
+        [Fact]
+        public void Enqueue_MultipleTopics_NullTopics_Throws()
+        {
+            using var session = store.OpenSession();
+
+            Should.Throw<ArgumentNullException>(() => session.Enqueue(new MyMessage("hello"), (IReadOnlyList<string>)null));
+        }
+
+        [Fact]
+        public void Enqueue_MultipleTopics_EmptyTopics_EnqueuesToDefaultTopic()
+        {
+            using var session = store.OpenSession();
+
+            var results = session.Enqueue(new MyMessage("hello"), new List<string>());
+
+            results.Count.ShouldBe(1);
+            results[0].Topic.ShouldBeNull();
+        }
+
+        [Fact]
+        public void Enqueue_MultipleTopics_MetadataIsIsolatedPerTopic()
+        {
+            using var session = store.OpenSession();
+
+            var metadata = new Dictionary<string, string> { ["key"] = "value" };
+
+            var results = session.Enqueue(new MyMessage("hello"), new List<string> { "topic-a", "topic-b" }, metadata: metadata);
+
+            results.Count.ShouldBe(2);
+            results[0].Metadata.ShouldNotBeSameAs(results[1].Metadata);
+            results[0].Metadata["key"].ShouldBe("value");
+            results[1].Metadata["key"].ShouldBe("value");
         }
     }
 }

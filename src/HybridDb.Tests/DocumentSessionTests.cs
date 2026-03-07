@@ -1651,6 +1651,62 @@ namespace HybridDb.Tests
             session.Query<Entity>().ToList().Count.ShouldBe(1);
         }
 
+        [Fact]
+        public void UnchangedDocument_NotUpdated()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+
+            UpdateCommand updateCommand = null;
+
+            store.Configuration.AddEventHandler(@event => Switch.On(@event)
+                .Match<SaveChanges_AfterExecuteCommands>(x =>
+                    updateCommand = x.ExecutedCommands.Keys.OfType<UpdateCommand>().SingleOrDefault())
+                .Else(_ => { }));
+
+            using var session = store.OpenSession();
+
+            session.Store(new Entity { Id = id, Property = "Asger" });
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            _ = session.Load<Entity>(id);
+
+            session.SaveChanges();
+
+            updateCommand.ShouldBe(null);
+        }
+
+        [Fact]
+        public void UnchangedDocument_Updated_ForceWriteUnchangedDocument()
+        {
+            Document<Entity>();
+
+            var id = NewId();
+
+            UpdateCommand updateCommand = null;
+
+            store.Configuration.AddEventHandler(@event => Switch.On(@event)
+                .Match<SaveChanges_AfterExecuteCommands>(x =>
+                    updateCommand = x.ExecutedCommands.Keys.OfType<UpdateCommand>().SingleOrDefault())
+                .Else(_ => { }));
+
+            using var session = store.OpenSession();
+
+            session.Store(new Entity { Id = id, Property = "Asger" });
+            session.SaveChanges();
+            session.Advanced.Clear();
+
+            var entity = session.Load<Entity>(id);
+
+            session.Advanced.ForceWriteUnchangedDocument(entity);
+
+            session.SaveChanges();
+
+            updateCommand.ShouldNotBe(null);
+            updateCommand.Id.ShouldBe(id);
+        }
         public class BaseCase { }
 
         public class Case : BaseCase

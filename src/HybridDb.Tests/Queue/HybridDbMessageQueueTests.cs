@@ -1296,6 +1296,44 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
+        public async Task ScopeFromOneMessageDoesNotLeakIntoNextSession()
+        {
+            // Regression test for https://github.com/asgerhallas/HybridDb/issues/91
+            var scopeAtStartOfSession = new ConcurrentQueue<TheScope>();
+
+            var queue = StartQueue(new MessageQueueOptions
+            {
+                MaxConcurrency = 1,
+                UseLocalEnqueueTrigger = false,
+                Subscribe = events => events.Subscribe(@event => Switch.On(@event)
+                    .Match<SessionBeginning>(m =>
+                    {
+                        scopeAtStartOfSession.Enqueue(TheScope.Current); // BEFORE Begin() — should always be null
+                        m.Context.Data.Add("scope", TheScope.Begin());
+                    })
+                    .Match<SessionEnded>(m => ((IDisposable)m.Context.Data["scope"]).Dispose())),
+            }.ReplayEvents(TimeSpan.FromSeconds(60)));
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue(new MyMessage("Message 1"));
+                session.Enqueue(new MyMessage("Message 2"));
+                session.SaveChanges();
+            }
+
+            await queue.ReplayedEvents
+                .OfType<MessageCommitted>()
+                .Take(2)
+                .ToList()
+                .FirstAsync()
+                .Timeout(timeout);
+
+            scopeAtStartOfSession.ToArray().ShouldAllBe(
+                s => s == null,
+                "A scope leaked from a previous message into a new session's SessionBeginning.");
+        }
+
+        [Fact]
         public async Task FastAndFurious()
         {
             // This test is to asses parallel runs of many queues, as we often do this in application testing.

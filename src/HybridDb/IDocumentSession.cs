@@ -31,7 +31,7 @@ namespace HybridDb
         
         IAdvancedDocumentSession Advanced { get; }
         Guid CommitId { get; }
-    }
+        }
 
     public interface IAdvancedDocumentSession
     {
@@ -58,5 +58,10 @@ namespace HybridDb
         Dictionary<object, object> SessionData { get; }
         IReadOnlyList<HybridDbCommand> DeferredCommands { get; }
         IReadOnlyList<(int Generation, EventData<byte[]> Data)> Events { get; }
+
+        /// <summary>
+        /// Force the session to save entity even when the document has not changed.
+        /// </summary>
+        void ForceWriteUnchangedDocument(object entity);
     }
 }

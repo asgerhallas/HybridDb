@@ -326,7 +326,7 @@ namespace HybridDb
                         var document = (string)projections[DocumentTable.DocumentColumn];
                         var metadataDocument = (string)projections[DocumentTable.MetadataColumn];
 
-                        if (!forceWriteUnchangedDocument &&
+                        if (!forceWriteUnchangedDocument && !managedEntity.ForceWriteUnchangedDocument &&
                             SafeSequenceEqual(managedEntity.Document, document) &&
                             SafeSequenceEqual(managedEntity.MetadataDocument, metadataDocument))
                             break;
@@ -546,6 +546,14 @@ namespace HybridDb
                 return false;
 
             return first.SequenceEqual(second);
+        }
+
+        public void ForceWriteUnchangedDocument(object entity)
+        {
+            if (Advanced.ManagedEntities.TryGetValue(entity, out var managedEntity))
+            {
+                managedEntity.ForceWriteUnchangedDocument = true;
+            }
         }
     }
 }

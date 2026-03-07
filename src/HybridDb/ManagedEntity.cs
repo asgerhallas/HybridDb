@@ -29,5 +29,6 @@ namespace HybridDb
         public Dictionary<string, List<string>> Metadata { get; set; }
         public string MetadataDocument { get; set; }
 
+        public bool ForceWriteUnchangedDocument { get; set; }
     }
 }
