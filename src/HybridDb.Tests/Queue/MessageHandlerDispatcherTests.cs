@@ -25,10 +25,8 @@ namespace HybridDb.Tests.Queue
         }
 
         [Fact]
-        public void NullResolveHandlers_ThrowsArgumentNullException()
-        {
+        public void NullResolveHandlers_ThrowsArgumentNullException() =>
             Should.Throw<ArgumentNullException>(() => MessageHandlerDispatcher.For(null));
-        }
 
         [Fact]
         public async Task DispatchesToExplicitInterfaceImplementation()
@@ -37,7 +35,7 @@ namespace HybridDb.Tests.Queue
             var session = A.Fake<IDocumentSession>();
             var message = new HybridDbMessage("id-explicit", new MyMessage("explicit"));
 
-            var dispatch = MessageHandlerDispatcher.For(_ => new object[] { handler });
+            var dispatch = MessageHandlerDispatcher.For(_ => [handler]);
 
             await dispatch(session, message);
 
@@ -70,7 +68,7 @@ namespace HybridDb.Tests.Queue
             var session = A.Fake<IDocumentSession>();
             var message = new HybridDbMessage("id-2", new MyMessage("world"));
 
-            var dispatch = MessageHandlerDispatcher.For(_ => new object[] { handler1, handler2 });
+            var dispatch = MessageHandlerDispatcher.For(_ => [handler1, handler2]);
 
             await dispatch(session, message);
 
@@ -103,11 +101,30 @@ namespace HybridDb.Tests.Queue
                 .Invokes(call => capturedSession = call.GetArgument<IDocumentSession>(0))
                 .Returns(Task.CompletedTask);
 
-            var dispatch = MessageHandlerDispatcher.For(_ => new object[] { handler });
+            var dispatch = MessageHandlerDispatcher.For(_ => [handler]);
 
             await dispatch(session, message);
 
             capturedSession.ShouldBeSameAs(session);
+        }
+
+        [Fact]
+        public async Task ExceptionsBubbles()
+        {
+            var session = A.Fake<IDocumentSession>();
+            var message = new HybridDbMessage("id-5", new MyMessage("fail"));
+
+            var handler = A.Fake<IMessageHandler<MyMessage>>();
+                
+            A.CallTo(() => handler.Handle(A<IDocumentSession>._, (MyMessage)message.Payload))
+                .Throws(new ArgumentOutOfRangeException("Raaaaaaaange"));
+
+            var dispatch = MessageHandlerDispatcher.For(_ => [handler]);
+
+            var exception = await Should.ThrowAsync<ArgumentOutOfRangeException>(() => dispatch(session, message));
+
+            exception.Message.ShouldBe("Raaaaaaaange");
+
         }
     }
 }
