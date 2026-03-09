@@ -168,13 +168,6 @@ namespace HybridDb.SqlBuilder
             return this;
         }
 
-        public Sql Append((Sql Sql1, Sql Sql2) sql)
-        {
-            Append(sql.Sql1);
-
-            return sql.Sql2;
-        }
-
         public static Sql From(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) => Empty.Append(predicate, handler, elseHandler);
         public Sql Append(bool predicate, SqlStringHandler handler, SqlStringHandler? elseHandler = null) =>
             predicate
