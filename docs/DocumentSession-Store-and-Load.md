@@ -10,7 +10,6 @@ The `DocumentSession` represents a unit of work and acts as a first-level cache 
 
 <!-- snippet: BasicSession -->
 <a id='snippet-BasicSession'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -25,7 +24,6 @@ session.SaveChanges();
 
 <!-- snippet: SessionWithTransaction -->
 <a id='snippet-SessionWithTransaction'></a>
-
 ```cs
 using var tx = store.BeginTransaction();
 
@@ -48,7 +46,6 @@ Store a new document with auto-generated or specified ID:
 
 <!-- snippet: StoreNewDocument -->
 <a id='snippet-StoreNewDocument'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -70,7 +67,6 @@ session.SaveChanges();
 
 <!-- snippet: StoreWithExplicitKey -->
 <a id='snippet-StoreWithExplicitKey'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -93,7 +89,6 @@ Store an existing document with optimistic concurrency control:
 
 <!-- snippet: StoreWithEtag -->
 <a id='snippet-StoreWithEtag'></a>
-
 ```cs
 using var session = store.OpenSession();
 var product = session.Load<Product>("product-123");
@@ -121,7 +116,6 @@ catch (ConcurrencyException)
 
 <!-- snippet: StoreMultipleDocuments -->
 <a id='snippet-StoreMultipleDocuments'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -148,7 +142,6 @@ session.SaveChanges();
 
 <!-- snippet: LoadSingleDocument -->
 <a id='snippet-LoadSingleDocument'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -166,7 +159,6 @@ if (product != null)
 
 <!-- snippet: LoadMultipleDocuments -->
 <a id='snippet-LoadMultipleDocuments'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -201,7 +193,6 @@ Load documents that won't be modified:
 
 <!-- snippet: LoadAsReadOnly -->
 <a id='snippet-LoadAsReadOnly'></a>
-
 ```cs
 using var session = store.OpenSession();
 var product = session.Load<Product>("product-123", readOnly: true);
@@ -216,7 +207,6 @@ output.WriteLine(product.Name);
 
 <!-- snippet: LoadMultipleAsReadOnly -->
 <a id='snippet-LoadMultipleAsReadOnly'></a>
-
 ```cs
 using var session = store.OpenSession();
 
@@ -237,7 +227,6 @@ foreach (var product in products)
 
 <!-- snippet: BasicSave -->
 <a id='snippet-BasicSave'></a>
-
 ```cs
 using var session = store.OpenSession();
 
