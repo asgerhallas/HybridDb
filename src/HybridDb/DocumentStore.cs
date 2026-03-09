@@ -1,9 +1,11 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
+using HybridDb.SqlBuilder;
 using Microsoft.Extensions.Logging;
 using IsolationLevel = System.Data.IsolationLevel;
 
@@ -122,6 +124,20 @@ namespace HybridDb
             AssertInitialized();
 
             return new DocumentTransaction(this, commitId, level, Stats, connectionTimeout);
+        }
+
+        public void Execute(Sql sql)
+        {
+            AssertInitialized();
+
+            Database.RawExecute(sql);
+        }
+
+        public void Execute(DocumentTransaction tx, Sql sql)
+        {
+            AssertInitialized();
+
+            tx.SqlConnection.Execute(sql.Build(this, out var parameters), parameters, tx.SqlTransaction);
         }
 
         public void Execute(DdlCommand command)
