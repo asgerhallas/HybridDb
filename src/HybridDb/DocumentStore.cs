@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
@@ -126,18 +125,18 @@ namespace HybridDb
             return new DocumentTransaction(this, commitId, level, Stats, connectionTimeout);
         }
 
-        public void Execute(Sql sql)
+        public int Execute(Sql sql)
         {
             AssertInitialized();
 
-            Database.RawExecute(sql);
+            return Database.RawExecute(sql);
         }
 
-        public void Execute(DocumentTransaction tx, Sql sql)
+        public int Execute(DocumentTransaction tx, Sql sql)
         {
             AssertInitialized();
 
-            tx.SqlConnection.Execute(sql.Build(this, out var parameters), parameters, tx.SqlTransaction);
+            return tx.Execute(sql);
         }
 
         public void Execute(DdlCommand command)

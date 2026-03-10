@@ -1170,8 +1170,9 @@ namespace HybridDb.Tests
             store.Insert(table, NewId(), new { Field = "Asger" });
             store.Insert(table, NewId(), new { Field = "Lars" });
 
-            store.Execute(Sql.From($"delete from {table}"));
+            var rowsAffected = store.Execute(Sql.From($"delete from {table}"));
 
+            rowsAffected.ShouldBe(2);
             store.Query(table, out _).ShouldBeEmpty();
         }
 
@@ -1185,9 +1186,10 @@ namespace HybridDb.Tests
             store.Insert(table, id, new { Field = "Asger" });
 
             using var tx = store.BeginTransaction();
-            store.Execute(tx, Sql.From($"delete from {table} where Id = {id}"));
+            var rowsAffected = store.Execute(tx, Sql.From($"delete from {table} where Id = {id}"));
             tx.Complete();
 
+            rowsAffected.ShouldBe(1);
             store.Query(table, out _).ShouldBeEmpty();
         }
 
