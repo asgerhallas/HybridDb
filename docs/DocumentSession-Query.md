@@ -10,6 +10,7 @@ HybridDb provides powerful querying capabilities through LINQ and SQL. You can q
 
 <!-- snippet: BasicLINQQuery -->
 <a id='snippet-BasicLINQQuery'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -24,6 +25,7 @@ var products = session.Query<Product>()
 
 <!-- snippet: QueryAllDocuments -->
 <a id='snippet-QueryAllDocuments'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -36,6 +38,7 @@ var allProducts = session.Query<Product>().ToList();
 
 <!-- snippet: QueryWithSingleResult -->
 <a id='snippet-QueryWithSingleResult'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -50,6 +53,7 @@ var product = session.Query<Product>()
 
 <!-- snippet: QueryWithFirst -->
 <a id='snippet-QueryWithFirst'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -66,6 +70,7 @@ var product = session.Query<Product>()
 
 <!-- snippet: WhereEquality -->
 <a id='snippet-WhereEquality'></a>
+
 ```cs
 var session = store.OpenSession();
 
@@ -80,6 +85,7 @@ var products = session.Query<Product>()
 
 <!-- snippet: ComparisonOperators -->
 <a id='snippet-ComparisonOperators'></a>
+
 ```cs
 // Greater than
 var expensive = session.Query<Product>()
@@ -111,6 +117,7 @@ var hasCategory = session.Query<Product>()
 
 <!-- snippet: LogicalOperators -->
 <a id='snippet-LogicalOperators'></a>
+
 ```cs
 // AND
 var filtered = session.Query<Product>()
@@ -129,6 +136,7 @@ var multiple = session.Query<Product>()
 
 <!-- snippet: MultipleWhereClauses -->
 <a id='snippet-MultipleWhereClauses'></a>
+
 ```cs
 var products = session.Query<Product>()
     .Where(x => x.Price > 50)
@@ -143,6 +151,7 @@ var products = session.Query<Product>()
 
 <!-- snippet: StringOperations -->
 <a id='snippet-StringOperations'></a>
+
 ```cs
 // StartsWith
 var startsWithPro = session.Query<Product>()
@@ -189,6 +198,7 @@ var products = session.Query<Product>()
 
 <!-- snippet: OrderingResults -->
 <a id='snippet-OrderingResults'></a>
+
 ```cs
 // Order by ascending
 var byPrice = session.Query<Product>()
@@ -213,6 +223,7 @@ var multiOrder = session.Query<Product>()
 
 <!-- snippet: TakeAndSkip -->
 <a id='snippet-TakeAndSkip'></a>
+
 ```cs
 // Take first 10
 var firstPage = session.Query<Product>()
@@ -234,6 +245,7 @@ var secondPage = session.Query<Product>()
 
 <!-- snippet: CountQueries -->
 <a id='snippet-CountQueries'></a>
+
 ```cs
 // Count all
 var totalCount = session.Query<Product>().Count();

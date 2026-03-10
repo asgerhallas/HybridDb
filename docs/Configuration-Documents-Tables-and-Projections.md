@@ -10,6 +10,7 @@ Documents are the core entities stored in HybridDb. Each document type must be r
 
 <!-- snippet: BasicDocumentRegistration -->
 <a id='snippet-BasicDocumentRegistration'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -36,6 +37,7 @@ Override the default table name:
 
 <!-- snippet: CustomTableNames -->
 <a id='snippet-CustomTableNames'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -51,6 +53,7 @@ Specify a custom discriminator for a document type:
 
 <!-- snippet: CustomDiscriminators -->
 <a id='snippet-CustomDiscriminators'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -75,6 +78,7 @@ Project a property using its name:
 
 <!-- snippet: SimpleProjections -->
 <a id='snippet-SimpleProjections'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -95,6 +99,7 @@ You can specify a different name for the column:
 
 <!-- snippet: CustomColumnNames -->
 <a id='snippet-CustomColumnNames'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -114,6 +119,7 @@ Project properties from nested objects:
 
 <!-- snippet: NestedProperties -->
 <a id='snippet-NestedProperties'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -134,6 +140,7 @@ Transform or convert property values before storing them in columns:
 
 <!-- snippet: TransformingValues -->
 <a id='snippet-TransformingValues'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -154,6 +161,7 @@ Project computed values derived from multiple properties:
 
 <!-- snippet: CalculatedProjections -->
 <a id='snippet-CalculatedProjections'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -172,6 +180,7 @@ Store complex objects as JSON in a column:
 
 <!-- snippet: JsonProjections -->
 <a id='snippet-JsonProjections'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -196,6 +205,7 @@ Set maximum length for string columns:
 
 <!-- snippet: MaxLengthOption -->
 <a id='snippet-MaxLengthOption'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -214,6 +224,7 @@ Store value as JSON:
 
 <!-- snippet: AsJsonOption -->
 <a id='snippet-AsJsonOption'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -230,6 +241,7 @@ Disable automatic null checking:
 
 <!-- snippet: DisableNullCheckInjectionOption -->
 <a id='snippet-DisableNullCheckInjectionOption'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -281,6 +293,7 @@ HybridDb supports polymorphic document hierarchies stored in the same table.
 
 <!-- snippet: AnimalHierarchy -->
 <a id='snippet-AnimalHierarchy'></a>
+
 ```cs
 public abstract class Animal
 {
@@ -303,6 +316,7 @@ public class Cat : Animal
 
 <!-- snippet: BasicPolymorphism -->
 <a id='snippet-BasicPolymorphism'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -333,6 +347,7 @@ All animals are stored in the "Animals" table with different discriminators.
 
 <!-- snippet: QueryingPolymorphicTypes -->
 <a id='snippet-QueryingPolymorphicTypes'></a>
+
 ```cs
 // Query all animals
 var allAnimals = session.Query<Animal>().ToList();
@@ -355,6 +370,7 @@ Sometimes you want derived types in separate tables:
 
 <!-- snippet: SeparateTablesForDerivedTypes -->
 <a id='snippet-SeparateTablesForDerivedTypes'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -390,6 +406,7 @@ Plus any projected columns you've configured.
 
 <!-- snippet: AccessingTableConfiguration -->
 <a id='snippet-AccessingTableConfiguration'></a>
+
 ```cs
 var design = store.Configuration.GetDesignFor<Product>();
 var table = design.Table;
@@ -411,6 +428,7 @@ Projections create columns, but you may want to add indexes for performance:
 
 <!-- snippet: MyMigration -->
 <a id='snippet-MyMigration'></a>
+
 ```cs
 public class MyMigration : Migration
 {
@@ -433,6 +451,7 @@ public class MyMigration : Migration
 
 <!-- snippet: ProjectionsAndIndexes -->
 <a id='snippet-ProjectionsAndIndexes'></a>
+
 ```cs
 var migration = new MyMigration();
 
@@ -451,6 +470,7 @@ For queries on multiple columns:
 
 <!-- snippet: CompositeIndexMigration -->
 <a id='snippet-CompositeIndexMigration'></a>
+
 ```cs
 public class CompositeIndexMigration : Migration
 {
@@ -477,6 +497,7 @@ Use the `Extend` method to add projections from related types:
 
 <!-- snippet: ExtendedProjections -->
 <a id='snippet-ExtendedProjections'></a>
+
 ```cs
 var store = DocumentStore.Create(config =>
 {
@@ -501,6 +522,7 @@ Access document metadata in projections:
 
 <!-- snippet: ProjectionWithMetadata -->
 <a id='snippet-ProjectionWithMetadata'></a>
+
 ```cs
 var projection = Projection.From<string>((document, metadata) =>
 {

@@ -97,6 +97,7 @@ Example:
 
 <!-- snippet: CanStoreAndLoadEntity -->
 <a id='snippet-CanStoreAndLoadEntity'></a>
+
 ```cs
 Document<Entity>();
 

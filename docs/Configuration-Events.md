@@ -122,6 +122,7 @@ Register an event handler during store configuration:
 
 <!-- snippet: AddEventHandler -->
 <a id='snippet-AddEventHandler'></a>
+
 ```cs
 using var store = DocumentStore.Create(config =>
 {
@@ -150,6 +151,7 @@ You can register multiple event handlers - they will be called in the order they
 
 <!-- snippet: MultipleEventHandlers -->
 <a id='snippet-MultipleEventHandlers'></a>
+
 ```cs
 using var store = DocumentStore.Create(config =>
 {
@@ -192,6 +194,7 @@ Validate documents or enforce business rules before they're saved:
 
 <!-- snippet: BeforeExecuteCommands_Validation -->
 <a id='snippet-BeforeExecuteCommands_Validation'></a>
+
 ```cs
 configuration.AddEventHandler(@event =>
 {
@@ -227,6 +230,7 @@ Modify documents automatically before they're saved:
 
 <!-- snippet: BeforeExecuteCommands_Modification -->
 <a id='snippet-BeforeExecuteCommands_Modification'></a>
+
 ```cs
 configuration.AddEventHandler(@event =>
 {
@@ -258,6 +262,7 @@ Log operations after they're successfully saved:
 
 <!-- snippet: AfterExecuteCommands_Logging -->
 <a id='snippet-AfterExecuteCommands_Logging'></a>
+
 ```cs
 configuration.AddEventHandler(@event =>
 {
@@ -289,6 +294,7 @@ The `AfterExecuteCommands` event fires after the transaction is committed. Don't
 
 <!-- snippet: DontModifySessionStateInAfterExecuteCommands -->
 <a id='snippet-DontModifySessionStateInAfterExecuteCommands'></a>
+
 ```cs
 // Wrong - transaction already committed
 if (@event is SaveChanges_AfterExecuteCommands afterSave)
@@ -310,6 +316,7 @@ Publish integration events before save:
 
 <!-- snippet: IntegrationEvents -->
 <a id='snippet-IntegrationEvents'></a>
+
 ```cs
 configuration.AddEventHandler(@event =>
 {
@@ -341,6 +348,7 @@ Avoid triggering saves within event handlers:
 
 <!-- snippet: InfiniteLoops -->
 <a id='snippet-InfiniteLoops'></a>
+
 ```cs
 // Wrong - infinite loop!
 configuration.AddEventHandler(@event =>

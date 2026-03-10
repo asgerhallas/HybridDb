@@ -10,7 +10,7 @@ namespace HybridDb.Migrations.Documents
     {
         public IdMatcher(IReadOnlyList<string> ids)
         {
-            Ids = ids;
+            Ids = ids ?? throw new ArgumentNullException(nameof(ids));
         }
 
         public IReadOnlyList<string> Ids { get; }
