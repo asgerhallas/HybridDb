@@ -60,7 +60,7 @@ namespace HybridDb
         public SqlTransaction SqlTransaction { get; }
 
         public T Execute<T>(HybridDbCommand<T> command) => Store.Execute(this, command);
-        public int Execute(Sql sql) => SqlConnection.Execute(sql.Build(Store, out var parameters), parameters, SqlTransaction);
+        public int Execute(Sql sql) => Store.Execute(this, sql);
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {

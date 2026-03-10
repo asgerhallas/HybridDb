@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Dapper;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
 using HybridDb.Migrations.Schema;
@@ -136,7 +137,7 @@ namespace HybridDb
         {
             AssertInitialized();
 
-            return tx.Execute(sql);
+            return tx.SqlConnection.Execute(sql.Build(this, out var parameters), parameters, tx.SqlTransaction);
         }
 
         public void Execute(DdlCommand command)
