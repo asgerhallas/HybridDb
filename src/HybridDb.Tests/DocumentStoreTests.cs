@@ -1161,6 +1161,47 @@ namespace HybridDb.Tests
             row.Data.ShouldBeLike(entity);
         }
 
+        [Fact]
+        public void CanExecuteSql()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            store.Insert(table, NewId(), new { Field = "Asger" });
+            store.Insert(table, NewId(), new { Field = "Lars" });
+
+            var rowsAffected = store.Execute(Sql.From($"delete from {table}"));
+
+            rowsAffected.ShouldBe(2);
+            store.Query(table, out _).ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void CanExecuteSqlWithTransaction()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var id = NewId();
+            store.Insert(table, id, new { Field = "Asger" });
+
+            using var tx = store.BeginTransaction();
+            var rowsAffected = store.Execute(tx, Sql.From($"delete from {table} where Id = {id}"));
+            tx.Complete();
+
+            rowsAffected.ShouldBe(1);
+            store.Query(table, out _).ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void ExecuteSql_FailsIfNotInitialized()
+        {
+            NoInitialize();
+
+            Should.Throw<InvalidOperationException>(() => store.Execute(Sql.From($"select 1")))
+                .Message.ShouldContain("not initialized");
+        }
+
         public class EntityWithListOfObjects<TThings, TOtherThings>
         {
             public IEnumerable<TThings> Things { get; set; }
