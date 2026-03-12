@@ -133,6 +133,27 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithCount()
+        {
+            var result = session.Query<Entity>().Count();
+            result.ShouldBe(3);
+        }
+
+        [Fact]
+        public void CanQueryWithWhereAndCount()
+        {
+            var result = session.Query<Entity>().Where(x => x.Property > 1).Count();
+            result.ShouldBe(2);
+        }
+
+        [Fact]
+        public void CanQueryWithCountPredicate()
+        {
+            var result = session.Query<Entity>().Count(x => x.Property > 1);
+            result.ShouldBe(2);
+        }
+
+        [Fact]
         public void CanQueryWithSingle()
         {
             var result = session.Query<Entity>().Where(x => x.StringProp == "Asger").Single();

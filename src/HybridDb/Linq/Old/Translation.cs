@@ -20,6 +20,7 @@ namespace HybridDb.Linq.Old
             SingleOrDefault,
             First,
             FirstOrDefault,
+            Count,
             Enumeration
         }
     }

@@ -77,6 +77,8 @@ namespace HybridDb.Linq.Old
                         return default(T);
 
                     return result.Results.First();
+                case Translation.ExecutionSemantics.Count:
+                    return (T)(object)lastQueryStats.RetrievedResults;
                 default:
                     throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
             }
