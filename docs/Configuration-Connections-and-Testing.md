@@ -8,6 +8,7 @@ HybridDb uses standard SQL Server connection strings. The connection string is c
 
 <!-- snippet: ProductionConfiguration -->
 <a id='snippet-ProductionConfiguration'></a>
+
 ```cs
 var newStore = DocumentStore.Create(config =>
 {
@@ -24,6 +25,7 @@ You can also configure settings using the Configuration object:
 
 <!-- snippet: ConfigurationObject -->
 <a id='snippet-ConfigurationObject'></a>
+
 ```cs
 var configuration = new Configuration();
 configuration.UseConnectionString("Server=(LocalDb)\\MSSQLLocalDB;Database=MyDb;Integrated Security=True;Encrypt=False;");
@@ -39,6 +41,7 @@ If you need to configure the store from multiple places before initializing:
 
 <!-- snippet: DeferredInitialization -->
 <a id='snippet-DeferredInitialization'></a>
+
 ```cs
 var newStore = DocumentStore.Create(config =>
 {
@@ -68,6 +71,7 @@ Uses global temporary tables in TempDb. Best for test isolation:
 
 <!-- snippet: GlobalTempTablesMode -->
 <a id='snippet-GlobalTempTablesMode'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(
     TableMode.GlobalTempTables,
@@ -93,6 +97,7 @@ Uses real tables with a prefix for isolation:
 
 <!-- snippet: RealTablesMode -->
 <a id='snippet-RealTablesMode'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(
     TableMode.RealTables,
@@ -125,6 +130,7 @@ Configure logging to track what HybridDb is doing:
 
 <!-- snippet: LoggerConfiguration -->
 <a id='snippet-LoggerConfiguration'></a>
+
 ```cs
 var loggerFactory = LoggerFactory.Create(builder =>
 {
@@ -157,6 +163,7 @@ The `DefaultSerializer` is specifically designed for document storage with the f
 
 <!-- snippet: DefaultSerializerConfiguration -->
 <a id='snippet-DefaultSerializerConfiguration'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
@@ -285,6 +292,7 @@ Add a prefix to all table names:
 
 <!-- snippet: TableNamePrefix -->
 <a id='snippet-TableNamePrefix'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
@@ -301,6 +309,7 @@ Customize how entity keys are resolved:
 
 <!-- snippet: CustomKeyResolver -->
 <a id='snippet-CustomKeyResolver'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
@@ -325,6 +334,7 @@ Enable soft deletes instead of hard deletes:
 
 <!-- snippet: SoftDeleteConfiguration -->
 <a id='snippet-SoftDeleteConfiguration'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
@@ -341,6 +351,7 @@ Control background migration behavior:
 
 <!-- snippet: BackgroundMigrationsConfiguration -->
 <a id='snippet-BackgroundMigrationsConfiguration'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
@@ -360,6 +371,7 @@ Enable the event store feature:
 
 <!-- snippet: EventStoreConfiguration -->
 <a id='snippet-EventStoreConfiguration'></a>
+
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {

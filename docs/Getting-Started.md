@@ -33,6 +33,7 @@ Here's a simple example to get started with HybridDb:
 
 <!-- snippet: QuickStart_BasicExample -->
 <a id='snippet-QuickStart_BasicExample'></a>
+
 ```cs
 // Create a document store for testing (uses temp tables)
 var store = DocumentStore.ForTesting(TableMode.GlobalTempTables, configuration => 
@@ -63,6 +64,7 @@ For production use, create a store with real tables:
 
 <!-- snippet: ProductionSetup -->
 <a id='snippet-ProductionSetup'></a>
+
 ```cs
 var store = DocumentStore.Create(configuration =>
 {
@@ -112,6 +114,7 @@ Documents must be registered with the store and can have projected properties:
 
 <!-- snippet: DocumentConfiguration -->
 <a id='snippet-DocumentConfiguration'></a>
+
 ```cs
 // Create a table named Products and add a database column for the Name, Price and CategoryId properties and keep the values up-to-date on each call to Session.SaveChanges()
 configuration.Document<Product>()
