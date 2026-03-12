@@ -5,13 +5,16 @@ using Microsoft.Data.SqlClient;
 using ShouldBeLike;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 using Table = HybridDb.Config.Table;
 
 namespace HybridDb.Tests.SqlBuilder
 {
-    public class SqlTests
+    public class SqlTests : HybridDbTests
     {
-        readonly DocumentStore store = DocumentStore.ForTesting(TableMode.GlobalTempTables);
+        public SqlTests(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public void AppendWithParameter()
