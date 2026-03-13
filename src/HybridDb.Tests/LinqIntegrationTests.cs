@@ -333,4 +333,39 @@ namespace HybridDb.Tests
             public string CaseName { get; set; }
         }
     }
+
+    public class LinqIntegrationTests_OfType : HybridDbTests
+    {
+        readonly IDocumentSession session;
+
+        public LinqIntegrationTests_OfType(ITestOutputHelper output) : base(output)
+        {
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+
+            UseSerializer(new DefaultSerializer());
+
+            session = Using(store.OpenSession());
+            session.Store(new DerivedEntity { Id = NewId() });
+            session.Store(new DerivedEntity { Id = NewId() });
+            session.Store(new MoreDerivedEntity1 { Id = NewId() });
+            session.Store(new MoreDerivedEntity1 { Id = NewId() });
+            session.Store(new MoreDerivedEntity1 { Id = NewId() });
+            session.SaveChanges();
+        }
+
+        [Fact]
+        public void CanQueryWithOfTypeAndCount()
+        {
+            var result = session.Query<DerivedEntity>().OfType<MoreDerivedEntity1>().Count();
+            result.ShouldBe(3);
+        }
+
+        [Fact]
+        public void CanQueryWithOfTypeAndCountReturnsZero()
+        {
+            var result = session.Query<DerivedEntity>().OfType<MoreDerivedEntity2>().Count();
+            result.ShouldBe(0);
+        }
+    }
 }

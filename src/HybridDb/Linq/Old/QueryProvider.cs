@@ -47,6 +47,28 @@ namespace HybridDb.Linq.Old
 
         T IQueryProvider.Execute<T>(Expression expression)
         {
+            // Count + OfType: SQL TotalResults covers the whole inheritance hierarchy, not just the
+            // requested subtype (OfType filtering is in-memory only). Enumerate with the discriminator
+            // filter here so the returned count is correct.
+            var translation = expression.Translate();
+            if (translation.ExecutionMethod == Translation.ExecutionSemantics.Count &&
+                translation.ProjectAs != null &&
+                design.DocumentType.IsAssignableFrom(translation.ProjectAs))
+            {
+                var (countStats, countRows) = session.Transactionally(tx => tx.Query<object>(
+                    design.Table, null, false, translation.Select, translation.Where,
+                    translation.Window, translation.OrderBy, false, translation.Parameters));
+
+                var ofTypeCount = countRows
+                    .Select(row => store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator))
+                    .Count(concreteDesign => translation.ProjectAs.IsAssignableFrom(concreteDesign.DocumentType));
+
+                countStats.CopyTo(lastQueryStats);
+
+                // T is always int here: Queryable.Count<TSource>() calls Execute<int>()
+                return (T)(object)ofTypeCount;
+            }
+
             var result = ExecuteQuery<T>(expression);
 
             switch (result.Translation.ExecutionMethod)
@@ -83,6 +105,7 @@ namespace HybridDb.Linq.Old
                     // otherwise fall back to the total number of matching rows.
                     var hasWindow = result.Translation.Window != null;
                     var count = hasWindow ? lastQueryStats.RetrievedResults : lastQueryStats.TotalResults;
+
                     return (T)(object)count;
                 default:
                     throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
