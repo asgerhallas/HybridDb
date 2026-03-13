@@ -18,6 +18,7 @@ ETags are also called CommitIds and will be fully renamed to CommitId in the fut
 
 <!-- snippet: Concurrency_AutomaticChecking -->
 <a id='snippet-Concurrency_AutomaticChecking'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -46,6 +47,7 @@ You can explicitly disable the Etag check using the `lastWriteWins` parameter:
 
 <!-- snippet: Concurrency_DisablingChecks -->
 <a id='snippet-Concurrency_DisablingChecks'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -64,6 +66,7 @@ For advanced scenarios, you can explicitly provide an Etag when storing:
 
 <!-- snippet: Concurrency_ManualEtagManagement -->
 <a id='snippet-Concurrency_ManualEtagManagement'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -93,6 +96,7 @@ When storing a new document, no Etag check is performed:
 
 <!-- snippet: Concurrency_NewDocuments -->
 <a id='snippet-Concurrency_NewDocuments'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -115,6 +119,7 @@ By default, each operation (Load, SaveChanges) runs in its own short-lived trans
 
 <!-- snippet: Concurrency_PerOperationTransactions -->
 <a id='snippet-Concurrency_PerOperationTransactions'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -191,6 +196,7 @@ When you provide a DocumentTransaction, all operations share the same transactio
 
 <!-- snippet: Concurrency_DocumentTransaction -->
 <a id='snippet-Concurrency_DocumentTransaction'></a>
+
 ```cs
 using var tx = store.BeginTransaction(IsolationLevel.RepeatableRead);
 using var session = store.OpenSession(tx);
@@ -247,6 +253,7 @@ Optimistic concurrency (automatic Etag checking) handles most scenarios well, bu
 
 <!-- snippet: Concurrency_ReadCalculateWrite -->
 <a id='snippet-Concurrency_ReadCalculateWrite'></a>
+
 ```cs
 using var session = store.OpenSession();
 
@@ -271,6 +278,7 @@ if (inventory.Stock >= product.Stock)
 
 <!-- snippet: Concurrency_ReadCalculateWriteWithTransaction -->
 <a id='snippet-Concurrency_ReadCalculateWriteWithTransaction'></a>
+
 ```cs
 using var tx = store.BeginTransaction(IsolationLevel.Serializable);
 using var session = store.OpenSession(tx);
@@ -297,6 +305,7 @@ This means that within a single session, you automatically get a consistent view
 
 <!-- snippet: Concurrency_SessionCaching -->
 <a id='snippet-Concurrency_SessionCaching'></a>
+
 ```cs
 using var session = store.OpenSession();
 

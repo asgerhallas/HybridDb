@@ -87,6 +87,7 @@ Providing a `DocumentTransaction` serves following key purposes:
 
 <!-- snippet: BasicTransaction -->
 <a id='snippet-BasicTransaction'></a>
+
 ```cs
 using var tx = store.BeginTransaction();
 
@@ -119,6 +120,7 @@ tx.Complete();
 
 <!-- snippet: TransactionWithIsolationLevel -->
 <a id='snippet-TransactionWithIsolationLevel'></a>
+
 ```cs
 using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
 
@@ -139,6 +141,7 @@ See [SQL Server Transaction Isolation Levels](https://learn.microsoft.com/en-us/
 
 <!-- snippet: TransactionWithCommitId -->
 <a id='snippet-TransactionWithCommitId'></a>
+
 ```cs
 var commitId = Guid.NewGuid();
 
@@ -180,6 +183,7 @@ var commitId = session.SaveChanges();  // Returns the session's CommitId
 
 <!-- snippet: TransactionWithConnectionTimeout -->
 <a id='snippet-TransactionWithConnectionTimeout'></a>
+
 ```cs
 using (var tx = store.BeginTransaction(
     IsolationLevel.ReadCommitted, 
@@ -373,6 +377,7 @@ Use CommitId to correlate external events with database changes:
 
 <!-- snippet: IdempotentOperations -->
 <a id='snippet-IdempotentOperations'></a>
+
 ```cs
 // Use message ID from external system as commitId
 using var tx = store.BeginTransaction(messageId);
