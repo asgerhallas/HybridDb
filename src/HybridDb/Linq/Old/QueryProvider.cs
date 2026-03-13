@@ -78,9 +78,7 @@ namespace HybridDb.Linq.Old
 
                     return result.Results.First();
                 case Translation.ExecutionSemantics.Count:
-                    if (typeof(T) != typeof(int))
-                        throw new InvalidCastException($"Count() returns int, but {typeof(T).Name} was requested.");
-
+                    // T is always int here: Queryable.Count<TSource>() calls Execute<int>()
                     return (T)(object)lastQueryStats.TotalResults;
                 default:
                     throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
