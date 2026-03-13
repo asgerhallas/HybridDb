@@ -287,6 +287,13 @@ namespace HybridDb.Tests
             result.ShouldBe(2);
         }
 
+        [Fact]
+        public void CanQueryWithCountReturnsZero()
+        {
+            var result = session.Query<Entity>().Count(x => x.StringProp == "WuggaWugga");
+            result.ShouldBe(0);
+        }
+
         public class Entity
         {
             public string Field;
