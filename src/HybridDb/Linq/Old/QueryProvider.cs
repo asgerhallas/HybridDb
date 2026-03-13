@@ -79,7 +79,11 @@ namespace HybridDb.Linq.Old
                     return result.Results.First();
                 case Translation.ExecutionSemantics.Count:
                     // T is always int here: Queryable.Count<TSource>() calls Execute<int>()
-                    return (T)(object)lastQueryStats.TotalResults;
+                    // Use the number of retrieved (windowed) results when a window is applied;
+                    // otherwise fall back to the total number of matching rows.
+                    var hasWindow = result.Translation.Window != null;
+                    var count = hasWindow ? lastQueryStats.RetrievedResults : lastQueryStats.TotalResults;
+                    return (T)(object)count;
                 default:
                     throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
             }

@@ -281,6 +281,18 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void CanQueryWithSkipTakeAndCount()
+        {
+            var result = session.Query<Entity>()
+                .OrderBy(x => x.Property)
+                .Skip(1)
+                .Take(1)
+                .Count();
+
+            result.ShouldBe(1);
+        }
+
+        [Fact]
         public void CanQueryWithCountPredicate()
         {
             var result = session.Query<Entity>().Count(x => x.Property > 1);
