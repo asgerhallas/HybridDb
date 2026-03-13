@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq;
 using HybridDb.Config;
 using HybridDb.SqlBuilder;
 using Microsoft.Data.SqlClient;
@@ -207,6 +208,27 @@ namespace HybridDb.Tests.SqlBuilder
 
             sql.Build(store, out var parameters2).ShouldBe("select @MyParam_1");
             parameters2.Parameters[0].ParameterName.ShouldBe("MyParam_1");
+        }
+
+        [Fact]
+        public void CustomParameters()
+        {
+            var sql = Sql.From($"select @a where 2 = @b");
+
+            sql.Build(store, out var parameters)
+                .ShouldBe("select @a where 2 = @b");
+
+            parameters.Count.ShouldBe(0);
+
+            sql.CustomParameters.Add("@a", 1, SqlDbType.Int);
+            sql.CustomParameters.Add("@b", 2, SqlDbType.Int);
+
+            sql.Build(store, out parameters)
+                .ShouldBe("select @a where 2 = @b");
+
+            parameters.Count.ShouldBe(2);
+
+            store.Database.RawQuery<int>(sql).Single().ShouldBe(1);
         }
     }
 }
