@@ -47,26 +47,43 @@ namespace HybridDb.Linq.Old
 
         T IQueryProvider.Execute<T>(Expression expression)
         {
-            // Count + OfType: SQL TotalResults covers the whole inheritance hierarchy, not just the
-            // requested subtype (OfType filtering is in-memory only). Enumerate with the discriminator
-            // filter here so the returned count is correct.
             var translation = expression.Translate();
-            if (translation.ExecutionMethod == Translation.ExecutionSemantics.Count &&
-                translation.ProjectAs != null &&
-                design.DocumentType.IsAssignableFrom(translation.ProjectAs))
+
+            if (translation.ExecutionMethod == Translation.ExecutionSemantics.Count)
             {
-                var (countStats, countRows) = session.Transactionally(tx => tx.Query<object>(
-                    design.Table, null, false, translation.Select, translation.Where,
-                    translation.Window, translation.OrderBy, false, translation.Parameters));
+                var where = translation.Where;
+                var parameters = translation.Parameters;
 
-                var ofTypeCount = countRows
-                    .Select(row => store.Configuration.GetOrCreateDesignByDiscriminator(design, row.Discriminator))
-                    .Count(concreteDesign => translation.ProjectAs.IsAssignableFrom(concreteDesign.DocumentType));
+                // If OfType is applied, add a discriminator IN filter for the specific subtype to the SQL WHERE
+                // so we count only rows matching that subtype rather than the entire inheritance hierarchy.
+                if (translation.ProjectAs != null && design.DocumentType.IsAssignableFrom(translation.ProjectAs))
+                {
+                    var ofTypeDesign = store.Configuration.GetOrCreateDesignFor(translation.ProjectAs);
+                    var discriminators = ofTypeDesign.DecendentsAndSelf.Keys.ToArray();
+                    var paramNames = discriminators.Select((_, i) => $"@__Disc{i}").ToArray();
+                    var discriminatorWhere = $"[{DocumentTable.DiscriminatorColumn.Name}] IN ({string.Join(", ", paramNames)})";
 
-                countStats.CopyTo(lastQueryStats);
+                    where = string.IsNullOrEmpty(where) ? discriminatorWhere : $"({where}) AND ({discriminatorWhere})";
+
+                    var combined = new Dictionary<string, object>(parameters ?? new Dictionary<string, object>());
+                    for (var i = 0; i < discriminators.Length; i++)
+                        combined[paramNames[i]] = discriminators[i];
+                    parameters = combined;
+                }
 
                 // T is always int here: Queryable.Count<TSource>() calls Execute<int>()
-                return (T)(object)ofTypeCount;
+                var total = session.Transactionally(tx => tx.QueryCount(design.Table, null, where, parameters));
+
+                // If a SkipTake window is applied, compute the count of rows in that window.
+                if (translation.Window is SkipTake skipTake)
+                {
+                    var remaining = Math.Max(0, total - skipTake.Skip);
+                    var windowed = skipTake.Take > 0 ? Math.Min(skipTake.Take, remaining) : remaining;
+
+                    return (T)(object)windowed;
+                }
+
+                return (T)(object)total;
             }
 
             var result = ExecuteQuery<T>(expression);
@@ -99,14 +116,6 @@ namespace HybridDb.Linq.Old
                         return default(T);
 
                     return result.Results.First();
-                case Translation.ExecutionSemantics.Count:
-                    // T is always int here: Queryable.Count<TSource>() calls Execute<int>()
-                    // Use the number of retrieved (windowed) results when a window is applied;
-                    // otherwise fall back to the total number of matching rows.
-                    var hasWindow = result.Translation.Window != null;
-                    var count = hasWindow ? lastQueryStats.RetrievedResults : lastQueryStats.TotalResults;
-
-                    return (T)(object)count;
                 default:
                     throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
             }

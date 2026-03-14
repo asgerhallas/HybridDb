@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using HybridDb.Linq;
 using HybridDb.Linq.Old;
@@ -627,6 +628,37 @@ namespace HybridDb.Tests
             var skipToId = translation.Window.ShouldBeOfType<SkipToId>();
             skipToId.Id.ShouldBe(id);
             skipToId.PageSize.ShouldBe(5);
+        }
+
+        [Fact]
+        public void Count_ProducesCountExecutionMethodAndCorrectWhere()
+        {
+            var q = Query<Entity>().Where(x => x.Property > 1);
+            var countMethod = typeof(Queryable)
+                .GetMethods()
+                .Single(m => m.Name == "Count" && m.GetParameters().Length == 1)
+                .MakeGenericMethod(typeof(Entity));
+            var translation = Expression.Call(countMethod, q.Expression).Translate();
+
+            translation.ExecutionMethod.ShouldBe(Translation.ExecutionSemantics.Count);
+            translation.Where.ShouldBe("([Property] > @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
+        [Fact]
+        public void CountWithPredicate_ProducesCountExecutionMethodAndCorrectWhere()
+        {
+            var q = Query<Entity>();
+            var countMethod = typeof(Queryable)
+                .GetMethods()
+                .Single(m => m.Name == "Count" && m.GetParameters().Length == 2)
+                .MakeGenericMethod(typeof(Entity));
+            var predicate = (Expression<Func<Entity, bool>>)(x => x.Property > 1);
+            var translation = Expression.Call(countMethod, q.Expression, predicate).Translate();
+
+            translation.ExecutionMethod.ShouldBe(Translation.ExecutionSemantics.Count);
+            translation.Where.ShouldBe("([Property] > @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }
 
         Query<T> Query<T>() where T : class
