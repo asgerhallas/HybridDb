@@ -191,6 +191,31 @@ namespace HybridDb
             return (stats, result);
         }
 
+        public int QueryCount(DocumentTable table, string join, string where = "", object parameters = null)
+        {
+            storeStats.NumberOfRequests++;
+            storeStats.NumberOfQueries++;
+
+            if (Store.Configuration.SoftDelete)
+            {
+                where = string.IsNullOrEmpty(where)
+                    ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}"
+                    : $"({where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
+            }
+
+            var from = Store.Database.FormatTableNameAndEscape(table.Name);
+            var sqlx = new SqlBuilder();
+            sqlx.Append("select count(1)")
+                .Append($"from {from}")
+                .Append(!string.IsNullOrEmpty(join), join)
+                .Append(!string.IsNullOrEmpty(where), $"where ({where})");
+
+            var hybridDbParameters = parameters.ToHybridDbParameters();
+            hybridDbParameters.Add(sqlx.Parameters);
+
+            return SqlConnection.ExecuteScalar<int>(sqlx.ToString(), hybridDbParameters, SqlTransaction);
+        }
+
         public IEnumerable<TProjection> Query<TProjection>(SqlBuilder sql)
         {
             storeStats.NumberOfRequests++;

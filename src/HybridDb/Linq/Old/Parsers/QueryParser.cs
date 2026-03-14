@@ -39,6 +39,10 @@ namespace HybridDb.Linq.Old.Parsers
                 case "First":
                     Execution = Translation.ExecutionSemantics.First;
                     goto Take1;
+                case "Count":
+                    Execution = Translation.ExecutionSemantics.Count;
+                    if (expression.Arguments.Count <= 1) break;
+                    goto Where;
                 case "Take1":
                     Take1:
                     Top1 = true;

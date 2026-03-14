@@ -47,6 +47,45 @@ namespace HybridDb.Linq.Old
 
         T IQueryProvider.Execute<T>(Expression expression)
         {
+            var translation = expression.Translate();
+
+            if (translation.ExecutionMethod == Translation.ExecutionSemantics.Count)
+            {
+                var where = translation.Where;
+                var parameters = translation.Parameters;
+
+                // If OfType is applied, add a discriminator IN filter for the specific subtype to the SQL WHERE
+                // so we count only rows matching that subtype rather than the entire inheritance hierarchy.
+                if (translation.ProjectAs != null && design.DocumentType.IsAssignableFrom(translation.ProjectAs))
+                {
+                    var ofTypeDesign = store.Configuration.GetOrCreateDesignFor(translation.ProjectAs);
+                    var discriminators = ofTypeDesign.DecendentsAndSelf.Keys.ToArray();
+                    var paramNames = discriminators.Select((_, i) => $"@__Disc{i}").ToArray();
+                    var discriminatorWhere = $"[{DocumentTable.DiscriminatorColumn.Name}] IN ({string.Join(", ", paramNames)})";
+
+                    where = string.IsNullOrEmpty(where) ? discriminatorWhere : $"({where}) AND ({discriminatorWhere})";
+
+                    var combined = new Dictionary<string, object>(parameters ?? new Dictionary<string, object>());
+                    for (var i = 0; i < discriminators.Length; i++)
+                        combined[paramNames[i]] = discriminators[i];
+                    parameters = combined;
+                }
+
+                // T is always int here: Queryable.Count<TSource>() calls Execute<int>()
+                var total = session.Transactionally(tx => tx.QueryCount(design.Table, null, where, parameters));
+
+                // If a SkipTake window is applied, compute the count of rows in that window.
+                if (translation.Window is SkipTake skipTake)
+                {
+                    var remaining = Math.Max(0, total - skipTake.Skip);
+                    var windowed = skipTake.Take > 0 ? Math.Min(skipTake.Take, remaining) : remaining;
+
+                    return (T)(object)windowed;
+                }
+
+                return (T)(object)total;
+            }
+
             var result = ExecuteQuery<T>(expression);
 
             switch (result.Translation.ExecutionMethod)

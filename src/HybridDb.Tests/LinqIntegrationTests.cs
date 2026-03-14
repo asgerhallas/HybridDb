@@ -266,6 +266,46 @@ namespace HybridDb.Tests
             session.Query<Entity>().FirstOrDefault(x => x.StringProp == "WuggaWugga").ShouldBe(null);
         }
 
+        [Fact]
+        public void CanQueryWithCount()
+        {
+            var result = session.Query<Entity>().Count();
+            result.ShouldBe(3);
+        }
+
+        [Fact]
+        public void CanQueryWithWhereAndCount()
+        {
+            var result = session.Query<Entity>().Where(x => x.Property > 1).Count();
+            result.ShouldBe(2);
+        }
+
+        [Fact]
+        public void CanQueryWithSkipTakeAndCount()
+        {
+            var result = session.Query<Entity>()
+                .OrderBy(x => x.Property)
+                .Skip(1)
+                .Take(1)
+                .Count();
+
+            result.ShouldBe(1);
+        }
+
+        [Fact]
+        public void CanQueryWithCountPredicate()
+        {
+            var result = session.Query<Entity>().Count(x => x.Property > 1);
+            result.ShouldBe(2);
+        }
+
+        [Fact]
+        public void CanQueryWithCountReturnsZero()
+        {
+            var result = session.Query<Entity>().Count(x => x.StringProp == "WuggaWugga");
+            result.ShouldBe(0);
+        }
+
         public class Entity
         {
             public string Field;
@@ -291,6 +331,41 @@ namespace HybridDb.Tests
         public class ProjectionWithPropertyContainingAs
         {
             public string CaseName { get; set; }
+        }
+    }
+
+    public class LinqIntegrationTests_OfType : HybridDbTests
+    {
+        readonly IDocumentSession session;
+
+        public LinqIntegrationTests_OfType(ITestOutputHelper output) : base(output)
+        {
+            Document<DerivedEntity>();
+            Document<MoreDerivedEntity1>();
+
+            UseSerializer(new DefaultSerializer());
+
+            session = Using(store.OpenSession());
+            session.Store(new DerivedEntity { Id = NewId() });
+            session.Store(new DerivedEntity { Id = NewId() });
+            session.Store(new MoreDerivedEntity1 { Id = NewId() });
+            session.Store(new MoreDerivedEntity1 { Id = NewId() });
+            session.Store(new MoreDerivedEntity1 { Id = NewId() });
+            session.SaveChanges();
+        }
+
+        [Fact]
+        public void CanQueryWithOfTypeAndCount()
+        {
+            var result = session.Query<DerivedEntity>().OfType<MoreDerivedEntity1>().Count();
+            result.ShouldBe(3);
+        }
+
+        [Fact]
+        public void CanQueryWithOfTypeAndCountReturnsZero()
+        {
+            var result = session.Query<DerivedEntity>().OfType<MoreDerivedEntity2>().Count();
+            result.ShouldBe(0);
         }
     }
 }
