@@ -78,7 +78,7 @@ namespace HybridDb.Migrations.Documents
                                     {
                                         using var tx = store.BeginTransaction();
 
-                                        var sql = $"select * from {formattedTableName} with (updlock, rowlock, readpast) where Id = @Id";
+                                    var sql = Sql.From($"select * from {table} with (updlock, rowlock, readpast) where {DocumentTable.IdColumn} = @Id").Build(store, out _);
 
                                         var idParameter = new DbString {Value = id, IsAnsi = false, IsFixedLength = false, Length = 850};
 

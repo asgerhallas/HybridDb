@@ -91,15 +91,17 @@ namespace HybridDb
                 }
             }
 
-            switch (Store.Configuration.SoftDelete)
+            if (!Store.Configuration.SoftDelete && includeDeleted)
+                throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
+
+            var whereClause = string.IsNullOrEmpty(where) ? Sql.Empty : Sql.From($"{where:@}");
+
+            if (Store.Configuration.SoftDelete && !includeDeleted)
             {
-                case false when includeDeleted:
-                    throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
-                case true when !includeDeleted:
-                    @where = string.IsNullOrEmpty(@where)
-                        ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
-                        : $"({@where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
-                    break;
+                var softDelete = Sql.From($"{DocumentTable.LastOperationColumn} <> {(byte)Operation.Deleted}");
+                whereClause = whereClause.IsEmpty
+                    ? softDelete
+                    : Sql.Parenthesize(whereClause).Append("and", Sql.Parenthesize(softDelete));
             }
 
             QueryStats stats = null;
@@ -113,7 +115,7 @@ namespace HybridDb
                 sqlx.Append("select count(*) as TotalResults")
                     .Append($"from {table}")
                     .Append(!string.IsNullOrEmpty(join), $"{join:@}")
-                    .Append(!string.IsNullOrEmpty(where), $"where {where:@}")
+                    .Append(!whereClause.IsEmpty, $"where {whereClause}")
                     .Append(";");
 
                 sqlx.Append(string.IsNullOrEmpty(select), @"with WithRowNumber as (select *", $"with WithRowNumber as (select {select:@}")
@@ -123,7 +125,7 @@ namespace HybridDb
                     .Append($", {table}.{DocumentTable.TimestampColumn} as __RowVersion")
                     .Append($"from {table}")
                     .Append(!string.IsNullOrEmpty(join), $"{join:@}")
-                    .Append(!string.IsNullOrEmpty(where), $"where {where:@}")
+                    .Append(!whereClause.IsEmpty, $"where {whereClause}")
                     .Append(")")
                     .Append(top1, "select top 1", "select")
                     .Append("*")
@@ -173,7 +175,7 @@ namespace HybridDb
                     .Append($", {table}.{DocumentTable.TimestampColumn} AS __RowVersion")
                     .Append($"from {table}")
                     .Append(!string.IsNullOrEmpty(join), $"{join:@}")
-                    .Append(!string.IsNullOrEmpty(where), $"where ({where:@})")
+                    .Append(!whereClause.IsEmpty, $"where ({whereClause})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby:@}");
 
                 result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)

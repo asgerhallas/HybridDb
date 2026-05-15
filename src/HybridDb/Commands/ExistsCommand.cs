@@ -1,6 +1,7 @@
 ﻿using System;
 using Dapper;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Commands
 {
@@ -19,10 +20,9 @@ namespace HybridDb.Commands
         {
             tx.Store.Stats.NumberOfRequests++;
 
-            var sql = $"select Etag from {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} where {DocumentTable.IdColumn.Name} = @Id";
+            var sql = Sql.From($"select {DocumentTable.EtagColumn} from {command.Table} where {DocumentTable.IdColumn} = {command.Id}").Build(tx.Store, out var parameters);
 
-            // ReSharper disable once RedundantAnonymousTypePropertyName
-            return (Guid?)tx.SqlConnection.ExecuteScalar(sql, new { Id = command.Id }, tx.SqlTransaction);
+            return (Guid?)tx.SqlConnection.ExecuteScalar(sql, parameters, tx.SqlTransaction);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dapper;
 using HybridDb.Commands;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Events.Commands
 {
@@ -26,11 +27,13 @@ namespace HybridDb.Events.Commands
             foreach (var param in command.Ids.Select((value, i) => (name: $"@p{i}", value: value)))
                 parameters.Add(param.name, param.value);
 
-            var sql = $@"
+            var paramList = string.Join(", ", parameters.ParameterNames.Select(x => $"@{x}"));
+
+            var sql = Sql.From($@"
                 SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
-                FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE CommitId IN ({string.Join(", ", parameters.ParameterNames.Select(x => $"@{x}"))})
-                ORDER BY Position";
+                FROM {command.Table}
+                WHERE CommitId IN ({paramList:@})
+                ORDER BY Position").Build(tx.Store, out _);
 
             var commits = new[] { Commit.Empty<byte[]>() }.Concat(
                 from row in tx.SqlConnection.Query<Row>(sql, parameters, tx.SqlTransaction)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using Dapper;
+using HybridDb.SqlBuilder;
 using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
@@ -31,13 +32,15 @@ namespace HybridDb.Events.Commands
                 throw new InvalidOperationException("Reads from event store is best done in snapshot isolation so they don't block writes.");
             }
 
-            var sql = $@"
-                SELECT Position, EventId, CommitId, @Id AS [StreamId], SequenceNumber, Name, Generation, Metadata, Data
-                FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE StreamId = @Id AND SequenceNumber >= @fromStreamSeq AND Position <= @toPosition
-                ORDER BY SequenceNumber {(command.Direction == Direction.Forward ? "ASC" : "DESC")}";
+            var direction = command.Direction == Direction.Forward ? "ASC" : "DESC";
 
-            // Using DbString over just string as a important performance optimization, 
+            var sql = Sql.From($@"
+                SELECT Position, EventId, CommitId, @Id AS [StreamId], SequenceNumber, Name, Generation, Metadata, Data
+                FROM {command.Table}
+                WHERE StreamId = @Id AND SequenceNumber >= @fromStreamSeq AND Position <= @toPosition
+                ORDER BY SequenceNumber {direction:@}").Build(tx.Store, out _);
+
+            // Using DbString over just string as an important performance optimization, 
             // see https://github.com/StackExchange/dapper-dot-net/issues/288
             var idParameter = new DbString {Value = command.StreamId, IsAnsi = false, IsFixedLength = false, Length = 850};
 
