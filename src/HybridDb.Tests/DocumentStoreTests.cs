@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using Microsoft.Data.SqlClient;
 using ShouldBeLike;
 using Shouldly;
@@ -161,10 +162,7 @@ namespace HybridDb.Tests
             var table = store.Configuration.GetDesignFor<Entity>();
             store.Insert(table.Table, id1, new { TheChildNestedDouble = 9.8d });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
-
-            sql.Append($"select * from {tableName}");
+            var sql = Sql.Empty.Append($"select * from {table.Table}");
 
             var rows = store.Query<ProjectionWithNestedProperty>(sql).ToList();
 
@@ -208,16 +206,13 @@ namespace HybridDb.Tests
             var id1 = NewId();
             var id2 = NewId();
             var id3 = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            var etag1 = store.Insert(table.Table, id1, new { Field = "Asger", Document = document });
-            var etag2 = store.Insert(table.Table, id2, new { Field = "Hans", Document = document });
-            store.Insert(table.Table, id3, new { Field = "Bjarne", Document = document });
+            var design = store.Configuration.GetDesignFor<Entity>();
+            var etag1 = store.Insert(design.Table, id1, new { Field = "Asger", Document = document });
+            var etag2 = store.Insert(design.Table, id2, new { Field = "Hans", Document = document });
+            store.Insert(design.Table, id3, new { Field = "Bjarne", Document = document });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
-
-            sql.Append($"select * from {tableName} where Field != @name");
-            sql.Parameters.Add("name", "Bjarne", table.Table.Columns.Single(x => x.Name == "Field"));
+            var name = "Bjarne";
+            var sql = Sql.Empty.Append($"select * from {design.Table} where Field != {name}");
 
             var rows = store.Query(sql).ToList();
 
@@ -261,17 +256,14 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var design = store.Configuration.GetDesignFor<Entity>();
 
-            store.Insert(table.Table, id, new { Field = "Asger", Document = document });
+            store.Insert(design.Table, id, new { Field = "Asger", Document = document });
 
             var t = new { Field = "" };
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
-
-            sql.Append($"select Field from {tableName} where Field = @name");
-            sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
+            var name = "Asger";
+            var sql = Sql.Empty.Append($"select Field from {design.Table} where Field = {name}");
 
             IEnumerable<dynamic> Query<T1>(T1 prototype) => store.Query<T1>(sql).Cast<dynamic>();
 
@@ -303,14 +295,11 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Field);
 
             var id = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
+            var design = store.Configuration.GetDesignFor<Entity>();
 
-            store.Insert(table.Table, id, new { Field = "Asger", Document = document });
+            store.Insert(design.Table, id, new { Field = "Asger", Document = document });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
-
-            sql.Append($"select Field from {tableName}");
+            var sql = Sql.Empty.Append($"select Field from {design.Table}");
 
             var rows = store.Query<string>(sql).ToList();
 
@@ -344,15 +333,12 @@ namespace HybridDb.Tests
 
             var id1 = NewId();
             var id2 = NewId();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id1, new { Field = "Asger", Property = "A", Document = document });
-            store.Insert(table.Table, id2, new { Field = "Hans", Property = "B", Document = document });
+            var design = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(design.Table, id1, new { Field = "Asger", Property = "A", Document = document });
+            store.Insert(design.Table, id2, new { Field = "Hans", Property = "B", Document = document });
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Table.Name);
-            var sql = new SqlBuilder();
-
-            sql.Append($"select * from {tableName} where Field = @name");
-            sql.Parameters.Add("name", "Asger", table.Table.Columns.Single(x => x.Name == "Field"));
+            var name = "Asger";
+            var sql = Sql.Empty.Append($"select * from {design.Table} where Field = {name}");
 
             var rows = store.Query(sql).ToList();
 
@@ -512,6 +498,23 @@ namespace HybridDb.Tests
             QueryStats stats;
             var result = store.Query<ProjectionWithEnum>(table.Table, out stats).Single();
             result.Data.EnumProp.ShouldBe(SomeFreakingEnum.Two);
+        }
+
+        // Issue 3: UpdateCommand uses Sql.From without column metadata, causing enum values
+        // to be stored as their numeric representation (int) instead of their name (string)
+        [Fact]
+        public void CanUpdateEnumProjectionAsString()
+        {
+            Document<Entity>().With(x => x.EnumProp);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var id = NewId();
+            store.Insert(table, id, new { EnumProp = SomeFreakingEnum.One });
+
+            var etag = store.Get(table, id).Get<Guid>("Etag");
+            store.Update(table, id, etag, new { EnumProp = SomeFreakingEnum.Two });
+
+            store.Get(table, id).Get<string>("EnumProp").ShouldBe(SomeFreakingEnum.Two.ToString());
         }
 
         [Fact]
@@ -1156,6 +1159,47 @@ namespace HybridDb.Tests
             var row = store.Query<EntityWithListOfObjects<OtherEntityWithSomeSimilarities, Case>>(table.Table, out _, select: "Things, OtherThings").Single();
 
             row.Data.ShouldBeLike(entity);
+        }
+
+        [Fact]
+        public void CanExecuteSql()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            store.Insert(table, NewId(), new { Field = "Asger" });
+            store.Insert(table, NewId(), new { Field = "Lars" });
+
+            var rowsAffected = store.Execute(Sql.From($"delete from {table}"));
+
+            rowsAffected.ShouldBe(2);
+            store.Query(table, out _).ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void CanExecuteSqlWithTransaction()
+        {
+            Document<Entity>().With(x => x.Field);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var id = NewId();
+            store.Insert(table, id, new { Field = "Asger" });
+
+            using var tx = store.BeginTransaction();
+            var rowsAffected = store.Execute(tx, Sql.From($"delete from {table} where Id = {id}"));
+            tx.Complete();
+
+            rowsAffected.ShouldBe(1);
+            store.Query(table, out _).ShouldBeEmpty();
+        }
+
+        [Fact]
+        public void ExecuteSql_FailsIfNotInitialized()
+        {
+            NoInitialize();
+
+            Should.Throw<InvalidOperationException>(() => store.Execute(Sql.From($"select 1")))
+                .Message.ShouldContain("not initialized");
         }
 
         public class EntityWithListOfObjects<TThings, TOtherThings>

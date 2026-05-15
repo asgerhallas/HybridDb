@@ -2,6 +2,7 @@ using System.Linq;
 using HybridDb.Config;
 using HybridDb.Events;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
@@ -13,10 +14,10 @@ namespace HybridDb.Migrations.Schema.Commands
             {
                 if (table is not DocumentTable) continue;
 
-                var formattedTableName = store.Database.FormatTableName(name);
+                var tableName = new Table(name);
 
-                store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_Version] ON [{formattedTableName}] ( [{DocumentTable.VersionColumn.Name}] ASC)", schema: true, commandTimeout: 300);
-                store.Database.RawExecute($"CREATE NONCLUSTERED INDEX [idx_AwaitsReprojection] ON [{formattedTableName}] ( [{DocumentTable.AwaitsReprojectionColumn.Name}] ASC)", schema: true, commandTimeout: 300 );
+                store.Database.RawExecute(Sql.From($"CREATE NONCLUSTERED INDEX [idx_Version] ON {tableName} ({DocumentTable.VersionColumn} ASC)"), schema: true, commandTimeout: 300);
+                store.Database.RawExecute(Sql.From($"CREATE NONCLUSTERED INDEX [idx_AwaitsReprojection] ON {tableName} ({DocumentTable.AwaitsReprojectionColumn} ASC)"), schema: true, commandTimeout: 300 );
             }
         }
 

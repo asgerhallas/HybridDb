@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations.Schema;
 using HybridDb.Migrations.Schema.Commands;
+using HybridDb.SqlBuilder;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -32,7 +33,7 @@ namespace HybridDb.Tests.Migrations
             runner.Run();
 
             configuration.Tables.Keys.ShouldContain("HybridDb");
-            store.Database.RawQuery<int>("select top 1 SchemaVersion from HybridDb").Single().ShouldBe(0);
+            store.Database.RawQuery<int>(Sql.From("select top 1 SchemaVersion from HybridDb")).Single().ShouldBe(0);
         }
 
         [Fact]
@@ -310,9 +311,9 @@ namespace HybridDb.Tests.Migrations
             
             runner.Run();
 
-            store.Database.RawQuery<bool>("select AwaitsReprojection from Entities").ShouldAllBe(x => x == true);
-            store.Database.RawQuery<bool>("select AwaitsReprojection from AbstractEntities").ShouldAllBe(x => x == true);
-            store.Database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => x == false);
+            store.Database.RawQuery<bool>(Sql.From("select AwaitsReprojection from Entities")).ShouldAllBe(x => x == true);
+            store.Database.RawQuery<bool>(Sql.From("select AwaitsReprojection from AbstractEntities")).ShouldAllBe(x => x == true);
+            store.Database.RawQuery<bool>(Sql.From("select AwaitsReprojection from OtherEntities")).ShouldAllBe(x => x == false);
         }
 
         [Fact]

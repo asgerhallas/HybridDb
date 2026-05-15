@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using Dapper;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Events.Commands
 {
@@ -25,11 +26,11 @@ namespace HybridDb.Events.Commands
                 throw new InvalidOperationException("Reads from event store is best done in snapshot isolation so they don't block writes.");
             }
 
-            var sql = $@"
+            var sql = Sql.From($@"
                 SELECT Position, EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data
-                FROM {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}
-                WHERE Position >= @fromPosition {(!command.ReadPastActiveTransactions ? "AND RowVersion < min_active_rowversion()" : "")}
-                ORDER BY Position ASC";
+                FROM {command.Table}
+                WHERE Position >= @fromPosition {(!command.ReadPastActiveTransactions ? "AND RowVersion < min_active_rowversion()" : ""):@}
+                ORDER BY Position ASC").Build(tx.Store, out _);
 
             return tx.SqlConnection.Query<Row>(sql, new {fromPosition = command.FromPositionIncluding}, tx.SqlTransaction, buffered: false).Batch();
         }

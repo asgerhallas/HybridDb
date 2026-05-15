@@ -2,24 +2,17 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using Dapper;
+using HybridDb.SqlBuilder;
 using Microsoft.Extensions.Logging;
 
 namespace HybridDb
 {
-    public abstract class SqlServer : IDatabase
+    public abstract class SqlServer(DocumentStore store, string connectionString) : IDatabase
     {
-        protected readonly DocumentStore store;
-        protected readonly string connectionString;
+        protected readonly DocumentStore store = store;
+        protected readonly string connectionString = connectionString;
 
-        protected SqlServer(DocumentStore store, string connectionString)
-        {
-            this.store = store;
-            this.connectionString = connectionString;
-
-            OnMessage = message => { };
-        }
-
-        public Action<SqlInfoMessageEventArgs> OnMessage { get; set; }
+        public Action<SqlInfoMessageEventArgs> OnMessage { get; set; } = message => { };
 
         public virtual void Initialize() { }
 
@@ -33,28 +26,30 @@ namespace HybridDb
 
         public string Escape(string identifier) => $"[{identifier}]";
 
-        public int RawExecute(string sql, object parameters = null, bool schema = false, int? commandTimeout = null)
+        public int RawExecute(Sql sql, bool schema = false, int? commandTimeout = null)
         {
-            store.Logger.LogDebug(sql);
+            var sqlString = sql.Build(store, out var parameters);
+
+            store.Logger.LogDebug(sqlString);
 
             using var connection = Connect(schema);
             
-            var result = connection.Connection.Execute(sql, parameters.ToHybridDbParameters(), commandTimeout: commandTimeout);
+            var result = connection.Connection.Execute(sqlString, parameters, commandTimeout: commandTimeout);
             
             connection.Complete();
 
             return result;
         }
 
-        public IEnumerable<T> RawQuery<T>(string sql, object parameters = null, bool schema = false)
+        public IEnumerable<T> RawQuery<T>(Sql sql, bool schema = false)
         {
-            store.Logger.LogDebug(sql);
+            var sqlString = sql.Build(store, out var parameters);
+
+            store.Logger.LogDebug(sqlString);
 
             using var connection = Connect(schema);
             
-            var hybridDbParameters = parameters.ToHybridDbParameters();
-
-            return connection.Connection.Query<T>(sql, hybridDbParameters);
+            return connection.Connection.Query<T>(sqlString, parameters);
         }
 
         public class TableInfo

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +24,7 @@ namespace HybridDb.Tests.Queue
 
             // Manipulate the topic directly in database - like returning errors to queue
             var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
-            store.Database.RawExecute($"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Id] = 'OtherId', [Topic] = 'OtherTopic'");
+            store.Database.RawExecute(Sql.From($"update {queueTable} set [Id] = 'OtherId', [Topic] = 'OtherTopic'"));
 
             var message = store.Execute(new DequeueCommand(
                 store.Configuration.Tables.Values.OfType<QueueTable>().Single(),
@@ -32,6 +33,33 @@ namespace HybridDb.Tests.Queue
             message.Id.ShouldBe("OtherId");
             message.Topic.ShouldBe("OtherTopic");
             ((MyMessage)message.Payload).Text.ShouldBe("Text");
+        }
+
+        [Fact]
+        public void MultipleTopics_DequeuesFromAllSpecifiedTopics()
+        {
+            configuration.UseMessageQueue(new MessageQueueOptions());
+
+            using (var session = store.OpenSession())
+            {
+                session.Enqueue("Id1", new MyMessage("Text1"), "TopicA");
+                session.Enqueue("Id2", new MyMessage("Text2"), "TopicB");
+                session.SaveChanges();
+            }
+
+            var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
+            var topics = new List<string> { "TopicA", "TopicB" };
+
+            var first = store.Execute(new DequeueCommand(queueTable, topics));
+            var second = store.Execute(new DequeueCommand(queueTable, topics));
+            var third = store.Execute(new DequeueCommand(queueTable, topics));
+
+            first.ShouldNotBeNull();
+            second.ShouldNotBeNull();
+            third.ShouldBeNull();
+
+            new[] { first.Id, second.Id }.ShouldContain("Id1");
+            new[] { first.Id, second.Id }.ShouldContain("Id2");
         }
 
         [Theory]

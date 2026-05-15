@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,34 +13,33 @@ namespace HybridDb.Tests.Migrations
         public void AddVersion()
         {
             var tablename = "messages";
+            var table = new QueueTable(tablename);
             var tableNameFormatted = store.Database.FormatTableName(tablename);
 
-            store.Database.RawExecute($@"
-                if (object_id('{tableNameFormatted}', 'U') is null)
+            store.Database.RawExecute(Sql.From($@"
+                if (object_id('{tableNameFormatted:@}', 'U') is null)
                 begin
-                    CREATE TABLE [dbo].[{tableNameFormatted}] (
+                    CREATE TABLE [dbo].[{tableNameFormatted:@}] (
                         [Topic] [nvarchar](850) NOT NULL,
 	                    [Id] [nvarchar](850) NOT NULL,
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Discriminator] [nvarchar](850) NOT NULL,
 	                    [Message] [nvarchar](max) NULL,
 
-                        CONSTRAINT [PK_{tableNameFormatted}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
+                        CONSTRAINT [PK_{tableNameFormatted:@}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
-                end", schema: true);
+                end"), schema: true);
 
-            store.Database.RawExecute(@$"
-                insert into {store.Database.FormatTableNameAndEscape(tablename)} 
+            var topic = "default";
+            var id = Guid.NewGuid().ToString();
+            var commitId = Guid.NewGuid().ToString();
+            var discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Message));
+            var message = configuration.Serializer.Serialize(new Message());
+
+            store.Database.RawExecute(Sql.From($@"
+                insert into {table} 
                 (Topic, Id, CommitId, Discriminator, Message)
-                values (@Topic, @Id, @CommitId, @Discriminator, @Message);",
-                new
-                {
-                    Topic = "default",
-                    Id = Guid.NewGuid().ToString(),
-                    CommitId = Guid.NewGuid().ToString(),
-                    Discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Message)),
-                    Message = configuration.Serializer.Serialize(new Message()),
-                });
+                values ({topic}, {id}, {commitId}, {discriminator}, {message});"));
 
             ResetConfiguration();
 
@@ -50,7 +50,7 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), ["default"]));
+            var oldMessage = store.Execute(new DequeueCommand(table, ["default"]));
 
             oldMessage.ShouldNotBe(null);
         }
@@ -59,34 +59,33 @@ namespace HybridDb.Tests.Migrations
         public void AddMetadata()
         {
             var tablename = "messages";
+            var table = new QueueTable(tablename);
             var tableNameFormatted = store.Database.FormatTableName(tablename);
 
-            store.Database.RawExecute($@"
-                if (object_id('{tableNameFormatted}', 'U') is null)
+            store.Database.RawExecute(Sql.From($@"
+                if (object_id('{tableNameFormatted:@}', 'U') is null)
                 begin
-                    CREATE TABLE [dbo].[{tableNameFormatted}] (
+                    CREATE TABLE [dbo].[{tableNameFormatted:@}] (
                         [Topic] [nvarchar](850) NOT NULL,
 	                    [Id] [nvarchar](850) NOT NULL,
 	                    [CommitId] [uniqueidentifier] NOT NULL,
 	                    [Discriminator] [nvarchar](850) NOT NULL,
 	                    [Message] [nvarchar](max) NULL,
 
-                        CONSTRAINT [PK_{tableNameFormatted}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
+                        CONSTRAINT [PK_{tableNameFormatted:@}] PRIMARY KEY CLUSTERED ([Topic] ASC, [Id] ASC)
                     )
-                end", schema: true);
+                end"), schema: true);
 
-            store.Database.RawExecute(@$"
-                insert into {store.Database.FormatTableNameAndEscape(tablename)} 
+            var topic = "default";
+            var id = Guid.NewGuid().ToString();
+            var commitId = Guid.NewGuid().ToString();
+            var discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Message));
+            var message = configuration.Serializer.Serialize(new Message());
+
+            store.Database.RawExecute(Sql.From($@"
+                insert into {table} 
                 (Topic, Id, CommitId, Discriminator, Message)
-                values (@Topic, @Id, @CommitId, @Discriminator, @Message);",
-                new
-                {
-                    Topic = "default",
-                    Id = Guid.NewGuid().ToString(),
-                    CommitId = Guid.NewGuid().ToString(),
-                    Discriminator = configuration.TypeMapper.ToDiscriminator(typeof(Message)),
-                    Message = configuration.Serializer.Serialize(new Message()),
-                });
+                values ({topic}, {id}, {commitId}, {discriminator}, {message});"));
 
             ResetConfiguration();
 
@@ -97,15 +96,15 @@ namespace HybridDb.Tests.Migrations
 
             TouchStore();
 
-            var oldMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), ["default"]));
+            var oldMessage = store.Execute(new DequeueCommand(table, ["default"]));
             oldMessage.Metadata.ShouldNotBe(null);
 
-            store.Execute(new EnqueueCommand(new QueueTable(tablename), new HybridDbMessage("a", "payload")
+            store.Execute(new EnqueueCommand(table, new HybridDbMessage("a", "payload")
             {
                 Metadata = { ["meta"] = "facebook" }
             }));
 
-            var newMessage = store.Execute(new DequeueCommand(new QueueTable(tablename), ["default"]));
+            var newMessage = store.Execute(new DequeueCommand(table, ["default"]));
             newMessage.Metadata.ShouldContainKeyAndValue("meta", "facebook");
         }
 

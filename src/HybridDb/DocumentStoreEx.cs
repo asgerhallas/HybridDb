@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb
 {
@@ -32,10 +33,10 @@ namespace HybridDb
 
         public static IDictionary<string, object> Get(this IDocumentStore store, DocumentTable table, string key) => store.Transactionally(tx => tx.Get(table, key));
 
-        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, SqlBuilder sql) =>
+        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, Sql sql) =>
             store.Query<object>(sql).Select(x => (IDictionary<string, object>)x);
 
-        public static IEnumerable<T> Query<T>(this IDocumentStore store, SqlBuilder sql)
+        public static IEnumerable<T> Query<T>(this IDocumentStore store, Sql sql)
         {
             using var tx = store.BeginTransaction();
 

@@ -4,6 +4,7 @@ using System.Linq;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using Newtonsoft.Json;
 
 namespace HybridDb.Events.Commands
@@ -40,16 +41,15 @@ namespace HybridDb.Events.Commands
             parameters.Add("@Metadata", JsonConvert.SerializeObject(command.Event.Metadata.Values));
             parameters.Add("@Data", command.Event.Data);
 
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
-
             var sequenceNumberSql = command.Event.SequenceNumber == SequenceNumber.Any
-                ? $"(SELECT COALESCE(MAX(SequenceNumber), -1) + 1 FROM {tablename} WHERE StreamId = @StreamId)"
-                : "@SequenceNumber";
+                ? Sql.From($"(SELECT COALESCE(MAX(SequenceNumber), -1) + 1 FROM {command.Table} WHERE StreamId = @StreamId)")
+                : Sql.From("@SequenceNumber");
 
-            var sql = $@"
-                INSERT INTO {tablename} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
+            var sql = Sql.From($@"
+                INSERT INTO {command.Table} (EventId, CommitId, StreamId, SequenceNumber, Name, Generation, Metadata, Data) 
                 OUTPUT Inserted.Position, Inserted.SequenceNumber
-                VALUES (@EventId, @CommitId, @StreamId, {sequenceNumberSql}, @Name, @Generation, @Metadata, @Data)";
+                VALUES (@EventId, @CommitId, @StreamId, {sequenceNumberSql}, @Name, @Generation, @Metadata, @Data)")
+                .Build(tx.Store, out _);
 
             try
             {

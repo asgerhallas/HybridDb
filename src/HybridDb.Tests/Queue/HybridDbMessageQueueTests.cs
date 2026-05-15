@@ -14,6 +14,7 @@ using FakeItEasy;
 using Halt;
 using HybridDb.Config;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Newtonsoft.Json.Linq;
 using ShouldBeLike;
 using Shouldly;
@@ -469,8 +470,8 @@ namespace HybridDb.Tests.Queue
 
             // Manipulate the topic directly in database - like returning errors to queue
             var queueTable = store.Configuration.Tables.Values.OfType<QueueTable>().Single();
-            store.Database.RawExecute(
-                $"update {store.Database.FormatTableNameAndEscape(queueTable.Name)} set [Topic] = 'myothertopic'");
+
+            store.Database.RawExecute(Sql.From($"update {queueTable} set [Topic] = 'myothertopic'"));
 
             var messages = new List<object>();
 

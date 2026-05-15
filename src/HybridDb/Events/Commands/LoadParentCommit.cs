@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Dapper;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Events.Commands
 {
@@ -19,9 +20,8 @@ namespace HybridDb.Events.Commands
         {
             if (command.CommitId == Guid.Empty) return null;
 
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
             var sql =
-                $@"SELECT
+                Sql.From($@"SELECT
                     EventId,
                     Position,
                     CommitId,
@@ -31,20 +31,20 @@ namespace HybridDb.Events.Commands
                     Generation,
                     Data, 
                     Metadata
-                  FROM {tablename}
+                  FROM {command.Table}
                   WHERE CommitId = (
                     SELECT TOP 1 CommitId
-                    FROM {tablename}
+                    FROM {command.Table}
                     WHERE Position < ISNULL(
                         (SELECT MIN(Position)
-                        FROM {tablename} 
+                        FROM {command.Table} 
                         WHERE CommitId = @id),
                         (SELECT MAX(Position) + 1
-                        FROM {tablename})
+                        FROM {command.Table})
                     )
                     ORDER BY Position DESC
                   )
-                  ORDER BY Position";
+                  ORDER BY Position").Build(tx.Store, out _);
 
             var rows = tx.SqlConnection.Query<Row>(sql, new {id = command.CommitId}, transaction: tx.SqlTransaction).ToList();
 

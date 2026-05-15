@@ -9,6 +9,7 @@ using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using HybridDb.SqlBuilder;
 using static Indentional.Text;
 
 namespace HybridDb.Migrations.Documents
@@ -77,7 +78,7 @@ namespace HybridDb.Migrations.Documents
                                     {
                                         using var tx = store.BeginTransaction();
 
-                                        var sql = $"select * from {formattedTableName} with (updlock, rowlock, readpast) where Id = @Id";
+                                    var sql = Sql.From($"select * from {table} with (updlock, rowlock, readpast) where {DocumentTable.IdColumn} = @Id").Build(store, out _);
 
                                         var idParameter = new DbString {Value = id, IsAnsi = false, IsFixedLength = false, Length = 850};
 
@@ -145,16 +146,18 @@ namespace HybridDb.Migrations.Documents
             loop.ContinueWith(x => x).Wait();
         }
 
-        IReadOnlyList<string> GetIds(string tableName, SqlBuilder where, int batchSize)
+        IReadOnlyList<string> GetIds(string tableName, Sql where, int batchSize)
         {
             using var tx = store.BeginTransaction(IsolationLevel.Snapshot);
 
             var ids = tx
-                .Query<string>(new SqlBuilder(parameters: where.Parameters.Parameters.ToArray())
-                    .Append($"select top {batchSize} Id " +
-                            $"from {tableName} " +
-                            $"where {where} " +
-                            $"order by {DocumentTable.VersionColumn.Name} desc"))
+                .Query<string>(Sql.From(
+                    $"""
+                     select top {batchSize:@} Id 
+                     from {tableName:@} 
+                     where {where} 
+                     order by {DocumentTable.VersionColumn} desc
+                     """))
                 .ToList();
 
             tx.Complete();

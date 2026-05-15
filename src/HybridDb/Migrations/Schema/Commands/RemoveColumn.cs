@@ -1,5 +1,6 @@
 using System;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
@@ -23,18 +24,20 @@ namespace HybridDb.Migrations.Schema.Commands
 
         public override void Execute(DocumentStore store)
         {
-            // TODO: sletter kun den første ser det ud til?
-            var dropConstraints = new SqlBuilder()
-                .Append("DECLARE @ConstraintName nvarchar(200)")
-                .Append("SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS ")
-                .Append($"WHERE PARENT_OBJECT_ID = OBJECT_ID('{Table.Name}') ")
-                .Append($"AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'{Name}' AND object_id = OBJECT_ID(N'{Table.Name}'))")
-                .Append($"IF @ConstraintName IS NOT NULL ")
-                .Append($"EXEC('ALTER TABLE {Table.Name} DROP CONSTRAINT ' + @ConstraintName)");
+            var tableName = store.Database.FormatTableName(Table.Name);
+            var escapedTableName = store.Database.FormatTableNameAndEscape(Table.Name);
 
-            store.Database.RawExecute(dropConstraints.ToString());
+            var dropConstraints = Sql.From($@"
+                DECLARE @ConstraintName nvarchar(200)
+                SELECT @ConstraintName = Name FROM SYS.DEFAULT_CONSTRAINTS
+                WHERE PARENT_OBJECT_ID = OBJECT_ID({tableName})
+                AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = {Name} AND object_id = OBJECT_ID({tableName}))
+                IF @ConstraintName IS NOT NULL
+                EXEC('ALTER TABLE {escapedTableName:verbatim} DROP CONSTRAINT ' + @ConstraintName)");
 
-            store.Database.RawExecute($"alter table {store.Database.FormatTableNameAndEscape(Table.Name)} drop column {store.Database.Escape(Name)};");
+            store.Database.RawExecute(dropConstraints);
+
+            store.Database.RawExecute(Sql.From($"alter table {Table} drop column {new Column<string>(Name)};"));
         }
     }
 }

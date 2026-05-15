@@ -8,7 +8,7 @@ using System.Transactions;
 using Dapper;
 using HybridDb.Commands;
 using HybridDb.Config;
-using Microsoft.Data.SqlClient;
+using HybridDb.SqlBuilder;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace HybridDb
@@ -60,6 +60,7 @@ namespace HybridDb
         public SqlTransaction SqlTransaction { get; }
 
         public T Execute<T>(HybridDbCommand<T> command) => Store.Execute(this, command);
+        public int Execute(Sql sql) => Store.Execute(this, sql);
 
         public IDictionary<string, object> Get(DocumentTable table, string key)
         {
@@ -90,41 +91,41 @@ namespace HybridDb
                 }
             }
 
-            switch (Store.Configuration.SoftDelete)
+            if (!Store.Configuration.SoftDelete && includeDeleted)
+                throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
+
+            var whereClause = string.IsNullOrEmpty(where) ? Sql.Empty : Sql.From($"{where:@}");
+
+            if (Store.Configuration.SoftDelete && !includeDeleted)
             {
-                case false when includeDeleted:
-                    throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
-                case true when !includeDeleted:
-                    @where = string.IsNullOrEmpty(@where)
-                        ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
-                        : $"({@where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
-                    break;
+                var softDelete = Sql.From($"{DocumentTable.LastOperationColumn} <> {(byte)Operation.Deleted}");
+                whereClause = whereClause.IsEmpty
+                    ? softDelete
+                    : Sql.Parenthesize(whereClause).Append("and", Sql.Parenthesize(softDelete));
             }
 
             QueryStats stats = null;
             IEnumerable<QueryResult<TProjection>> result = null;
             var timer = Stopwatch.StartNew();
-            var sqlx = new SqlBuilder();
+            var sqlx = Sql.Empty;
             var isWindowed = window != null;
-
-            var from = Store.Database.FormatTableNameAndEscape(table.Name);
 
             if (isWindowed || top1)
             {
                 sqlx.Append("select count(*) as TotalResults")
-                    .Append($"from {@from}")
-                    .Append(!string.IsNullOrEmpty(join), join)
-                    .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                    .Append($"from {table}")
+                    .Append(!string.IsNullOrEmpty(join), $"{join:@}")
+                    .Append(!whereClause.IsEmpty, $"where {whereClause}")
                     .Append(";");
 
-                sqlx.Append(string.IsNullOrEmpty(select), @"with WithRowNumber as (select *", $@"with WithRowNumber as (select {select}")
-                    .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
-                    .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
-                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} as __RowVersion")
-                    .Append($"from {@from}")
-                    .Append(!string.IsNullOrEmpty(join), join)
-                    .Append(!string.IsNullOrEmpty(where), $"where {where}")
+                sqlx.Append(string.IsNullOrEmpty(select), @"with WithRowNumber as (select *", $"with WithRowNumber as (select {select:@}")
+                    .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby):@}) - 1 as RowNumber")
+                    .Append($", {table}.{DocumentTable.DiscriminatorColumn} as __Discriminator")
+                    .Append($", {table}.{DocumentTable.LastOperationColumn} as __LastOperation")
+                    .Append($", {table}.{DocumentTable.TimestampColumn} as __RowVersion")
+                    .Append($"from {table}")
+                    .Append(!string.IsNullOrEmpty(join), $"{join:@}")
+                    .Append(!whereClause.IsEmpty, $"where {whereClause}")
                     .Append(")")
                     .Append(top1, "select top 1", "select")
                     .Append("*")
@@ -137,15 +138,15 @@ namespace HybridDb
                             var skip = skipTake.Skip;
                             var take = skipTake.Take;
 
-                            sqlx.Append("where RowNumber >= @skip", new SqlParameter("skip", skip))
-                                .Append(take > 0, "and RowNumber < @take", new SqlParameter("take", skip + take))
+                            sqlx.Append($"where RowNumber >= {skip}")
+                                .Append(take > 0, $"and RowNumber < {skip + take}")
                                 .Append("order by RowNumber");
                             break;
                         }
                     case SkipToId skipToId:
-                        sqlx.Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
-                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % @__PageSize) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + @__PageSize")
-                            .Append("order by RowNumber", new SqlParameter("__Id", skipToId.Id), new SqlParameter("__PageSize", skipToId.PageSize));
+                        sqlx.Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as FirstRow from WithRowNumber where Id={skipToId.Id} union all select 0 as FirstRow) as x order by FirstRow desc)")
+                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as FirstRow from WithRowNumber where Id={skipToId.Id} union all select 0 as FirstRow) as x order by FirstRow desc) + {skipToId.PageSize}")
+                            .Append("order by RowNumber");
                         break;
                     case null: break;
                 }
@@ -167,15 +168,15 @@ namespace HybridDb
             }
             else
             {
-                sqlx.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
-                    .Append($", 0 as RowNumber")
-                    .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} AS __LastOperation")
-                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} AS __RowVersion")
-                    .Append($"from {@from}")
-                    .Append(!string.IsNullOrEmpty(join), join)
-                    .Append(!string.IsNullOrEmpty(where), $"where ({where})")
-                    .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
+                sqlx.Append(string.IsNullOrEmpty(select), "select *", $"select {select:@}")
+                    .Append(", 0 as RowNumber")
+                    .Append($", {table}.{DocumentTable.DiscriminatorColumn} as __Discriminator")
+                    .Append($", {table}.{DocumentTable.LastOperationColumn} AS __LastOperation")
+                    .Append($", {table}.{DocumentTable.TimestampColumn} AS __RowVersion")
+                    .Append($"from {table}")
+                    .Append(!string.IsNullOrEmpty(join), $"{join:@}")
+                    .Append(!whereClause.IsEmpty, $"where ({whereClause})")
+                    .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby:@}");
 
                 result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)
                     .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion))
@@ -191,12 +192,12 @@ namespace HybridDb
             return (stats, result);
         }
 
-        public IEnumerable<TProjection> Query<TProjection>(SqlBuilder sql)
+        public IEnumerable<TProjection> Query<TProjection>(Sql sql)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
 
-            var result = SqlConnection.Query<TProjection>(sql.ToString(), sql.Parameters, SqlTransaction).ToList();
+            var result = SqlConnection.Query<TProjection>(sql.Build(Store, out var parameters), parameters, SqlTransaction).ToList();
 
             return result;
         }
@@ -224,13 +225,13 @@ namespace HybridDb
             return select;
         }
 
-        T InternalQuery<T>(SqlBuilder sql, object parameters, Func<SqlMapper.GridReader, T> read)
+        T InternalQuery<T>(Sql sql, object parameters, Func<SqlMapper.GridReader, T> read)
         {
             var hybridDbParameters = parameters.ToHybridDbParameters();
 
-            hybridDbParameters.Add(sql.Parameters);
+            var sqlString = sql.Build(Store, hybridDbParameters);
 
-            using var reader = SqlConnection.QueryMultiple(sql.ToString(), hybridDbParameters, SqlTransaction);
+            using var reader = SqlConnection.QueryMultiple(sqlString, hybridDbParameters, SqlTransaction);
 
             return read(reader);
         }

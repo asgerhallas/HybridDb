@@ -7,10 +7,8 @@ using HybridDb.Queue;
 
 namespace HybridDb.Migrations.BuiltIn
 {
-    public class UpdateCorrelationId : Migration
+    public class UpdateCorrelationId(int version) : Migration(version)
     {
-        public UpdateCorrelationId(int version) : base(version) { }
-
         public override IEnumerable<DdlCommand> BeforeAutoMigrations(Configuration configuration)
         {
             foreach (var table in configuration.Tables.Values.OfType<QueueTable>())
@@ -19,13 +17,12 @@ namespace HybridDb.Migrations.BuiltIn
                     "Update correlation ID",
                     (sql, db) =>
                     {
-                        var tableNameEscaped = db.FormatTableNameAndEscape(table.Name);
+                        var breadcrumbsPath = "$.\"" + HybridDbMessage.Breadcrumbs + "\"";
 
-                        sql.Append(@$"
-                            update {tableNameEscaped}
-                            set CorrelationId = coalesce((select top 1
-        		                CorrelationId.value
-	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '$.""{HybridDbMessage.Breadcrumbs}""') X
+                        sql.Append($"update {table}");
+                        sql.Append($@"
+                            set CorrelationId = coalesce((select top 1 CorrelationId.value
+	                        from openjson(Metadata, '$') with (CorrelationIds nvarchar(max) '{breadcrumbsPath:@}') X
 	                        cross apply openjson(X.CorrelationIds, '$') CorrelationId), 'N/A')");
                     });
             }

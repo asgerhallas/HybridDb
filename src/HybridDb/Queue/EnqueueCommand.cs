@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Dapper;
+using HybridDb.Config;
+using HybridDb.SqlBuilder;
 using Microsoft.Data.SqlClient;
 
 namespace HybridDb.Queue
@@ -30,31 +34,31 @@ namespace HybridDb.Queue
         public static string Execute(Func<object, string> serializer, DocumentTransaction tx, EnqueueCommand command)
         {
             var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
-            var tableName = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
-            var discriminator = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType());
 
             command.Message.Metadata[HybridDbMessage.EnqueuedAtKey] = DateTimeOffset.Now.ToString("O");
 
+            var projections = new Dictionary<Column, object>
+            {
+                [QueueTable.TopicColumn] = command.Message.Topic,
+                [QueueTable.VersionColumn] = options.Version.ToString(),
+                [QueueTable.IdColumn] = command.Message.Id,
+                [QueueTable.OrderColumn] = command.Message.Order,
+                [QueueTable.CommitIdColumn] = tx.CommitId,
+                [QueueTable.DiscriminatorColumn] = tx.Store.Configuration.TypeMapper.ToDiscriminator(command.Message.Payload.GetType()),
+                [QueueTable.MessageColumn] = serializer(command.Message.Payload),
+                [QueueTable.MetadataColumn] = serializer(command.Message.Metadata),
+                [QueueTable.CorrelationIdColumn] = command.Message.CorrelationId,
+            };
+
+            var columns = Sql.Join(", ", projections.Keys.Select(col => Sql.From($"{col}")));
+            var values = Sql.Join(", ", projections.Select(x => Sql.Empty.Append(x.Value, x.Key)));
+
+            var sql = Sql.From($"set nocount on; insert into {command.Table} ({columns}) values ({values}); set nocount off;")
+                .Build(tx.Store, out var parameters);
+
             try
             {
-                tx.SqlConnection.Execute(@$"
-                    set nocount on; 
-                    insert into {tableName} (Topic, Version, Id, [Order], CommitId, Discriminator, Message, Metadata, CorrelationId) 
-                    values (@Topic, @Version, @Id, @Order, @CommitId, @Discriminator, @Message, @Metadata, @CorrelationId); 
-                    set nocount off;",
-                    new
-                    {
-                        command.Message.Topic,
-                        Version = options.Version.ToString(),
-                        command.Message.Id,
-                        command.Message.Order,
-                        tx.CommitId,
-                        Discriminator = discriminator,
-                        Message = serializer(command.Message.Payload),
-                        Metadata = serializer(command.Message.Metadata),
-                        command.Message.CorrelationId
-                    },
-                    tx.SqlTransaction);
+                tx.SqlConnection.Execute(sql, parameters, tx.SqlTransaction);
             }
             catch (SqlException e)
             {

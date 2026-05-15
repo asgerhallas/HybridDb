@@ -10,6 +10,7 @@ using HybridDb.Config;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
 using HybridDb.Queue;
+using HybridDb.SqlBuilder;
 using Microsoft.Data.SqlClient;
 using ShinySwitch;
 using ShouldBeLike;
@@ -1600,9 +1601,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnProjectionUsingSqlBuilder()
         {
-            var sql = new SqlBuilder();
-
-            sql.Append(@"
+            var sql = Sql.Empty.Append(@"
                 select '1.1' ProjectedProperty, '1.2' TheChildNestedProperty
                 union
                 select '2.1' ProjectedProperty, '2.2' TheChildNestedProperty
@@ -1622,9 +1621,7 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnSimpleTypeUsingSqlBuilder()
         {
-            var sql = new SqlBuilder();
-
-            sql.Append(@"
+            var sql = Sql.From(@"
                 select 1
             ");
 
@@ -1643,11 +1640,9 @@ namespace HybridDb.Tests
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
 
-            var tableName = store.Database.FormatTableNameAndEscape(table.Name);
-
             using var session = store.OpenSession();
 
-            session.Advanced.Defer(new SqlCommand(new SqlBuilder($"truncate table {tableName}"), -1));
+            session.Advanced.Defer(new SqlCommand(Sql.From($"truncate table {table}"), -1));
 
             session.Store(new Entity());
 

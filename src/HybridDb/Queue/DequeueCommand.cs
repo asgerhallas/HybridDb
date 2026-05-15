@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Queue
 {
@@ -30,38 +31,31 @@ namespace HybridDb.Queue
 
         public static HybridDbMessage Execute(Func<string, Type, object> deserializer, DocumentTransaction tx, DequeueCommand command)
         {
-            var options = tx.Store.Configuration.Resolve<MessageQueueOptions>();
-            var tablename = tx.Store.Database.FormatTableNameAndEscape(command.Table.Name);
+            var version = tx.Store.Configuration.Resolve<MessageQueueOptions>().Version.ToString();
 
-            var (where, param) = (command.Topics, command.MessageId) switch
+            var where = (command.Topics, command.MessageId) switch
             {
-                (not null, _) => ("where Topic in @Topics", (object)new
-                {
-                    command.Topics,
-                    Version = options.Version.ToString()
-                }),
-                (_, not null) => ("where Id = @MessageId", new
-                {
-                    command.MessageId,
-                    Version = options.Version.ToString()
-                }),
+                (not null, _) => Sql.From($"where {QueueTable.TopicColumn} in {command.Topics}"),
+                (_, not null) => Sql.From($"where {QueueTable.IdColumn} = {command.MessageId}"),
                 _ => throw new ArgumentException()
             };
 
+            var sql = Sql.From($"""
+                set nocount on;
+                with x as (
+                    select top(1) * from {command.Table} with (rowlock, readpast)
+                    {where}
+                    and cast('/' + [Version] + '/' as hierarchyid) <= cast('/' + {version} + '/' as hierarchyid)
+                    order by [Order] asc, [Position] asc
+                )
+                delete from x output deleted.[Id], deleted.[Message] as Payload, deleted.[Discriminator], deleted.[Topic], deleted.[Order], deleted.[Metadata], deleted.[CorrelationId];
+                set nocount off;
+                """).Build(tx.Store, out var parameters);
+
             var msg = tx.SqlConnection
-                .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata, string CorrelationId)>($@"
-                    set nocount on;
-                    with x as (
-                        select top(1) * from {tablename} with (rowlock, readpast) 
-                        {where}
-                        and cast('/' + Version + '/' as hierarchyid) <= cast('/' + @Version + '/' as hierarchyid)
-                        order by [Order] asc, Position asc
-                    )
-                    delete from x output deleted.Id, deleted.Message as Payload, deleted.Discriminator, deleted.Topic, deleted.[Order], deleted.Metadata, deleted.CorrelationId;
-                    set nocount off;",
-                    param,
-                    tx.SqlTransaction
-                ).SingleOrDefault();
+                .Query<(string Id, string Payload, string Discriminator, string Topic, int Order, string Metadata, string CorrelationId)>(
+                    sql, parameters, tx.SqlTransaction)
+                .SingleOrDefault();
 
             if (msg == default) return null;
 

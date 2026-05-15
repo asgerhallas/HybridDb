@@ -1,18 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Documents
 {
-    public class IdPrefixMatcher : IDocumentMigrationMatcher
+    public class IdPrefixMatcher(string idPrefix) : IDocumentMigrationMatcher
     {
-        public IdPrefixMatcher(string idPrefix) => IdPrefix = idPrefix;
-        
-        public string IdPrefix { get; }
+        public string IdPrefix { get; } = idPrefix;
 
-        public SqlBuilder Matches(IDocumentStore store, int? version) => new SqlBuilder()
-            .Append(!string.IsNullOrEmpty(IdPrefix), " and Id LIKE @idPrefix + '%'", new SqlParameter("idPrefix", IdPrefix));
+        public Sql Matches(IDocumentStore store, int? version) => Sql.From(!string.IsNullOrEmpty(IdPrefix), $" and Id LIKE {IdPrefix + "%"}");
 
         public bool Matches(int version, Configuration configuration, DocumentDesign design, IDictionary<string, object> row)
         {

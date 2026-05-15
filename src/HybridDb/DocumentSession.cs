@@ -9,6 +9,7 @@ using HybridDb.Events;
 using HybridDb.Events.Commands;
 using HybridDb.Linq.Old;
 using HybridDb.Migrations.Documents;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb
 {
@@ -151,7 +152,7 @@ namespace HybridDb
             return query;
         }
 
-        public IEnumerable<T> Query<T>(SqlBuilder sql) => Transactionally(x => x.Query<T>(sql));
+        public IEnumerable<T> Query<T>(Sql sql) => Transactionally(x => x.Query<T>(sql));
 
         public void Defer(HybridDbCommand command) => deferredCommands.Add(command);
 

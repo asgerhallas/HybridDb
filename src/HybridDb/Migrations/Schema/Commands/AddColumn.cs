@@ -1,4 +1,5 @@
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Migrations.Schema.Commands
 {
@@ -19,11 +20,9 @@ namespace HybridDb.Migrations.Schema.Commands
         public override string ToString() => $"Add column {Column} to table {Tablename}.";
 
         public override void Execute(DocumentStore store) =>
-            store.Database.RawExecute(
-                new SqlBuilder()
-                    .Append($"alter table {store.Database.FormatTableNameAndEscape(Tablename)} add {store.Database.Escape(Column.Name)}")
-                    .Append(DdlCommandEx.BuildColumnSql(Column))
-                    .ToString(),
+            store.Database.RawExecute(Sql
+                    .From($"alter table {new Table(Tablename)} add {Column}")
+                    .Append(DdlCommandEx.BuildColumnSql(Column)),
                 schema: true,
                 commandTimeout: 300);
     }

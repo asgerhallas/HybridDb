@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Commands
 {
@@ -28,16 +29,15 @@ namespace HybridDb.Commands
             projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
             projections[DocumentTable.LastOperationColumn] = Operation.Inserted;
 
-            var sql = $@"
-                insert into {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} 
-                ({string.Join(", ", from column in projections.Keys select tx.Store.Database.Escape(column.Name))}) 
-                values ({string.Join(", ", from column in projections.Keys select "@" + column.Name)});";
+            var columnList = Sql.Join(", ", projections.Keys.Select(col => Sql.From($"{col}")));
+            var valueList = Sql.Join(", ", projections.Select(x => Sql.Empty.Append(x.Value, x.Key)));
 
-            var parameters = projections.ToHybridDbParameters();
+            var sqlString = Sql.From($"insert into {command.Table} ({columnList}) values ({valueList});")
+                .Build(tx.Store, out var parameters);
 
             DocumentWriteCommand.Execute(tx, new SqlDatabaseCommand
             {
-                Sql = sql,
+                Sql = sqlString,
                 Parameters = parameters,
                 ExpectedRowCount = 1
             });

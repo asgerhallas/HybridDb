@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using HybridDb.Config;
 using HybridDb.Migrations.Documents;
+using HybridDb.SqlBuilder;
 using Serilog.Events;
 using ShouldBeLike;
 using Shouldly;
@@ -380,6 +381,49 @@ namespace HybridDb.Tests.Migrations
         }
 
         [Fact]
+        public async Task MigratesSelectedIds_WithSqlMetacharactersInId()
+        {
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var table = configuration.GetDesignFor<Entity>().Table;
+
+            void Insert(string id) =>
+                store.Insert(table, id, new
+                {
+                    AwaitsReprojection = false,
+                    Discriminator = typeof(Entity).AssemblyQualifiedName,
+                    Version = 0,
+                    Document = configuration.Serializer.Serialize(new Entity())
+                });
+
+            Insert("a'b");
+            Insert("c--d");
+            Insert("normal");
+
+            ResetConfiguration();
+
+            UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
+            Document<Entity>().With(x => x.Number);
+
+            var migratedIds = new List<string>();
+
+            UseMigrations(
+                new InlineMigration(1, new ChangeDocument<Entity>(ListOf(new IdMatcher(["a'b", "c--d"])),
+                    (session, serializer, r) =>
+                    {
+                        migratedIds.Add(r.Get(DocumentTable.IdColumn));
+                        return r.Get(DocumentTable.DocumentColumn);
+                    })));
+
+            TouchStore();
+
+            await store.DocumentMigration;
+
+            migratedIds.ShouldBeLikeUnordered("a'b", "c--d");
+        }
+
+        [Fact]
         public async Task DeleteDocument()
         {
             UseTypeMapper(new AssemblyQualifiedNameTypeMapper());
@@ -478,7 +522,7 @@ namespace HybridDb.Tests.Migrations
         public class MigrationFailsBeforeLoadingDocument(Type type, params IDocumentMigrationMatcher[] matchers)
             : DocumentRowMigrationCommand(type, matchers)
         {
-            public override SqlBuilder Matches(IDocumentStore store, int? version) => throw new Exception("Hej do");
+            public override Sql Matches(IDocumentStore store, int? version) => throw new Exception("Hej do");
 
             public override IDictionary<string, object> Execute(IDocumentSession session, ISerializer serializer, IDictionary<string, object> row) => throw new NotImplementedException();
         }

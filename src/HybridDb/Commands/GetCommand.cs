@@ -2,6 +2,7 @@
 using System.Linq;
 using Dapper;
 using HybridDb.Config;
+using HybridDb.SqlBuilder;
 
 namespace HybridDb.Commands
 {
@@ -21,7 +22,7 @@ namespace HybridDb.Commands
             tx.Store.Stats.NumberOfRequests++;
             tx.Store.Stats.NumberOfGets++;
 
-            var sql = $"select * from {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} where {DocumentTable.IdColumn.Name} in @Ids";
+            var sql = Sql.From($"select * from {command.Table} where {DocumentTable.IdColumn} in @Ids").Build(tx.Store, out _);
 
             return tx.SqlConnection.Query(sql, new { Ids = command.Ids.ToArray() }, tx.SqlTransaction)
                 .Cast<IDictionary<string, object>>()

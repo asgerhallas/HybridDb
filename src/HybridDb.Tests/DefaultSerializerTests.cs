@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Shouldly;
 using Xunit;
+using System.Threading.Tasks;
 
 namespace HybridDb.Tests
 {
