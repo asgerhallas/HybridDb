@@ -1,9 +1,6 @@
-using System;
-
-namespace HybridDb
+namespace HybridDb.LiveQuery
 {
-    [Flags]
-    public enum Operation
+    public enum Operation : byte
     {
         Inserted = 1,
         Updated = 2,

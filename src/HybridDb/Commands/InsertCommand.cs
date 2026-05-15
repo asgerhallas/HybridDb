@@ -26,7 +26,6 @@ namespace HybridDb.Commands
             projections[DocumentTable.EtagColumn] = tx.CommitId;
             projections[DocumentTable.CreatedAtColumn] = DateTimeOffset.Now;
             projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
-            projections[DocumentTable.LastOperationColumn] = Operation.Inserted;
 
             var sql = $@"
                 insert into {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)} 

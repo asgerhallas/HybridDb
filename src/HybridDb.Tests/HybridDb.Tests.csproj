@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HybridDb\HybridDb.csproj" />
+    <ProjectReference Include="..\HybridDb.LiveQuery\HybridDb.LiveQuery.csproj" />
   </ItemGroup>
 
   <ItemGroup>

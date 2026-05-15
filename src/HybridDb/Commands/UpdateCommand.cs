@@ -28,7 +28,6 @@ namespace HybridDb.Commands
 
             projections[DocumentTable.EtagColumn] = tx.CommitId;
             projections[DocumentTable.ModifiedAtColumn] = DateTimeOffset.Now;
-            projections[DocumentTable.LastOperationColumn] = Operation.Updated;
 
             var sql = new SqlBuilder()
                 .Append($"update {tx.Store.Database.FormatTableNameAndEscape(command.Table.Name)}")

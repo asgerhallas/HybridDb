@@ -300,33 +300,9 @@ session.Delete(product);
     
 session.SaveChanges();`n```
 
-### Soft Delete
+### Live Query Addon
 
-If soft delete is configured, documents are marked as deleted but not removed:
-
-```csharp
-// In configuration
-config.UseSoftDelete();
-
-// Deleted documents remain in database
-using var session = store.OpenSession();
-
-var product = session.Load<Product>("product-123");
-session.Delete(product);
-session.SaveChanges();
-    
-// Document is marked deleted but still in table
-}
-
-// Query including deleted documents
-using var session = store.OpenSession();
-
-var sql = new SqlBuilder()
-        .Append("select * from Products where Id = @id", new SqlParameter("id", "product-123"));
-    
-var deleted = session.Query<Product>(sql).FirstOrDefault();
-// Can retrieve soft-deleted document
-```
+`HybridDb` now uses hard deletes by default. If you need a change feed for created, updated, and deleted documents, enable the `HybridDb.LiveQuery` addon and consume its `QueryChanges(...)` API.
 
 ## Entity States
 

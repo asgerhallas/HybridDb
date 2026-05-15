@@ -623,7 +623,6 @@ Check that:
 1. Properties are indexed/projected
 2. Values match exactly (case-sensitive for strings)
 3. Documents exist in the table
-4. No soft-delete filtering
 
 ### Slow Queries
 

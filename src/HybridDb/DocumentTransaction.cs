@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -75,7 +74,7 @@ namespace HybridDb
 
         public (QueryStats stats, IEnumerable<QueryResult<TProjection>> rows) Query<TProjection>(
             DocumentTable table, string join, bool top1 = false, string select = null, string where = "",
-            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
+            Window window = null, string orderby = "", object parameters = null)
         {
             storeStats.NumberOfRequests++;
             storeStats.NumberOfQueries++;
@@ -88,17 +87,6 @@ namespace HybridDb
                 {
                     select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
                 }
-            }
-
-            switch (Store.Configuration.SoftDelete)
-            {
-                case false when includeDeleted:
-                    throw new InvalidOperationException("Soft delete is not enabled, please configure with UseSoftDelete.");
-                case true when !includeDeleted:
-                    @where = string.IsNullOrEmpty(@where)
-                        ? $"{DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D}" // TODO: Use parameters for performance
-                        : $"({@where}) AND ({DocumentTable.LastOperationColumn.Name} <> {Operation.Deleted:D})";
-                    break;
             }
 
             QueryStats stats = null;
@@ -120,8 +108,6 @@ namespace HybridDb
                 sqlx.Append(string.IsNullOrEmpty(select), @"with WithRowNumber as (select *", $@"with WithRowNumber as (select {select}")
                     .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(orderby) ? "CURRENT_TIMESTAMP" : orderby)}) - 1 as RowNumber")
                     .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} as __LastOperation")
-                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} as __RowVersion")
                     .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where {where}")
@@ -156,7 +142,7 @@ namespace HybridDb
                     Rows = ReadRow<TProjection>(reader)
                 });
 
-                result = internalResult.Rows.Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion));
+                result = internalResult.Rows.Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator));
 
                 stats = new QueryStats
                 {
@@ -170,15 +156,13 @@ namespace HybridDb
                 sqlx.Append(string.IsNullOrEmpty(select), "select *", $"select {select}")
                     .Append($", 0 as RowNumber")
                     .Append($", {@from}.{DocumentTable.DiscriminatorColumn.Name} as __Discriminator")
-                    .Append($", {@from}.{DocumentTable.LastOperationColumn.Name} AS __LastOperation")
-                    .Append($", {@from}.{DocumentTable.TimestampColumn.Name} AS __RowVersion")
                     .Append($"from {@from}")
                     .Append(!string.IsNullOrEmpty(join), join)
                     .Append(!string.IsNullOrEmpty(where), $"where ({where})")
                     .Append(!string.IsNullOrEmpty(orderby), $"order by {orderby}");
 
                 result = InternalQuery(sqlx, parameters, ReadRow<TProjection>)
-                    .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator, x.LastOperation, x.RowVersion))
+                    .Select(x => new QueryResult<TProjection>(x.Data, x.Discriminator))
                     .ToList();
 
                 stats = new QueryStats();
@@ -255,8 +239,6 @@ namespace HybridDb
         {
             public int RowNumber { get; set; }
             public string __Discriminator { get; set; }
-            public Operation __LastOperation { get; set; }
-            public byte[] __RowVersion { get; set; }
         }
 
         public class Row<T>
@@ -266,15 +248,11 @@ namespace HybridDb
                 Data = data;
                 RowNumber = extras.RowNumber;
                 Discriminator = extras.__Discriminator;
-                LastOperation = extras.__LastOperation;
-                RowVersion = extras.__RowVersion;
             }
 
             public T Data { get; set; }
             public int RowNumber { get; set; }
             public string Discriminator { get; set; }
-            public Operation LastOperation { get; set; }
-            public byte[] RowVersion { get; set; }
         }
 
         static readonly HashSet<Type> simpleTypes = new()

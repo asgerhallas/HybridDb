@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RepositoryUrl>https://github.com/asgerhallas/HybridDb</RepositoryUrl>
+    <Description>Opt-in live query/change feed support for HybridDb.</Description>
+    <Copyright>Copyright 2013</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <LangVersion>11</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HybridDb\HybridDb.csproj" />
+  </ItemGroup>
+
+</Project>

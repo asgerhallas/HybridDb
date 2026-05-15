@@ -368,7 +368,6 @@ tx.Complete();
 - `orderby`: SQL ORDER BY clause
 - `window`: Pagination window (`SkipTake` or `SkipToId`)
 - `top1`: Return only first result
-- `includeDeleted`: Include soft-deleted documents
 - `parameters`: Query parameters as anonymous object
 
 ### Relating Operations with CommitId

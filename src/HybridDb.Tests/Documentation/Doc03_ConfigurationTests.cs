@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using HybridDb.LiveQuery;
 
 namespace HybridDb.Tests.Documentation
 {
@@ -169,13 +170,13 @@ namespace HybridDb.Tests.Documentation
         }
 
         [Fact(Skip = "Code example - not meant for execution")]
-        public void SoftDeleteConfiguration()
+        public void LiveQueryConfiguration()
         {
-            #region SoftDeleteConfiguration
+            #region LiveQueryConfiguration
             var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
             {
-                config.UseSoftDelete();
-                // Deleted documents will have a metadata flag instead of being removed
+                config.UseLiveQuery();
+                // Change tracking moves to the HybridDb.LiveQuery addon
             });
             #endregion
 
