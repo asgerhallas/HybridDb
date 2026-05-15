@@ -247,7 +247,7 @@ namespace HybridDb.Tests
             var t = new { Field = "" };
 
             IEnumerable<dynamic> Query<U>(U prototype) =>
-                store.Query<U>(table.Table, out _, false, null, "Field = @name", null, "", false, new { name = "Asger" });
+                store.Query<U>(table.Table, out _, false, null, "Field = @name", null, "", new { name = "Asger" });
 
             var rows = Query(t).ToList();
 

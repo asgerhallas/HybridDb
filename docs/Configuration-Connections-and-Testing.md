@@ -16,7 +16,7 @@ var newStore = DocumentStore.Create(config =>
         "Server=(LocalDb)\\MSSQLLocalDB;Database=MyAppDb;Integrated Security=True;Encrypt=False;");
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L22-L28' title='Snippet source file'>snippet source</a> | <a href='#snippet-ProductionConfiguration' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L23-L29' title='Snippet source file'>snippet source</a> | <a href='#snippet-ProductionConfiguration' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Configuration Object
@@ -32,7 +32,7 @@ configuration.UseConnectionString("Server=(LocalDb)\\MSSQLLocalDB;Database=MyDb;
 
 var newStore = DocumentStore.Create(configuration);
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L36-L41' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConfigurationObject' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L37-L42' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConfigurationObject' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Deferred Initialization
@@ -54,7 +54,7 @@ newStore.Configuration.Document<Product>().With(x => x.Name);
 // Manually initialize when ready
 newStore.Initialize();
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L49-L60' title='Snippet source file'>snippet source</a> | <a href='#snippet-DeferredInitialization' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L50-L61' title='Snippet source file'>snippet source</a> | <a href='#snippet-DeferredInitialization' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ## Testing Configurations
@@ -81,7 +81,7 @@ var newStore = DocumentStore.ForTesting(
             "Server=(LocalDb)\\MSSQLLocalDB;Integrated Security=True;Encrypt=False;");
     });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L68-L76' title='Snippet source file'>snippet source</a> | <a href='#snippet-GlobalTempTablesMode' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L69-L77' title='Snippet source file'>snippet source</a> | <a href='#snippet-GlobalTempTablesMode' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **Characteristics**:
@@ -114,7 +114,7 @@ var newStore = DocumentStore.ForTesting(
 // Remember to clean up
 newStore.Dispose();
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L84-L99' title='Snippet source file'>snippet source</a> | <a href='#snippet-RealTablesMode' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L85-L100' title='Snippet source file'>snippet source</a> | <a href='#snippet-RealTablesMode' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **Characteristics**:
@@ -142,7 +142,7 @@ var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
     config.UseLogger(loggerFactory.CreateLogger("HybridDb"));
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L105-L115' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoggerConfiguration' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L106-L116' title='Snippet source file'>snippet source</a> | <a href='#snippet-LoggerConfiguration' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Serializer
@@ -174,7 +174,7 @@ var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
     config.UseSerializer(serializer);
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L123-L132' title='Snippet source file'>snippet source</a> | <a href='#snippet-DefaultSerializerConfiguration' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L124-L133' title='Snippet source file'>snippet source</a> | <a href='#snippet-DefaultSerializerConfiguration' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 **Serializer Configuration Options:**
@@ -300,7 +300,7 @@ var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
     // Results in tables like: MyApp_Products, MyApp_Orders, etc.
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L140-L146' title='Snippet source file'>snippet source</a> | <a href='#snippet-TableNamePrefix' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L141-L147' title='Snippet source file'>snippet source</a> | <a href='#snippet-TableNamePrefix' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Key Resolver
@@ -323,26 +323,26 @@ var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
     });
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L154-L166' title='Snippet source file'>snippet source</a> | <a href='#snippet-CustomKeyResolver' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L155-L167' title='Snippet source file'>snippet source</a> | <a href='#snippet-CustomKeyResolver' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Defaults to the Id property.
 
-### Soft Delete
+### Live Query Addon
 
-Enable soft deletes instead of hard deletes:
+Enable opt-in change tracking through the `HybridDb.LiveQuery` addon:
 
-<!-- snippet: SoftDeleteConfiguration -->
-<a id='snippet-SoftDeleteConfiguration'></a>
+<!-- snippet: LiveQueryConfiguration -->
+<a id='snippet-LiveQueryConfiguration'></a>
 
 ```cs
 var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
 {
-    config.UseSoftDelete();
-    // Deleted documents will have a metadata flag instead of being removed
+    config.UseLiveQuery();
+    // Change tracking moves to the HybridDb.LiveQuery addon
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L174-L180' title='Snippet source file'>snippet source</a> | <a href='#snippet-SoftDeleteConfiguration' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L175-L181' title='Snippet source file'>snippet source</a> | <a href='#snippet-LiveQueryConfiguration' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Background Migrations
@@ -362,7 +362,7 @@ var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
     config.UseMigrationBatchSize(1000);
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L188-L197' title='Snippet source file'>snippet source</a> | <a href='#snippet-BackgroundMigrationsConfiguration' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L189-L198' title='Snippet source file'>snippet source</a> | <a href='#snippet-BackgroundMigrationsConfiguration' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### Event Store
@@ -378,5 +378,5 @@ var newStore = DocumentStore.ForTesting(TableMode.GlobalTempTables, config =>
     config.UseEventStore();
 });
 ```
-<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L205-L210' title='Snippet source file'>snippet source</a> | <a href='#snippet-EventStoreConfiguration' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/HybridDb.Tests/Documentation/Doc03_ConfigurationTests.cs#L206-L211' title='Snippet source file'>snippet source</a> | <a href='#snippet-EventStoreConfiguration' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->

@@ -18,8 +18,6 @@ namespace HybridDb.Config
             DiscriminatorColumn = AddBuiltIn(new Column<string>("Discriminator", length: 850));
             AwaitsReprojectionColumn = AddBuiltIn(new Column<bool>("AwaitsReprojection"));
             VersionColumn = AddBuiltIn(new Column<int>("Version"));
-            TimestampColumn = AddBuiltIn(new Column<int>("Timestamp", SqlDbType.Timestamp));
-            LastOperationColumn = AddBuiltIn(new Column<byte>("LastOperation", SqlDbType.TinyInt));
         }
 
         public DocumentTable(string name) : base(name, Enumerable.Empty<Column>()) {}
@@ -35,7 +33,5 @@ namespace HybridDb.Config
         public static Column<string> DiscriminatorColumn { get; }
         public static Column<bool> AwaitsReprojectionColumn { get; }
         public static Column<int> VersionColumn { get; }
-        public static Column<int> TimestampColumn { get; }
-        public static Column<byte> LastOperationColumn { get; }
     }
 }

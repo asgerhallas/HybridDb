@@ -48,11 +48,11 @@ namespace HybridDb
 
         public static IEnumerable<QueryResult<T>> Query<T>(
             this IDocumentStore store, DocumentTable table, string @join, out QueryStats stats, bool top1 = false, string select = null, string where = "",
-            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null)
+            Window window = null, string orderby = "", object parameters = null)
         {
             using var tx = store.BeginTransaction();
 
-            var (queryStats, rows) = tx.Query<T>(table, join, top1, select, where, window, orderby, includeDeleted, parameters);
+            var (queryStats, rows) = tx.Query<T>(table, join, top1, select, where, window, orderby, parameters);
 
             tx.Complete();
 
@@ -63,27 +63,14 @@ namespace HybridDb
 
         public static IEnumerable<QueryResult<T>> Query<T>(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
-            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
-            store.Query<T>(table, null, out stats, top1, select, where, window, orderby, includeDeleted, parameters);
+            Window window = null, string orderby = "", object parameters = null) =>
+            store.Query<T>(table, null, out stats, top1, select, where, window, orderby, parameters);
 
         public static IEnumerable<IDictionary<string, object>> Query(
             this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
-            Window window = null, string orderby = "", bool includeDeleted = false, object parameters = null) =>
-            store.Query<object>(table, out stats, top1, @select, @where, window, @orderby, includeDeleted, parameters)
+            Window window = null, string orderby = "", object parameters = null) =>
+            store.Query<object>(table, out stats, top1, @select, @where, window, @orderby, parameters)
                 .Select(x => (IDictionary<string, object>)x.Data);
-
-        public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            this IDocumentStore store, DocumentTable table, byte[] since, string select = null) =>
-            store.Transactionally(tx => tx.Query<TProjection>(table, since, @select));
-
-        public static IEnumerable<QueryResult<TProjection>> Query<TProjection>(
-            this DocumentTransaction tx, DocumentTable table, byte[] since, string select = null) =>
-            tx.Query<TProjection>(table, null, false, @select,
-                @where: $"{DocumentTable.TimestampColumn.Name} > @Since and {DocumentTable.TimestampColumn.Name} < min_active_rowversion()",
-                @orderby: $"{DocumentTable.TimestampColumn.Name} ASC",
-                includeDeleted: true,
-                parameters: new { Since = since }
-            ).rows;
 
         public static void Transactionally(this IDocumentStore store, Action<DocumentTransaction> func) =>
             Transactionally(store, IsolationLevel.ReadCommitted, func);
